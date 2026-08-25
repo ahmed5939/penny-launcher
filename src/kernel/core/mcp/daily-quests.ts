@@ -30,7 +30,12 @@ export class MCPDailyQuests {
       )
 
       const data = responses
-        .filter((response) => response.status === 'fulfilled')
+        .filter(
+          (
+            response,
+          ): response is PromiseFulfilledResult<DailyQuestsAccountData> =>
+            response.status === 'fulfilled',
+        )
         .map((response) => response.value)
 
       MainWindow.instance.webContents.send(
