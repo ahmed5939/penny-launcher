@@ -21,7 +21,6 @@ import {
   Pin,
   Puzzle,
   Radar,
-  Repeat,
   ScrollText,
   Smartphone,
   Store,
@@ -190,13 +189,6 @@ export const navSections: Array<NavSection> = [
         label: 'sidebar:stw-operations.options.unlock',
         to: '/stw-operations/unlock',
       },
-      {
-        beta: true,
-        icon: Repeat,
-        label: 'Endurance',
-        needsAccount: true,
-        to: '/stw-operations/endurance',
-      },
     ],
   },
   {
@@ -306,7 +298,7 @@ export const navSections: Array<NavSection> = [
   },
   {
     key: 'plugins',
-    label: 'Plugins',
+    label: 'Add-ons',
     icon: Puzzle,
     to: '/plugins',
     items: [],

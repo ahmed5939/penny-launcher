@@ -128,7 +128,6 @@ import venturesBouncyHusks from '../assets/images/modifiers/ventures-bouncy-husk
 import venturesEscalation from '../assets/images/modifiers/ventures-escalation.png'
 import venturesRageMeter from '../assets/images/modifiers/ventures-rage-meter.png'
 import venturesSuperTreasure from '../assets/images/modifiers/ventures-super-treasure.png'
-import donaldDuckAngry from '../assets/images/random/donald-duck-angry.gif'
 import pensiveCowboy from '../assets/images/random/pensive-cowboy.png'
 import c from '../assets/images/rarities/c.png'
 import er from '../assets/images/rarities/er.png'
@@ -464,7 +463,6 @@ export const images: Record<string, string> = {
   'ventures-escalation': venturesEscalation,
   'ventures-rage-meter': venturesRageMeter,
   'ventures-super-treasure': venturesSuperTreasure,
-  'donald-duck-angry': donaldDuckAngry,
   'pensive-cowboy': pensiveCowboy,
   c: c,
   er: er,

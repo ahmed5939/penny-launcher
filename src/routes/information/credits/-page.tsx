@@ -7,8 +7,6 @@ import packageJson from '../../../../package.json'
 
 import { PageHeader, Panel } from '../../../components/page'
 
-import { useActions } from './-hooks'
-
 import { whatIsThis } from '../../../lib/callbacks'
 import { cn } from '../../../lib/utils'
 
@@ -24,9 +22,6 @@ const links = {
 
 export function ComponentRoute() {
   const { t } = useTranslation(['general'])
-
-  const { handleEricDejaDeJoder, handleFreshAttrs, handleSick } =
-    useActions()
 
   const openURL = (url: string) => (event: MouseEvent) => {
     event.preventDefault()
@@ -83,8 +78,7 @@ export function ComponentRoute() {
                 </a>
                 <div>
                   Helped with the logos, design and suggested many cool
-                  features along the way. Lleva meses con la misma{' '}
-                  <span onClick={handleSick}>tos ☠️</span>
+                  features along the way.
                 </div>
               </li>
               <li className="item">
@@ -165,10 +159,7 @@ export function ComponentRoute() {
           </h2>
           <ul className="list">
               <li className="item">
-                <span
-                  className="text-muted-foreground"
-                  {...handleFreshAttrs}
-                >
+                <span className="text-muted-foreground">
                   Fresh
                 </span>
                 <div>
@@ -179,10 +170,7 @@ export function ComponentRoute() {
                 </div>
               </li>
               <li className="item">
-                <span
-                  className="text-muted-foreground"
-                  onClick={handleEricDejaDeJoder}
-                >
+                <span className="text-muted-foreground">
                   eric_guest1
                 </span>
                 <div>
@@ -219,4 +207,3 @@ export function ComponentRoute() {
     </>
   )
 }
-

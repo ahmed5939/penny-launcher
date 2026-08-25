@@ -14,9 +14,7 @@ import {
   HeartPulse,
   LockOpen,
   Pin,
-  Puzzle,
   Radar,
-  Repeat,
   ScrollText,
   Store,
   Swords,
@@ -150,13 +148,6 @@ const items: Array<HubItem> = [
   },
   {
     beta: true,
-    title: 'Endurance',
-    description: 'Auto-start, loop and claim Storm Shield Endurance',
-    icon: Repeat,
-    to: '/stw-operations/endurance',
-  },
-  {
-    beta: true,
     title: 'Profile',
     description: 'Power level, F.O.R.T., loadouts and collection at a glance',
     icon: HeartPulse,
@@ -180,13 +171,6 @@ const items: Array<HubItem> = [
     description: 'Track matchmaking for an account',
     icon: Radar,
     to: '/advanced-mode/matchmaking-track',
-  },
-  {
-    beta: true,
-    title: 'Plugins',
-    description: 'Add-ons like Endurance automation',
-    icon: Puzzle,
-    to: '/plugins',
   },
 ]
 
