@@ -1,6 +1,5 @@
-import aerialLauncher from '../assets/images/aerial-launcher.png'
-import aerialMlCorp from '../assets/images/aerial-ml-corp.webp'
-import aerialStwnews from '../assets/images/aerial-stwnews.webp'
+import mlCorp from '../assets/images/ml-corp.webp'
+import stwnews from '../assets/images/stwnews.webp'
 import bluglo from '../assets/images/bluglo.png'
 import brxp from '../assets/images/brxp.png'
 import campaign_event_currency from '../assets/images/currency/campaign_event_currency.gif'
@@ -338,9 +337,8 @@ import stormShield from '../assets/images/world/storm-shield.png'
 import tts from '../assets/images/world/tts.png'
 
 export const images: Record<string, string> = {
-  'aerial-launcher': aerialLauncher,
-  'aerial-ml-corp': aerialMlCorp,
-  'aerial-stwnews': aerialStwnews,
+  'ml-corp': mlCorp,
+  stwnews: stwnews,
   bluglo: bluglo,
   brxp: brxp,
   campaign_event_currency: campaign_event_currency,

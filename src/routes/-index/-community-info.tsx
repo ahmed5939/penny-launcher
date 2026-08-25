@@ -39,12 +39,12 @@ const information: Array<{
   {
     url: 'https://stw.news/',
     text: 'STW News',
-    imageUrl: images['aerial-stwnews'],
+    imageUrl: images.stwnews,
   },
   {
     url: 'https://discord.gg/XbGSTuXZdy',
     text: 'ML Corp',
-    imageUrl: images['aerial-ml-corp'],
+    imageUrl: images['ml-corp'],
   },
 ]
 
