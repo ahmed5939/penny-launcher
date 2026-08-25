@@ -7,10 +7,6 @@ export function epicGamesAccountSettingsURL(exchangeCode: string) {
   return `https://www.epicgames.com/id/exchange?exchangeCode=${exchangeCode}`
 }
 
-export function stwNewsProfileURL(displayName: string) {
-  return `https://stw.news/${displayName}`
-}
-
 export function pennyDBProfileURL(displayName: string) {
   return `https://pennydb.net/profile/${encodeURIComponent(displayName)}`
 }

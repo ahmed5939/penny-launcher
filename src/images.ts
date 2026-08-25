@@ -66,7 +66,6 @@ import twine_t03 from '../assets/images/ingredients/twine_t03.png'
 import twine_t04 from '../assets/images/ingredients/twine_t04.png'
 import twine_t05 from '../assets/images/ingredients/twine_t05.png'
 import twine_t06 from '../assets/images/ingredients/twine_t06.png'
-import koFi from '../assets/images/ko-fi.webp'
 import epicgames from '../assets/images/logos/epicgames.png'
 import psn from '../assets/images/logos/psn.png'
 import xbl from '../assets/images/logos/xbl.png'
@@ -403,7 +402,6 @@ export const images: Record<string, string> = {
   twine_t04: twine_t04,
   twine_t05: twine_t05,
   twine_t06: twine_t06,
-  'ko-fi': koFi,
   epicgames: epicgames,
   psn: psn,
   xbl: xbl,
