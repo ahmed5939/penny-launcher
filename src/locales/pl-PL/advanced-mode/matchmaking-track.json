@@ -1,0 +1,29 @@
+{
+  "description": "Zobacz, co gracz robi teraz w Ratowaniu Świata — aktualna misja, trudność, drużyna i nagrody.",
+  "form": {
+    "recently": {
+      "label": "Uwaga: ci gracze są przechowywani tymczasowo"
+    }
+  },
+  "live": {
+    "eyebrow": "Aktywna misja",
+    "loading": "Sprawdzanie sesji gracza...",
+    "unknown-mission": "Nieznana misja",
+    "zone": "Strefa",
+    "difficulty": "Trudność",
+    "region": "Region",
+    "squad": "Drużyna ({{total}})",
+    "mission-rewards": "Nagrody za misję",
+    "alert-rewards": "Nagrody za alert misji",
+    "modifiers": "Modyfikatory",
+    "session": "Sesja",
+    "session-time": "{{time}} min",
+    "refresh": "Odśwież",
+    "pennydb": "Zobacz na PennyDB",
+    "status": {
+      "launched": "W misji",
+      "in-lobby": "W poczekalni",
+      "not-playing": "{{name}} nie jest obecnie na misji"
+    }
+  }
+}

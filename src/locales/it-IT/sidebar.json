@@ -1,0 +1,64 @@
+{
+  "stw-operations": {
+    "title": "Operazioni STW",
+    "options": {
+      "auto-kick": "Auto-caccia",
+      "taxi-service": "Servizio Taxi",
+      "party": "Party",
+      "daily-quests": "Missioni Giornaliere",
+      "expeditions": "Spedizioni",
+      "squad-presets": "Squadre Sopravvissuti",
+      "inventory": "Deposito",
+      "compendium": "Compendio",
+      "quests": "Registro Missioni",
+      "loadouts": "Equipaggiamenti Eroi",
+      "timeline": "Cronologia Eventi",
+      "shop": "Negozio STW",
+      "xp-boosts": "Incrementi PE",
+      "auto-pin-urns": "Auto-fissa Rovine",
+      "auto-llamas": "Auto-lama",
+      "unlock": "Sblocca Ricompense SSD"
+    },
+    "auto-kick-status": {
+      "issue": "Errore",
+      "active": "Attivo"
+    }
+  },
+  "account-management": {
+    "title": "Gestione Account",
+    "options": {
+      "vbucks-information": "Informazioni V-Bucks",
+      "profile": "Profilo",
+      "redeem-codes": "Riscatta Codici",
+      "devices-auth": "Autorizzazione Dispositivi",
+      "epic-settings": "Impostazioni Epic Games"
+    }
+  },
+  "advanced-mode": {
+    "title": "Modalità Avanzata",
+    "options": {
+      "matchmaking-track": "Traccia Matchmaking",
+      "server-status": "Stato Server",
+      "world-info": "World Info"
+    }
+  },
+  "accounts": {
+    "title": "I Miei Account",
+    "options": {
+      "show-total-accounts": "Mostra Account Totali",
+      "auth": "Codice Autorizzazione",
+      "exchange": "Codice Exchange",
+      "device": "Autorizzazione Dispositivi",
+      "remove": "Rimuovi Account"
+    }
+  },
+  "links": {
+    "discord": "Server Discord",
+    "github": "Vedi su GitHub",
+    "credits": "Crediti"
+  },
+  "version": {
+    "release": "Rilascio v{{version}}",
+    "all-releases": "Tutti I Rilasci"
+  }
+}

@@ -1,0 +1,349 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Penny design tokens.
+ *
+ * Sampled from the Power B.A.S.E. Penny render in `src/assets/brand`: the
+ * jacket's hot pink (336 68% 45%) is the interactive colour, the hair's rose
+ * and a deeper magenta bracket it in the brand gradient, and the jacket trim's
+ * teal (184 100% 34%) is the one accent that is not pink.
+ *
+ * Dark-first, because that is how the app actually ships. Every surface,
+ * border and muted tone shares the pink-tinted neutral hue (335) so nothing
+ * drifts toward grey, and surfaces step in small increments — background →
+ * surface → card → elevated — for depth without heavy borders.
+ *
+ * `--destructive` is deliberately pushed to a warm red (hue 6) and away from
+ * the primary: at the source pink's own hue a delete button and a confirm
+ * button would be near-indistinguishable.
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 335 25% 10%;
+    --surface: 335 40% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 335 25% 10%;
+    --elevated: 335 35% 96%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 335 25% 10%;
+    --primary: 336 72% 46%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 335 35% 95%;
+    --secondary-foreground: 335 25% 16%;
+    --muted: 335 30% 95%;
+    --muted-foreground: 335 10% 45%;
+    --accent: 336 60% 94%;
+    --accent-foreground: 336 60% 30%;
+    --destructive: 6 74% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 168 62% 32%;
+    --warning: 38 92% 45%;
+    --border: 335 20% 88%;
+    --input: 335 20% 88%;
+    --ring: 336 72% 46%;
+
+    /*
+     * Fluent's numbers, not the web's. WinUI uses 4px on controls
+     * (ControlCornerRadius) and 8px on surfaces and flyouts
+     * (OverlayCornerRadius); the 10px this used to be sat between the two and
+     * read as neither.
+     */
+    --radius: 0.25rem;
+    --radius-surface: 0.5rem;
+
+    /*
+     * Control stroke. A WinUI control's bottom edge is a shade stronger than
+     * its other three, which is what makes it look raised without any shadow
+     * at all.
+     */
+    --control-stroke: 335 20% 78%;
+  }
+
+  .dark {
+    /* Near-black with just enough pink to read as "Penny" not "grey app". */
+    --background: 335 24% 4%;
+    --foreground: 335 18% 97%;
+    --surface: 335 22% 6%;
+    --card: 335 20% 8%;
+    --card-foreground: 335 18% 97%;
+    --elevated: 335 18% 13%;
+    --popover: 335 20% 8%;
+    --popover-foreground: 335 18% 97%;
+    --primary: 336 82% 62%;
+    --primary-foreground: 336 45% 8%;
+    --secondary: 335 16% 15%;
+    --secondary-foreground: 335 18% 97%;
+    --muted: 335 16% 15%;
+    --muted-foreground: 335 10% 63%;
+    --accent: 336 30% 19%;
+    --accent-foreground: 336 85% 88%;
+    --destructive: 6 82% 63%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 168 62% 46%;
+    --warning: 38 94% 62%;
+    --border: 335 16% 17%;
+    --input: 335 16% 19%;
+    --ring: 336 82% 62%;
+
+    --control-stroke: 335 16% 26%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+
+    /*
+     * Segoe UI Variable is the Windows 11 UI face, and it ships three optical
+     * sizes in one family: Text below 18px, Display above it, Small under
+     * 12px. Naming Text first means body copy gets the size it was drawn for;
+     * the headings below opt into Display.
+     */
+    font-family:
+      'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI',
+      system-ui, -apple-system, sans-serif;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * `cursor: pointer` is the *hyperlink* cursor. A native Windows button
+   * never shows it — every control in the app was quietly claiming to be a
+   * link. Anchors that really do navigate somewhere outside the app keep it.
+   */
+  button,
+  [role='button'],
+  [role='tab'],
+  [role='option'],
+  [role='menuitem'],
+  summary,
+  label {
+    cursor: default;
+  }
+
+  /*
+   * WinUI control states land in ~83ms or immediately. The web's 150ms
+   * everything-fades default is the lag you feel without being able to name
+   * it, so hover and press get cut back to a frame or two. Anything that
+   * genuinely animates — panels opening, toasts arriving — is unaffected,
+   * since those carry their own longer durations.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    button,
+    [role='button'],
+    [role='menuitem'],
+    [role='option'],
+    a {
+      transition-duration: 80ms;
+    }
+  }
+
+  /* Headings read as UI, not as prose, and take the Display optical size. */
+  h1,
+  h2,
+  h3 {
+    font-family:
+      'Segoe UI Variable Display', 'Segoe UI Variable', 'Segoe UI',
+      system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
+  /*
+   * The Windows 11 focus rectangle: a high-contrast outer ring with an
+   * inverse hairline inside it. Unlike a soft accent glow it stays legible on
+   * every surface in the app — including a translucent one with the desktop
+   * showing through.
+   *
+   * Keyboard focus only; pointer focus paints nothing.
+   */
+  :focus-visible {
+    outline: 2px solid hsl(var(--foreground));
+    outline-offset: 1px;
+    box-shadow: 0 0 0 1px hsl(var(--background));
+    border-radius: var(--radius);
+  }
+
+  /* Windows exposes high contrast as a system setting. Honour it. */
+  @media (forced-colors: active) {
+    :focus-visible {
+      outline: 2px solid CanvasText;
+      box-shadow: none;
+    }
+  }
+}
+
+:root {
+  /*
+   * Must equal `titleBarHeight` in kernel/startup/window-chrome.ts — Windows
+   * sizes the caption buttons from that, and if the two disagree the buttons
+   * sit proud of the header strip. The renderer syncs this from the main
+   * process on load; this value is what the first paint uses.
+   */
+  --header-height: 2.5rem;
+
+  --sidebar-width-md: 14rem;
+  --sidebar-width-lg: 16.5rem;
+
+  /*
+   * Brand gradient — used by the logo glow, hero and active nav accents.
+   * Reads top-left to bottom-right of the render: hair highlight, jacket,
+   * then the magenta the jacket falls into in shadow.
+   */
+  --brand-from: 344 78% 72%;
+  --brand-via: 336 78% 56%;
+  --brand-to: 322 72% 44%;
+
+  /* The jacket trim. The only non-pink accent, so it stays deliberate. */
+  --brand-teal: 184 84% 40%;
+
+  --zone-color-stonewood: #34d375;
+  --zone-color-plankerton: #4da2dd;
+  --zone-color-canny-valley: #dfa12a;
+  --zone-color-twine-peaks: #9c72f7;
+  --zone-color-ventures: #3cd8e3;
+}
+
+/**
+ * Scrollbars.
+ *
+ * The hand-drawn `::-webkit-scrollbar` recipe this replaces was a web
+ * signature — a pink-tinted, custom-rounded bar that exists nowhere else on
+ * the OS. The standard properties hand the job back to Chromium's Windows 11
+ * rendering: thin, neutral, and shaped the way every other app's are.
+ */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+  }
+}
+
+@layer components {
+  /* Brand gradient text, used for the wordmark. */
+  .brand-text {
+    @apply bg-clip-text text-transparent;
+
+    background-image: linear-gradient(
+      100deg,
+      hsl(var(--brand-from)),
+      hsl(var(--brand-via)) 55%,
+      hsl(var(--brand-to))
+    );
+  }
+
+  /*
+   * Panel surface used by cards, hubs and empty states. Slightly lighter
+   * than the page with a hairline border and a top highlight, so panels
+   * separate from the background without a heavy stroke.
+   */
+  .panel {
+    @apply rounded-xl border border-border/70 bg-card/60;
+
+    /*
+     * Fluent gets depth from a layered fill and a control stroke, not from a
+     * drop shadow — the bottom edge one shade stronger than the other three.
+     * Shadows are reserved for things that genuinely float above the window:
+     * flyouts, menus, dialogs.
+     */
+    border-bottom-color: hsl(var(--control-stroke));
+  }
+
+  .panel-interactive {
+    @apply panel transition-colors;
+
+    @apply hover:border-primary/40 hover:bg-accent/30;
+  }
+}
+
+img {
+  pointer-events: none;
+  user-select: none;
+}
+
+.app-draggable-region {
+  -webkit-app-region: drag;
+}
+
+.not-draggable-region {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * The caption buttons are Windows' now, and they sit in an overlay region the
+ * browser reports through these environment variables. Stopping the header at
+ * `titlebar-area-width` is what guarantees nothing ever renders underneath
+ * them — hard-coding a right padding breaks the moment the buttons change
+ * size, which they do in RTL and at other display scales.
+ */
+.titlebar-area {
+  width: env(titlebar-area-width, 100%);
+  height: env(titlebar-area-height, var(--header-height));
+  margin-left: env(titlebar-area-x, 0);
+}
+
+/*
+ * Mica.
+ *
+ * The window base is transparent when the material is active, so the chrome
+ * can let the desktop through while content stays readable. This follows
+ * WinUI's own rule rather than making the whole app see-through: Mica shows
+ * in the titlebar and the navigation surfaces, and the content layer above it
+ * stays opaque. Without `.mica` — Windows 10, or anything not Win32 — every
+ * one of these falls back to the solid token it always used.
+ */
+html.mica,
+html.mica body {
+  background: transparent;
+}
+
+html.mica .mica-chrome {
+  background-color: hsl(var(--surface) / 0.55);
+}
+
+html.mica .mica-content {
+  background-color: hsl(var(--background) / 0.88);
+}
+
+/*
+ * Windows stops rounding the window and drawing its border once it fills the
+ * screen, so the app must stop implying one too.
+ */
+html.maximized .app-window-edge {
+  border-radius: 0;
+}
+
+.mantine-ColorInput-input {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+  height: 2.5rem;
+}
+
+.mantine-ColorSwatch-alphaOverlay {
+  background-image: none;
+}
+
+.mantine-ColorInput-dropdown {
+  background-color: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+}
+
+@media (max-width: 600px) {
+  [data-sonner-toaster] {
+    --mobile-offset: 0px !important;
+  }
+}

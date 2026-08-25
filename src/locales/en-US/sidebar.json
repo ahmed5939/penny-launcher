@@ -1,0 +1,64 @@
+{
+  "stw-operations": {
+    "title": "STW Operations",
+    "options": {
+      "auto-kick": "Auto-kick",
+      "taxi-service": "Taxi Service",
+      "party": "Party",
+      "daily-quests": "Daily Quests",
+      "expeditions": "Expeditions",
+      "squad-presets": "Survivor Squads",
+      "inventory": "Vault",
+      "compendium": "Compendium",
+      "quests": "Quest Log",
+      "loadouts": "Hero Loadouts",
+      "timeline": "Event Timeline",
+      "shop": "STW Shop",
+      "xp-boosts": "XP Boosts",
+      "auto-pin-urns": "Auto-pin Urns",
+      "auto-llamas": "Auto-llamas",
+      "unlock": "Unlock SSD Rewards"
+    },
+    "auto-kick-status": {
+      "issue": "Issue",
+      "active": "Active"
+    }
+  },
+  "account-management": {
+    "title": "Account Management",
+    "options": {
+      "vbucks-information": "V-Bucks Information",
+      "profile": "Profile",
+      "redeem-codes": "Redeem Codes",
+      "devices-auth": "Devices Auth",
+      "epic-settings": "Epic Games Settings"
+    }
+  },
+  "advanced-mode": {
+    "title": "Advanced Mode",
+    "options": {
+      "matchmaking-track": "Matchmaking Track",
+      "server-status": "Server Status",
+      "world-info": "World Info"
+    }
+  },
+  "accounts": {
+    "title": "My Accounts",
+    "options": {
+      "show-total-accounts": "Show Total Accounts",
+      "auth": "Authorization Code",
+      "exchange": "Exchange Code",
+      "device": "Device Auth",
+      "remove": "Remove Account"
+    }
+  },
+  "links": {
+    "discord": "Discord Server",
+    "github": "View on GitHub",
+    "credits": "Credits"
+  },
+  "version": {
+    "release": "Release v{{version}}",
+    "all-releases": "All Releases"
+  }
+}

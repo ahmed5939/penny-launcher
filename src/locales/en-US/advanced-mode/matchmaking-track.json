@@ -1,0 +1,29 @@
+{
+  "description": "See what a player is doing in Save the World right now — current mission, difficulty, squad and rewards.",
+  "form": {
+    "recently": {
+      "label": "Note: These players are stored temporarily"
+    }
+  },
+  "live": {
+    "eyebrow": "Active deployment",
+    "loading": "Checking player session...",
+    "unknown-mission": "Unknown mission",
+    "zone": "Zone",
+    "difficulty": "Difficulty",
+    "region": "Region",
+    "squad": "Squad ({{total}})",
+    "mission-rewards": "Mission rewards",
+    "alert-rewards": "Mission alert rewards",
+    "modifiers": "Modifiers",
+    "session": "Session",
+    "session-time": "{{time}} mins",
+    "refresh": "Refresh",
+    "pennydb": "View on PennyDB",
+    "status": {
+      "launched": "Launched",
+      "in-lobby": "In lobby",
+      "not-playing": "{{name}} is not currently in a mission"
+    }
+  }
+}

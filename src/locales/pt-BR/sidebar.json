@@ -1,0 +1,64 @@
+{
+  "stw-operations": {
+    "title": "Operações STW",
+    "options": {
+      "auto-kick": "Auto-expulsar",
+      "taxi-service": "Serviço de Táxi",
+      "party": "Grupo",
+      "daily-quests": "Missões Diárias",
+      "expeditions": "Expedições",
+      "squad-presets": "Esquadrões de Sobreviventes",
+      "inventory": "Cofre",
+      "compendium": "Compêndio",
+      "quests": "Registro de Missões",
+      "loadouts": "Equipes de Heróis",
+      "timeline": "Linha do Tempo",
+      "shop": "Loja STW",
+      "xp-boosts": "Impulsos de XP",
+      "auto-pin-urns": "Fixar Urnas Automaticamente",
+      "auto-llamas": "Lhamas Automáticas",
+      "unlock": "Desbloquear Recompensas dos Escudos"
+    },
+    "auto-kick-status": {
+      "issue": "Problema",
+      "active": "Ativo"
+    }
+  },
+  "account-management": {
+    "title": "Gerenciamento de Conta",
+    "options": {
+      "vbucks-information": "Informações de V-Bucks",
+      "profile": "Perfil",
+      "redeem-codes": "Resgatar Códigos",
+      "devices-auth": "Autenticação de Dispositivos",
+      "epic-settings": "Configurações da Epic Games"
+    }
+  },
+  "advanced-mode": {
+    "title": "Modo Avançado",
+    "options": {
+      "matchmaking-track": "Rastreamento de Partidas",
+      "server-status": "Status do Servidor",
+      "world-info": "Informações do Mundo"
+    }
+  },
+  "accounts": {
+    "title": "Minhas Contas",
+    "options": {
+      "show-total-accounts": "Mostrar Total de Contas",
+      "auth": "Código de Autorização",
+      "exchange": "Código de Troca",
+      "device": "Autenticação por Dispositivo",
+      "remove": "Remover Conta"
+    }
+  },
+  "links": {
+    "discord": "Servidor do Discord",
+    "github": "Ver no GitHub",
+    "credits": "Créditos"
+  },
+  "version": {
+    "release": "Lançamento v{{version}}",
+    "all-releases": "Todas as Versões"
+  }
+}

@@ -1,0 +1,162 @@
+import type {
+  ComboboxOption,
+  ComboboxProps,
+} from '../../../components/ui/extended/combobox/hooks'
+import type { AutomationAccountData } from '../../../types/automation'
+
+import { useEffect } from 'react'
+
+import { useTaxiServiceStore } from '../../../state/stw-operations/taxi-service'
+
+import {
+  useGetAutomationActions,
+  useGetAutomationData,
+} from '../../../hooks/stw-operations/automation'
+import { useGetAccounts } from '../../../hooks/accounts'
+
+import { checkIfCustomDisplayNameIsValid } from '../../../lib/validations/properties'
+import { parseCustomDisplayName } from '../../../lib/utils'
+
+export function useAutomationData() {
+  const { accountsArray, accountList } = useGetAccounts()
+  const { selectedAccounts } = useGetAutomationData()
+  const taxiServiceAccounts = useTaxiServiceStore(
+    (state) => state.accounts,
+  )
+  const {
+    addAccount,
+    removeAccount,
+    updateAccountAction,
+    updateAccountStatus,
+    updateAccountSubmitting,
+  } = useGetAutomationActions()
+
+  const options = accountsArray
+    .filter(
+      (account) =>
+        !selectedAccounts[account.accountId] &&
+        !taxiServiceAccounts[account.accountId],
+    )
+    .map((account) => {
+      const _keys: Array<string> = [account.displayName]
+
+      if (checkIfCustomDisplayNameIsValid(account.customDisplayName)) {
+        _keys.push(account.customDisplayName)
+      }
+
+      return {
+        keywords: _keys,
+        label: parseCustomDisplayName(account),
+        value: account.accountId,
+      } as ComboboxOption
+    })
+  const accounts = Object.keys(selectedAccounts)
+    .filter((accountId) => accountList[accountId])
+    .map((accountId) => accountList[accountId])
+  const accountSelectorIsDisabled = options.length <= 0
+
+  useEffect(() => {
+    const listener = window.electronAPI.notificationAutomationServiceStart(
+      async (response) => {
+        updateAccountStatus(response.accountId, response.status)
+        updateAccountSubmitting('connecting', {
+          accountId: response.accountId,
+          value: false,
+        })
+      },
+    )
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [])
+
+  useEffect(() => {
+    const listener =
+      window.electronAPI.notificationAutomationServiceRemove(
+        async (accountId) => {
+          removeAccount(accountId)
+        },
+      )
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [])
+
+  const customFilter: ComboboxProps['customFilter'] = (
+    _value,
+    search,
+    keywords,
+  ) => {
+    const _search = search.toLowerCase().trim()
+    const _keys =
+      keywords &&
+      keywords.some((keyword) =>
+        keyword.toLowerCase().trim().includes(_search),
+      )
+
+    return _keys ? 1 : 0
+  }
+
+  const onSelectItem = (accountId: string) => {
+    addAccount(accountId)
+    updateAccountSubmitting('connecting', {
+      accountId,
+      value: true,
+    })
+    window.electronAPI.automationServiceStart(accountId)
+  }
+
+  const handleRemoveAccount = (accountId: string) => () => {
+    updateAccountSubmitting('removing', {
+      accountId,
+      value: true,
+    })
+    window.electronAPI.automationServiceRemove(accountId)
+  }
+
+  const handleRemoveAll = () => {
+    accounts.forEach(({ accountId }) => handleRemoveAccount(accountId)())
+  }
+
+  const handleReloadAccount = (accountId: string) => () => {
+    updateAccountSubmitting('connecting', {
+      accountId,
+      value: true,
+    })
+    window.electronAPI.automationServiceReload(accountId)
+  }
+
+  const handleReloadAll = () => {
+    accounts.forEach(({ accountId }) => handleReloadAccount(accountId)())
+  }
+
+  const handleUpdateClaimAction =
+    (type: keyof AutomationAccountData['actions'], accountId: string) =>
+    (value: boolean) => {
+      updateAccountAction(type, {
+        accountId,
+        value,
+      })
+      window.electronAPI.automationServiceUpdateAction(accountId, {
+        type,
+        value,
+      })
+    }
+
+  return {
+    accounts,
+    accountSelectorIsDisabled,
+    options,
+    selectedAccounts,
+
+    customFilter,
+    handleReloadAccount,
+    handleReloadAll,
+    handleRemoveAccount,
+    handleRemoveAll,
+    handleUpdateClaimAction,
+    onSelectItem,
+  }
+}

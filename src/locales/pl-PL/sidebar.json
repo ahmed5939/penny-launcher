@@ -1,0 +1,64 @@
+{
+  "stw-operations": {
+    "title": "Operacje w RŚ",
+    "options": {
+      "auto-kick": "Auto-wyrzucanie",
+      "taxi-service": "Serwis Taksówkowy",
+      "party": "Ekipa",
+      "daily-quests": "Dzienne Zadania",
+      "expeditions": "Ekspedycje",
+      "squad-presets": "Oddziały Ocalałych",
+      "inventory": "Skarbiec",
+      "compendium": "Kompendium",
+      "quests": "Dziennik Zadań",
+      "loadouts": "Zestawy Bohaterów",
+      "timeline": "Oś Czasu Wydarzeń",
+      "shop": "Sklep STW",
+      "xp-boosts": "Wzmocnienia PD",
+      "auto-pin-urns": "Aut-przypinanie Urn",
+      "auto-llamas": "Auto-llamy",
+      "unlock": "Odblokuj nagrody Burzowej Tarczy"
+    },
+    "auto-kick-status": {
+      "issue": "Problem",
+      "active": "Działa"
+    }
+  },
+  "account-management": {
+    "title": "Zarządzanie kontem",
+    "options": {
+      "vbucks-information": "Informacje o V-Dolcach",
+      "profile": "Profil",
+      "redeem-codes": "Zrealizuj kody",
+      "devices-auth": "Urządzenia autoryzowane",
+      "epic-settings": "Ustawienia Epic Games"
+    }
+  },
+  "advanced-mode": {
+    "title": "Tryb zaawansowany",
+    "options": {
+      "matchmaking-track": "Ścieżka matchmakingowa",
+      "server-status": "Status Serwerów",
+      "world-info": "Informacje o świecie"
+    }
+  },
+  "accounts": {
+    "title": "Moje konta",
+    "options": {
+      "show-total-accounts": "Pokaż wszystkie konta",
+      "auth": "Kod Autoryzacji",
+      "exchange": "Kod wymiany",
+      "device": "Użyj autoryzacji urządzenia",
+      "remove": "Usuń konto"
+    }
+  },
+  "links": {
+    "discord": "Serwer Discord",
+    "github": "Zobacz na GitHubie",
+    "credits": "Podziękowania"
+  },
+  "version": {
+    "release": "Wersja v{{version}}",
+    "all-releases": "Wszystkie Wydania"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "description": "Guarda cosa sta facendo un giocatore in Salva il Mondo in questo momento — missione attuale, difficoltà, squadra e ricompense.",
+  "form": {
+    "recently": {
+      "label": "Nota: questi giocatori vengono memorizzati temporaneamente"
+    }
+  },
+  "live": {
+    "eyebrow": "Missione attiva",
+    "loading": "Controllo della sessione del giocatore...",
+    "unknown-mission": "Missione sconosciuta",
+    "zone": "Zona",
+    "difficulty": "Difficoltà",
+    "region": "Regione",
+    "squad": "Squadra ({{total}})",
+    "mission-rewards": "Ricompense della missione",
+    "alert-rewards": "Ricompense dell'allerta missione",
+    "modifiers": "Modificatori",
+    "session": "Sessione",
+    "session-time": "{{time}} min",
+    "refresh": "Aggiorna",
+    "pennydb": "Vedi su PennyDB",
+    "status": {
+      "launched": "In missione",
+      "in-lobby": "Nella lobby",
+      "not-playing": "{{name}} non è attualmente in una missione"
+    }
+  }
+}

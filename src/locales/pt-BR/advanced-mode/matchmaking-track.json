@@ -1,0 +1,29 @@
+{
+  "description": "Veja o que um jogador está fazendo no Salve o Mundo agora — missão atual, dificuldade, esquadrão e recompensas.",
+  "form": {
+    "recently": {
+      "label": "Nota: Esses jogadores são armazenados temporariamente"
+    }
+  },
+  "live": {
+    "eyebrow": "Missão ativa",
+    "loading": "Verificando a sessão do jogador...",
+    "unknown-mission": "Missão desconhecida",
+    "zone": "Zona",
+    "difficulty": "Dificuldade",
+    "region": "Região",
+    "squad": "Esquadrão ({{total}})",
+    "mission-rewards": "Recompensas da missão",
+    "alert-rewards": "Recompensas do alerta de missão",
+    "modifiers": "Modificadores",
+    "session": "Sessão",
+    "session-time": "{{time}} min",
+    "refresh": "Atualizar",
+    "pennydb": "Ver no PennyDB",
+    "status": {
+      "launched": "Em missão",
+      "in-lobby": "No lobby",
+      "not-playing": "{{name}} não está em uma missão no momento"
+    }
+  }
+}
