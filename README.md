@@ -60,7 +60,6 @@ When a new version is available, you will see a notification in the home section
 - Custom game path and custom display names per account.
 - Launch the game with the selected account.
 - Generate Exchange Codes.
-- Access the [STW News](https://stw.news/) profile of the selected account.
 - Automation: daily quests, mission scheduling, auto-llamas, and more.
 
 ## Development

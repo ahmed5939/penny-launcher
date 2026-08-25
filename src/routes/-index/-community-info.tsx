@@ -36,16 +36,6 @@ const information: Array<{
       </svg>
     ),
   },
-  {
-    url: 'https://stw.news/',
-    text: 'STW News',
-    imageUrl: images.stwnews,
-  },
-  {
-    url: 'https://discord.gg/XbGSTuXZdy',
-    text: 'ML Corp',
-    imageUrl: images['ml-corp'],
-  },
 ]
 
 export function CommunityInfo() {
