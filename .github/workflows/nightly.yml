@@ -48,10 +48,13 @@ jobs:
         run: |
           # Minute precision: same-day rebuilds must get distinct versions,
           # or Squirrel treats a reinstall as already-current and keeps the
-          # old app folder.
-          DATE=$(date -u +%Y%m%d%H%M)
+          # old app folder. The 'x' between date and time is load-bearing:
+          # Squirrel's bundled NuGet Int32-parses each digit run, and a
+          # 12-digit run overflows it.
+          DATE=$(date -u +%Y%m%d)
+          TIME=$(date -u +%H%M)
           PKG_VERSION=$(node -p "require('./package.json').version")
-          NIGHTLY_VERSION="${PKG_VERSION}-nightly${DATE}"
+          NIGHTLY_VERSION="${PKG_VERSION}-nightly${DATE}x${TIME}"
           npm version --no-git-tag-version "$NIGHTLY_VERSION"
           echo "NIGHTLY_VERSION=$NIGHTLY_VERSION" >> "$GITHUB_ENV"
           echo "NIGHTLY_DATE=$DATE" >> "$GITHUB_ENV"
