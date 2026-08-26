@@ -9,9 +9,7 @@ A fast Windows desktop application to manage things on Fortnite STW.
 
 Penny Launcher is a fork of [Aerial Launcher](https://github.com/Ciensprog/Aerial-Launcher) by **Ciensprog** (itself based on Potato Launcher), focused on **performance** and **new features**. All credit for the original application goes to Ciensprog and contributors. Licensed under GPL-3.0.
 
-<p align="center">
-  <img src="./app-preview.jpg" />
-</p>
+<!-- TODO: add a screenshot of Penny Launcher here (app-preview.jpg) once captured from the running app. -->
 
 > [!IMPORTANT]
 >
@@ -62,7 +60,7 @@ When a new version is available, you will see a notification in the home section
 - Custom game path and custom display names per account.
 - Launch the game with the selected account.
 - Generate Exchange Codes.
-- Access the [STW News](https://stw.news/) profile of the selected account.
+- Access the [Penny DB](https://pennydb.net) profile of the selected account.
 - Automation: daily quests, mission scheduling, auto-llamas, and more.
 
 ## Development

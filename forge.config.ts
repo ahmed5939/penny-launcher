@@ -13,10 +13,9 @@ const config: ForgeConfig = {
     asar: true,
     icon: 'icon-transparent.ico',
     /**
-     * Built-in plugins are plain CommonJS folders with their own windows,
-     * preload scripts, PowerShell helpers and image assets. They must stay
-     * real files on disk (PowerShell cannot read from inside an asar), so
-     * they ship as resources/plugins instead of going through Vite.
+     * Marketplace packages are plain, readable CommonJS folders. They must
+     * stay as real files on disk so users can inspect their README and source
+     * before choosing to install them.
      */
     extraResource: ['./plugins', './endurance-assets'],
   },

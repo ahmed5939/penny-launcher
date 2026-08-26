@@ -540,11 +540,10 @@ export class Automation {
         : accountIds
 
     ids.forEach((accountId) => {
-      if (
-        Automation._activeChecks[accountId] !== undefined &&
-        Automation._activeChecks[accountId] !== null
-      ) {
-        clearInterval(Automation._activeChecks[accountId])
+      const activeCheck = Automation._activeChecks[accountId]
+
+      if (activeCheck !== undefined && activeCheck !== null) {
+        clearInterval(activeCheck)
         Automation._activeChecks[accountId] = null
       }
     })
