@@ -164,7 +164,7 @@ export class Authentication {
     }
 
     MainWindow.instance.webContents.send(
-      ElectronAPIEventKeys.ResponseAuthWithAuthorization,
+      ElectronAPIEventKeys.ResponseAuthWithExchange,
       {
         accessToken: null,
         data: null,
