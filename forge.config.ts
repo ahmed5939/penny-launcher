@@ -6,25 +6,61 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FuseV1Options, FuseVersion } from '@electron/fuses'
 
-import { cp, readFile } from 'node:fs/promises'
+import { cp, readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import packageJson from './package.json'
 
 /**
- * Copy the production dependency closure into the packaged app.
+ * Copy the main process's runtime dependencies into the packaged app.
  *
  * plugin-vite ≥7.4 packages only the Vite output — node_modules never make
- * it in. But the main-process build externalizes every production
- * dependency (vite.base.config.ts), and marketplace plugins resolve their
- * requires out of the app's node_modules via NODE_PATH, so the packaged
- * app needs the real modules on disk. Copying from the project's
- * node_modules — not reinstalling — keeps the electron-rebuilt native
- * binaries (node-process-watcher) intact.
+ * it in. The renderer bundles everything it uses, but the main-process
+ * build externalizes production dependencies (vite.base.config.ts), so its
+ * bundles still `require()` them from disk. The list is read off the built
+ * bundles rather than package.json, so it stays exact: renderer-only
+ * libraries never ship, and a new kernel import can't be forgotten here.
+ * Copying from the project's node_modules — not reinstalling — keeps the
+ * electron-rebuilt native binaries (node-process-watcher) intact.
+ * Peer dependencies are deliberately not followed; they exist for hosts,
+ * and chasing them is how 100 MB of @swc/core ends up in an installer.
  */
-async function copyProductionDependencies(buildPath: string) {
+async function copyMainProcessDependencies(buildPath: string) {
   const root = path.dirname(__filename)
-  const queue = Object.keys(packageJson.dependencies)
+  const dependencies: Record<string, string> = packageJson.dependencies
+
+  const buildDir = path.join(buildPath, '.vite', 'build')
+  const required = new Set<string>()
+
+  for (const file of await readdir(buildDir)) {
+    if (!file.endsWith('.js')) {
+      continue
+    }
+
+    const bundle = await readFile(path.join(buildDir, file), 'utf8')
+
+    for (const match of bundle.matchAll(
+      /require\(["']([^"'./][^"']*)["']\)/g
+    )) {
+      const id = match[1]
+
+      if (id.startsWith('node:')) {
+        continue
+      }
+
+      const name = id.startsWith('@')
+        ? id.split('/').slice(0, 2).join('/')
+        : id.split('/')[0]
+
+      // Externals are always declared dependencies; anything else here is
+      // a builtin ('fs', 'electron') or an optional probe inside a dep.
+      if (name in dependencies) {
+        required.add(name)
+      }
+    }
+  }
+
+  const queue = [...required]
   const seen = new Set<string>()
 
   while (queue.length > 0) {
@@ -56,15 +92,11 @@ async function copyProductionDependencies(buildPath: string) {
     const manifest = JSON.parse(manifestRaw) as {
       dependencies?: Record<string, string>
       optionalDependencies?: Record<string, string>
-      peerDependencies?: Record<string, string>
     }
 
     queue.push(
       ...Object.keys(manifest.dependencies ?? {}),
-      ...Object.keys(manifest.optionalDependencies ?? {}),
-      // npm ≥7 hoists installed peers next to everything else; absent ones
-      // fall through the readFile guard above.
-      ...Object.keys(manifest.peerDependencies ?? {})
+      ...Object.keys(manifest.optionalDependencies ?? {})
     )
   }
 }
@@ -72,7 +104,7 @@ async function copyProductionDependencies(buildPath: string) {
 const config: ForgeConfig = {
   hooks: {
     packageAfterPrune: async (_forgeConfig, buildPath) => {
-      await copyProductionDependencies(buildPath)
+      await copyMainProcessDependencies(buildPath)
     },
   },
   packagerConfig: {
