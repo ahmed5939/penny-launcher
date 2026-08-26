@@ -1,0 +1,72 @@
+name: Nightly
+on:
+  schedule:
+    # 03:00 UTC daily, after the day's work has landed.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    name: Build and publish nightly
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v7
+
+      # Scheduled runs bail out when main has not moved since the last
+      # nightly; a manual dispatch always rebuilds.
+      - name: Skip when nothing changed since the last nightly
+        id: changes
+        shell: bash
+        run: |
+          LAST=$(gh release view nightly --json targetCommitish -q .targetCommitish 2>/dev/null || echo "")
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$LAST" = "$GITHUB_SHA" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - uses: actions/setup-node@v7
+        if: steps.changes.outputs.skip == 'false'
+        with:
+          node-version: 20.12.0
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.changes.outputs.skip == 'false'
+        run: npm ci
+
+      # Squirrel versions go through legacy NuGet parsing, so the prerelease
+      # label must stay a single alphanumeric run — no dots, no extra hyphens.
+      - name: Stamp nightly version
+        if: steps.changes.outputs.skip == 'false'
+        shell: bash
+        run: |
+          DATE=$(date -u +%Y%m%d)
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          NIGHTLY_VERSION="${PKG_VERSION}-nightly${DATE}"
+          npm version --no-git-tag-version "$NIGHTLY_VERSION"
+          echo "NIGHTLY_VERSION=$NIGHTLY_VERSION" >> "$GITHUB_ENV"
+          echo "NIGHTLY_DATE=$DATE" >> "$GITHUB_ENV"
+
+      - name: Build installer
+        if: steps.changes.outputs.skip == 'false'
+        run: npm run make
+
+      - name: Publish rolling nightly release
+        if: steps.changes.outputs.skip == 'false'
+        shell: bash
+        run: |
+          gh release delete nightly --yes || true
+          git push origin :refs/tags/nightly || true
+          gh release create nightly out/make/squirrel.windows/x64/* \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Nightly $NIGHTLY_DATE" \
+            --notes "$(printf 'Automated nightly build of `main` @ %s.\n\nVersion: `%s`\n\nNightly builds are unstable and for testing only — use the latest stable release otherwise.' "$GITHUB_SHA" "$NIGHTLY_VERSION")"
+        env:
+          GH_TOKEN: ${{ github.token }}

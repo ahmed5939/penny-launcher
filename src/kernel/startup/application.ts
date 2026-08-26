@@ -13,7 +13,11 @@ export class Application {
       const currentVersion = `v${packageJson.version}`
 
       const response = await getAppReleases()
-      const latest = response.data[0]
+      // Skip the rolling nightly prerelease — only stable releases should
+      // nudge users to update.
+      const latest = response.data.find(
+        (release) => !release.draft && !release.prerelease
+      )
 
       if (latest && latest.tag_name !== currentVersion) {
         MainWindow.instance.webContents.send(
