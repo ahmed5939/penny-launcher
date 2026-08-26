@@ -121,7 +121,10 @@ export class XPBoostsManager {
         })
       )
       const queryProfiles = queryProfileResponse
-        .filter((response) => response.status === 'fulfilled')
+        .filter(
+          (response): response is PromiseFulfilledResult<XPBoostsData> =>
+            response.status === 'fulfilled'
+        )
         .map((response) => response.value)
 
       MainWindow.instance.webContents.send(

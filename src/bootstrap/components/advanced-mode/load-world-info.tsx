@@ -52,7 +52,7 @@ export function LoadHomeWorldInfo() {
           const result = worldInfoSchema.parse(response) as WorldInfoData
           const { worldInfo } = worlInfoParser(result)
 
-          initPagination(worldInfo.keys().toArray())
+          initPagination([...worldInfo.keys()])
           setWorldInfoData(worldInfo)
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars

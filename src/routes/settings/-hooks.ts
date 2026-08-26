@@ -13,6 +13,7 @@ export function useSetupForm() {
   const { t } = useTranslation(['settings'])
 
   const {
+    autoDailyQuests,
     claimingRewards,
     customProcess,
     missionInterval,
@@ -21,6 +22,7 @@ export function useSetupForm() {
     userAgent,
   } = useSettingsStore(
     useShallow((state) => ({
+      autoDailyQuests: state.autoDailyQuests,
       claimingRewards: state.claimingRewards,
       customProcess: state.customProcess,
       missionInterval: state.missionInterval,
@@ -32,6 +34,7 @@ export function useSetupForm() {
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
     values: {
+      autoDailyQuests,
       claimingRewards,
       customProcess,
       missionInterval,
