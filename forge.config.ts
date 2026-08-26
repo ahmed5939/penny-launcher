@@ -111,6 +111,7 @@ async function copyMainProcessDependencies(buildPath: string) {
     const manifest = JSON.parse(manifestRaw) as {
       dependencies?: Record<string, string>
       optionalDependencies?: Record<string, string>
+      peerDependencies?: Record<string, string>
     }
 
     queue.push(
