@@ -1,6 +1,3 @@
-import aerialLauncher from '../assets/images/aerial-launcher.png'
-import aerialMlCorp from '../assets/images/aerial-ml-corp.webp'
-import aerialStwnews from '../assets/images/aerial-stwnews.webp'
 import bluglo from '../assets/images/bluglo.png'
 import brxp from '../assets/images/brxp.png'
 import campaign_event_currency from '../assets/images/currency/campaign_event_currency.gif'
@@ -69,7 +66,6 @@ import twine_t03 from '../assets/images/ingredients/twine_t03.png'
 import twine_t04 from '../assets/images/ingredients/twine_t04.png'
 import twine_t05 from '../assets/images/ingredients/twine_t05.png'
 import twine_t06 from '../assets/images/ingredients/twine_t06.png'
-import koFi from '../assets/images/ko-fi.webp'
 import epicgames from '../assets/images/logos/epicgames.png'
 import psn from '../assets/images/logos/psn.png'
 import xbl from '../assets/images/logos/xbl.png'
@@ -132,7 +128,6 @@ import venturesBouncyHusks from '../assets/images/modifiers/ventures-bouncy-husk
 import venturesEscalation from '../assets/images/modifiers/ventures-escalation.png'
 import venturesRageMeter from '../assets/images/modifiers/ventures-rage-meter.png'
 import venturesSuperTreasure from '../assets/images/modifiers/ventures-super-treasure.png'
-import donaldDuckAngry from '../assets/images/random/donald-duck-angry.gif'
 import pensiveCowboy from '../assets/images/random/pensive-cowboy.png'
 import c from '../assets/images/rarities/c.png'
 import er from '../assets/images/rarities/er.png'
@@ -338,9 +333,6 @@ import stormShield from '../assets/images/world/storm-shield.png'
 import tts from '../assets/images/world/tts.png'
 
 export const images: Record<string, string> = {
-  'aerial-launcher': aerialLauncher,
-  'aerial-ml-corp': aerialMlCorp,
-  'aerial-stwnews': aerialStwnews,
   bluglo: bluglo,
   brxp: brxp,
   campaign_event_currency: campaign_event_currency,
@@ -409,7 +401,6 @@ export const images: Record<string, string> = {
   twine_t04: twine_t04,
   twine_t05: twine_t05,
   twine_t06: twine_t06,
-  'ko-fi': koFi,
   epicgames: epicgames,
   psn: psn,
   xbl: xbl,
@@ -472,7 +463,6 @@ export const images: Record<string, string> = {
   'ventures-escalation': venturesEscalation,
   'ventures-rage-meter': venturesRageMeter,
   'ventures-super-treasure': venturesSuperTreasure,
-  'donald-duck-angry': donaldDuckAngry,
   'pensive-cowboy': pensiveCowboy,
   c: c,
   er: er,

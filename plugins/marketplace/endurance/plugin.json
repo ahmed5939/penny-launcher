@@ -1,0 +1,11 @@
+{
+  "id": "endurance",
+  "name": "Endurance Automation",
+  "description": "Starts Storm Shield Endurance, waits for completion, claims rewards and repeats for the currently scoped account.",
+  "version": "1.0.0",
+  "author": "Penny contributors",
+  "category": "Automation",
+  "entry": "main.js",
+  "readme": "README.md",
+  "repository": "https://github.com/ahmed5939/penny-launcher/tree/main/plugins/marketplace/endurance"
+}
