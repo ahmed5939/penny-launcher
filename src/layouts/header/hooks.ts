@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { stwNewsProfileURL } from '../../config/fortnite/links'
+import { pennyDBProfileURL } from '../../config/fortnite/links'
 
 import { useGetSelectedAccount } from '../../hooks/accounts'
 import { useCustomProcessStatus } from '../../hooks/settings'
@@ -43,20 +43,20 @@ export function useHandlers() {
     window.electronAPI.killProcess()
   }
 
-  const handleOpenSTWNewsProfile = () => {
+  const handleOpenPennyDBProfile = () => {
     if (!selected) {
       return
     }
 
     window.electronAPI.openExternalURL(
-      stwNewsProfileURL(selected.accountId)
+      pennyDBProfileURL(selected.accountId)
     )
   }
 
   return {
     handleKillProcess,
     handleLaunch,
-    handleOpenSTWNewsProfile,
+    handleOpenPennyDBProfile,
   }
 }
 

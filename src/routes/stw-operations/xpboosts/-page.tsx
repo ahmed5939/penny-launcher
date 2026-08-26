@@ -22,7 +22,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import {
   maxAmountLimitedTo,
 } from '../../../config/constants/xpboosts'
-import { stwNewsProfileURL } from '../../../config/fortnite/links'
+import { pennyDBProfileURL } from '../../../config/fortnite/links'
 
 
 import { Button } from '../../../components/ui/button'
@@ -143,7 +143,7 @@ function Content() {
     (event) => {
       event.preventDefault()
 
-      window.electronAPI.openExternalURL(stwNewsProfileURL(accountId))
+      window.electronAPI.openExternalURL(pennyDBProfileURL(accountId))
     }
 
   return (
@@ -228,7 +228,7 @@ function Content() {
                     <div>
                       <div>
                         <a
-                          href={stwNewsProfileURL(
+                          href={pennyDBProfileURL(
                             searchedUser.data.lookup.id,
                           )}
                           className="inline-flex gap-2 items-center hover:opacity-75"
@@ -613,7 +613,7 @@ function SendBoostsSheet({
                     <div className="flex flex-col gap-1 overflow-auto px-1 pt-4">
                       <div>
                         <a
-                          href={stwNewsProfileURL(
+                          href={pennyDBProfileURL(
                             searchedUser.data.lookup.id,
                           )}
                           className="inline-flex gap-2 items-center hover:opacity-75"

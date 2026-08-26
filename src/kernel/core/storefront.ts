@@ -37,7 +37,7 @@ export class Storefront {
       const freeLlamas = cardPacks.catalogEntries.find(
         (item) =>
           item.devName.toLowerCase().includes('free') &&
-          item.title.toLowerCase().includes('free') &&
+          item.title?.toLowerCase().includes('free') &&
           item.prices[0]?.regularPrice === 50 &&
           item.prices[0]?.finalPrice === 0
       )
