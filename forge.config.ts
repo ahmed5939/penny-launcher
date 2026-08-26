@@ -6,9 +6,75 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses'
 import { VitePlugin } from '@electron-forge/plugin-vite'
 import { FuseV1Options, FuseVersion } from '@electron/fuses'
 
+import { cp, readFile } from 'node:fs/promises'
+import path from 'node:path'
+
 import packageJson from './package.json'
 
+/**
+ * Copy the production dependency closure into the packaged app.
+ *
+ * plugin-vite ≥7.4 packages only the Vite output — node_modules never make
+ * it in. But the main-process build externalizes every production
+ * dependency (vite.base.config.ts), and marketplace plugins resolve their
+ * requires out of the app's node_modules via NODE_PATH, so the packaged
+ * app needs the real modules on disk. Copying from the project's
+ * node_modules — not reinstalling — keeps the electron-rebuilt native
+ * binaries (node-process-watcher) intact.
+ */
+async function copyProductionDependencies(buildPath: string) {
+  const root = path.dirname(__filename)
+  const queue = Object.keys(packageJson.dependencies)
+  const seen = new Set<string>()
+
+  while (queue.length > 0) {
+    const name = queue.shift()!
+
+    if (seen.has(name) || name === 'electron') {
+      continue
+    }
+
+    seen.add(name)
+
+    const source = path.join(root, 'node_modules', name)
+    let manifestRaw: string
+
+    try {
+      manifestRaw = await readFile(
+        path.join(source, 'package.json'),
+        'utf8'
+      )
+    } catch {
+      // Optional or platform-specific dependency that was never installed.
+      continue
+    }
+
+    await cp(source, path.join(buildPath, 'node_modules', name), {
+      recursive: true,
+    })
+
+    const manifest = JSON.parse(manifestRaw) as {
+      dependencies?: Record<string, string>
+      optionalDependencies?: Record<string, string>
+      peerDependencies?: Record<string, string>
+    }
+
+    queue.push(
+      ...Object.keys(manifest.dependencies ?? {}),
+      ...Object.keys(manifest.optionalDependencies ?? {}),
+      // npm ≥7 hoists installed peers next to everything else; absent ones
+      // fall through the readFile guard above.
+      ...Object.keys(manifest.peerDependencies ?? {})
+    )
+  }
+}
+
 const config: ForgeConfig = {
+  hooks: {
+    packageAfterPrune: async (_forgeConfig, buildPath) => {
+      await copyProductionDependencies(buildPath)
+    },
+  },
   packagerConfig: {
     asar: true,
     icon: 'icon-transparent.ico',
