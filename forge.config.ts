@@ -115,7 +115,17 @@ async function copyMainProcessDependencies(buildPath: string) {
 
     queue.push(
       ...Object.keys(manifest.dependencies ?? {}),
-      ...Object.keys(manifest.optionalDependencies ?? {})
+      ...Object.keys(manifest.optionalDependencies ?? {}),
+      /**
+       * Peers ship only when the app itself declares them. Kernel code
+       * imports enums from renderer state files, which drags zustand into
+       * the main bundle — and zustand's entry does require('react'), a
+       * peer. Unconditional peer-chasing is what shipped 100 MB of
+       * @swc/core, so the app's dependency list is the gate.
+       */
+      ...Object.keys(manifest.peerDependencies ?? {}).filter(
+        (peer) => peer in dependencies
+      )
     )
   }
 }
