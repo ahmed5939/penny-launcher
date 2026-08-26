@@ -14,7 +14,6 @@ import {
   Gift,
   Globe,
   HeartPulse,
-  KeyRound,
   LayoutDashboard,
   Pin,
   Puzzle,
@@ -45,6 +44,8 @@ export type NavItem = {
   beta?: boolean
   /** Customisable-menu key controlling visibility. */
   can?: MenuKey
+  /** Visible while any of these keys is enabled — for one entry standing in for several legacy toggles. */
+  canAny?: Array<MenuKey>
   icon: LucideIcon
   /** i18n key, or a literal when the product name is not translated. */
   label: string
@@ -225,24 +226,12 @@ export const navSections: Array<NavSection> = [
         to: '/account-management/eula',
       },
       {
-        can: 'authorizationCode',
-        icon: KeyRound,
-        label: 'sidebar:accounts.options.auth',
-        params: { type: 'authorization-code' },
-        to: '/accounts/add/$type',
-      },
-      {
-        can: 'exchangeCode',
+        // One entry for all three sign-in methods; the page switches between
+        // them in place. The legacy per-method toggles still gate it together.
+        canAny: ['authorizationCode', 'exchangeCode', 'deviceAuth'],
         icon: UserPlus,
-        label: 'sidebar:accounts.options.exchange',
-        params: { type: 'exchange-code' },
-        to: '/accounts/add/$type',
-      },
-      {
-        can: 'deviceAuth',
-        icon: Smartphone,
-        label: 'sidebar:accounts.options.device',
-        params: { type: 'device-auth' },
+        label: 'Add account',
+        params: { type: 'authorization-code' },
         to: '/accounts/add/$type',
       },
       {

@@ -2,7 +2,7 @@ import type { MouseEventHandler } from 'react'
 import type { AuthCallbackResponseParam } from '../../../types/preload'
 
 import { useTranslation } from 'react-i18next'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   epicGamesAuthorizationCodeURL,
@@ -99,4 +99,84 @@ export function useBaseSetupForm({
       listener.removeListener()
     }
   }, [])
+}
+
+/**
+ * One-click migration from Aerial Launcher.
+ *
+ * The main process reads Aerial's accounts.json (same shape as ours) and
+ * links everything it finds; this hook owns the button state and folds the
+ * result into the roster.
+ */
+export function useAerialImport() {
+  const [isImporting, setIsImporting] = useState(false)
+
+  const register = useAccountListStore((state) => state.register)
+  const setPrimary = useAccountScopeStore((state) => state.setPrimary)
+
+  useEffect(() => {
+    const listener = window.electronAPI.responseImportAccountsFromAerial(
+      async (response) => {
+        setIsImporting(false)
+
+        switch (response.status) {
+          case 'success': {
+            if (response.accounts) {
+              const hadAccounts =
+                Object.keys(useAccountListStore.getState().accounts)
+                  .length > 0
+
+              register(response.accounts)
+
+              // Same rule as adding one by hand: only claim the scope when
+              // there was nothing selected to begin with.
+              if (!hadAccounts) {
+                const [first] = Object.values(response.accounts)
+
+                if (first) {
+                  setPrimary(first.accountId)
+                }
+              }
+            }
+
+            const plural = response.imported === 1 ? '' : 's'
+
+            toast(
+              response.skipped > 0
+                ? `Imported ${response.imported} account${plural} from Aerial Launcher — ${response.skipped} already linked`
+                : `Imported ${response.imported} account${plural} from Aerial Launcher`
+            )
+            break
+          }
+          case 'nothing-new':
+            toast(
+              response.skipped > 0
+                ? 'Every Aerial Launcher account is already linked'
+                : 'No accounts found in Aerial Launcher'
+            )
+            break
+          case 'no-file':
+            toast('No Aerial Launcher data was found on this computer')
+            break
+          default:
+            toast('Could not read the Aerial Launcher accounts file')
+        }
+      }
+    )
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [])
+
+  const importFromAerial = () => {
+    if (isImporting) {
+      return
+    }
+
+    setIsImporting(true)
+    window.electronAPI.importAccountsFromAerial()
+  }
+
+  return { importFromAerial, isImporting }
 }

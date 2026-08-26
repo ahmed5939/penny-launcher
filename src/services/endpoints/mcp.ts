@@ -340,6 +340,23 @@ export function setClientQuestLogin({
   )
 }
 
+export function setRefreshExpeditions({
+  accessToken,
+  accountId,
+}: {
+  accessToken: string
+  accountId: string
+}) {
+  return baseGameService.post<MCPQueryProfile>(
+    `/profile/${accountId}/client/RefreshExpeditions`,
+    {},
+    {
+      headers: { Authorization: `bearer ${accessToken}` },
+      params: { profileId: 'campaign', rvn: -1 },
+    }
+  )
+}
+
 export function setCollectExpedition({
   accessToken,
   accountId,

@@ -4,6 +4,7 @@ import type {
   AccountDataRecord,
   SyncAccountDataResponse,
 } from '../../types/accounts'
+import type { AerialImportCallbackResponseParam } from '../../types/preload'
 
 import { ipcRenderer } from 'electron'
 
@@ -59,6 +60,33 @@ export function syncAccountData(
     removeListener: () =>
       rendererInstance.removeListener(
         ElectronAPIEventKeys.SyncAccessToken,
+        customCallback
+      ),
+  }
+}
+
+export function importAccountsFromAerial() {
+  ipcRenderer.send(ElectronAPIEventKeys.ImportAccountsFromAerial)
+}
+
+export function responseImportAccountsFromAerial(
+  callback: (value: AerialImportCallbackResponseParam) => Promise<void>
+) {
+  const customCallback = (
+    _: IpcRendererEvent,
+    value: AerialImportCallbackResponseParam
+  ) => {
+    callback(value).catch(console.error)
+  }
+  const rendererInstance = ipcRenderer.on(
+    ElectronAPIEventKeys.ResponseImportAccountsFromAerial,
+    customCallback
+  )
+
+  return {
+    removeListener: () =>
+      rendererInstance.removeListener(
+        ElectronAPIEventKeys.ResponseImportAccountsFromAerial,
         customCallback
       ),
   }

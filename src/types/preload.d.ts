@@ -15,6 +15,18 @@ export type AuthCallbackResponseParam =
       error: string
     }
 
+export type AerialImportCallbackResponseParam = {
+  /**
+   * `no-file`: no Aerial Launcher data directory on this machine.
+   * `nothing-new`: the file exists but every account is already linked.
+   */
+  status: 'success' | 'no-file' | 'nothing-new' | 'error'
+  imported: number
+  skipped: number
+  /** Only the newly imported accounts, ready to merge into the roster. */
+  accounts: AccountDataRecord | null
+}
+
 export type AntiCheatProviderCallbackResponseParam =
   | {
       account: AccountData

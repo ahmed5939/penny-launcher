@@ -50,7 +50,10 @@ export function AccountRail() {
           }
 
           const items = section.items.filter(
-            (item) => !item.can || getMenuOptionVisibility(item.can)
+            (item) =>
+              (!item.can || getMenuOptionVisibility(item.can)) &&
+              (!item.canAny ||
+                item.canAny.some((key) => getMenuOptionVisibility(key)))
           )
 
           // A section with no children is itself the destination.
@@ -78,7 +81,9 @@ export function AccountRail() {
               {items.map((item) => (
                 <NavRow
                   key={`${item.to}-${item.label}`}
-                  isActive={pathname.startsWith(item.to)}
+                  // Match up to the first `$param`, so a parameterized entry
+                  // highlights for every value of the parameter.
+                  isActive={pathname.startsWith(item.to.split('/$')[0])}
                   isDisabled={item.needsAccount && !areThereAccounts}
                   item={item}
                   label={item.label === 'EULA' ? 'EULA' : t(item.label)}

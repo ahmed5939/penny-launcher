@@ -30,7 +30,7 @@ type HubItem = {
 const items: Array<HubItem> = [
   {
     title: 'Add account',
-    description: 'Link an Epic account (auth, device or exchange code)',
+    description: 'Link an Epic account — all sign-in methods in one place',
     icon: UserPlus,
     to: '/accounts/add/$type',
     params: { type: 'authorization-code' },

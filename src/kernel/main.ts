@@ -714,6 +714,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     secureIpcOn(
+      ElectronAPIEventKeys.ImportAccountsFromAerial,
+      async () => {
+        await AccountsManager.importFromAerial()
+      }
+    )
+
+    secureIpcOn(
       ElectronAPIEventKeys.OpenEpicGamesSettings,
       async (_, account: AccountData) => {
         await Authentication.openEpicGamesSettings(account)

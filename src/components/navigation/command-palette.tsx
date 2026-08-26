@@ -79,6 +79,8 @@ export function CommandPalette({
           const items = section.items.filter(
             (item) =>
               (!item.can || getMenuOptionVisibility(item.can)) &&
+              (!item.canAny ||
+                item.canAny.some((key) => getMenuOptionVisibility(key))) &&
               !(item.needsAccount && !areThereAccounts)
           )
 

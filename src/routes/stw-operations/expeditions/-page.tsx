@@ -1,28 +1,19 @@
-import type { ExpeditionActionNotification, ExpeditionSlot, ExpeditionsEntry } from '../../../kernel/core/expeditions'
+import type { ExpeditionActionNotification, ExpeditionSlot } from '../../../kernel/core/expeditions'
 
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { CheckCheck, Compass, Play, Timer, XCircle } from 'lucide-react'
+import { CheckCheck, Clock3, Compass, Play, ShieldAlert, Timer, Users, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import Masonry from 'react-responsive-masonry'
 import dayjs from 'dayjs'
 
 import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
-import { GoToTop } from '../../../components/go-to-top'
-import {
-  PageHeader,
-  Panel,
-  StatRow,
-  StatTile,
-} from '../../../components/page'
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs'
+import { Callout, EmptyState, PageHeader, Panel, StatRow, StatTile, StatusPill } from '../../../components/page'
 import { useExpeditionsData } from './-hooks'
-
 import { useGetAccounts } from '../../../hooks/accounts'
-
-import { squadLabelsById } from '../../../config/constants/fortnite/squads'
-
 import { parseCustomDisplayName } from '../../../lib/utils'
+
+type BoardItem = { accountId: string; accountName: string; slot: ExpeditionSlot }
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
@@ -32,258 +23,150 @@ export function RouteComponent() {
       <PageHeader
         icon={Compass}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.expeditions')}
-            <BetaBadge />
-          </span>
-        }
-        description="Collect every finished expedition across your accounts in one press."
+        title={<span className="flex items-center gap-2">{t('stw-operations.options.expeditions')}<BetaBadge /></span>}
+        description="Refresh offers, build an eligible hero team, dispatch expeditions, and collect rewards."
       />
-      <Content />
+      <ExpeditionBoard />
     </>
   )
 }
 
-function Content() {
+function ExpeditionBoard() {
   const {
-    data,
-    handleCollect,
-    handleAction,
-    handleLoad,
-    isCollecting,
-    isDisabledCollect,
-    isDisabledForm,
-    isLoading,
-    scopeCount,
-    pending,
-    totalAvailable,
-    totalInFlight,
-    totalReady,
+    data, handleAction, handleCollect, handleLoad, isCollecting,
+    isDisabledCollect, isDisabledForm, isLoading, pending, scopeCount,
+    totalAvailable, totalInFlight, totalReady,
   } = useExpeditionsData()
+  const { accountList } = useGetAccounts()
+  const items: Array<BoardItem> = data.flatMap((entry) => {
+    const account = accountList[entry.accountId]
+    return entry.slots.map((slot) => ({
+      accountId: entry.accountId,
+      accountName: account ? parseCustomDisplayName(account) : entry.accountId,
+      slot,
+    }))
+  })
+  const errors = data.filter((entry) => entry.errorMessage)
 
   return (
     <>
-      {/*
-        The account picker that used to sit here is gone. The rail already
-        answers which accounts this is about, and the data loads itself when
-        that changes — so this strip is a toolbar over live results rather
-        than a form standing between you and them.
-
-        The collect button names its blast radius. A global scope acting on
-        several accounts at once must never let you press a bare verb.
-      */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
-        <Button
-          className="min-w-32"
-          variant="secondary"
-          onClick={handleLoad}
-          disabled={isDisabledForm}
-        >
-          {isLoading ? (
-            <UpdateIcon className="animate-spin" />
-          ) : (
-            'Refresh'
-          )}
+        <p className="mr-auto text-xs text-muted-foreground">
+          {scopeCount} selected {scopeCount === 1 ? 'account' : 'accounts'}
+        </p>
+        <Button variant="secondary" onClick={handleLoad} disabled={isDisabledForm}>
+          <UpdateIcon className={isLoading ? 'animate-spin' : ''} /> Refresh board
         </Button>
-        <Button
-          className="ml-auto min-w-40"
-          onClick={handleCollect}
-          disabled={isDisabledCollect}
-        >
-          {isCollecting ? (
-            <UpdateIcon className="animate-spin" />
-          ) : (
-            <>
-              <CheckCheck className="size-4" />
-              Collect {totalReady} on {scopeCount}{' '}
-              {scopeCount === 1 ? 'account' : 'accounts'}
-            </>
-          )}
+        <Button onClick={handleCollect} disabled={isDisabledCollect}>
+          {isCollecting ? <UpdateIcon className="animate-spin" /> : <CheckCheck className="size-4" />}
+          Collect all ready ({totalReady})
         </Button>
       </div>
 
-      {data.length > 0 && (
-        <>
-          <StatRow className="lg:grid-cols-4">
-            <StatTile
-              icon={CheckCheck}
-              label="Ready to collect"
-              tone={totalReady > 0 ? 'success' : 'default'}
-              value={totalReady}
-            />
-            <StatTile
-              icon={Timer}
-              label="In flight"
-              value={totalInFlight}
-            />
-            <StatTile icon={Play} label="Available" value={totalAvailable} />
-            <StatTile
-              icon={Compass}
-              label="Accounts checked"
-              value={data.length}
-            />
-          </StatRow>
+      <StatRow className="lg:grid-cols-3">
+        <StatTile icon={Play} label="Available" value={totalAvailable} />
+        <StatTile icon={Timer} label="In flight" value={totalInFlight} />
+        <StatTile icon={CheckCheck} label="Ready" tone={totalReady > 0 ? 'success' : 'default'} value={totalReady} />
+      </StatRow>
 
-          <Masonry
-            columnsCount={3}
-            gutter="0.75rem"
-          >
-            {data.map((entry) => (
-              <AccountExpeditions
-                entry={entry}
-                key={entry.accountId}
-                onAction={handleAction}
-                pending={pending}
-              />
-            ))}
-          </Masonry>
-        </>
-      )}
+      {errors.map((entry) => (
+        <Callout key={entry.accountId} title={accountList[entry.accountId] ? parseCustomDisplayName(accountList[entry.accountId]) : entry.accountId} tone="warning">
+          {entry.errorMessage}
+        </Callout>
+      ))}
 
-      <GoToTop containerId="selector-card" />
+      <Tabs defaultValue="available">
+        <TabsList className="grid h-11 w-full grid-cols-3">
+          <TabsTrigger value="available">Available ({totalAvailable})</TabsTrigger>
+          <TabsTrigger value="in-flight">In flight ({totalInFlight})</TabsTrigger>
+          <TabsTrigger value="ready">Ready ({totalReady})</TabsTrigger>
+        </TabsList>
+        <BoardTab state="available" items={items} pending={pending} onAction={handleAction} />
+        <BoardTab state="in-flight" items={items} pending={pending} onAction={handleAction} />
+        <BoardTab state="ready" items={items} pending={pending} onAction={handleAction} />
+      </Tabs>
     </>
   )
 }
 
-function AccountExpeditions({
-  entry,
-  onAction,
-  pending,
-}: {
-  entry: ExpeditionsEntry
-  onAction: (
-    accountId: string,
-    slot: ExpeditionSlot,
-    action: ExpeditionActionNotification['action']
-  ) => void
+function BoardTab({ items, onAction, pending, state }: {
+  items: Array<BoardItem>
+  onAction: (accountId: string, slot: ExpeditionSlot, action: ExpeditionActionNotification['action']) => void
   pending: Array<string>
+  state: ExpeditionSlot['state']
 }) {
-  const { accountList } = useGetAccounts()
-
-  const account = accountList[entry.accountId]
-  const ready = entry.slots.filter((slot) => slot.state === 'ready').length
+  const visible = items.filter((item) => item.slot.state === state)
 
   return (
-    <Panel>
-      <header className="border-b border-border/60 px-4 py-3">
-        <p className="truncate text-[0.8125rem] font-medium">
-          {parseCustomDisplayName(account)}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {entry.errorMessage
-            ? entry.errorMessage
-            : ready > 0
-              ? `${ready} ready to collect`
-              : 'Nothing ready'}
-        </p>
-      </header>
-
-      {entry.slots.length > 0 && (
-        <ul className="divide-y divide-border/40">
-          {entry.slots.map((slot) => (
-            <li
-              className="flex items-start gap-3 px-4 py-2.5"
-              key={slot.itemId}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5">
-                  <span className="truncate text-xs font-medium">
-                    {slot.name}
-                  </span>
-                  {slot.tier > 0 && (
-                    <span className="shrink-0 rounded border border-border/70 px-1 text-[0.55rem] font-semibold uppercase text-muted-foreground">
-                      T{slot.tier}
-                    </span>
-                  )}
-                </span>
-                <span className="mt-0.5 block truncate text-[0.65rem] text-muted-foreground">
-                  {[
-                    slot.vehicle,
-                    slot.duration,
-                    slot.maxTargetPower > 0 &&
-                      `power ${slot.minTargetPower}–${slot.maxTargetPower}`,
-                    slot.criteria.length > 0 &&
-                      `${slot.criteria.length} hero${slot.criteria.length === 1 ? '' : 'es'}`,
-                    slot.squadId && squadLabelsById[slot.squadId],
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </span>
-                {slot.criteria.length > 0 && (
-                  <span className="mt-1 flex flex-wrap gap-1">
-                    {slot.criteria.map((requirement, index) => (
-                      <span
-                        className="rounded border border-border/60 px-1 text-[0.55rem] uppercase tracking-wide text-muted-foreground"
-                        key={`${requirement.rarity}-${requirement.type}-${index}`}
-                      >
-                        {requirement.rarity}
-                        {requirement.type ? ` ${requirement.type}` : ''}
-                      </span>
-                    ))}
-                  </span>
-                )}
-                {slot.state === 'available' && (
-                  <span className="mt-1 block text-[0.6rem] text-muted-foreground">
-                    Recommended team: {slot.suggestedHeroIds.length}/{slot.criteria.length} heroes
-                  </span>
-                )}
-              </span>
-
-              <span className="flex shrink-0 flex-col items-end gap-1 text-right">
-                {slot.state === 'ready' ? (
-                  <span className="text-xs font-semibold text-success">
-                    Ready
-                  </span>
-                ) : slot.state === 'in-flight' ? (
-                  <>
-                    <span className="block text-xs tabular-nums text-muted-foreground">
-                      {dayjs(slot.endTime).fromNow()}
-                    </span>
-                    {slot.successChance > 0 && (
-                      <span className="block text-[0.6rem] text-muted-foreground">
-                        {Math.round(slot.successChance * 100)}% success
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <span className="block text-xs text-muted-foreground">
-                      Idle
-                    </span>
-                    {slot.expiresAt && (
-                      <span className="block text-[0.6rem] text-muted-foreground">
-                        expires {dayjs(slot.expiresAt).fromNow()}
-                      </span>
-                    )}
-                  </>
-                )}
-                {pending.includes(slot.itemId) ? (
-                  <UpdateIcon className="size-4 animate-spin text-muted-foreground" />
-                ) : slot.state === 'ready' ? (
-                  <Button size="sm" className="h-7 px-2 text-[0.65rem]" onClick={() => onAction(entry.accountId, slot, 'collect')}>
-                    <CheckCheck className="size-3" /> Collect
-                  </Button>
-                ) : slot.state === 'in-flight' ? (
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[0.65rem] text-destructive" onClick={() => onAction(entry.accountId, slot, 'abandon')}>
-                    <XCircle className="size-3" /> Abandon
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="h-7 px-2 text-[0.65rem]"
-                    disabled={!slot.squadId || slot.suggestedHeroIds.length !== slot.criteria.length}
-                    title={!slot.squadId || slot.suggestedHeroIds.length !== slot.criteria.length ? 'Not enough eligible heroes' : 'Send the recommended hero team'}
-                    onClick={() => onAction(entry.accountId, slot, 'start')}
-                  >
-                    <Play className="size-3" /> Dispatch
-                  </Button>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
+    <TabsContent value={state} className="mt-3">
+      {visible.length === 0 ? (
+        <EmptyState
+          icon={state === 'ready' ? CheckCheck : state === 'in-flight' ? Timer : Compass}
+          title={`No ${state === 'in-flight' ? 'running' : state} expeditions`}
+          description={state === 'available' ? 'Refresh the board to ask Epic for current expedition offers.' : 'Nothing needs attention here.'}
+        />
+      ) : (
+        <Panel className="overflow-hidden">
+          <ul className="divide-y divide-border/50">
+            {visible.map((item) => (
+              <ExpeditionRow item={item} key={`${item.accountId}-${item.slot.itemId}`} pending={pending.includes(item.slot.itemId)} onAction={onAction} />
+            ))}
+          </ul>
+        </Panel>
       )}
-    </Panel>
+    </TabsContent>
+  )
+}
+
+function ExpeditionRow({ item, onAction, pending }: {
+  item: BoardItem
+  onAction: (accountId: string, slot: ExpeditionSlot, action: ExpeditionActionNotification['action']) => void
+  pending: boolean
+}) {
+  const { accountId, accountName, slot } = item
+  const hasTeam = Boolean(slot.squadId) && slot.criteria.length > 0 && slot.suggestedHeroIds.length === slot.criteria.length
+
+  return (
+    <li className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(12rem,1fr)_auto] lg:items-center">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-sm font-semibold">{slot.name}</p>
+          <StatusPill tone={slot.state === 'ready' ? 'active' : slot.state === 'in-flight' ? 'warning' : 'idle'}>
+            {slot.state === 'in-flight' ? 'In flight' : slot.state}
+          </StatusPill>
+          {slot.tier > 0 && <span className="text-xs text-muted-foreground">Tier {slot.tier}</span>}
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">{accountName} · {slot.vehicle} · {slot.duration}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {slot.criteria.map((criterion, index) => (
+            <span key={`${criterion.rarity}-${criterion.type}-${index}`} className="rounded-md border border-border/70 bg-muted/30 px-2 py-1 text-[0.65rem] text-muted-foreground">
+              {criterion.rarity} {criterion.type || 'Hero'}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-1.5 text-xs text-muted-foreground">
+        {slot.maxTargetPower > 0 && <p className="flex items-center gap-2"><ShieldAlert className="size-3.5" /> Target power {slot.minTargetPower}–{slot.maxTargetPower}</p>}
+        {slot.state === 'available' && <p className="flex items-center gap-2"><Users className="size-3.5" /> Team found {slot.suggestedHeroIds.length}/{slot.criteria.length}</p>}
+        {slot.state === 'in-flight' && <p className="flex items-center gap-2"><Clock3 className="size-3.5" /> Completes {dayjs(slot.endTime).fromNow()}</p>}
+        {slot.state === 'in-flight' && slot.successChance > 0 && <p>{Math.round(slot.successChance * 100)}% success chance</p>}
+        {slot.state === 'available' && slot.expiresAt && <p>Offer expires {dayjs(slot.expiresAt).fromNow()}</p>}
+      </div>
+
+      <div className="flex justify-end">
+        {pending ? (
+          <Button disabled><UpdateIcon className="animate-spin" /> Working</Button>
+        ) : slot.state === 'available' ? (
+          <Button disabled={!hasTeam} title={hasTeam ? 'Dispatch recommended heroes' : 'No usable squad or complete eligible team'} onClick={() => onAction(accountId, slot, 'start')}>
+            <Play className="size-4" /> Dispatch
+          </Button>
+        ) : slot.state === 'ready' ? (
+          <Button onClick={() => onAction(accountId, slot, 'collect')}><CheckCheck className="size-4" /> Collect</Button>
+        ) : (
+          <Button variant="ghost" className="text-destructive" onClick={() => onAction(accountId, slot, 'abandon')}><XCircle className="size-4" /> Abandon</Button>
+        )}
+      </div>
+    </li>
   )
 }

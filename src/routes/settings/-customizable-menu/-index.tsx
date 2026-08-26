@@ -11,6 +11,13 @@ import {
 
 import { cn } from '../../../lib/utils'
 
+/** The legacy per-method keys the single "Add account" switch stands in for. */
+const addAccountMenuKeys = [
+  'authorizationCode',
+  'exchangeCode',
+  'deviceAuth',
+] as const
+
 export function CustomizableMenu() {
   const { t } = useTranslation(['settings'])
 
@@ -488,43 +495,27 @@ function MyAccountsSection() {
         </div>
       </div>
       <div className="list">
+        {/*
+          One switch for the unified Add-account page. It drives the three
+          legacy per-method keys together, so old saved settings still count.
+        */}
         <div className="item">
           <Label
             className="title"
-            htmlFor="authorization-code"
+            htmlFor="add-account"
           >
-            {t('accounts.options.auth')}
+            Add account
           </Label>
           <Switch
-            id="authorization-code"
-            checked={getMenuOptionVisibility('authorizationCode')}
-            onCheckedChange={updateMenuOption('authorizationCode')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="exchange-code"
-          >
-            {t('accounts.options.exchange')}
-          </Label>
-          <Switch
-            id="exchange-code"
-            checked={getMenuOptionVisibility('exchangeCode')}
-            onCheckedChange={updateMenuOption('exchangeCode')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="device-auth"
-          >
-            {t('accounts.options.device')}
-          </Label>
-          <Switch
-            id="device-auth"
-            checked={getMenuOptionVisibility('deviceAuth')}
-            onCheckedChange={updateMenuOption('deviceAuth')}
+            id="add-account"
+            checked={addAccountMenuKeys.some((key) =>
+              getMenuOptionVisibility(key)
+            )}
+            onCheckedChange={(visibility) => {
+              for (const key of addAccountMenuKeys) {
+                updateMenuOption(key)(visibility)
+              }
+            }}
           />
         </div>
         <div className="item">

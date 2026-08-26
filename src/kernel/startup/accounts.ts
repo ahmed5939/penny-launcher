@@ -5,14 +5,21 @@ import type {
   AccountDataRecord,
   AccountList,
 } from '../../types/accounts'
+import type { AerialImportCallbackResponseParam } from '../../types/preload'
 
 import { Collection } from '@discordjs/collection'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import { app } from 'electron'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
+
+import { accountListSchema } from '../../lib/validations/schemas/accounts'
 
 import { MainWindow } from './windows/main'
 import { Automation } from './automation'
 import { DataDirectory } from './data-directory'
+import { RuntimeLog } from '../runtime-log'
 
 export class AccountsManager {
   private static _accounts: Collection<string, AccountData> =
@@ -83,6 +90,93 @@ export class AccountsManager {
     })
 
     await DataDirectory.updateAccountsFile(accounts)
+  }
+
+  /**
+   * One-click migration from Aerial Launcher.
+   *
+   * Penny began as an Aerial fork, so Aerial's accounts.json uses the same
+   * shape ours does — accounts can be copied straight across without
+   * touching Epic. Secrets are re-encrypted on write; Aerial stores them in
+   * plain text.
+   */
+  static async importFromAerial() {
+    const respond = (response: AerialImportCallbackResponseParam) => {
+      MainWindow.instance.webContents.send(
+        ElectronAPIEventKeys.ResponseImportAccountsFromAerial,
+        response
+      )
+    }
+
+    const aerialAccountsFilePath = path.join(
+      app.getPath('appData'),
+      'aerial-launcher-data',
+      'accounts.json'
+    )
+
+    let aerialAccounts: AccountList
+
+    try {
+      const raw = await readFile(aerialAccountsFilePath, 'utf8')
+
+      aerialAccounts = accountListSchema.parse(JSON.parse(raw))
+    } catch (error) {
+      const missingFile =
+        (error as NodeJS.ErrnoException).code === 'ENOENT'
+
+      if (!missingFile) {
+        RuntimeLog.error('accounts:import-from-aerial', error)
+      }
+
+      respond({
+        status: missingFile ? 'no-file' : 'error',
+        imported: 0,
+        skipped: 0,
+        accounts: null,
+      })
+
+      return
+    }
+
+    const fresh = aerialAccounts.filter(
+      (account) => !AccountsManager._accounts.has(account.accountId)
+    )
+
+    if (fresh.length === 0) {
+      respond({
+        status: 'nothing-new',
+        imported: 0,
+        skipped: aerialAccounts.length,
+        accounts: null,
+      })
+
+      return
+    }
+
+    const { accounts } = await DataDirectory.getAccountsFile()
+
+    await DataDirectory.updateAccountsFile([...accounts, ...fresh])
+
+    const imported = fresh.reduce((accumulator, account) => {
+      const data: AccountData = {
+        ...account,
+        accessToken: undefined,
+        customDisplayName: account.customDisplayName ?? '',
+        provider: undefined,
+      }
+
+      AccountsManager._accounts.set(account.accountId, data)
+      accumulator[account.accountId] = AccountsManager.toRenderer(data)
+
+      return accumulator
+    }, {} as AccountDataRecord)
+
+    respond({
+      status: 'success',
+      imported: fresh.length,
+      skipped: aerialAccounts.length - fresh.length,
+      accounts: imported,
+    })
   }
 
   static async remove(accountId: string) {

@@ -10,6 +10,7 @@ import {
   getQueryProfile,
   setAbandonExpedition,
   setCollectExpedition,
+  setRefreshExpeditions,
   setStartExpedition,
 } from '../../services/endpoints/mcp'
 
@@ -166,13 +167,14 @@ export class Expeditions {
             { [account.accountId]: entry } as ExpeditionsPayload
           )
         })
-        .catch(() => {
+        .catch((error: unknown) => {
+          RuntimeLog.error('caught:core/expeditions:request', error)
           MainWindow.instance.webContents.send(
             ElectronAPIEventKeys.ExpeditionsResponse,
             {
               [account.accountId]: {
                 accountId: account.accountId,
-                errorMessage: 'Unknown Error',
+                errorMessage: Expeditions.errorMessage(error),
                 slots: [],
               },
             } as ExpeditionsPayload
@@ -189,10 +191,17 @@ export class Expeditions {
     const accessToken = await Authentication.verifyAccessToken(account)
 
     if (!accessToken) {
-      entry.errorMessage = 'Unknown Error'
+      entry.errorMessage = 'Could not authenticate this account'
 
       return entry
     }
+
+    // Epic generates/replaces expired expedition offers through this MCP
+    // operation. QueryProfile alone can return a stale or half-empty board.
+    await setRefreshExpeditions({
+      accessToken,
+      accountId: account.accountId,
+    })
 
     const response = await getQueryProfile({
       accessToken,
@@ -212,6 +221,7 @@ export class Expeditions {
       .filter(([, item]) => item.templateId.startsWith('Hero:'))
       .map(([itemId, item]) => {
         const attributes = item.attributes as {
+          building_slot_used?: number
           level?: number
           squad_id?: string
         }
@@ -222,9 +232,13 @@ export class Expeditions {
           level: attributes.level ?? 1,
           rarity,
           squadId: attributes.squad_id ?? '',
+          usedInLoadout: (attributes.building_slot_used ?? 0) > 0,
         }
       })
-      .filter((hero) => !occupiedExpeditionSquads.has(hero.squadId))
+      .filter(
+        (hero) =>
+          !hero.usedInLoadout && !occupiedExpeditionSquads.has(hero.squadId)
+      )
       .sort(
         (heroA, heroB) =>
           rarityPower[heroB.rarity] - rarityPower[heroA.rarity] ||
@@ -263,6 +277,8 @@ export class Expeditions {
         return index < 0 ? [] : remainingHeroes.splice(index, 1)
       })
 
+      const rawSuccessChance = Number(attributes.expedition_success_chance ?? 0)
+
       entry.slots.push({
         itemId,
         templateId: item.templateId,
@@ -274,7 +290,8 @@ export class Expeditions {
         minTargetPower: attributes.expedition_min_target_power ?? 0,
         maxTargetPower: attributes.expedition_max_target_power ?? 0,
         squadId: attributes.expedition_squad_id ?? null,
-        successChance: attributes.expedition_success_chance ?? 0,
+        successChance:
+          rawSuccessChance > 1 ? rawSuccessChance / 100 : rawSuccessChance,
         suggestedHeroIds: suggestedHeroes.map((hero) => hero.itemId),
       })
     })
@@ -380,11 +397,30 @@ export class Expeditions {
       }
       payload.errorMessage =
         typed.response?.data?.errorMessage ?? typed.message ?? 'Action failed'
+      RuntimeLog.error(`caught:core/expeditions:${action}`, error)
     }
 
     MainWindow.instance.webContents.send(
       ElectronAPIEventKeys.ExpeditionsActionNotification,
       payload
+    )
+  }
+
+  private static errorMessage(error: unknown) {
+    const typed = error as {
+      code?: string
+      message?: string
+      response?: {
+        data?: { errorCode?: string; errorMessage?: string }
+      }
+    }
+
+    return (
+      typed.response?.data?.errorMessage ??
+      typed.response?.data?.errorCode ??
+      typed.message ??
+      typed.code ??
+      'Could not load expeditions'
     )
   }
 

@@ -96,6 +96,9 @@ export enum ElectronAPIEventKeys {
   CreateAuthWithDevice = 'auth:create:device',
   ResponseAuthWithDevice = 'auth:create:device:response',
 
+  ImportAccountsFromAerial = 'accounts:import-from-aerial',
+  ResponseImportAccountsFromAerial = 'accounts:import-from-aerial:response',
+
   OpenEpicGamesSettings = 'epicgames:open-settings',
   OpenEpicGamesSettingsNotification = 'epicgames:open-settings:notification',
 
