@@ -71,17 +71,19 @@ function DeferredBootstrap() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    const windowWithIdle = window as Window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
-      cancelIdleCallback?: (id: number) => void
-    }
-    const id = windowWithIdle.requestIdleCallback
-      ? windowWithIdle.requestIdleCallback(() => setReady(true), { timeout: 1_500 })
+    // lib.dom types requestIdleCallback as always present, but the typeof
+    // guard stays: the timeout fallback covers any runtime without it.
+    const hasIdleCallback =
+      typeof window.requestIdleCallback === 'function'
+    const id = hasIdleCallback
+      ? window.requestIdleCallback(() => setReady(true), {
+          timeout: 1_500,
+        })
       : window.setTimeout(() => setReady(true), 250)
 
     return () => {
-      if (windowWithIdle.cancelIdleCallback && windowWithIdle.requestIdleCallback) {
-        windowWithIdle.cancelIdleCallback(id)
+      if (hasIdleCallback) {
+        window.cancelIdleCallback(id)
       } else {
         window.clearTimeout(id)
       }

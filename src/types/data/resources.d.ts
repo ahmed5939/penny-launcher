@@ -1,3 +1,4 @@
+import type { RarityType } from '../../config/constants/resources'
 import type { WorldInfoMission } from './advanced-mode/world-info'
 
 export type ResourceType =

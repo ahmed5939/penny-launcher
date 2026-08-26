@@ -149,7 +149,9 @@ export function useExpeditionsData() {
       }
     )
 
-    return () => listener.removeListener()
+    return () => {
+      listener.removeListener()
+    }
   }, [selectedAccounts])
 
   const handleLoad = () => {
