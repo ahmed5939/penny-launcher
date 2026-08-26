@@ -20,7 +20,7 @@ export function redeemCodesNotification(
     _: IpcRendererEvent,
     value: RedeemCodeAccountNotification
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.RedeemCodesRedeenNotification,

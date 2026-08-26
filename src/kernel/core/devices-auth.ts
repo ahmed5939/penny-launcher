@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { DeviceAuthInfoWithStates } from '../../state/accounts/devices-auth'
 import type { AccountData } from '../../types/accounts'
 
@@ -137,7 +138,7 @@ export class DevicesAuthManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/devices-auth.ts', error)
     }
 
     return []
@@ -166,7 +167,7 @@ export class DevicesAuthManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/devices-auth.ts', error)
     }
 
     MainWindow.instance.webContents.send(

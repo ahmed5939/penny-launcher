@@ -5,7 +5,6 @@ import { Combobox } from '../../../components/ui/extended/combobox'
 import { SeparatorWithTitle } from '../../../components/ui/extended/separator'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
-import { Label } from '../../../components/ui/label'
 
 import { useInputPaddingButton } from '../../../hooks/ui/inputs'
 import { useCustomizableMenuSettingsVisibility } from '../../../hooks/settings'
@@ -36,14 +35,25 @@ export function SearchForm() {
   })
 
   return (
+    /*
+     * Opaque `bg-card` rather than the panel's translucent default: the "Or"
+     * separator knocks its rule out with a chip of the surface behind it, and
+     * a 60% fill over the page leaves a visible seam through the label.
+     */
     <div
-      className="grid gap-4"
+      className="panel grid gap-4 bg-card p-4"
       id="form-alerts-done"
     >
       <div className="space-y-2">
-        <Label className="text-muted-foreground text-sm">
-          Fetch data from one of your accounts
-        </Label>
+        {/*
+          Plain <label>: the shadcn Label bakes in a `text-sm` utility, which
+          outranks the `.micro-label` component class and would quietly undo it.
+        */}
+        <label className="micro-label">
+          {t('form.accounts.select', {
+            ns: 'general',
+          })}
+        </label>
         <Combobox
           className="max-w-full"
           emptyPlaceholder={t('form.accounts.no-options', {
@@ -75,7 +85,7 @@ export function SearchForm() {
           hideSelectorOnSelectItem
         />
       </div>
-      <SeparatorWithTitle>
+      <SeparatorWithTitle className="bg-card text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground/55">
         {t('separators.or', {
           ns: 'general',
         })}
@@ -90,35 +100,39 @@ export function SearchForm() {
           }
         }}
       >
-        <Label
-          className="text-muted-foreground"
+        <label
+          className="micro-label"
           htmlFor="alerts-done-input-search-player"
         >
           {t('form.search-account.label', {
             ns: 'general',
           })}
-        </Label>
-        <div className="flex items-center relative">
+        </label>
+        <div className="relative flex items-center">
           <Input
             placeholder={t('form.search-account.input.placeholder', {
               ns: 'general',
             })}
-            className="pr-[var(--pr-button-width)] pl-3 py-1"
+            className="h-9 pl-3 pr-[var(--pr-button-width)] text-[0.8125rem]"
             value={inputSearch}
             onChange={handleChangeSearchDisplayName}
             disabled={formDisabled || searchIsSubmitting}
             id="alerts-done-input-search-player"
             ref={$updateInput}
           />
+          {/*
+            Fixed width: the input's right padding is measured from this
+            button once, so it must not resize when the spinner takes over.
+          */}
           <Button
             type="submit"
-            className="absolute h-8 px-2 py-1.5 right-1 text-sm w-28"
+            className="absolute right-1 h-7 w-24 px-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]"
             variant="secondary"
             disabled={formDisabled || inputSearchButtonIsDisabled}
             ref={$submitButton}
           >
             {searchIsSubmitting ? (
-              <UpdateIcon className="animate-spin h-4" />
+              <UpdateIcon className="size-3.5 animate-spin" />
             ) : (
               t('actions.search', {
                 ns: 'general',

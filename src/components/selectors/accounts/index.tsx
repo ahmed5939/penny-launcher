@@ -6,11 +6,10 @@ import type {
 import { CheckCheck, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { Button } from '../../ui/button'
 import { InputTags } from '../../ui/third-party/extended/input-tags'
 
 import { useAccountsInputTagsCustomFilter } from './hooks'
-
-import { cn } from '../../../lib/utils'
 
 /**
  * Account picker used by every bulk operation.
@@ -58,7 +57,7 @@ export function AccountSelectors({
       />
 
       <div className="flex items-center gap-2 px-0.5">
-        <span className="text-xs tabular-nums text-muted-foreground">
+        <span className="figure text-xs text-muted-foreground">
           {t('form.multi.select.counter', {
             selected,
             total,
@@ -66,48 +65,28 @@ export function AccountSelectors({
         </span>
 
         <div className="ml-auto flex items-center gap-1">
-          <SelectorAction
+          <Button
+            className="text-xs text-muted-foreground"
             disabled={isDisabled || allSelected || total === 0}
+            size="sm"
+            variant="ghost"
             onClick={() => update(accounts.options)}
           >
             <CheckCheck className="size-3.5" />
             {t('form.multi.select.all')}
-          </SelectorAction>
-          <SelectorAction
+          </Button>
+          <Button
+            className="text-xs text-muted-foreground"
             disabled={isDisabled || selected === 0}
+            size="sm"
+            variant="ghost"
             onClick={() => update([])}
           >
             <X className="size-3.5" />
             {t('form.multi.select.clear')}
-          </SelectorAction>
+          </Button>
         </div>
       </div>
     </div>
-  )
-}
-
-function SelectorAction({
-  children,
-  disabled,
-  onClick,
-}: {
-  children: React.ReactNode
-  disabled?: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium',
-        'text-muted-foreground transition-colors',
-        'hover:bg-accent/60 hover:text-foreground',
-        'disabled:pointer-events-none disabled:opacity-40'
-      )}
-    >
-      {children}
-    </button>
   )
 }

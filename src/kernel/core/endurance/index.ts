@@ -85,10 +85,20 @@ type VisionStep = {
   searchRegion?: Region
   threshold?: number
   target?: EndurancePoint
-  action: 'click' | 'click-repeat' | 'key' | 'confirm'
+  action:
+    | 'click'
+    | 'click-repeat'
+    | 'click-until'
+    | 'key'
+    | 'confirm'
+    | 'scroll'
   key?: 'Tab' | 'I'
+  /** Completion target for the reference macro's retry-until-success steps. */
+  untilTemplate?: string
+  scrollAmount?: number
   repeatCount?: number
   repeatEveryMs?: number
+  timeoutMs?: number
   /** If this later step is already visible, skip forward to it. */
   advanceIfVisible?: string
   /** Steps the resume scan may land on. */
@@ -108,18 +118,20 @@ type Interrupt = {
   threshold: number
 }
 
+const macroMatchThreshold = 0.88
+
 const interrupts: Array<Interrupt> = [
   {
     id: 'reward-open',
     template: 'reward-open',
     searchRegion: { x: 0.2, y: 0.7, width: 0.6, height: 0.3 },
-    threshold: 0.94,
+    threshold: macroMatchThreshold,
   },
   {
     id: 'reward-continue',
     template: 'reward-continue',
     searchRegion: { x: 0.25, y: 0.75, width: 0.5, height: 0.25 },
-    threshold: 0.94,
+    threshold: macroMatchThreshold,
   },
 ]
 
@@ -130,30 +142,6 @@ const readyToReturn: Interrupt = {
   threshold: 0.94,
 }
 
-const zoneHomebaseConfigs: Record<
-  EnduranceConfig['zone'],
-  { searchRegion: Region; target: EndurancePoint }
-> = {
-  stonewood: {
-    searchRegion: { x: 0.32, y: 0.15, width: 0.38, height: 0.45 },
-    // The banner identifies the tile; the clickable Storm Shield structure
-    // sits below the match, hence targets outside 0..1.
-    target: { x: 0.42, y: 3.4 },
-  },
-  plankerton: {
-    searchRegion: { x: 0.3, y: 0.55, width: 0.45, height: 0.45 },
-    target: { x: 0.5, y: 3 },
-  },
-  'canny-valley': {
-    searchRegion: { x: 0.3, y: 0.55, width: 0.45, height: 0.45 },
-    target: { x: 0.5, y: 3 },
-  },
-  'twine-peaks': {
-    searchRegion: { x: 0.15, y: 0.2, width: 0.85, height: 0.8 },
-    target: { x: 0.5, y: 3 },
-  },
-}
-
 /**
  * The proven navigation states of the original macro, template-driven:
  * from a fresh lobby it clicks into Save the World first, then walks the
@@ -161,160 +149,194 @@ const zoneHomebaseConfigs: Record<
  */
 function buildSteps(config: EnduranceConfig): Array<VisionStep> {
   const zone = enduranceZones[config.zone]
-  const homebase = zoneHomebaseConfigs[config.zone]
+  const zoneVerification: Array<VisionStep> = []
+
+  if (config.zone === 'twine-peaks') {
+    zoneVerification.push({
+      id: 'zone-highlighted',
+      name: 'Verify Twine Peaks is highlighted',
+      template: 'macro-twine-peaks-highlighted',
+      threshold: macroMatchThreshold,
+      action: 'confirm',
+      resumeEligible: true,
+      afterMs: 1_000,
+    })
+  } else if (config.zone === 'stonewood' || config.zone === 'plankerton') {
+    zoneVerification.push({
+      id: 'zone-highlighted',
+      name: `Verify ${zone.name} is highlighted`,
+      template:
+        config.zone === 'stonewood'
+          ? 'stonewood-selected'
+          : 'plankerton-selected',
+      threshold: macroMatchThreshold,
+      action: 'confirm',
+      resumeEligible: true,
+      afterMs: 1_000,
+    })
+  }
 
   return [
     {
-      id: 'save-the-world-tile',
-      name: 'Save the World tile',
-      template: 'save-the-world-tile',
-      action: 'click',
+      id: 'current-lobby',
+      name: 'Save the World current lobby',
+      template: 'macro-current-lobby',
+      threshold: macroMatchThreshold,
+      action: 'scroll',
+      scrollAmount: 1,
       resumeEligible: true,
       longWait: true,
+      timeoutMs: 15 * 60_000,
+      afterMs: 3_000,
     },
     {
-      id: 'save-the-world-play',
-      name: 'Save the World — PLAY',
-      template: 'save-the-world-play',
-      target: { x: 0.5, y: 0.82 },
-      action: 'click',
+      id: 'enter-save-the-world',
+      name: 'Enter Save the World',
+      template: 'macro-save-the-world',
+      untilTemplate: 'macro-hestia-loaded',
+      threshold: macroMatchThreshold,
+      action: 'click-until',
+      timeoutMs: 15 * 60_000,
+      repeatEveryMs: 8_000,
       afterMs: 2_000,
     },
     {
-      id: 'homebase-loaded',
-      name: 'Homebase loaded',
-      template: 'homebase-loaded',
+      id: 'hestia-loaded',
+      name: 'Open the Save the World frontend',
+      template: 'macro-hestia-loaded',
+      threshold: macroMatchThreshold,
       action: 'key',
       key: 'Tab',
-      advanceIfVisible: 'game-menu-map',
       resumeEligible: true,
       longWait: true,
-      afterMs: 1_800,
+      afterMs: 2_000,
     },
     {
-      id: 'game-menu-map',
-      name: 'Game menu — MAP tab',
-      template: 'game-menu-map',
-      referenceRegion: { x: 0.418, y: 0.11, width: 0.078, height: 0.052 },
-      searchRegion: { x: 0.15, y: 0, width: 0.55, height: 0.25 },
+      id: 'quests-tab',
+      name: 'Wait for the Quests tab',
+      template: 'macro-quests-tab',
+      threshold: macroMatchThreshold,
+      action: 'confirm',
+      resumeEligible: true,
+      afterMs: 1_000,
+    },
+    {
+      id: 'map-tab',
+      name: 'Open the map',
+      template: 'macro-map-tab',
+      threshold: macroMatchThreshold,
       action: 'click',
-      resumeEligible: true,
-      afterMs: 1_500,
+      overridePointId: 'map-tab',
+      afterMs: 3_000,
     },
-    {
-      id: 'zone-nav',
-      name: `Stonewood to ${zone.name}`,
-      template: 'stonewood-selected',
-      searchRegion: { x: 0, y: 0.1, width: 0.4, height: 0.22 },
-      threshold: 0.9,
-      confirmScans: 2,
-      target: { x: 0.185, y: 0.5 },
-      action: zone.rightClicks ? 'click-repeat' : 'confirm',
-      repeatCount: zone.rightClicks,
-      repeatEveryMs: 350,
-      resumeEligible: true,
-      overridePointId: 'zone-arrow-right',
-      afterMs: 900,
-    },
+    ...(zone.rightClicks
+      ? [
+          {
+            id: 'zone-nav',
+            name: `Stonewood to ${zone.name}`,
+            template: 'macro-world-arrow-right',
+            threshold: macroMatchThreshold,
+            action: 'click-repeat' as const,
+            repeatCount: zone.rightClicks,
+            repeatEveryMs: 1_500,
+            overridePointId: 'zone-arrow-right',
+            afterMs: 2_000,
+          },
+        ]
+      : []),
+    ...zoneVerification,
     {
       id: 'zone-select',
       name: `${zone.name} — SELECT`,
-      template: 'twine-peaks-select',
+      template: 'macro-select-zone',
+      threshold: macroMatchThreshold,
       action: 'click',
       overridePointId: 'zone-select',
-      afterMs: 2_200,
+      afterMs: 3_000,
     },
     {
-      id: 'map-play-with-others',
-      name: 'Zone map opened',
-      template: 'map-play-with-others',
-      referenceRegion: { x: 0.43, y: 0.3, width: 0.16, height: 0.25 },
-      searchRegion: { x: 0.15, y: 0.25, width: 0.85, height: 0.75 },
-      threshold: 0.9,
-      confirmScans: 2,
-      action: 'confirm',
-      resumeEligible: true,
-    },
-    {
-      id: 'homebase-tile',
-      name: 'Homebase tile',
-      template: 'homebase-tile',
-      searchRegion: homebase.searchRegion,
-      threshold: 0.72,
-      confirmScans: 2,
-      target: homebase.target,
+      id: 'storm-shield-node',
+      name: `${zone.name} Storm Shield node`,
+      template: 'macro-storm-shield-node',
+      threshold: macroMatchThreshold,
       action: 'click',
       overridePointId: 'homebase-tile',
-      afterMs: 1_200,
-    },
-    {
-      id: 'homebase-select',
-      name: 'Homebase — SELECT',
-      template: 'homebase-select',
-      action: 'click',
-      overridePointId: 'homebase-select',
-      afterMs: 1_800,
-    },
-    {
-      id: 'my-storm-shield',
-      name: 'MY STORM SHIELD',
-      template: 'my-storm-shield',
-      referenceRegion: { x: 0.03, y: 0.2, width: 0.42, height: 0.065 },
-      searchRegion: { x: 0, y: 0.12, width: 0.6, height: 0.35 },
-      threshold: 0.8,
-      confirmScans: 2,
-      action: 'click',
-      overridePointId: 'my-storm-shield',
-      afterMs: 1_200,
-    },
-    {
-      id: 'storm-shield-launch',
-      name: 'Storm Shield — LAUNCH',
-      template: 'storm-shield-launch',
-      action: 'click',
-      overridePointId: 'storm-shield-launch',
-      afterMs: 2_500,
-    },
-    {
-      id: 'mission-lobby-launch',
-      name: 'Mission lobby — LAUNCH',
-      template: 'mission-lobby-launch',
-      action: 'click',
-      overridePointId: 'lobby-launch',
       afterMs: 2_000,
     },
     {
-      id: 'storm-shield-mission-loaded',
-      name: 'Storm Shield zone loaded',
-      template: 'storm-shield-mission-loaded',
+      id: 'select-storm-shield',
+      name: `Select ${zone.name} Storm Shield`,
+      template: 'macro-select-storm-shield',
+      threshold: macroMatchThreshold,
+      action: 'click',
+      overridePointId: 'homebase-select',
+      afterMs: 3_000,
+    },
+    {
+      id: 'launch-community-lookout',
+      name: 'Launch My Storm Shield',
+      template: 'macro-launch-community-lookout',
+      threshold: macroMatchThreshold,
+      action: 'click',
+      overridePointId: 'storm-shield-launch',
+      afterMs: 8_000,
+    },
+    {
+      id: 'launch-lobby',
+      name: 'Launch from the mission lobby',
+      template: 'macro-launch-lobby',
+      untilTemplate: 'macro-storm-shield-loaded',
+      threshold: macroMatchThreshold,
+      action: 'click-until',
+      timeoutMs: 15 * 60_000,
+      repeatEveryMs: 10_000,
+      overridePointId: 'lobby-launch',
+      afterMs: 3_000,
+    },
+    {
+      id: 'storm-shield-loaded',
+      name: 'Open inventory in the Storm Shield',
+      template: 'macro-storm-shield-loaded',
+      threshold: macroMatchThreshold,
       action: 'key',
       key: 'I',
       resumeEligible: true,
       longWait: true,
-      afterMs: 1_800,
+      afterMs: 3_000,
     },
     {
-      id: 'inventory-storm-shield',
-      name: 'Inventory — Storm Shield',
-      template: 'inventory-storm-shield',
+      id: 'storm-shield-tab',
+      name: 'Open the Storm Shield tab',
+      template: 'macro-storm-shield-tab',
+      threshold: macroMatchThreshold,
       action: 'click',
       overridePointId: 'inv-storm-shield',
-      afterMs: 1_500,
+      afterMs: 2_000,
     },
     {
       id: 'storm-shield-endurance',
-      name: 'Storm Shield Endurance',
-      template: 'storm-shield-endurance',
+      name: 'Choose Storm Shield Endurance',
+      template: 'macro-storm-shield-endurance',
+      threshold: macroMatchThreshold,
       action: 'click',
       overridePointId: 'endurance-tile',
-      afterMs: 1_500,
+      afterMs: 3_000,
     },
     {
       id: 'start-endurance',
-      name: 'START ENDURANCE',
-      template: 'start-endurance',
+      name: 'Choose Start Endurance',
+      template: 'macro-start-endurance',
+      threshold: macroMatchThreshold,
       action: 'click',
       overridePointId: 'start-endurance',
+      afterMs: 2_000,
+    },
+    {
+      id: 'confirm-start',
+      name: 'Confirm Start Endurance',
+      template: 'macro-confirm-start',
+      threshold: macroMatchThreshold,
+      action: 'click',
       afterMs: 2_000,
     },
   ]
@@ -339,6 +361,7 @@ export class EnduranceAutomation {
   private static processWatcherActive = false
   private static processRunning = false
   private static processName = 'FortniteClient-Win64-Shipping.exe'
+  private static nextHealthCheckAt = 0
 
   private static status: EnduranceStatus = {
     phase: 'idle',
@@ -578,6 +601,7 @@ export class EnduranceAutomation {
     }
 
     EnduranceAutomation.abortFlag = { aborted: false }
+    EnduranceAutomation.nextHealthCheckAt = 0
     EnduranceAutomation.setStatus({
       phase: 'waiting-for-process',
       running: true,
@@ -742,7 +766,7 @@ export class EnduranceAutomation {
       })
       EnduranceAutomation.emit({
         type: 'step',
-        message: `Endurance running — watching for READY TO RETURN (up to ${config.missionMinutes} minutes). Press F8 to stop.`,
+        message: `Endurance running — expecting results around ${config.missionMinutes} minutes, then allowing a 45-minute results grace period. Press F8 to stop.`,
       })
       await EnduranceAutomation.waitForMissionEnd(config)
 
@@ -750,15 +774,7 @@ export class EnduranceAutomation {
         phase: 'returning',
         missionStartedAt: null,
       })
-      await EnduranceAutomation.logWatcher.waitFor(
-        logMarkers.frontend,
-        5 * 60_000,
-        abort,
-      )
-      EnduranceAutomation.throwIfAborted()
-      await EnduranceAutomation.delay(10_000)
-      // Login/return reward popups may sit over the frontend.
-      await EnduranceAutomation.sweepInterrupts()
+      await EnduranceAutomation.recoverFrontend()
 
       if (config.claimAfterRun) {
         EnduranceAutomation.setStatus({ phase: 'claiming' })
@@ -875,7 +891,7 @@ export class EnduranceAutomation {
       referenceRegion: step.referenceRegion,
       searchRegion: step.searchRegion,
       target: step.target,
-      threshold: step.threshold ?? 0.9,
+      threshold: step.threshold ?? macroMatchThreshold,
     })
   }
 
@@ -885,7 +901,8 @@ export class EnduranceAutomation {
     index: number,
   ): Promise<MatchResult | { override: EndurancePoint }> {
     const step = steps[index]
-    const timeoutMs = step.longWait ? 5 * 60_000 : 2 * 60_000
+    const timeoutMs =
+      step.timeoutMs ?? (step.longWait ? 5 * 60_000 : 2 * 60_000)
     const deadline = Date.now() + timeoutMs
     const advanceIndex = step.advanceIfVisible
       ? steps.findIndex((item) => item.id === step.advanceIfVisible)
@@ -907,21 +924,9 @@ export class EnduranceAutomation {
       return { override }
     }
 
-    // Zone loads dominate this wait; let the log skip the scanning.
-    if (step.longWait) {
-      await EnduranceAutomation.logWatcher.waitFor(
-        logMarkers.loadMap,
-        15_000,
-        EnduranceAutomation.abortFlag,
-      )
-    }
-
     while (Date.now() < deadline) {
       EnduranceAutomation.throwIfAborted()
-
-      if (step.id === 'homebase-loaded') {
-        await EnduranceAutomation.sweepInterrupts(3)
-      }
+      await EnduranceAutomation.assertGameHealthy()
 
       const result = await EnduranceAutomation.findStep(step)
 
@@ -983,10 +988,16 @@ export class EnduranceAutomation {
     EnduranceAutomation.throwIfAborted()
     EnduranceAutomation.step(step.id, step.name)
 
-    if (step.action === 'key' && step.key) {
-      const { uIOhook, UiohookKey } = uiohook()
+    if (step.action === 'click-until' && step.untilTemplate) {
+      await EnduranceAutomation.clickUntilComplete(step, result)
 
-      uIOhook.keyTap(UiohookKey[step.key])
+      return
+    }
+
+    if (step.action === 'key' && step.key) {
+      await EnduranceAutomation.input.key(step.key)
+    } else if (step.action === 'scroll') {
+      await EnduranceAutomation.input.scroll(step.scrollAmount ?? 1)
     } else if (step.action !== 'confirm') {
       const target =
         'override' in result
@@ -1005,6 +1016,61 @@ export class EnduranceAutomation {
     }
 
     await EnduranceAutomation.delay(step.afterMs ?? 900)
+  }
+
+  /**
+   * The reference macro does not trust a single click on loading controls.
+   * It keeps checking the destination screen and retries the source button
+   * at a slower interval until the destination is positively identified.
+   */
+  private static async clickUntilComplete(
+    step: VisionStep,
+    firstResult: MatchResult | { override: EndurancePoint },
+  ) {
+    const deadline = Date.now() + (step.timeoutMs ?? 15 * 60_000)
+    let nextClickAt = 0
+    let targetResult = firstResult
+    let clicks = 0
+
+    while (Date.now() < deadline) {
+      EnduranceAutomation.throwIfAborted()
+      await EnduranceAutomation.assertGameHealthy()
+
+      const completed = await Vision.find(step.untilTemplate!, {
+        threshold: step.threshold ?? macroMatchThreshold,
+      })
+
+      if (completed.found) {
+        EnduranceAutomation.emit({
+          type: 'log',
+          message: `${step.name} succeeded after ${clicks} click${clicks === 1 ? '' : 's'}.`,
+        })
+        await EnduranceAutomation.delay(step.afterMs ?? 900)
+
+        return
+      }
+
+      if (Date.now() >= nextClickAt) {
+        if (!('override' in targetResult)) {
+          targetResult = await EnduranceAutomation.findStep(step)
+        }
+
+        if ('override' in targetResult || targetResult.found) {
+          const target =
+            'override' in targetResult
+              ? EnduranceAutomation.pointToPhysical(targetResult.override)
+              : targetResult.clickTarget
+
+          clicks += 1
+          await EnduranceAutomation.input.click(target.x, target.y)
+          nextClickAt = Date.now() + (step.repeatEveryMs ?? 8_000)
+        }
+      }
+
+      await EnduranceAutomation.delay(900, false)
+    }
+
+    throw new StepJumpError('TIMEOUT')
   }
 
   /**
@@ -1051,13 +1117,13 @@ export class EnduranceAutomation {
     return actions
   }
 
-  /**
-   * Endurance end: watch for READY TO RETURN (visual, like the original),
-   * with the timer and the optional log marker as backstops. Then click it
-   * and clear the reward screens.
-   */
+  /** Watch for the reference macro's results screen, with the old
+   * READY TO RETURN target retained as an early-exit helper. */
   private static async waitForMissionEnd(config: EnduranceConfig) {
-    const deadline = Date.now() + config.missionMinutes * 60_000
+    const expectedAt = Date.now() + config.missionMinutes * 60_000
+    // The reference workflow keeps searching for the results screen after
+    // the expected duration instead of immediately forcing an Esc-menu exit.
+    const deadline = expectedAt + 45 * 60_000
     let completionSeen = false
     let unsubscribe: (() => void) | null = null
 
@@ -1084,38 +1150,58 @@ export class EnduranceAutomation {
     try {
       while (Date.now() < deadline) {
         EnduranceAutomation.throwIfAborted()
+        await EnduranceAutomation.assertGameHealthy()
 
-        const result = await Vision.find(readyToReturn.template, {
+        const results = await Vision.find('macro-continue', {
+          threshold: macroMatchThreshold,
+        })
+
+        if (results.found) {
+          EnduranceAutomation.emit({
+            type: 'step',
+            message: 'Endurance results detected — continuing.',
+          })
+          await EnduranceAutomation.focusGame()
+          await EnduranceAutomation.input.click(
+            results.clickTarget.x,
+            results.clickTarget.y,
+          )
+          await EnduranceAutomation.delay(5_000)
+
+          return
+        }
+
+        const ready = await Vision.find(readyToReturn.template, {
           searchRegion: readyToReturn.searchRegion,
           threshold: readyToReturn.threshold,
         })
 
-        if (result.found) {
+        if (ready.found) {
           EnduranceAutomation.emit({
             type: 'step',
             message: 'READY TO RETURN is up — heading back.',
           })
           await EnduranceAutomation.focusGame()
           await EnduranceAutomation.input.click(
-            result.clickTarget.x,
-            result.clickTarget.y,
+            ready.clickTarget.x,
+            ready.clickTarget.y,
           )
           await EnduranceAutomation.delay(3_000)
-          await EnduranceAutomation.sweepInterrupts()
-
-          return
         }
 
         if (completionSeen) {
           EnduranceAutomation.emit({
             type: 'step',
             message:
-              'Completion marker seen in the log — waiting for READY TO RETURN…',
+              'Completion marker seen in the log — waiting for results…',
           })
           completionSeen = false
         }
 
-        await EnduranceAutomation.delay(10_000, false)
+        await EnduranceAutomation.delay(
+          Date.now() < expectedAt ? 120_000 : 1_000,
+          false,
+        )
       }
     } finally {
       unsubscribe?.()
@@ -1124,17 +1210,15 @@ export class EnduranceAutomation {
     EnduranceAutomation.emit({
       type: 'step',
       message:
-        'Run timer elapsed without READY TO RETURN — leaving through the pause menu.',
+        'Results did not appear during the 45-minute grace period — leaving through the pause menu.',
     })
     await EnduranceAutomation.escReturnFallback(config)
   }
 
   /** Blind Esc-menu exit, used only when READY TO RETURN never showed. */
   private static async escReturnFallback(config: EnduranceConfig) {
-    const { uIOhook, UiohookKey } = uiohook()
-
     await EnduranceAutomation.focusGame()
-    uIOhook.keyTap(UiohookKey.Escape)
+    await EnduranceAutomation.input.key('Escape')
     await EnduranceAutomation.delay(1_200)
 
     for (const pointId of ['return-to-homebase', 'return-confirm']) {
@@ -1149,8 +1233,170 @@ export class EnduranceAutomation {
   }
 
   /**
+   * Mirror the reference macro's post-Endurance state machine. It handles
+   * reward cards, Battle Royale XP, the mode picker, and Hestia instead of
+   * assuming one frontend log line means the UI is ready for another run.
+   */
+  private static async recoverFrontend() {
+    const deadline = Date.now() + 30 * 60_000
+    let lastState = ''
+    let lastStateChange = Date.now()
+    let rewardKeyPresses = 0
+
+    const observe = (state: string) => {
+      if (state === lastState) {
+        return
+      }
+
+      lastState = state
+      lastStateChange = Date.now()
+      EnduranceAutomation.emit({
+        type: 'log',
+        message: `Post-Endurance recovery: ${state}.`,
+      })
+    }
+
+    while (Date.now() < deadline) {
+      EnduranceAutomation.throwIfAborted()
+      await EnduranceAutomation.assertGameHealthy()
+
+      if (Date.now() - lastStateChange >= 5 * 60_000) {
+        throw new Error(
+          'Post-Endurance recovery stopped making progress for 5 minutes.',
+        )
+      }
+
+      const quests = await Vision.find('macro-quests-tab', {
+        threshold: macroMatchThreshold,
+      })
+
+      if (quests.found) {
+        observe('Hestia frontend')
+
+        // The original macro deliberately sends a minimum number of reward
+        // confirmations so stacked reward cards cannot survive into a loop.
+        if (rewardKeyPresses < 14) {
+          rewardKeyPresses += 1
+          await EnduranceAutomation.input.key('C')
+          await EnduranceAutomation.delay(1_500, false)
+          continue
+        }
+
+        EnduranceAutomation.emit({
+          type: 'step',
+          message: 'Save the World frontend recovered.',
+        })
+
+        return
+      }
+
+      const reward = await Vision.find('macro-reward-open', {
+        threshold: macroMatchThreshold,
+      })
+
+      if (reward.found) {
+        observe('reward prompt')
+        rewardKeyPresses += 1
+        await EnduranceAutomation.input.key('C')
+        await EnduranceAutomation.delay(1_500, false)
+        continue
+      }
+
+      const xp = await Vision.find('macro-battle-royale-xp-claim', {
+        threshold: macroMatchThreshold,
+      })
+
+      if (xp.found) {
+        observe('Battle Royale XP popup')
+        await EnduranceAutomation.input.click(
+          xp.clickTarget.x,
+          xp.clickTarget.y,
+        )
+        await EnduranceAutomation.delay(1_500, false)
+        continue
+      }
+
+      const currentLobby = await Vision.find('macro-current-lobby', {
+        threshold: macroMatchThreshold,
+      })
+
+      if (currentLobby.found) {
+        observe('Battle Royale current lobby')
+        await EnduranceAutomation.input.scroll(1)
+        await EnduranceAutomation.delay(8_000, false)
+        continue
+      }
+
+      const saveTheWorld = await Vision.find('macro-save-the-world', {
+        threshold: macroMatchThreshold,
+      })
+
+      if (saveTheWorld.found) {
+        observe('Save the World mode tile')
+        await EnduranceAutomation.input.click(
+          saveTheWorld.clickTarget.x,
+          saveTheWorld.clickTarget.y,
+        )
+        await EnduranceAutomation.delay(8_000, false)
+        continue
+      }
+
+      const hestia = await Vision.find('macro-hestia-loaded', {
+        threshold: macroMatchThreshold,
+      })
+
+      if (hestia.found) {
+        observe('Hestia loaded')
+        await EnduranceAutomation.input.key('Tab')
+        await EnduranceAutomation.delay(10_000, false)
+        continue
+      }
+
+      observe('unrecognized screen')
+      await EnduranceAutomation.delay(1_000, false)
+    }
+
+    throw new Error('Timed out recovering the Save the World frontend.')
+  }
+
+  /**
    * Primitives
    */
+
+  /** Process and blocking-dialog checks from the reference controller. */
+  private static async assertGameHealthy() {
+    const now = Date.now()
+
+    if (now < EnduranceAutomation.nextHealthCheckAt) {
+      return
+    }
+
+    EnduranceAutomation.nextHealthCheckAt = now + 15_000
+
+    if (
+      !(await EnduranceAutomation.input.checkProcess(
+        EnduranceAutomation.processName,
+      ))
+    ) {
+      throw new Error('Fortnite closed while Endurance was running.')
+    }
+
+    for (const dialog of [
+      { id: 'Roadblock', template: 'macro-roadblock' },
+      { id: 'Network Connection Lost', template: 'macro-network-lost' },
+    ]) {
+      const result = await Vision.find(dialog.template, {
+        searchRegion: { x: 0.15, y: 0.15, width: 0.7, height: 0.55 },
+        threshold: 0.8,
+      })
+
+      if (result.found) {
+        throw new Error(
+          `${dialog.id} dialog detected (${Math.round(result.confidence * 100)}% match).`,
+        )
+      }
+    }
+  }
 
   private static pointToPhysical(point: EndurancePoint) {
     const display = screen.getPrimaryDisplay()

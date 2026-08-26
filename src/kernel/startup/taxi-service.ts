@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type {
   TaxiServiceAccountData,
   TaxiServiceAccountFileData,
@@ -538,7 +539,7 @@ export class TaxiService {
           return
         }
       } catch (error) {
-        //
+        RuntimeLog.error('caught:startup/taxi-service.ts', error)
       }
 
       const filteredMembersId = member.party.members.filter(({ id }) =>
@@ -562,7 +563,7 @@ export class TaxiService {
               try {
                 await currentClient.client.party?.leave()
               } catch (error) {
-                //
+                RuntimeLog.error('caught:startup/taxi-service.ts', error)
               }
 
               clearCurrentTimeout()
@@ -705,7 +706,7 @@ export class TaxiService {
           return
         }
       } catch (error) {
-        //
+        RuntimeLog.error('caught:startup/taxi-service.ts', error)
       }
 
       try {
@@ -734,7 +735,7 @@ export class TaxiService {
                 'away',
               )
             } catch (_error) {
-              //
+              RuntimeLog.error('caught:startup/taxi-service.ts', _error)
             }
           },
           1000 * 60 * 2,
@@ -971,7 +972,7 @@ export class TaxiService {
     try {
       await accountService.client.party?.me?.sendPatch(metaInfo)
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/taxi-service.ts', error)
     }
   }
 

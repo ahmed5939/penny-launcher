@@ -36,7 +36,7 @@ export function ActionTile({
       type="button"
       className={cn(
         'panel group flex w-full items-start gap-3.5 p-4 text-left transition-colors',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'disabled:opacity-50',
         !disabled &&
           (danger
             ? 'hover:border-destructive/50 hover:bg-destructive/[0.07]'
@@ -45,12 +45,17 @@ export function ActionTile({
       disabled={disabled}
       onClick={onClick}
     >
+      {/*
+        Spelt out rather than an `IconWell`: the kit well has exactly two tones
+        by design, and a delete tile needs the destructive one. It also brightens
+        with the tile under the pointer, which a static well does not do.
+      */}
       <span
         className={cn(
-          'grid size-9 shrink-0 place-items-center rounded-lg transition-colors',
+          'grid size-9 shrink-0 place-items-center rounded-lg ring-1 ring-inset transition-colors',
           danger
-            ? 'bg-destructive/10 text-destructive'
-            : 'bg-primary/10 text-primary',
+            ? 'bg-destructive/10 text-destructive ring-destructive/20'
+            : 'bg-primary/10 text-primary ring-primary/20',
           !disabled &&
             (danger
               ? 'group-hover:bg-destructive/20'

@@ -3,13 +3,14 @@ import type { ItemActionRequest } from '../../../kernel/core/item-actions'
 import type { ItemKind } from '../../../config/constants/fortnite/items'
 
 import { useShallow } from 'zustand/react/shallow'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   getItemRecord,
   useItemDatabaseStore,
 } from '../../../state/items/database'
 import { useInventoryStore } from '../../../state/stw-operations/inventory'
+import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
@@ -30,6 +31,8 @@ export type InventoryRow = InventoryItem & {
 }
 
 export function useInventoryData() {
+  useRequestItemDatabase()
+
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [isActing, setActing] = useState(false)
 
@@ -81,9 +84,11 @@ export function useInventoryData() {
 
   const entry = accountId ? data[accountId] : undefined
   const selected_ = (accountId ? selection[accountId] : undefined) ?? []
+  const selectedSet = useMemo(() => new Set(selected_), [selected_])
 
   const maxRarityIndex = rarityOrder.indexOf(filters.maxRarity)
   const search = filters.search.trim().toLowerCase()
+  const deferredSearch = useDeferredValue(search)
 
   /**
    * Everything the account owns is listed, favourited and equipped items
@@ -125,25 +130,30 @@ export function useInventoryData() {
           return false
         }
 
-        if (search.length > 0) {
+        if (deferredSearch.length > 0) {
           return (
-            item.displayName.toLowerCase().includes(search) ||
-            (item.displaySubtitle ?? '').toLowerCase().includes(search) ||
-            item.templateId.toLowerCase().includes(search)
+            item.displayName.toLowerCase().includes(deferredSearch) ||
+            (item.displaySubtitle ?? '').toLowerCase().includes(deferredSearch) ||
+            item.templateId.toLowerCase().includes(deferredSearch)
           )
         }
 
         return true
       }),
     }
-  }, [entry, filters, maxRarityIndex, ratings, records, search])
+  }, [deferredSearch, entry, filters, maxRarityIndex, ratings, records])
+
+  const rowsById = useMemo(
+    () => new Map(rows.map((item) => [item.itemId, item])),
+    [rows]
+  )
 
   /** What the current selection would hand back, by resource. */
   const recycleRewards = useMemo(() => {
     const totals: Record<string, number> = {}
 
     rows.forEach((item) => {
-      if (!selected_.includes(item.itemId) || !item.recycle) {
+      if (!selectedSet.has(item.itemId) || !item.recycle) {
         return
       }
 
@@ -155,7 +165,7 @@ export function useInventoryData() {
       .filter(([, amount]) => amount > 0)
       .sort(([, a], [, b]) => b - a)
       .map(([templateId, amount]) => ({ amount, templateId }))
-  }, [rows, selected_])
+  }, [rows, selectedSet])
 
   const totalSelected = selected_.length
   const isDisabledRecycle = isRecycling || totalSelected <= 0 || !accountId
@@ -247,7 +257,7 @@ export function useInventoryData() {
       return
     }
 
-    const item = rows.find((row) => row.itemId === itemId)
+    const item = rowsById.get(itemId)
 
     if (!item || item.lockedReason !== null) {
       return
@@ -255,7 +265,7 @@ export function useInventoryData() {
 
     updateSelection(
       accountId,
-      selected_.includes(itemId)
+      selectedSet.has(itemId)
         ? selected_.filter((value) => value !== itemId)
         : [...selected_, itemId]
     )
@@ -388,6 +398,7 @@ export function useInventoryData() {
     recycleRewards,
     rows,
     selectedIds: selected_,
+    selectedSet,
     totalSelected,
 
     clearSelection,

@@ -5,7 +5,6 @@
       "auto-kick": "自动踢出",
       "taxi-service": "出租车服务",
       "party": "队伍",
-      "daily-quests": "每日任务",
       "expeditions": "远征",
       "squad-presets": "幸存者小队",
       "inventory": "仓库",
@@ -15,9 +14,8 @@
       "timeline": "活动时间线",
       "shop": "STW 商店",
       "xp-boosts": "经验加成",
-      "auto-pin-urns": "自动标记宝箱",
-      "auto-llamas": "自动羊驼",
-      "unlock": "解锁 SSD 奖励"
+      "auto-pin-urns": "瓮任务追踪器",
+      "auto-llamas": "自动羊驼"
     },
     "auto-kick-status": {
       "issue": "未生效",

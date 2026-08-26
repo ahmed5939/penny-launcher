@@ -37,7 +37,6 @@ export const customizableMenuSettingsRelations: Record<
     'autoKick',
     'taxiService',
     'party',
-    'dailyQuests',
     'expeditions',
     'squadPresets',
     'inventory',
@@ -49,7 +48,6 @@ export const customizableMenuSettingsRelations: Record<
     'xpBoosts',
     'autoPinUrns',
     'autoLlamas',
-    'unlock',
   ],
   accountManagement: [
     'vbucksInformation',

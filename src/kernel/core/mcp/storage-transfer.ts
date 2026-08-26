@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../../runtime-log'
 import type {
   MCPQueryProfileStorageItem,
   MCPStorageTransferItem,
@@ -146,13 +147,13 @@ export class MCPStorageTransfer {
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-          //
+          RuntimeLog.error('caught:core/mcp/storage-transfer.ts', error)
         }
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/mcp/storage-transfer.ts', error)
     }
   }
 }

@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { BrowserWindow, Rectangle } from 'electron'
 
 import { writeFileSync } from 'node:fs'
@@ -160,7 +161,7 @@ export class WindowState {
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        //
+        RuntimeLog.error('caught:startup/window-state.ts', error)
       }
     })
   }
@@ -195,7 +196,7 @@ export class WindowState {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/window-state.ts', error)
     }
   }
 }

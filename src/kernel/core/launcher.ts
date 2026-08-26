@@ -1,6 +1,8 @@
+import { RuntimeLog } from '../runtime-log'
 import type { AccountData } from '../../types/accounts'
 
-import childProcess from 'node:child_process'
+import { spawn } from 'node:child_process'
+import path from 'node:path'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 import { launcherAppClient2 } from '../../config/fortnite/clients'
@@ -14,6 +16,7 @@ import {
   getAccessTokenUsingExchangeCode,
   getExchangeCodeUsingAccessToken,
 } from '../../services/endpoints/oauth'
+import { createLauncherArguments } from './launcher-arguments'
 
 export class FortniteLauncher {
   static async start(account: AccountData) {
@@ -79,27 +82,25 @@ export class FortniteLauncher {
         return
       }
 
-      const command = [
-        'start',
-        '""',
-        'FortniteLauncher.exe',
-        // `${manifest.LaunchCommand}`,
-        '-AUTH_LOGIN=unused',
-        `-AUTH_PASSWORD=${launcherExchangeCode.data.code}`,
-        '-AUTH_TYPE=exchangecode',
-        '-epicapp=Fortnite',
-        '-epicenv=Prod',
-        '-EpicPortal',
-        // '-steamimportavailable',
-        `-epicusername="${account.displayName}"`,
-        `-epicuserid=${account.accountId}`,
-        // '-epiclocale=en',
-        // '-epicsandboxid=fn',
-      ].join(' ')
-
-      childProcess.exec(command, {
-        cwd: settings.path,
+      const args = createLauncherArguments({
+        accountId: account.accountId,
+        displayName: account.displayName,
+        exchangeCode: launcherExchangeCode.data.code,
       })
+      const executable = path.join(settings.path, 'FortniteLauncher.exe')
+      const process = spawn(executable, args, {
+        cwd: settings.path,
+        detached: true,
+        shell: false,
+        stdio: 'ignore',
+        windowsHide: false,
+      })
+
+      await new Promise<void>((resolve, reject) => {
+        process.once('spawn', resolve)
+        process.once('error', reject)
+      })
+      process.unref()
 
       MainWindow.instance.webContents.send(
         ElectronAPIEventKeys.LauncherNotification,
@@ -113,7 +114,7 @@ export class FortniteLauncher {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/launcher.ts', error)
     }
 
     sendError()

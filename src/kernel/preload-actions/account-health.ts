@@ -17,7 +17,7 @@ export function responseAccountHealth(
     _: IpcRendererEvent,
     response: ProfilePayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.AccountHealthResponse,

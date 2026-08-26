@@ -25,11 +25,7 @@ export function InputSecret({
   const icon = isSecret ? <Eye size={16} /> : <EyeOff size={16} />
 
   return (
-    <div
-      className={cn(
-        'flex items-center overflow-hidden relative rounded-md'
-      )}
-    >
+    <div className="flex items-center overflow-hidden relative rounded-lg">
       <Input
         {...inputProps}
         className={cn('pr-10 select-none', inputProps?.className)}

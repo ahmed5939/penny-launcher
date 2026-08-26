@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { BrowserWindow } from 'electron'
 
 import path from 'node:path'
@@ -112,7 +113,7 @@ export class Taskbar {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/taskbar.ts', error)
     }
   }
 

@@ -195,6 +195,20 @@
    */
   --header-height: 2.5rem;
 
+  /*
+   * The status bar strip at the foot of the shell. Declared here because
+   * three files hand-computed a `100vh` subtraction against a literal, and
+   * two of them subtracted 1.875rem — a height the bar has never had.
+   */
+  --status-bar-height: 1.5rem;
+
+  /*
+   * Chrome fill opacity, read by `.chrome-surface`. This is the fallback:
+   * no material behind the window, so the strips sit on an opaque page and
+   * need a firm blend to read as chrome at all. `html.mica` lowers it.
+   */
+  --chrome-opacity: 0.8;
+
   --sidebar-width-md: 14rem;
   --sidebar-width-lg: 16.5rem;
 
@@ -267,6 +281,101 @@
 
     @apply hover:border-primary/40 hover:bg-accent/30;
   }
+
+  /*
+   * The three chrome strips — titlebar, account rail, status bar — share one
+   * fill, so they cannot drift apart the way they did when each carried its
+   * own `bg-surface/*` literal: the header sat one step heavier than the rail
+   * and the status bar, while Mica flattened all three to the same value. The
+   * split showed everywhere *except* the one place a material justified it.
+   *
+   * The opacity is a custom property rather than a literal because Mica needs
+   * a second value, and a variable keeps both of them declared in one place.
+   */
+  .chrome-surface {
+    background-color: hsl(var(--surface) / var(--chrome-opacity));
+  }
+
+  /*
+   * The mission row's outer frame. Three columns: a 28px gutter for the
+   * read-only completion tick, the brief card, and a 28px gutter for the
+   * screenshot button.
+   *
+   * Both gutters stay reserved even when their contents are hidden — Alerts
+   * Done hides the tick, some sections hide the screenshot — because a row
+   * that shifts 34px sideways depending on which screen it is on loses the
+   * column alignment the whole layout is built on.
+   *
+   * `start`, not `stretch`: the middle column grows to whatever the expanded
+   * detail panel needs, and a stretched gutter would centre its tick on that
+   * whole height — leaving the tick floating a hundred pixels below the row it
+   * describes. The gutters size themselves to the collapsed row instead.
+   */
+  .mission-brief-frame {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr) 1.75rem;
+    column-gap: 0.375rem;
+    align-items: start;
+  }
+
+  /*
+   * The card's internal template, declared once here and reused verbatim by
+   * the row and by its loading skeleton, so the page cannot reflow when data
+   * lands and six files cannot drift apart.
+   *
+   * A flex line ends wherever the data runs out; a fixed six-column grid keeps
+   * an empty cell empty and reserved, so power figures and payload wells share
+   * an x-coordinate the whole way down the page.
+   *
+   * 3px zone rail | 44px identity well | flexible job | 68px power | payload |
+   * 28px chevron.
+   */
+  .mission-brief {
+    display: grid;
+    grid-template-columns: 3px 2.75rem minmax(0, 1fr) 4.25rem 11.5rem 1.75rem;
+    align-items: stretch;
+  }
+
+  /*
+   * The payload bay takes its extra 32px at the width where the shell stops
+   * being the constraint: 14rem sidebar plus content clears 1120px at `lg`.
+   */
+  @media (min-width: 1024px) {
+    .mission-brief {
+      grid-template-columns: 3px 2.75rem minmax(0, 1fr) 4.25rem 13.5rem 1.75rem;
+    }
+  }
+
+  /*
+   * Every heading below h2 in the missions UI, matching the label already
+   * above the alert preview tiles. Six files writing six near-identical
+   * heading recipes is how a system stops being one.
+   */
+  .micro-label {
+    @apply text-[0.625rem] font-semibold uppercase leading-none tracking-[0.12em] text-muted-foreground/55;
+  }
+
+  /* Section headings. One step louder and wider, so the two never read as the same rank. */
+  .section-label {
+    @apply text-[0.6875rem] font-bold uppercase leading-none tracking-[0.16em] text-foreground/85;
+  }
+
+  /*
+   * Every number in the missions UI. Display is the optical size the family
+   * draws for figures, and it is what the base rule already hands h1/h2/h3;
+   * the matching -0.02em tracking means a 20px power figure and a 20px heading
+   * have the same colour on the page.
+   *
+   * Literal CSS rather than `@apply font-display` so this file has no ordering
+   * dependency on the Tailwind config.
+   */
+  .figure {
+    font-family:
+      'Segoe UI Variable Display', 'Segoe UI Variable', 'Segoe UI',
+      system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
 }
 
 img {
@@ -310,8 +419,14 @@ html.mica body {
   background: transparent;
 }
 
-html.mica .mica-chrome {
-  background-color: hsl(var(--surface) / 0.55);
+/*
+ * With the material behind the window the chrome lets the desktop through,
+ * so the shared fill thins out. Lowering the variable is the whole of it:
+ * `.chrome-surface` reads its opacity from here, so the three strips follow
+ * without a Mica-specific rule of their own.
+ */
+html.mica {
+  --chrome-opacity: 0.55;
 }
 
 html.mica .mica-content {

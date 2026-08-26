@@ -5,7 +5,6 @@
       "auto-kick": "Auto-expulsar",
       "taxi-service": "Serviço de Táxi",
       "party": "Grupo",
-      "daily-quests": "Missões Diárias",
       "expeditions": "Expedições",
       "squad-presets": "Esquadrões de Sobreviventes",
       "inventory": "Cofre",
@@ -15,9 +14,8 @@
       "timeline": "Linha do Tempo",
       "shop": "Loja STW",
       "xp-boosts": "Impulsos de XP",
-      "auto-pin-urns": "Fixar Urnas Automaticamente",
-      "auto-llamas": "Lhamas Automáticas",
-      "unlock": "Desbloquear Recompensas dos Escudos"
+      "auto-pin-urns": "Rastreador da missão de urnas",
+      "auto-llamas": "Lhamas Automáticas"
     },
     "auto-kick-status": {
       "issue": "Problema",

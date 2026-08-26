@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 /**
  * PennyDB
@@ -10,7 +10,7 @@ import axios from 'axios'
  *
  * Deliberately no Epic user-agent interceptor: this is not an Epic service.
  */
-export const pennydbService = axios.create({
+export const pennydbService = createAxios({
   baseURL: 'https://pennydb.net/api',
   timeout: 20000,
 })

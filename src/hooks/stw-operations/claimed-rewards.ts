@@ -7,7 +7,8 @@ import { useGetAccounts } from '../accounts'
 import { useClaimedRewardsStore } from '../../state/stw-operations/claimed-rewards'
 
 export function useClaimedRewards() {
-  const { data, updateData } = useClaimedRewardsStore()
+  const data = useClaimedRewardsStore((state) => state.data)
+  const updateData = useClaimedRewardsStore((state) => state.updateData)
 
   return {
     data,

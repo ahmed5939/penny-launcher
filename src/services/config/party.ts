@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Party Service
  */
 
-export const partyService = axios.create({
+export const partyService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://party-service-prod.ol.epicgames.com/party/api/v1/Fortnite',
 })

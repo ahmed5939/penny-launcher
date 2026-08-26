@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Public Account Service
  */
 
-export const publicAccountService = axios.create({
+export const publicAccountService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://account-public-service-prod.ol.epicgames.com/account/api/public/account',
 })

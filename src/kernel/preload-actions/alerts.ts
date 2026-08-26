@@ -19,7 +19,7 @@ export function fetchPlayerDataNotification(
     _: IpcRendererEvent,
     value: AlertsDoneSearchPlayerResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.HomeFetchPlayerResponse,

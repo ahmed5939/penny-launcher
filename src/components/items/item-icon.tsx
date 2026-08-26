@@ -1,4 +1,7 @@
 import type { ItemRecordMap } from '../../kernel/core/item-database'
+import type { ParseResourceData } from '../../types/data/resources'
+
+import { accentByRarity, gradedTypes, rarityStyle } from '../page/rarity'
 
 import { RarityType } from '../../config/constants/resources'
 import { peglegImageURL } from '../../config/constants/pegleg'
@@ -58,7 +61,45 @@ const frameByRarity: Record<string, string> = {
 /** The kinds whose decoded name beats `parseResource`'s generic one. */
 const decodablePrefix = /^(Hero|Schematic|Defender|Worker):/
 
+/**
+ * The one corner-badge recipe.
+ *
+ * A quantity, a level, a tier, a power and the padlock are all the same
+ * thing — a small fact stamped onto the item's own art — so they are one
+ * shape rather than five. The fill is a token pair rather than black and
+ * white, because a badge has to stay legible over a bright legendary plate
+ * and over a pale page, and a fixed pair only manages one of the two.
+ *
+ * Where a badge pins is the call site's business, since the corner and the
+ * inset scale with the art it sits on. What it looks like is not.
+ */
+export const itemBadge =
+  'absolute z-10 inline-flex items-center gap-0.5 rounded-lg bg-background/85 px-1 py-px text-[0.625rem] font-semibold leading-none text-foreground ring-1 ring-inset ring-border/50'
+
+/**
+ * The rarity colour this item's chrome is allowed to spend, on the app's one
+ * ladder (`src/components/page/rarity.ts`).
+ *
+ * Two gates, both borrowed rather than restated, so the vault cannot become a
+ * second source of truth for rarity. Rarity is a real property of graded item
+ * classes only — a stack of Nuts & Bolts is not "Common", it has no rarity to
+ * colour at all — and `accentByRarity` holds no entry below Rare, which keeps
+ * the junk half of a vault page in the neutral border token.
+ */
+function resolveAccent(templateId: string, resource: ParseResourceData) {
+  const graded =
+    (resource.type !== null && gradedTypes.has(resource.type)) ||
+    templateId.startsWith('Schematic:')
+
+  return graded ? accentByRarity[resource.rarity] ?? null : null
+}
+
 export type ItemArt = {
+  /**
+   * The colour this item's chrome draws its rarity in, or null when the item
+   * has no rarity worth spending colour on. See `resolveAccent`.
+   */
+  accent: string | null
   /** Rarity backing tile. Always present. */
   frame: string | undefined
   /** Foreground icon, or undefined when only the frame is known. */
@@ -82,6 +123,7 @@ export function resolveItemArt(
 
   if (record) {
     return {
+      accent: resolveAccent(templateId, resource),
       frame: assets(frameByRarity[resource.rarity] ?? 'c'),
       imgUrl: record.image ? peglegImageURL(record.image) : undefined,
       name: record.name,
@@ -121,6 +163,7 @@ export function resolveItemArt(
   }
 
   return {
+    accent: resolveAccent(templateId, resource),
     frame,
     /** Nothing matched, so the frame is the whole picture. */
     imgUrl: imgUrl === frame ? undefined : imgUrl,
@@ -132,7 +175,9 @@ export function resolveItemArt(
 
 /**
  * One framed item icon: rarity tile behind, item art on top, quantity in the
- * corner. Sized in the same steps as the reward chips.
+ * corner. Sized in the same steps as the reward chips, and ringed the same
+ * way `RewardWell` rings them — rarity as a hairline, never a fill behind the
+ * art, and only for the grades the ladder decided are worth the colour.
  */
 export function ItemIcon({
   className,
@@ -164,11 +209,13 @@ export function ItemIcon({
   return (
     <span
       className={cn(
-        'relative grid shrink-0 place-items-center overflow-hidden rounded-md',
-        'bg-muted/40 ring-1 ring-inset ring-border/60',
+        'relative grid shrink-0 place-items-center overflow-hidden rounded-lg',
+        'bg-muted/40 ring-1 ring-inset',
+        art.accent ? 'ring-[color:var(--rarity-soft)]' : 'ring-border/60',
         box,
         className
       )}
+      style={rarityStyle(art.accent)}
       title={title ?? art.name}
     >
       {art.frame && (
@@ -176,6 +223,8 @@ export function ItemIcon({
           alt=""
           aria-hidden
           className="absolute inset-0 size-full object-cover"
+          decoding="async"
+          loading="lazy"
           src={art.frame}
         />
       )}
@@ -183,19 +232,20 @@ export function ItemIcon({
         <img
           alt=""
           className="relative size-full object-contain"
+          decoding="async"
           loading="lazy"
           src={art.imgUrl}
         />
       )}
       {typeof quantity === 'number' && quantity > 1 && (
-        <span className="absolute bottom-0 right-0 rounded-tl bg-background/85 px-1 text-[0.55rem] font-semibold leading-tight tabular-nums">
+        <span className={cn(itemBadge, 'figure bottom-0.5 right-0.5')}>
           {quantity > 9999
             ? `${Math.round(quantity / 1000)}k`
             : quantity.toLocaleString()}
         </span>
       )}
       {typeof tier === 'number' && tier > 0 && (
-        <span className="absolute left-0 top-0 rounded-br bg-background/85 px-1 text-[0.5rem] font-semibold leading-tight">
+        <span className={cn(itemBadge, 'figure left-0.5 top-0.5')}>
           T{tier}
         </span>
       )}

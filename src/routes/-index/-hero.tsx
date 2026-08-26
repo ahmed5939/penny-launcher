@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router'
 import { Plus, Rocket, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useRef, useState } from 'react'
+import { useDocumentVisible } from '../../hooks/ui/document-visibility'
 
 import { PennyRender } from '../../components/branding/penny-portrait'
 import { Button } from '../../components/ui/button'
@@ -14,7 +15,6 @@ import { useAlertsSummary, useAutomationServices } from './-hooks'
 
 import { numberWithCommaSeparator } from '../../lib/parsers/numbers'
 import { parseCustomDisplayName, cn } from '../../lib/utils'
-import { whatIsThis } from '../../lib/callbacks'
 
 /**
  * Home hero: identity, the one action that matters, and the numbers worth
@@ -106,7 +106,6 @@ export function HomeHero() {
             {!hasAccounts ? (
               <Button
                 className="h-11 rounded-lg bg-gradient-to-r from-brand-from to-brand-to px-7 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-black/40 hover:brightness-110"
-                onAuxClick={whatIsThis()}
                 asChild
               >
                 <Link
@@ -190,6 +189,7 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
  * we have no start time and would rather show nothing than guess one.
  */
 function useSessionTimer(isRunning: boolean) {
+  const isVisible = useDocumentVisible()
   const [elapsed, setElapsed] = useState<number | null>(null)
   const startedAt = useRef<number | null>(null)
   const wasRunning = useRef(isRunning)
@@ -214,7 +214,9 @@ function useSessionTimer(isRunning: boolean) {
       return
     }
 
-    setElapsed(0)
+    setElapsed(Date.now() - start)
+
+    if (!isVisible) return
 
     const interval = setInterval(() => {
       setElapsed(Date.now() - start)
@@ -223,7 +225,7 @@ function useSessionTimer(isRunning: boolean) {
     return () => {
       clearInterval(interval)
     }
-  }, [isRunning])
+  }, [isRunning, isVisible])
 
   return elapsed
 }

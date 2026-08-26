@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Base Game Service
  */
 
-export const baseGameService = axios.create({
+export const baseGameService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://fngw-mcp-gc-livefn.ol.epicgames.com/fortnite/api/game/v2',
 })

@@ -25,7 +25,7 @@ export function syncAccountsOrdering(accounts: AccountDataRecord) {
 
 export function responseCustomDisplayName(callback: () => Promise<void>) {
   const customCallback = () => {
-    callback().catch(() => {})
+    callback().catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ResponseUpdateAccountBasicInfo,
@@ -48,7 +48,7 @@ export function syncAccountData(
     _: IpcRendererEvent,
     value: SyncAccountDataResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.SyncAccessToken,
@@ -82,7 +82,7 @@ export function eulaVerificationResponse(
     _: IpcRendererEvent,
     value: Record<string, EULAAccountStatus>
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.EULAVerificationResponse,

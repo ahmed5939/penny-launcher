@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { MCPQueryProfileMainProfile } from '../../types/services/mcp'
 import type { AccountData } from '../../types/accounts'
 
@@ -88,7 +89,7 @@ export class VBucksInformation {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/vbucks-information.ts', error)
     }
 
     return result

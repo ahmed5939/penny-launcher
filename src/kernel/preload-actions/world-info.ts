@@ -56,7 +56,7 @@ export function responseHomeWorldInfo(
   callback: (value: WorldInfoData) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, value: WorldInfoData) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.HomeWorldInfoResponse,
@@ -79,7 +79,7 @@ export function responseWorldInfoData(
     _: IpcRendererEvent,
     value: WorldInfoResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.WorldInfoResponseData,
@@ -102,7 +102,7 @@ export function responseWorldInfoFiles(
     _: IpcRendererEvent,
     value: Array<WorldInfoFileData>
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.WorldInfoResponseFiles,
@@ -122,7 +122,7 @@ export function saveWorldInfoDataNotification(
   callback: (value: boolean) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, value: boolean) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.WorldInfoSaveNotification,
@@ -145,7 +145,7 @@ export function deleteWorldInfoFileNotification(
     _: IpcRendererEvent,
     value: WorldInfoDeleteResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.WorldInfoDeleteNotification,
@@ -168,7 +168,7 @@ export function exportWorldInfoFileNotification(
     _: IpcRendererEvent,
     value: WorldInfoExportResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.WorldInfoExportFileNotification,
@@ -191,7 +191,7 @@ export function openWorldInfoFileNotification(
     _: IpcRendererEvent,
     value: WorldInfoOpenResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.WorldInfoOpenFileNotification,
@@ -211,7 +211,7 @@ export function renameWorldInfoFileNotification(
   callback: (value: boolean) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, value: boolean) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.WorldInfoRenameFileNotification,

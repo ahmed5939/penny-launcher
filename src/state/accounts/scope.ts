@@ -24,7 +24,7 @@ export type AccountScopeState = {
  * This replaces both the titlebar's `selected` account and the private
  * `selectedAccounts` array that lived in five separate stores. Those were the
  * same question asked twelve times: picking an account up top changed nothing
- * on Expeditions, Daily Quests, Profile or any of the other nine tools,
+ * on Expeditions, Profile, or any of the other account tools,
  * because each of them owned its own answer.
  *
  * Two invariants hold everywhere, and every action below maintains them:

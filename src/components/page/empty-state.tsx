@@ -1,6 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { IconWell } from './icon-well'
+
 import { cn } from '../../lib/utils'
 
 /**
@@ -32,9 +34,10 @@ export function EmptyState({
       )}
     >
       {Icon && (
-        <span className="grid size-11 place-items-center rounded-xl bg-muted/60 text-muted-foreground">
-          <Icon className="size-5" />
-        </span>
+        <IconWell
+          icon={Icon}
+          size="lg"
+        />
       )}
       <div className="space-y-1">
         <p className="text-sm font-semibold">{title}</p>

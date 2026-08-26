@@ -68,7 +68,6 @@ import {
   extractXPBoosts,
   extractCommanderLevel,
 } from '../../../lib/parsers/query-profile'
-import { whatIsThis } from '../../../lib/callbacks'
 import { assets } from '../../../lib/repository'
 import {
   AccountBasicInformationSection,
@@ -121,7 +120,7 @@ function Content() {
   } = useSearchUser()
   const { getMenuOptionVisibility } =
     useCustomizableMenuSettingsVisibility()
-  const { showLink, handleXD, handleWhy } = useWhy({
+  const { showLink, handleWhy } = useWhy({
     inputSearchValue: inputSearchDisplayName,
   })
   const { recalculateTotal, teammateXPBoostsFiltered } = useFilterXPBoosts(
@@ -173,7 +172,6 @@ function Content() {
 
                         if (!inputSearchButtonIsDisabled) {
                           handleSearchUser()
-                          handleXD()
                           handleWhy()
                         }
                       }}
@@ -235,7 +233,6 @@ function Content() {
                           onClick={handleOpenExternalFNDBProfileUrl(
                             searchedUser.data.lookup.id,
                           )}
-                          onAuxClick={whatIsThis()}
                         >
                           <ExternalAuthTypeImage
                             externalAuthType={
@@ -486,7 +483,7 @@ function SendBoostsSheet({
                   grayscale: xpBoostType,
                 })}
               >
-                <img src={assets('smallxpboost_gift')} />
+                <img decoding="async" loading="lazy" src={assets('smallxpboost_gift')} />
               </figure>
               <Switch
                 checked={xpBoostType}
@@ -498,7 +495,7 @@ function SendBoostsSheet({
                   grayscale: !xpBoostType,
                 })}
               >
-                <img src={assets('smallxpboost')} />
+                <img decoding="async" loading="lazy" src={assets('smallxpboost')} />
               </figure>
             </div>
           </div>
@@ -620,7 +617,6 @@ function SendBoostsSheet({
                           onClick={handleOpenExternalFNDBProfileUrl(
                             searchedUser.data.lookup.id,
                           )}
-                          onAuxClick={whatIsThis()}
                         >
                           <ExternalAuthTypeImage
                             externalAuthType={
@@ -805,7 +801,7 @@ function BoostSummaryItem({
   */
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface/70 py-1 pl-1 pr-3">
-      <img
+      <img decoding="async" loading="lazy"
         src={assets(`smallxpboost${isPersonal ? '' : '_gift'}`)}
         className="size-6"
       />
@@ -894,7 +890,7 @@ function AccountInformation({
         >
           <div className="flex items-center py-1">
             <figure className="flex-shrink-0 px-2">
-              <img
+              <img decoding="async" loading="lazy"
                 src={assets('smallxpboost_gift')}
                 className="size-5"
               />
@@ -927,7 +923,7 @@ function AccountSummaryItem({
   return (
     <div className="flex items-center py-1 last:border-l">
       <figure className="flex-shrink-0 px-2">
-        <img
+        <img decoding="async" loading="lazy"
           src={assets(`smallxpboost${isPersonal ? '' : '_gift'}`)}
           className="size-5"
         />
@@ -976,7 +972,6 @@ function PrayForXPBoosts() {
         className="bg-muted/50 break-all flex px-2 py-1 rounded text-xs hover:opacity-85"
         href={link.join('')}
         onClick={handleClick}
-        onAuxClick={whatIsThis()}
       >
         {link.join('')}
       </a>

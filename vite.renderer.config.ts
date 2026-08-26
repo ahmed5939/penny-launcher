@@ -15,7 +15,7 @@ export default defineConfig((env) => {
     mode,
     base: './',
     build: {
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 750,
       outDir: `.vite/renderer/${name}`,
       rollupOptions: {
         onwarn(warning, warn) {

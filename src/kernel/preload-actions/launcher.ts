@@ -23,7 +23,7 @@ export function onNotificationLauncher(
     _: IpcRendererEvent,
     data: LauncherNotificationCallbackResponseParam
   ) => {
-    callback(data).catch(() => {})
+    callback(data).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.LauncherNotification,

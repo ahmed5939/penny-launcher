@@ -26,7 +26,7 @@ export function responseAuthWithExchange(
     _: IpcRendererEvent,
     values: AuthCallbackResponseParam
   ) => {
-    callback(values).catch(() => {})
+    callback(values).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ResponseAuthWithExchange,
@@ -53,7 +53,7 @@ export function responseAuthWithAuthorization(
     _: IpcRendererEvent,
     values: AuthCallbackResponseParam
   ) => {
-    callback(values).catch(() => {})
+    callback(values).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ResponseAuthWithAuthorization,
@@ -82,7 +82,7 @@ export function responseAuthWithDevice(
     _: IpcRendererEvent,
     values: AuthCallbackResponseParam
   ) => {
-    callback(values).catch(() => {})
+    callback(values).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ResponseAuthWithDevice,
@@ -111,7 +111,7 @@ export function responseEpicGamesSettings(
     _: IpcRendererEvent,
     values: EpicGamesSettingsNotificationCallbackResponseParam
   ) => {
-    callback(values).catch(() => {})
+    callback(values).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.OpenEpicGamesSettingsNotification,
@@ -140,7 +140,7 @@ export function responseGenerateExchangeCode(
     _: IpcRendererEvent,
     response: GenerateExchangeCodeNotificationCallbackResponseParam
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ResponseGenerateExchangeCode,

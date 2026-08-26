@@ -6,8 +6,10 @@ Endurance with the currently selected account.
 ## What it does
 
 - Starts an Endurance session for the selected zone.
-- Uses log-driven waits and calibrated screen positions.
-- Returns to the lobby, claims rewards and can repeat the run.
+- Verifies each Fortnite screen with bundled reference images and retries
+  clicks until the destination screen appears.
+- Detects blocked/crashed sessions, recovers post-run reward screens and can
+  repeat the run.
 - Keeps its settings in Penny's per-add-on data directory.
 
 ## Install and use

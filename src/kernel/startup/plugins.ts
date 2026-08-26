@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type {
   MarketplacePlugin,
   PluginActionResult,
@@ -7,8 +8,17 @@ import type {
   PluginSource,
   PluginSummary,
 } from '../../types/plugins'
+import type { Dirent } from 'node:fs'
 
-import { access, cp, mkdir, readdir, readFile, rm } from 'node:fs/promises'
+import {
+  access,
+  cp,
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+} from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
@@ -66,8 +76,30 @@ export class PluginManager {
 
   private static userDirectory = path.join(
     DataDirectory.getDataDirectoryPath(),
-    'plugins',
+    'plugins'
   )
+
+  private static isValidId(value: unknown): value is string {
+    return typeof value === 'string' && /^[a-z0-9-]{1,64}$/.test(value)
+  }
+
+  private static async resolveInside(directory: string, relativePath: string) {
+    if (!relativePath || path.isAbsolute(relativePath)) {
+      throw new Error('Plugin file paths must be relative.')
+    }
+
+    const [root, target] = await Promise.all([
+      realpath(directory),
+      realpath(path.resolve(directory, relativePath)),
+    ])
+    const relative = path.relative(root, target)
+
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error('Plugin file path escapes its add-on folder.')
+    }
+
+    return target
+  }
 
   static load() {
     PluginManager.loading ??= PluginManager.loadAll()
@@ -94,7 +126,7 @@ export class PluginManager {
   static async marketplace(): Promise<Array<MarketplacePlugin>> {
     await PluginManager.load().catch(() => {})
     const packages = await PluginManager.readManifests(
-      PluginManager.marketplaceDirectory,
+      PluginManager.marketplaceDirectory
     )
 
     return packages.map(({ manifest }) => ({
@@ -106,25 +138,34 @@ export class PluginManager {
       category: manifest.category ?? null,
       repository: manifest.repository ?? null,
       installed: PluginManager.plugins.some(
-        (plugin) => plugin.manifest.id === manifest.id,
+        (plugin) => plugin.manifest.id === manifest.id
       ),
     }))
   }
 
   static async install(pluginId: string): Promise<PluginActionResult> {
+    if (!PluginManager.isValidId(pluginId)) {
+      return { ok: false, error: 'Invalid add-on identifier.' }
+    }
+
     await PluginManager.load().catch(() => {})
 
-    if (PluginManager.plugins.some((plugin) => plugin.manifest.id === pluginId)) {
+    if (
+      PluginManager.plugins.some((plugin) => plugin.manifest.id === pluginId)
+    ) {
       return { ok: true }
     }
 
     const available = await PluginManager.readManifests(
-      PluginManager.marketplaceDirectory,
+      PluginManager.marketplaceDirectory
     )
     const selected = available.find(({ manifest }) => manifest.id === pluginId)
 
     if (!selected) {
-      return { ok: false, error: 'That add-on is not available in this catalog.' }
+      return {
+        ok: false,
+        error: 'That add-on is not available in this catalog.',
+      }
     }
 
     const destination = path.join(PluginManager.userDirectory, pluginId)
@@ -148,7 +189,7 @@ export class PluginManager {
       await PluginManager.loadPlugin(destination, 'user')
 
       const installed = PluginManager.plugins.find(
-        (plugin) => plugin.manifest.id === pluginId,
+        (plugin) => plugin.manifest.id === pluginId
       )
 
       if (!installed || installed.status === 'error') {
@@ -169,14 +210,18 @@ export class PluginManager {
   }
 
   static async readme(pluginId: string): Promise<PluginReadmeResult> {
+    if (!PluginManager.isValidId(pluginId)) {
+      return { ok: false, error: 'Invalid add-on identifier.' }
+    }
+
     const available = await PluginManager.readManifests(
-      PluginManager.marketplaceDirectory,
+      PluginManager.marketplaceDirectory
     )
     const catalogPlugin = available.find(
-      ({ manifest }) => manifest.id === pluginId,
+      ({ manifest }) => manifest.id === pluginId
     )
     const installedPlugin = PluginManager.plugins.find(
-      (plugin) => plugin.manifest.id === pluginId,
+      (plugin) => plugin.manifest.id === pluginId
     )
     const plugin = installedPlugin ?? catalogPlugin
 
@@ -188,8 +233,11 @@ export class PluginManager {
       return {
         ok: true,
         content: await readFile(
-          path.join(plugin.directory, plugin.manifest.readme ?? 'README.md'),
-          'utf8',
+          await PluginManager.resolveInside(
+            plugin.directory,
+            plugin.manifest.readme ?? 'README.md'
+          ),
+          'utf8'
         ),
       }
     } catch (error) {
@@ -203,10 +251,14 @@ export class PluginManager {
   }
 
   static async open(pluginId: string): Promise<PluginOpenResult> {
+    if (!PluginManager.isValidId(pluginId)) {
+      return { ok: false, error: 'Invalid add-on identifier.' }
+    }
+
     await PluginManager.load().catch(() => {})
 
     const plugin = PluginManager.plugins.find(
-      (item) => item.manifest.id === pluginId,
+      (item) => item.manifest.id === pluginId
     )
 
     if (!plugin?.controller?.open) {
@@ -226,6 +278,19 @@ export class PluginManager {
         error: error instanceof Error ? error.message : `${error}`,
       }
     }
+  }
+
+  static async shutdown() {
+    const plugins = [...PluginManager.plugins].reverse()
+
+    await Promise.allSettled(
+      plugins.map(async (plugin) => {
+        await plugin.controller?.deactivate?.()
+      })
+    )
+
+    PluginManager.plugins = []
+    PluginManager.loading = null
   }
 
   private static async loadAll() {
@@ -250,22 +315,22 @@ export class PluginManager {
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        //
+        RuntimeLog.error('caught:startup/plugins.ts', error)
       }
     }
 
     await mkdir(PluginManager.userDirectory, { recursive: true }).catch(
-      () => {},
+      () => {}
     )
 
     await PluginManager.scanDirectory(PluginManager.userDirectory, 'user')
   }
 
   private static async readManifests(directory: string) {
-    let entries: Array<string> = []
+    let entries: Array<Dirent> = []
 
     try {
-      entries = await readdir(directory)
+      entries = await readdir(directory, { withFileTypes: true })
     } catch (error) {
       return []
     }
@@ -273,14 +338,20 @@ export class PluginManager {
     const manifests: Array<{ directory: string; manifest: PluginManifest }> = []
 
     for (const entry of entries) {
-      const pluginDirectory = path.join(directory, entry)
+      if (!entry.isDirectory()) continue
+
+      const pluginDirectory = path.join(directory, entry.name)
 
       try {
         const manifest = JSON.parse(
-          await readFile(path.join(pluginDirectory, 'plugin.json'), 'utf8'),
+          await readFile(path.join(pluginDirectory, 'plugin.json'), 'utf8')
         ) as PluginManifest
 
-        if (manifest.id && manifest.name && /^[a-z0-9-]+$/.test(manifest.id)) {
+        if (
+          PluginManager.isValidId(manifest.id) &&
+          typeof manifest.name === 'string' &&
+          manifest.name.length > 0
+        ) {
           manifests.push({ directory: pluginDirectory, manifest })
         }
       } catch (error) {
@@ -291,14 +362,11 @@ export class PluginManager {
     return manifests
   }
 
-  private static async scanDirectory(
-    directory: string,
-    source: PluginSource,
-  ) {
-    let entries: Array<string> = []
+  private static async scanDirectory(directory: string, source: PluginSource) {
+    let entries: Array<Dirent> = []
 
     try {
-      entries = await readdir(directory)
+      entries = await readdir(directory, { withFileTypes: true })
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -306,21 +374,20 @@ export class PluginManager {
     }
 
     for (const entry of entries) {
-      await PluginManager.loadPlugin(path.join(directory, entry), source)
+      if (entry.isDirectory()) {
+        await PluginManager.loadPlugin(path.join(directory, entry.name), source)
+      }
     }
   }
 
-  private static async loadPlugin(
-    directory: string,
-    source: PluginSource,
-  ) {
+  private static async loadPlugin(directory: string, source: PluginSource) {
     let manifest: PluginManifest
 
     try {
       manifest = JSON.parse(
         await readFile(path.join(directory, 'plugin.json'), {
           encoding: 'utf8',
-        }),
+        })
       ) as PluginManifest
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -330,15 +397,15 @@ export class PluginManager {
       return
     }
 
-    if (!manifest.id || !manifest.name) {
+    if (
+      !PluginManager.isValidId(manifest.id) ||
+      typeof manifest.name !== 'string'
+    ) {
       return
     }
 
     if (
-      !/^[a-z0-9-]+$/.test(manifest.id) ||
-      PluginManager.plugins.some(
-        (plugin) => plugin.manifest.id === manifest.id,
-      )
+      PluginManager.plugins.some((plugin) => plugin.manifest.id === manifest.id)
     ) {
       return
     }
@@ -356,14 +423,17 @@ export class PluginManager {
       const storageDirectory = path.join(
         DataDirectory.getDataDirectoryPath(),
         'plugin-data',
-        manifest.id,
+        manifest.id
       )
 
       await mkdir(storageDirectory, { recursive: true })
 
       const requirePlugin = createRequire(__filename)
       const pluginModule = requirePlugin(
-        path.join(directory, manifest.entry ?? 'main.js'),
+        await PluginManager.resolveInside(
+          directory,
+          manifest.entry ?? 'main.js'
+        )
       ) as PluginModule
 
       if (typeof pluginModule.activate !== 'function') {
@@ -376,7 +446,7 @@ export class PluginManager {
         openRoute: (route) => {
           if (!route.startsWith('/')) return
           MainWindow.instance?.webContents.executeJavaScript(
-            `window.history.pushState({}, '', ${JSON.stringify(route)}); window.dispatchEvent(new PopStateEvent('popstate'))`,
+            `window.history.pushState({}, '', ${JSON.stringify(route)}); window.dispatchEvent(new PopStateEvent('popstate'))`
           )
         },
       })
@@ -384,8 +454,7 @@ export class PluginManager {
       loaded.controller = controller ?? null
     } catch (error) {
       loaded.status = 'error'
-      loaded.error =
-        error instanceof Error ? error.message : `${error}`
+      loaded.error = error instanceof Error ? error.message : `${error}`
     }
 
     PluginManager.plugins.push(loaded)

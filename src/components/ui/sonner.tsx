@@ -13,8 +13,13 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="flex h-auto justify-center text-sm z-50"
       toastOptions={{
         classNames: {
+          /*
+           * Popover tokens, so a toast follows the theme. `bg-zinc-50` was a
+           * raw palette colour: a near-white card in a near-black app, and
+           * the only surface in it that never went dark.
+           */
           toast:
-            'bg-zinc-50 border border-muted-foreground/40 px-3 py-2 rounded text-muted w-auto max-[600px]:!left-auto max-[600px]:!right-auto max-[600px]:!w-auto',
+            'w-auto rounded-xl border border-border bg-popover px-3 py-2 text-popover-foreground shadow-lg max-[600px]:!left-auto max-[600px]:!right-auto max-[600px]:!w-auto',
         },
         duration: 2700,
         unstyled: true,

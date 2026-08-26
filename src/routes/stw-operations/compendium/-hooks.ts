@@ -3,6 +3,7 @@ import type { ItemRecord } from '../../../kernel/core/item-database'
 import { useDeferredValue, useMemo, useState } from 'react'
 
 import { useItemDatabaseStore } from '../../../state/items/database'
+import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 export type CompendiumFamily =
   | 'hero'
@@ -63,6 +64,8 @@ function matchesFamily(
 }
 
 export function useCompendiumData() {
+  useRequestItemDatabase()
+
   const [family, setFamily] = useState<CompendiumFamily>('hero')
   const [search, setSearch] = useState('')
 

@@ -32,7 +32,7 @@ export function responseInventory(
     _: IpcRendererEvent,
     response: InventoryPayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.InventoryResponse,
@@ -55,7 +55,7 @@ export function notificationInventoryRecycle(
     _: IpcRendererEvent,
     response: InventoryRecycleNotification
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.InventoryRecycleNotification,

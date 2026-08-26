@@ -1,6 +1,9 @@
 import packageJson from '../../../package.json'
+import { useEffect, useState } from 'react'
 
 import { AutomationStatusType } from '../../config/constants/automation'
+
+import { StatusDot } from '../page'
 
 import { useAccountScope, usePrimaryAccount } from '../../hooks/accounts/scope'
 import { useGetAutomationDataStatus } from '../../hooks/stw-operations/automation'
@@ -17,12 +20,30 @@ import { cn, parseCustomDisplayName } from '../../lib/utils'
  * app puts its always-running state in a strip along the bottom, and this is
  * also the natural second home for the scope: a global selection that acts on
  * several accounts at once should never be more than a glance away.
+ *
+ * Everything in the strip is a caption at `micro-label` rank, so the one
+ * thing that changes with what you do — the scope — is the only thing on the
+ * line carrying weight and colour.
  */
 export function StatusBar() {
+  const [isOnline, setOnline] = useState(() => navigator.onLine)
   const { members } = useAccountScope()
   const primary = usePrimaryAccount()
   const { status: autoKick } = useGetAutomationDataStatus()
   const { status: taxi } = useGetTaxiServiceDataStatus()
+
+  useEffect(() => {
+    const online = () => setOnline(true)
+    const offline = () => setOnline(false)
+
+    window.addEventListener('online', online)
+    window.addEventListener('offline', offline)
+
+    return () => {
+      window.removeEventListener('online', online)
+      window.removeEventListener('offline', offline)
+    }
+  }, [])
 
   const scopeLabel =
     members.length === 0
@@ -34,14 +55,15 @@ export function StatusBar() {
   return (
     <footer
       className={cn(
-        'mica-chrome flex h-6 shrink-0 select-none items-center gap-3',
-        'border-t border-border/60 bg-surface/50 px-2.5',
-        'text-[0.6875rem] tabular-nums text-muted-foreground'
+        'chrome-surface flex h-[var(--status-bar-height)] shrink-0 select-none',
+        'items-center gap-3 border-t border-border/60 px-2.5'
       )}
     >
       <span className="flex items-center gap-1.5">
-        Scope
-        <span className="font-semibold text-brand-teal">{scopeLabel}</span>
+        <span className="micro-label">Scope</span>
+        <span className="text-[0.6875rem] font-semibold text-brand-teal">
+          {scopeLabel}
+        </span>
       </span>
 
       <Divider />
@@ -55,13 +77,26 @@ export function StatusBar() {
         status={taxi}
       />
 
-      <span className="ml-auto font-mono">v{packageJson.version}</span>
+      <Divider />
+      <span
+        className={cn(
+          'micro-label flex items-center gap-1.5',
+          !isOnline && 'text-warning'
+        )}
+      >
+        <StatusDot tone={isOnline ? 'active' : 'warning'} />
+        {isOnline ? 'Online' : 'Offline'}
+      </span>
+
+      <span className="figure ml-auto text-[0.6875rem] text-muted-foreground">
+        v{packageJson.version}
+      </span>
     </footer>
   )
 }
 
 function Divider() {
-  return <span className="opacity-30">│</span>
+  return <span className="h-3 w-px shrink-0 bg-border/60" />
 }
 
 /**
@@ -77,16 +112,15 @@ function Service({
   status: AutomationStatusType | null
 }) {
   return (
-    <span className="flex items-center gap-1.5">
-      <span
-        className={cn(
-          'size-1.5 rounded-full',
-          status === null && 'bg-muted-foreground/45',
-          status === AutomationStatusType.ISSUE && 'bg-warning',
-          status !== null &&
-            status !== AutomationStatusType.ISSUE &&
-            'bg-success'
-        )}
+    <span className="micro-label flex items-center gap-1.5">
+      <StatusDot
+        tone={
+          status === null
+            ? 'idle'
+            : status === AutomationStatusType.ISSUE
+              ? 'warning'
+              : 'active'
+        }
       />
       {label}
       {status === null && <span className="opacity-60">off</span>}

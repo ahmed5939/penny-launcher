@@ -98,6 +98,7 @@ export function CommandPalette({
 
                 return (
                   <CommandItem
+                    className="gap-2"
                     key={`${item.to}-${item.label}`}
                     value={label}
                     onSelect={() => {
@@ -108,7 +109,7 @@ export function CommandPalette({
                       })
                     }}
                   >
-                    <Icon className="mr-2 size-4 shrink-0 text-muted-foreground" />
+                    <Icon className="size-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{label}</span>
                     {item.beta && <BetaBadge />}
                   </CommandItem>

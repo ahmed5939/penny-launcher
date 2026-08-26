@@ -13,6 +13,8 @@ import path from 'node:path'
  * Protocol (stdin → stdout, one line each):
  *   ping            → ok
  *   click <x> <y>   → ok            (absolute pixels)
+ *   key <name>      → ok
+ *   scroll <steps>  → ok
  *   check <process> → ok running | ok absent
  *   focus <process> → ok <title>    (foregrounds the process main window)
  */
@@ -37,6 +39,14 @@ public static class PennyInputWorker {
 
     private const uint LEFT_DOWN = 0x0002;
     private const uint LEFT_UP = 0x0004;
+    private const uint WHEEL = 0x0800;
+    private const uint KEY_UP = 0x0002;
+
+    [DllImport("user32.dll")]
+    private static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extraInfo);
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int index);
 
     public static void Click(int x, int y) {
         if (!SetCursorPos(x, y)) throw new InvalidOperationException("Could not position the mouse cursor.");
@@ -49,6 +59,26 @@ public static class PennyInputWorker {
     public static bool Focus(IntPtr window) {
         ShowWindowAsync(window, 9);
         return SetForegroundWindow(window);
+    }
+
+    public static void Key(string name) {
+        byte key;
+        switch (name.ToLowerInvariant()) {
+            case "tab": key = 0x09; break;
+            case "escape": key = 0x1B; break;
+            case "c": key = 0x43; break;
+            case "i": key = 0x49; break;
+            default: throw new ArgumentException("Unsupported key: " + name);
+        }
+        keybd_event(key, 0, 0, UIntPtr.Zero);
+        System.Threading.Thread.Sleep(45);
+        keybd_event(key, 0, KEY_UP, UIntPtr.Zero);
+    }
+
+    public static void Scroll(int steps) {
+        SetCursorPos(GetSystemMetrics(0) / 2, GetSystemMetrics(1) / 2);
+        System.Threading.Thread.Sleep(150);
+        mouse_event(WHEEL, 0, 0, unchecked((uint)(steps * 120)), UIntPtr.Zero);
     }
 }
 "@
@@ -64,6 +94,14 @@ while ($true) {
       }
       'click' {
         [PennyInputWorker]::Click([int]$parts[1], [int]$parts[2])
+        [Console]::Out.WriteLine('ok')
+      }
+      'key' {
+        [PennyInputWorker]::Key($parts[1])
+        [Console]::Out.WriteLine('ok')
+      }
+      'scroll' {
+        [PennyInputWorker]::Scroll([int]$parts[1])
         [Console]::Out.WriteLine('ok')
       }
       'check' {
@@ -198,6 +236,16 @@ export class InputWorker {
   async focus(processName: string) {
     await this.ensureStarted()
     await this.send(`focus ${processName}`)
+  }
+
+  async key(name: 'Tab' | 'Escape' | 'C' | 'I') {
+    await this.ensureStarted()
+    await this.send(`key ${name}`)
+  }
+
+  async scroll(steps: number) {
+    await this.ensureStarted()
+    await this.send(`scroll ${Math.trunc(steps)}`)
   }
 
   /** Authoritative "is the game up" check, independent of watcher latency. */

@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import axios from 'axios'
@@ -179,7 +180,7 @@ export class Timeline {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/timeline.ts', error)
     }
   }
 

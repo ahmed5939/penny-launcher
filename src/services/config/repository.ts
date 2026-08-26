@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 /**
  * Repository Service
@@ -7,6 +7,7 @@ import axios from 'axios'
  * where releases are actually published.
  */
 
-export const repositoryService = axios.create({
+export const repositoryService = createAxios({
+  timeout: 20_000,
   baseURL: 'https://api.github.com/repos/ahmed5939/penny-launcher',
 })

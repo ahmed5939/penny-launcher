@@ -66,13 +66,13 @@ export function InputTags({
       styles={colourStyles}
       classNames={{
         clearIndicator: () => 'px-1 text-muted-foreground',
-        container: () => 'border rounded-md',
-        control: () => 'bg-background pl-3 pr-2 py-1.5 rounded-md',
+        container: () => 'border rounded-lg',
+        control: () => 'bg-background pl-3 pr-2 py-1.5 rounded-lg',
         dropdownIndicator: () => 'pl-1.5 text-muted-foreground',
         indicatorSeparator: () => 'bg-[hsl(var(--border))]',
         input: () => 'text-sm',
         menu: () =>
-          'bg-background border my-2 overflow-hidden rounded-md z-20',
+          'bg-background border my-2 overflow-hidden rounded-xl z-20',
         multiValue: () => 'max-w-56 rounded',
         multiValueLabel: () => 'px-1.5',
         multiValueRemove: () => 'px-1.5 rounded-r',
@@ -128,9 +128,11 @@ function LabelWithIcon({
     <div className="flex gap-1.5 items-center">
       {icon !== undefined && (
         <img
-          className="flex-shrink-0 size-4"
+          className="shrink-0 size-4"
           src={icon}
           alt={label}
+          decoding="async"
+          loading="lazy"
         />
       )}
       {label}
@@ -163,7 +165,7 @@ const colourStyles: StylesConfig<SelectOption, true> = {
             ? 'white'
             : 'black'
           : currentColor,
-      cursor: isDisabled ? 'not-allowed' : 'default',
+      cursor: 'default',
 
       ':active': {
         ...styles[':active'],

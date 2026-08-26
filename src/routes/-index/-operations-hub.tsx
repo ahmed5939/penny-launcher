@@ -5,14 +5,12 @@ import {
   Activity,
   BookOpen,
   Boxes,
-  CalendarCheck,
   CalendarRange,
   Car,
   Compass,
   Gift,
   Globe,
   HeartPulse,
-  LockOpen,
   Pin,
   Radar,
   ScrollText,
@@ -25,7 +23,6 @@ import {
 
 import { BetaBadge } from '../../components/navigation/beta-badge'
 
-import { whatIsThis } from '../../lib/callbacks'
 
 /**
  * Fortnite operations hub: every STW tool in one launcher-style grid —
@@ -59,12 +56,6 @@ const items: Array<HubItem> = [
     description: 'Kick or leave party, claim rewards in bulk',
     icon: Users,
     to: '/stw-operations/party',
-  },
-  {
-    title: 'Daily quests',
-    description: 'Check and reroll daily quests',
-    icon: CalendarCheck,
-    to: '/stw-operations/daily-quests',
   },
   {
     beta: true,
@@ -135,16 +126,10 @@ const items: Array<HubItem> = [
     to: '/stw-operations/xpboosts',
   },
   {
-    title: 'Auto-pin urns',
-    description: 'Pin urns and mini-bosses automatically',
+    title: 'Urn Quest Tracker',
+    description: 'Keep urn and mini-boss quests pinned automatically',
     icon: Pin,
     to: '/stw-operations/urns',
-  },
-  {
-    title: 'Unlock',
-    description: 'Unlock managed accounts',
-    icon: LockOpen,
-    to: '/stw-operations/unlock',
   },
   {
     beta: true,
@@ -182,7 +167,6 @@ export function OperationsHub() {
           <Link
             to={item.to}
             className="panel-interactive group flex h-full items-start gap-3 p-4"
-            onAuxClick={whatIsThis()}
           >
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
               <item.icon className="size-5" />

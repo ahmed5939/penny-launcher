@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { MCPQueryProfileProfileChangesConsumableAccountItem } from '../../types/services/mcp'
 import type { AccountData } from '../../types/accounts'
 import type {
@@ -114,7 +115,7 @@ export class XPBoostsManager {
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
-            //
+            RuntimeLog.error('caught:core/xpboosts.ts', error)
           }
 
           return defaultValue
@@ -136,7 +137,7 @@ export class XPBoostsManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/xpboosts.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -207,7 +208,7 @@ export class XPBoostsManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/xpboosts.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -309,7 +310,7 @@ export class XPBoostsManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/xpboosts.ts', error)
     }
 
     MainWindow.instance.webContents.send(

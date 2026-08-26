@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next'
 
 import {
   World,
+  WorldColor,
   worldNameByTheaterId,
+  zoneColors,
 } from '../../../config/constants/fortnite/world-info'
 
 import { CommonMissionsSection } from '../-components/-common-missions-section'
@@ -31,31 +33,49 @@ export function ZoneSection({
     total: missions.size,
   })
 
+  /*
+   * `zoneColors` is the same lookup the world-info parser runs to colour each
+   * mission's rail, so the section rule and the 3px rail of every row beneath
+   * it are guaranteed to be the same value. Rule and rails read as one system,
+   * which is what makes a long list scannable by zone from the far-left gutter
+   * without any row needing a coloured background.
+   */
+  const accent = zoneColors[theaterId] ?? WorldColor.Ventures
+
   return (
     <section
       aria-labelledby={`section-${theaterId}`}
+      className="mt-6"
       key={theaterId}
     >
       <TitleSection
+        accent={accent}
         deps={deps}
         id={`section-${theaterId}`}
       >
-        {worldNameByTheaterId[
-          theaterId as keyof typeof worldNameByTheaterId
-        ]
-          ? t(theaterId, {
-              ns: 'zones',
-            })
-          : t('ventures', {
-              ns: 'zones',
+        <>
+          {worldNameByTheaterId[
+            theaterId as keyof typeof worldNameByTheaterId
+          ]
+            ? t(theaterId, {
+                ns: 'zones',
+              })
+            : t('ventures', {
+                ns: 'zones',
+              })}
+          {/*
+            A quiet trailing figure rather than a parenthetical: the count is a
+            footnote to the section, not part of its name. It cannot be pushed
+            past the rule with `order-last` — `TitleSection` wraps all of its
+            children in one inline `.section-label` span, so there is no flex
+            context here to order against.
+          */}
+          <span className="figure ml-2 whitespace-nowrap text-[0.6875rem] font-normal normal-case tracking-normal text-muted-foreground/50">
+            {t('information.missions', {
+              total: missions.size,
             })}
-        <span className="text-muted-foreground text-sm">
-          (
-          {t('information.missions', {
-            total: missions.size,
-          })}
-          )
-        </span>
+          </span>
+        </>
       </TitleSection>
       <EmptySection total={missions.size}>
         <CommonMissionsSection

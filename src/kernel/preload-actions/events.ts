@@ -16,7 +16,7 @@ export function onAccountsLoaded(
     _: IpcRendererEvent,
     values: AccountDataRecord
   ) => {
-    callback(values).catch(() => {})
+    callback(values).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.OnAccountsLoaded,

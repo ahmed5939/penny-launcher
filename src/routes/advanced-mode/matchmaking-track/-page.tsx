@@ -26,7 +26,6 @@ import { useMatchmakingPlayersPath } from '../../../hooks/advanced-mode/matchmak
 import { useInputPaddingButton } from '../../../hooks/ui/inputs'
 import { useCurrentActions } from './-hooks'
 
-import { whatIsThis } from '../../../lib/callbacks'
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar', 'advanced-mode'])
@@ -204,7 +203,6 @@ function Content() {
                 onClick={handleOpenExternalPennyDBUrl(
                   searchedUser.data.lookup.displayName
                 )}
-                onAuxClick={whatIsThis()}
                 title={t('matchmaking-track.live.pennydb')}
               >
                 <ExternalAuthTypeImage

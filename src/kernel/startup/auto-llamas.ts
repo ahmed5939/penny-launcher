@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { AccountDataList } from '../../types/accounts'
 import type {
   AutoLlamasData,
@@ -247,6 +248,8 @@ export class AutoLlamas {
 }
 
 export class ProcessAutoLlamas {
+  private static active = new Set<string>()
+
   static start({
     selected,
     type,
@@ -277,7 +280,15 @@ export class ProcessAutoLlamas {
     )
 
     accounts.forEach((account) => {
-      Authentication.verifyAccessToken(account).then(
+      const runKey = `${type}:${account.accountId}`
+
+      if (ProcessAutoLlamas.active.has(runKey)) {
+        return
+      }
+
+      ProcessAutoLlamas.active.add(runKey)
+
+      void Authentication.verifyAccessToken(account).then(
         async (initialAccessToken) => {
           if (!initialAccessToken) {
             return
@@ -324,7 +335,7 @@ export class ProcessAutoLlamas {
 
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
               } catch (error) {
-                //
+                RuntimeLog.error('caught:startup/auto-llamas.ts', error)
               }
 
               const queryProfile = await getQueryProfile({
@@ -492,8 +503,10 @@ export class ProcessAutoLlamas {
               break
             }
           }
-        }
-      )
+        },
+      ).catch(() => {}).finally(() => {
+        ProcessAutoLlamas.active.delete(runKey)
+      })
     })
   }
 

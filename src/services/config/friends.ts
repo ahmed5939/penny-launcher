@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Friends Service
  */
 
-export const friendsService = axios.create({
+export const friendsService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://friends-public-service-prod.ol.epicgames.com/friends/api/v1',
 })

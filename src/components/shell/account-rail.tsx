@@ -6,13 +6,14 @@ import { useTranslation } from 'react-i18next'
 import { navSections } from '../../config/navigation'
 import { AutomationStatusType } from '../../config/constants/automation'
 
+import { StatusDot } from '../page'
+
 import { useGetAccounts } from '../../hooks/accounts'
 import { useGetAutomationDataStatus } from '../../hooks/stw-operations/automation'
 import { useGetTaxiServiceDataStatus } from '../../hooks/stw-operations/taxi-service'
 import { useCustomizableMenuSettingsVisibility } from '../../hooks/settings'
 
 import { cn } from '../../lib/utils'
-import { whatIsThis } from '../../lib/callbacks'
 
 /**
  * Navigation rail. Destinations only.
@@ -36,7 +37,7 @@ export function AccountRail() {
   const statuses = { 'auto-kick': autoKick, 'taxi-service': taxi }
 
   return (
-    <aside className="mica-chrome flex w-48 shrink-0 flex-col border-r border-border/60 bg-surface/50">
+    <aside className="chrome-surface flex w-48 shrink-0 flex-col border-r border-border/60">
       <nav className="flex-1 overflow-y-auto px-1.5 py-1.5">
         {navSections.map((section, sectionIndex) => {
           const validateChildren = section.items.length > 0
@@ -112,22 +113,19 @@ function NavRow({
       <Icon className="size-4 shrink-0 opacity-75" />
       <span className="flex-1 truncate">{label}</span>
       {status != null && (
-        <span
-          className={cn(
-            'size-1.5 shrink-0 rounded-full',
-            status === AutomationStatusType.ISSUE
-              ? 'bg-warning'
-              : 'bg-success'
-          )}
+        <StatusDot
+          tone={
+            status === AutomationStatusType.ISSUE ? 'warning' : 'active'
+          }
         />
       )}
     </>
   )
 
   const className = cn(
-    'relative flex h-8 items-center gap-2.5 rounded-md px-2 text-[0.8125rem]',
+    'relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-[0.8125rem]',
     'text-muted-foreground',
-    !isDisabled && 'hover:bg-muted/60 hover:text-foreground',
+    !isDisabled && 'hover:bg-accent/30 hover:text-foreground',
     isActive && 'bg-accent/70 font-medium text-foreground',
     isDisabled && 'pointer-events-none opacity-45'
   )
@@ -141,7 +139,6 @@ function NavRow({
       to={item.to}
       params={item.params}
       className={className}
-      onAuxClick={whatIsThis()}
     >
       {isActive && (
         <span className="absolute inset-y-2 left-0 w-[3px] rounded-r bg-primary" />

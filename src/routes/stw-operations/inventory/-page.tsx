@@ -218,6 +218,7 @@ function Content() {
     recycleRewards,
     rows,
     selectedIds,
+    selectedSet,
     setConfirmOpen,
     totalSelected,
     updateFilters,
@@ -459,7 +460,7 @@ function Content() {
                       }
                       power={item.power}
                       records={records}
-                      selected={selectedIds.includes(item.itemId)}
+                      selected={selectedSet.has(item.itemId)}
                       templateId={item.templateId}
                       tier={item.tier}
                       title={
@@ -491,7 +492,7 @@ function Content() {
 
       {totalSelected > 0 && (
         <div className="sticky bottom-3 z-10">
-          <Panel className="flex flex-wrap items-center gap-3 border-destructive/30 px-4 py-3 shadow-lg backdrop-blur">
+          <Panel className="flex flex-wrap items-center gap-3 border-destructive/30 px-4 py-3 shadow-lg">
             <ShieldAlert className="size-4 shrink-0 text-destructive" />
             <p className="text-[0.8125rem]">
               <span className="font-semibold tabular-nums">

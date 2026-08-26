@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { AccountData } from '../../types/accounts'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
@@ -9,6 +10,7 @@ import {
   getQueryProfile,
   setAbandonExpedition,
   setCollectExpedition,
+  setStartExpedition,
 } from '../../services/endpoints/mcp'
 
 /**
@@ -111,6 +113,7 @@ export type ExpeditionSlot = {
   squadId: string | null
   /** 0–1. Only meaningful once running. */
   successChance: number
+  suggestedHeroIds: Array<string>
 }
 
 export type ExpeditionsEntry = {
@@ -127,6 +130,30 @@ export type ExpeditionsCollectNotification = {
     collected: number
     errorMessage?: string
   }>
+}
+
+export type ExpeditionActionNotification = {
+  accountId: string
+  action: 'abandon' | 'collect' | 'start'
+  errorMessage?: string
+  expeditionId: string
+}
+
+const rarityPower: Record<string, number> = {
+  Common: 1,
+  Uncommon: 2,
+  Rare: 3,
+  Epic: 4,
+  Legendary: 5,
+}
+
+function heroRarity(templateId: string) {
+  const id = templateId.toLowerCase()
+  if (id.includes('_sr_')) return 'Legendary'
+  if (id.includes('_vr_')) return 'Epic'
+  if (id.includes('_r_')) return 'Rare'
+  if (id.includes('_uc_')) return 'Uncommon'
+  return 'Common'
 }
 
 export class Expeditions {
@@ -173,6 +200,36 @@ export class Expeditions {
     })
     const items = response.data.profileChanges[0]?.profile.items ?? {}
     const now = Date.now()
+    const occupiedExpeditionSquads = new Set(
+      Object.values(items)
+        .filter((item) => item.templateId.startsWith('Expedition:'))
+        .map((item) => item.attributes as Record<string, unknown>)
+        .filter((attributes) => Boolean(attributes.expedition_end_time))
+        .map((attributes) => `${attributes.expedition_squad_id ?? ''}`)
+        .filter(Boolean)
+    )
+    const heroes = Object.entries(items)
+      .filter(([, item]) => item.templateId.startsWith('Hero:'))
+      .map(([itemId, item]) => {
+        const attributes = item.attributes as {
+          level?: number
+          squad_id?: string
+        }
+        const rarity = heroRarity(item.templateId)
+
+        return {
+          itemId,
+          level: attributes.level ?? 1,
+          rarity,
+          squadId: attributes.squad_id ?? '',
+        }
+      })
+      .filter((hero) => !occupiedExpeditionSquads.has(hero.squadId))
+      .sort(
+        (heroA, heroB) =>
+          rarityPower[heroB.rarity] - rarityPower[heroA.rarity] ||
+          heroB.level - heroA.level
+      )
 
     Object.entries(items).forEach(([itemId, item]) => {
       if (!item.templateId.startsWith('Expedition:')) {
@@ -195,11 +252,22 @@ export class Expeditions {
           ? 'ready'
           : 'in-flight'
 
+      const criteria = parseCriteria(attributes.expedition_criteria ?? [])
+      const remainingHeroes = [...heroes]
+      const suggestedHeroes = criteria.flatMap((requirement) => {
+        const minimum = rarityPower[requirement.rarity] ?? 0
+        const index = remainingHeroes.findIndex(
+          (hero) => rarityPower[hero.rarity] >= minimum
+        )
+
+        return index < 0 ? [] : remainingHeroes.splice(index, 1)
+      })
+
       entry.slots.push({
         itemId,
         templateId: item.templateId,
         ...parseExpeditionTemplate(item.templateId),
-        criteria: parseCriteria(attributes.expedition_criteria ?? []),
+        criteria,
         state,
         endTime,
         expiresAt: attributes.expedition_expiration_end_time ?? null,
@@ -207,6 +275,7 @@ export class Expeditions {
         maxTargetPower: attributes.expedition_max_target_power ?? 0,
         squadId: attributes.expedition_squad_id ?? null,
         successChance: attributes.expedition_success_chance ?? 0,
+        suggestedHeroIds: suggestedHeroes.map((hero) => hero.itemId),
       })
     })
 
@@ -246,10 +315,77 @@ export class Expeditions {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/expeditions.ts', error)
     }
 
     await Expeditions.request([account])
+  }
+
+  static async action({
+    account,
+    action,
+    expeditionId,
+    expeditionTemplate,
+    itemIds = [],
+    squadId,
+  }: {
+    account: AccountData
+    action: ExpeditionActionNotification['action']
+    expeditionId: string
+    expeditionTemplate?: string
+    itemIds?: Array<string>
+    squadId?: string
+  }) {
+    const payload: ExpeditionActionNotification = {
+      accountId: account.accountId,
+      action,
+      expeditionId,
+    }
+
+    try {
+      const accessToken = await Authentication.verifyAccessToken(account)
+      if (!accessToken) throw new Error('Could not authenticate this account')
+
+      if (action === 'start') {
+        if (!squadId || itemIds.length === 0) {
+          throw new Error('No eligible hero team is available')
+        }
+        await setStartExpedition({
+          accessToken,
+          accountId: account.accountId,
+          expeditionId,
+          squadId,
+          itemIds,
+          slotIndices: itemIds.map((_, index) => index),
+        })
+      } else if (action === 'collect') {
+        if (!expeditionTemplate) throw new Error('Missing expedition template')
+        await setCollectExpedition({
+          accessToken,
+          accountId: account.accountId,
+          expeditionId,
+          expeditionTemplate,
+        })
+      } else {
+        await setAbandonExpedition({
+          accessToken,
+          accountId: account.accountId,
+          expeditionId,
+        })
+      }
+    } catch (error: unknown) {
+      const typed = error as {
+        message?: string
+        response?: { data?: { errorMessage?: string } }
+      }
+      payload.errorMessage =
+        typed.response?.data?.errorMessage ?? typed.message ?? 'Action failed'
+    }
+
+    MainWindow.instance.webContents.send(
+      ElectronAPIEventKeys.ExpeditionsActionNotification,
+      payload
+    )
   }
 
   /**

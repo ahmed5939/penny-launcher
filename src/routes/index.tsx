@@ -77,6 +77,8 @@ export function IndexComponent() {
 }
 
 const MainContent = memo(() => {
+  const [tab, setTab] = useState<IndexTabs>(defaultTab)
+
   return (
     <>
       <Tabs
@@ -85,23 +87,28 @@ const MainContent = memo(() => {
           '[&_.tab-content]:mt-6'
         )}
         defaultValue={defaultTab}
+        onValueChange={(value) => setTab(value as IndexTabs)}
       >
         <NavigationTab />
         <TabsContent
           className="tab-content"
           value={IndexTabs.Play}
         >
-          <HomeHero />
-          <AutomationChips />
-          <div className="mt-5">
-            <HomeAlerts />
-          </div>
+          {tab === IndexTabs.Play && (
+            <>
+              <HomeHero />
+              <AutomationChips />
+              <div className="mt-5">
+                <HomeAlerts />
+              </div>
+            </>
+          )}
         </TabsContent>
         <TabsContent
           className="tab-content"
           value={IndexTabs.Missions}
         >
-          <MissionsContent />
+          {tab === IndexTabs.Missions && <MissionsContent />}
         </TabsContent>
       </Tabs>
 

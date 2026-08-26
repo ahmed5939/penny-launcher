@@ -25,7 +25,7 @@ export function responseSquads(
   callback: (response: SquadsPayload) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, response: SquadsPayload) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.SquadsResponse,
@@ -48,7 +48,7 @@ export function notificationSquadsAssign(
     _: IpcRendererEvent,
     response: SquadsAssignNotification
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.SquadsAssignNotification,

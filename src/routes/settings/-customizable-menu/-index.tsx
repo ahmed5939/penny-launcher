@@ -132,19 +132,6 @@ function STWOperationsSection() {
         <div className="item">
           <Label
             className="title"
-            htmlFor="daily-quests"
-          >
-            {t('stw-operations.options.daily-quests')}
-          </Label>
-          <Switch
-            id="daily-quests"
-            checked={getMenuOptionVisibility('dailyQuests')}
-            onCheckedChange={updateMenuOption('dailyQuests')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
             htmlFor="expeditions"
           >
             {t('stw-operations.options.expeditions')}
@@ -283,19 +270,6 @@ function STWOperationsSection() {
             id="auto-llamas"
             checked={getMenuOptionVisibility('autoLlamas')}
             onCheckedChange={updateMenuOption('autoLlamas')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="unlock"
-          >
-            {t('stw-operations.options.unlock')}
-          </Label>
-          <Switch
-            id="unlock"
-            checked={getMenuOptionVisibility('unlock')}
-            onCheckedChange={updateMenuOption('unlock')}
           />
         </div>
       </div>

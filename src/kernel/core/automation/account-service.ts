@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../../runtime-log'
 import type { AccountData } from '../../../types/accounts'
 import type {
   ServiceEventInteractionNotification,
@@ -258,7 +259,7 @@ export class AccountService {
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        //
+        RuntimeLog.error('caught:core/automation/account-service.ts', error)
       }
 
       if (Object.keys(body).length <= 0) {
@@ -331,7 +332,7 @@ export class AccountService {
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        //
+        RuntimeLog.error('caught:core/automation/account-service.ts', error)
       }
 
       this.emit(EventNotification.GENERIC_MESSAGE, body)

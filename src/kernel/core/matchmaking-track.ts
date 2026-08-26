@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { AccountData } from '../../types/accounts'
 import type {
   MatchmakingTrackStatus,
@@ -49,7 +50,7 @@ export class MatchmakingTrack {
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
-            //
+            RuntimeLog.error('caught:core/matchmaking-track.ts', error)
           }
 
           const playerIds = [
@@ -88,7 +89,7 @@ export class MatchmakingTrack {
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
-            //
+            RuntimeLog.error('caught:core/matchmaking-track.ts', error)
           }
 
           response.playing = true
@@ -109,7 +110,7 @@ export class MatchmakingTrack {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/matchmaking-track.ts', error)
     }
 
     MainWindow.instance.webContents.send(

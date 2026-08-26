@@ -27,7 +27,7 @@ export function ExternalAuthTypeImage({
 }) {
   return (
     <figure>
-      <img
+      <img decoding="async" loading="lazy"
         src={assets(externalAuthType ?? 'epicgames')}
         className="size-5"
       />
@@ -121,7 +121,7 @@ export function SearchedUserData({
             title={
               <>
                 <figure className="size-5">
-                  <img
+                  <img decoding="async" loading="lazy"
                     src={assets('smallxpboost')}
                     className="size-[18px]"
                   />
@@ -135,7 +135,7 @@ export function SearchedUserData({
             title={
               <>
                 <figure className="size-5">
-                  <img
+                  <img decoding="async" loading="lazy"
                     src={assets('smallxpboost_gift')}
                     className="size-[18px]"
                   />
@@ -151,7 +151,7 @@ export function SearchedUserData({
         title={
           <>
             <figure className="size-5">
-              <img
+              <img decoding="async" loading="lazy"
                 src={assets('eventcurrency_founders')}
                 className="size-[18px]"
               />

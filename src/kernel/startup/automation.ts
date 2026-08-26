@@ -20,6 +20,7 @@ import { MainWindow } from './windows/main'
 import { AccountsManager } from './accounts'
 import { DataDirectory } from './data-directory'
 import { SettingsManager } from './settings'
+import { RuntimeLog } from '../runtime-log'
 
 import { AutomationState } from '../../state/stw-operations/automation'
 
@@ -44,6 +45,7 @@ export class Automation {
     new Collection()
 
   private static _activeChecks: Record<string, NodeJS.Timeout | null> = {}
+  private static _activePolls: Record<string, boolean> = {}
   private static _missionActive: Record<string, boolean> = {}
 
   static async load() {
@@ -218,7 +220,7 @@ export class Automation {
                 })
               }
             } catch (error) {
-              //
+              RuntimeLog.error('caught:startup/automation.ts', error)
             }
           })
 
@@ -251,7 +253,7 @@ export class Automation {
                 meta: value.party_state_updated,
               })
             } catch (errro) {
-              //
+              RuntimeLog.error('caught:startup/automation.ts', errro)
             }
           })
 
@@ -291,7 +293,7 @@ export class Automation {
                     })
                   }
                 } catch (error) {
-                  //
+                  RuntimeLog.error('caught:startup/automation.ts', error)
                 }
               }, 8000)
             }
@@ -381,6 +383,10 @@ export class Automation {
 
           Automation._missionActive[accountId] = true
           Automation._activeChecks[accountId] = setInterval(async () => {
+            if (Automation._activePolls[accountId]) return
+
+            Automation._activePolls[accountId] = true
+
             try {
               const account = AccountsManager.getAccountById(accountId)
 
@@ -480,7 +486,9 @@ export class Automation {
                 }
               }
             } catch (error) {
-              //
+              RuntimeLog.error(`automation:profile-check:${accountId}`, error)
+            } finally {
+              Automation._activePolls[accountId] = false
             }
           }, missionInterval * 1_000)
         } else if (Automation._missionActive[accountId]) {
@@ -513,7 +521,7 @@ export class Automation {
                 }
               }
             } catch (error) {
-              //
+              RuntimeLog.error('caught:startup/automation.ts', error)
             }
 
             return true
@@ -529,7 +537,7 @@ export class Automation {
         }
       }
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/automation.ts', error)
     }
   }
 
@@ -545,6 +553,7 @@ export class Automation {
       if (activeCheck !== undefined && activeCheck !== null) {
         clearInterval(activeCheck)
         Automation._activeChecks[accountId] = null
+        Automation._activePolls[accountId] = false
       }
     })
   }
@@ -635,7 +644,7 @@ export class Automation {
                   })
                 }
               } catch (error) {
-                //
+                RuntimeLog.error('caught:startup/automation.ts', error)
               }
             }
 

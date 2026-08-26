@@ -1,6 +1,6 @@
 import type { AxiosRetry } from 'axios-retry'
 
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const axiosRetry = require('axios-retry').default as AxiosRetry
 
@@ -15,7 +15,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * OAuth Service
  */
 
-export const oauthService = axios.create({
+export const oauthService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://account-public-service-prod.ol.epicgames.com/account/api/oauth',
 })

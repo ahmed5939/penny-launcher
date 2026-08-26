@@ -10,7 +10,6 @@ import { Button } from '../../components/ui/button'
 
 import { useCheckNewVersion } from './hooks'
 
-import { whatIsThis } from '../../lib/callbacks'
 
 export function CheckNewVersion() {
   const { t } = useTranslation(['general'])
@@ -37,7 +36,6 @@ export function CheckNewVersion() {
             size="sm"
             variant="link"
             onClick={handleGoToNewRelease}
-            onAuxClick={whatIsThis()}
             asChild
           >
             <a href={data.link}>{data.link}</a>

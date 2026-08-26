@@ -68,7 +68,7 @@ export function notificationTaxiServiceServiceData(
     value: Parameters<TaxiServiceState['refreshAccounts']>[0],
     onlyUpdate: boolean,
   ) => {
-    callback(value, onlyUpdate).catch(() => {})
+    callback(value, onlyUpdate).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.TaxiServiceServiceResponseData,
@@ -95,7 +95,7 @@ export function notificationTaxiServiceServiceStart(
     value: TaxiServiceServiceStatusResponse,
     refresh?: boolean,
   ) => {
-    callback(value, refresh).catch(() => {})
+    callback(value, refresh).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.TaxiServiceServiceStartNotification,
@@ -118,7 +118,7 @@ export function notificationTaxiServiceServiceStart(
 //     _: IpcRendererEvent,
 //     value: TaxiServiceServiceStatusResponse
 //   ) => {
-//     callback(value).catch(() => {})
+//     callback(value).catch(console.error)
 //   }
 //   const rendererInstance = ipcRenderer.on(
 //     ElectronAPIEventKeys.TaxiServiceServiceReloadNotification,
@@ -138,7 +138,7 @@ export function notificationTaxiServiceServiceRemove(
   callback: (value: string) => Promise<void>,
 ) {
   const customCallback = (_: IpcRendererEvent, value: string) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.TaxiServiceServiceRemoveNotification,
@@ -171,7 +171,7 @@ export function taxiServiceServiceNotifications(
       | TaxiServiceNotificationEventPartyInvite
       | TaxiServiceNotificationEventPartyMemberJoined,
   ) => {
-    callback(notifications).catch(() => {})
+    callback(notifications).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.TaxiServiceServiceNotifications,

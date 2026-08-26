@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next'
 import { useAutomationServices } from './-hooks'
 
 import { cn } from '../../lib/utils'
-import { whatIsThis } from '../../lib/callbacks'
 
 /**
  * Glanceable automation status.
@@ -63,7 +62,6 @@ function ServiceChip({ service }: { service: PlayService }) {
         'text-xs font-medium transition-colors',
         statusStyles[service.status]
       )}
-      onAuxClick={whatIsThis()}
     >
       <span className="relative flex size-1.5 shrink-0">
         {isLive && (

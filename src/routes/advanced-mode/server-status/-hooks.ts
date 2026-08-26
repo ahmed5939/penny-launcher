@@ -4,9 +4,10 @@ import { useEffect } from 'react'
 import { useServerStatusStore } from '../../../state/advanced-mode/server-status'
 
 export function useServerStatusData() {
-  const { entries, errorMessage, isLoading, lastCheckedAt } =
+  const { diagnostics, entries, errorMessage, isLoading, lastCheckedAt } =
     useServerStatusStore(
       useShallow((state) => ({
+        diagnostics: state.diagnostics,
         entries: state.entries,
         errorMessage: state.errorMessage,
         isLoading: state.isLoading,
@@ -23,11 +24,24 @@ export function useServerStatusData() {
   useEffect(() => {
     const listener = window.electronAPI.responseServerStatus(
       async (response) => {
+        const previousEntries = useServerStatusStore.getState().entries
         setResponse({
+          diagnostics: response.diagnostics,
           entries: response.entries,
           errorMessage: response.errorMessage,
           checkedAt: Date.now(),
         })
+        const rules = JSON.parse(
+          localStorage.getItem('penny-notification-rules') ?? '{}'
+        ) as { serverDown?: boolean; serverRecovered?: boolean }
+        const wasDown = previousEntries.some((entry) => entry.status === 'DOWN')
+        const nowDown = response.entries.some((entry) => entry.status === 'DOWN')
+        if (previousEntries.length > 0 && !wasDown && nowDown && rules.serverDown !== false) {
+          window.electronAPI.sendNativeNotification({ title: 'Epic service interruption', body: 'Fortnite is reporting a service outage.' })
+        }
+        if (previousEntries.length > 0 && wasDown && !nowDown && rules.serverRecovered !== false) {
+          window.electronAPI.sendNativeNotification({ title: 'Epic services recovered', body: 'Fortnite is operational again.' })
+        }
       }
     )
 
@@ -54,6 +68,7 @@ export function useServerStatusData() {
     entries.length === 0 || entries.every((entry) => entry.status === 'UNKNOWN')
 
   return {
+    diagnostics,
     entries,
     errorMessage,
     isDown,

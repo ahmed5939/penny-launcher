@@ -9,7 +9,13 @@ const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       className={cn(
-        'rounded-lg border bg-card text-card-foreground shadow-sm',
+        /*
+         * `.panel`, not shadcn's own recipe: `rounded-lg` is remapped to the
+         * 4px control radius, so a card was drawn at button radius with a
+         * drop shadow under it. The panel class carries the 8px surface
+         * radius and the control stroke instead.
+         */
+        'panel text-card-foreground',
         className
       )}
       {...props}

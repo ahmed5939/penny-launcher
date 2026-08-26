@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { CommonErrorResponse } from '../../types/services/errors'
 import type {
   AccountData,
@@ -206,7 +207,7 @@ export class Authentication {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/authentication.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -252,7 +253,7 @@ export class Authentication {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/authentication.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -327,7 +328,7 @@ export class Authentication {
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-          //
+          RuntimeLog.error('caught:core/authentication.ts', error)
         }
       }
     }
@@ -347,7 +348,7 @@ export class Authentication {
         })
       }
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/authentication.ts', error)
     }
   }
 
@@ -380,17 +381,17 @@ export class Authentication {
 
     const { accounts } = await DataDirectory.getAccountsFile()
     const accountList = accounts.reduce((accumulator, current) => {
-      accumulator[current.accountId] = current
+      accumulator[current.accountId] = AccountsManager.toRenderer(current)
 
       return accumulator
     }, {} as AccountDataRecord)
 
     MainWindow.instance.webContents.send(eventKey, {
       data: {
-        currentAccount: newData,
+        currentAccount: AccountsManager.toRenderer(newData),
         accounts: accountList,
       },
-      accessToken: data.accessToken,
+      accessToken: null,
       error: null,
     })
   }

@@ -24,7 +24,7 @@ export function notificationMatchmakingStatus(
     _: IpcRendererEvent,
     value: MatchmakingTrackStatus
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.MatchmakingTrackStatusNotification,

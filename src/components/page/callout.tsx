@@ -11,25 +11,25 @@ const tones: Record<
   { chip: string; icon: typeof Info; shell: string; title: string }
 > = {
   info: {
-    chip: 'bg-primary/15 text-primary',
+    chip: 'bg-primary/15 text-primary ring-primary/25',
     icon: Info,
     shell: 'border-primary/25 bg-primary/[0.06]',
     title: 'text-foreground',
   },
   success: {
-    chip: 'bg-success/15 text-success',
+    chip: 'bg-success/15 text-success ring-success/25',
     icon: CircleCheck,
     shell: 'border-success/25 bg-success/[0.06]',
     title: 'text-foreground',
   },
   warning: {
-    chip: 'bg-warning/15 text-warning',
+    chip: 'bg-warning/15 text-warning ring-warning/25',
     icon: AlertTriangle,
     shell: 'border-warning/30 bg-warning/[0.07]',
     title: 'text-foreground',
   },
   danger: {
-    chip: 'bg-destructive/15 text-destructive',
+    chip: 'bg-destructive/15 text-destructive ring-destructive/25',
     icon: OctagonAlert,
     shell: 'border-destructive/30 bg-destructive/[0.07]',
     title: 'text-foreground',
@@ -67,7 +67,7 @@ export function Callout({
     >
       <span
         className={cn(
-          'mt-px grid size-6 shrink-0 place-items-center rounded-lg',
+          'grid size-7 shrink-0 place-items-center rounded-lg ring-1 ring-inset',
           chip
         )}
       >

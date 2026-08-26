@@ -13,7 +13,7 @@ export function scheduleResponseAccounts(accounts: Array<AccountData>) {
 // export function scheduleRequestAccounts(callback: () => Promise<void>) {
 //   const eventKey = ElectronAPIEventKeys.ScheduleRequestAccounts
 //   const customCallback = () => {
-//     callback().catch(() => {})
+//     callback().catch(console.error)
 //   }
 //   const rendererInstance = ipcRenderer.on(eventKey, customCallback)
 
@@ -33,7 +33,7 @@ export function scheduleResponseProviders(
     _: IpcRendererEvent,
     response: AntiCheatProviderCallbackResponseParam
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(eventKey, customCallback)
 

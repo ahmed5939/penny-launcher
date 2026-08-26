@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../../runtime-log'
 import type { AccountData } from '../../../types/accounts'
 import type {
   MCPClaimDifficultyIncreaseRewardsResponse,
@@ -67,7 +68,7 @@ export class MCPClaimRewards {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/mcp/claim-rewards.ts', error)
     }
 
     return defaultResponse
@@ -129,7 +130,7 @@ export class MCPClaimRewards {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/mcp/claim-rewards.ts', error)
     }
 
     return defaultResponse
@@ -152,7 +153,7 @@ export class MCPClaimRewards {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/mcp/claim-rewards.ts', error)
     }
 
     return [] as Array<MCPClaimMissionAlertRewardsResponse>
@@ -175,7 +176,7 @@ export class MCPClaimRewards {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/mcp/claim-rewards.ts', error)
     }
 
     return [] as Array<MCPClaimDifficultyIncreaseRewardsResponse>
@@ -198,7 +199,7 @@ export class MCPClaimRewards {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/mcp/claim-rewards.ts', error)
     }
 
     return null

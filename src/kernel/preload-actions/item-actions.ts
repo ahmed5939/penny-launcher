@@ -24,7 +24,7 @@ export function notificationItemAction(
     _: IpcRendererEvent,
     response: ItemActionNotification
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ItemActionNotification,

@@ -19,6 +19,7 @@ import type { AutomationServiceActionConfig } from '../types/automation'
 import type { CustomizableMenuSettings, Settings } from '../types/settings'
 import type { EnduranceConfig } from '../types/endurance'
 import type { TaxiServiceServiceActionConfig } from '../types/taxi-service'
+import type { Event as ElectronEvent } from 'electron'
 import type {
   XPBoostsConsumePersonalData,
   XPBoostsConsumeTeammateData,
@@ -31,7 +32,7 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 import timezone from 'dayjs/plugin/timezone'
 import utc from 'dayjs/plugin/utc'
 import dayjs from 'dayjs'
-import { app, BrowserWindow, ipcMain, Menu, shell } from 'electron'
+import { app, BrowserWindow, Menu, shell } from 'electron'
 import schedule from 'node-schedule'
 
 import { ElectronAPIEventKeys } from '../config/constants/main-process'
@@ -42,7 +43,6 @@ import { AlertsDone } from './core/alerts'
 import { Authentication } from './core/authentication'
 import { ClaimRewards } from './core/claim-rewards'
 import { DevicesAuthManager } from './core/devices-auth'
-import { EnduranceAutomation } from './core/endurance'
 import {
   endurancePointDefinitions,
   enduranceZones,
@@ -53,9 +53,8 @@ import { FortniteLauncher } from './core/launcher'
 import { FriendsManager } from './core/friends-manager'
 import { Inventory } from './core/inventory'
 import { ItemActions } from './core/item-actions'
-import { ItemDatabase } from './core/item-database'
 import { Loadouts } from './core/loadouts'
-import { MCPClientQuestLogin, MCPDailyQuests } from './core/mcp'
+import { MCPClientQuestLogin } from './core/mcp'
 import { MatchmakingTrack } from './core/matchmaking-track'
 import { Manifest } from './core/manifest'
 import { Party } from './core/party'
@@ -65,7 +64,6 @@ import { ServerStatus } from './core/server-status'
 import { Shop } from './core/shop'
 import { Squads } from './core/squads'
 import { Timeline } from './core/timeline'
-import { Unlock } from './core/unlock'
 import { VBucksInformation } from './core/vbucks-information'
 import { WorldInfoManager } from './core/world-info'
 import { XPBoostsManager } from './core/xpboosts'
@@ -80,7 +78,6 @@ import {
 import { AutoPinUrns } from './startup/auto-pin-urns'
 import { Automation } from './startup/automation'
 import { DataDirectory } from './startup/data-directory'
-import { PluginManager } from './startup/plugins'
 import {
   AppLanguage,
   CustomizableMenuSettingsManager,
@@ -104,6 +101,12 @@ import {
   type WindowChromeTheme,
 } from './startup/window-chrome'
 import { WindowState } from './startup/window-state'
+import { RuntimeLog } from './runtime-log'
+import { secureIpcHandle, secureIpcOn } from './secure-ipc'
+import {
+  isAllowedRendererNavigation,
+  parseSecureExternalUrl,
+} from './security'
 
 import {
   AutoLlamasAccountAddParams,
@@ -125,6 +128,17 @@ if (require('electron-squirrel-startup')) {
 }
 
 const gotTheLock = app.requestSingleInstanceLock()
+
+const loadEndurance = () => import('./core/endurance')
+const loadItemDatabase = () => import('./core/item-database')
+
+process.on('unhandledRejection', (error) => {
+  RuntimeLog.error('unhandled-rejection', error)
+})
+
+process.on('uncaughtExceptionMonitor', (error) => {
+  RuntimeLog.error('uncaught-exception', error)
+})
 
 ;(() => {
   if (!gotTheLock) {
@@ -162,11 +176,45 @@ const gotTheLock = app.requestSingleInstanceLock()
         ? { backgroundMaterial: 'mica' as const }
         : {}),
       webPreferences: {
+        contextIsolation: true,
         devTools: !app.isPackaged,
+        nodeIntegration: false,
         preload: path.join(__dirname, 'preload.js'),
+        sandbox: true,
         spellcheck: false,
+        webSecurity: true,
       },
     })
+
+    const openExternal = async (rawUrl: string) => {
+      const url = parseSecureExternalUrl(rawUrl)
+
+      if (url) await shell.openExternal(url.toString())
+    }
+
+    const rendererFilePath = path.join(
+      __dirname,
+      `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
+    )
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      void openExternal(url)
+      return { action: 'deny' }
+    })
+
+    const guardNavigation = (event: ElectronEvent, url: string) => {
+      if (
+        !isAllowedRendererNavigation(url, {
+          devServerUrl: MAIN_WINDOW_VITE_DEV_SERVER_URL,
+          rendererFilePath,
+        })
+      ) {
+        event.preventDefault()
+        void openExternal(url)
+      }
+    }
+
+    mainWindow.webContents.on('will-navigate', guardNavigation)
+    mainWindow.webContents.on('will-redirect', guardNavigation)
 
     WindowState.apply(mainWindow, savedState)
     WindowState.track(mainWindow)
@@ -198,19 +246,56 @@ const gotTheLock = app.requestSingleInstanceLock()
         return
       }
 
-      mainWindow.webContents.send(
-        ElectronAPIEventKeys.WindowChromeState,
-        {
-          maximized: mainWindow.isMaximized(),
-          mica: WindowChrome.supportsMica,
-          titleBarHeight,
-        },
-      )
+      mainWindow.webContents.send(ElectronAPIEventKeys.WindowChromeState, {
+        maximized: mainWindow.isMaximized(),
+        mica: WindowChrome.supportsMica,
+        titleBarHeight,
+      })
     }
 
     mainWindow.on('maximize', sendChromeState)
     mainWindow.on('unmaximize', sendChromeState)
-    mainWindow.webContents.on('did-finish-load', sendChromeState)
+
+    let rendererRecoveryAttempts = 0
+    let rendererRecoveryReset: NodeJS.Timeout | null = null
+    const recoverRenderer = () => {
+      if (rendererRecoveryAttempts >= 2 || mainWindow.isDestroyed()) return
+
+      rendererRecoveryAttempts += 1
+      setTimeout(() => {
+        if (!mainWindow.isDestroyed()) mainWindow.webContents.reload()
+      }, rendererRecoveryAttempts * 1_000)
+    }
+
+    mainWindow.webContents.on('did-finish-load', () => {
+      if (rendererRecoveryReset) clearTimeout(rendererRecoveryReset)
+      rendererRecoveryReset = setTimeout(() => {
+        rendererRecoveryAttempts = 0
+      }, 60_000)
+      sendChromeState()
+    })
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      RuntimeLog.error('renderer-process-gone', new Error(details.reason))
+      recoverRenderer()
+    })
+    mainWindow.webContents.on(
+      'did-fail-load',
+      (_event, code, description, validatedURL, isMainFrame) => {
+        if (isMainFrame) {
+          RuntimeLog.error(
+            'renderer-load-failed',
+            new Error(`${code} ${description} ${validatedURL}`)
+          )
+          recoverRenderer()
+        }
+      }
+    )
+    mainWindow.on('unresponsive', () => {
+      RuntimeLog.error(
+        'renderer-unresponsive',
+        new Error('Window stopped responding.')
+      )
+    })
 
     Taskbar.attach(mainWindow)
 
@@ -218,11 +303,13 @@ const gotTheLock = app.requestSingleInstanceLock()
       mainWindow.show()
     })
 
-    const manifest = Manifest.getData()
-
-    if (manifest) {
-      mainWindow.webContents.setUserAgent(manifest.UserAgent)
-    }
+    // Manifest discovery can touch many files under ProgramData. Never keep
+    // it on the first-paint path; apply it when available instead.
+    void Manifest.getData().then((manifest) => {
+      if (manifest && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.setUserAgent(manifest.UserAgent)
+      }
+    })
 
     // and load the index.html of the app.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
@@ -232,12 +319,7 @@ const gotTheLock = app.requestSingleInstanceLock()
 
       await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
     } else {
-      await mainWindow.loadFile(
-        path.join(
-          __dirname,
-          `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
-        ),
-      )
+      await mainWindow.loadFile(rendererFilePath)
     }
 
     return mainWindow
@@ -259,7 +341,7 @@ const gotTheLock = app.requestSingleInstanceLock()
       if (requestedScope) {
         MainWindow.instance.webContents.send(
           ElectronAPIEventKeys.ScopeRequest,
-          requestedScope,
+          requestedScope
         )
       }
 
@@ -281,7 +363,9 @@ const gotTheLock = app.requestSingleInstanceLock()
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.on('ready', async () => {
-    DataDirectory.createDataResources().catch(() => {})
+    DataDirectory.createDataResources().catch((error) => {
+      RuntimeLog.error('startup:data-resources', error)
+    })
 
     MainWindow.setInstance(await createWindow())
 
@@ -289,72 +373,103 @@ const gotTheLock = app.requestSingleInstanceLock()
      * Plugins
      */
 
-    PluginManager.load().catch(() => {})
+    import('./startup/plugins').then(({ PluginManager }) => PluginManager.load()).catch((error) => {
+      RuntimeLog.error('startup:plugins', error)
+    })
 
-    ipcMain.handle(ElectronAPIEventKeys.PluginsList, () =>
-      PluginManager.list(),
+    let dailyQuestsRun: Promise<void> | null = null
+    const runAutoDailyQuests = () => {
+      dailyQuestsRun ??= (async () => {
+        const settings = await SettingsManager.getData()
+
+        if (!settings.autoDailyQuests) return
+
+        const accounts = AccountsManager.getAccounts()
+
+        if (accounts.size > 0) {
+          await MCPClientQuestLogin.save([...accounts.values()])
+        }
+      })().finally(() => {
+        dailyQuestsRun = null
+      })
+
+      return dailyQuestsRun
+    }
+
+    secureIpcHandle(ElectronAPIEventKeys.PluginsList, () =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.list())
     )
 
-    ipcMain.handle(ElectronAPIEventKeys.PluginsMarketplaceList, () =>
-      PluginManager.marketplace(),
+    secureIpcHandle(ElectronAPIEventKeys.PluginsMarketplaceList, () =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.marketplace())
     )
 
-    ipcMain.handle(ElectronAPIEventKeys.PluginInstall, (_, pluginId: string) =>
-      PluginManager.install(pluginId),
+    secureIpcHandle(ElectronAPIEventKeys.PluginInstall, (_, pluginId: string) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.install(pluginId))
     )
 
-    ipcMain.handle(ElectronAPIEventKeys.PluginReadme, (_, pluginId: string) =>
-      PluginManager.readme(pluginId),
+    secureIpcHandle(ElectronAPIEventKeys.PluginReadme, (_, pluginId: string) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.readme(pluginId))
     )
 
-    ipcMain.handle(ElectronAPIEventKeys.PluginsDirectoryOpen, () =>
-      PluginManager.openDirectory(),
+    secureIpcHandle(ElectronAPIEventKeys.PluginsDirectoryOpen, () =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.openDirectory())
     )
 
-    ipcMain.handle(
-      ElectronAPIEventKeys.PluginOpen,
-      (_, pluginId: string) => PluginManager.open(pluginId),
+    secureIpcHandle(ElectronAPIEventKeys.PluginOpen, (_, pluginId: string) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.open(pluginId))
     )
 
     /**
      * Endurance
      */
 
-    ipcMain.handle(
-      ElectronAPIEventKeys.EnduranceStatusRequest,
-      async () => ({
+    secureIpcHandle(ElectronAPIEventKeys.EnduranceStatusRequest, async () => {
+      const { EnduranceAutomation } = await loadEndurance()
+
+      return {
         config: await EnduranceAutomation.getConfig(),
         pointDefinitions: endurancePointDefinitions,
         status: EnduranceAutomation.getStatus(),
         zones: enduranceZones,
-      }),
-    )
+      }
+    })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.EnduranceStart,
-      (_, account: AccountData) => {
-        EnduranceAutomation.start(account).catch(() => {})
-      },
+      async (_, account: AccountData) => {
+        const { EnduranceAutomation } = await loadEndurance()
+        EnduranceAutomation.start(account).catch((error) => {
+          RuntimeLog.error('endurance:start', error)
+        })
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.EnduranceStop, () => {
+    secureIpcOn(ElectronAPIEventKeys.EnduranceStop, async () => {
+      const { EnduranceAutomation } = await loadEndurance()
       EnduranceAutomation.stop()
     })
 
-    ipcMain.handle(
+    secureIpcHandle(
       ElectronAPIEventKeys.EnduranceConfigUpdate,
-      (_, partial: Partial<EnduranceConfig>) =>
-        EnduranceAutomation.updateConfig(partial),
+      async (_, partial: Partial<EnduranceConfig>) => {
+        const { EnduranceAutomation } = await loadEndurance()
+        return EnduranceAutomation.updateConfig(partial)
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.EnduranceCalibrateStart,
-      (_, pointId: string) => {
-        EnduranceAutomation.startCalibration(pointId).catch(() => {})
-      },
+      async (_, pointId: string) => {
+        const { EnduranceAutomation } = await loadEndurance()
+        EnduranceAutomation.startCalibration(pointId).catch((error) => {
+          RuntimeLog.error('endurance:calibration', error)
+        })
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.EnduranceCalibrateCancel, () => {
+    secureIpcOn(ElectronAPIEventKeys.EnduranceCalibrateCancel, async () => {
+      const { EnduranceAutomation } = await loadEndurance()
       EnduranceAutomation.cancelCalibration()
     })
 
@@ -362,68 +477,65 @@ const gotTheLock = app.requestSingleInstanceLock()
      * Settings
      */
 
-    ipcMain.on(ElectronAPIEventKeys.AppLanguageRequest, async () => {
+    secureIpcOn(ElectronAPIEventKeys.AppLanguageRequest, async () => {
       await AppLanguage.load()
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AppLanguageUpdate,
       async (_, language: Language) => {
         await AppLanguage.update(language)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.RequestAccounts, async () => {
+    secureIpcOn(ElectronAPIEventKeys.RequestAccounts, async () => {
       await AccountsManager.load()
+      await runAutoDailyQuests()
     })
 
-    ipcMain.on(ElectronAPIEventKeys.RequestSettings, async () => {
+    secureIpcOn(ElectronAPIEventKeys.RequestSettings, async () => {
       await SettingsManager.load()
     })
 
-    ipcMain.on(ElectronAPIEventKeys.DevSettingsRequest, async () => {
+    secureIpcOn(ElectronAPIEventKeys.DevSettingsRequest, async () => {
       await DevSettingsManager.load()
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.CustomizableMenuSettingsRequest,
       async () => {
         await CustomizableMenuSettingsManager.load()
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.UpdateSettings,
       async (_, settings: Settings) => {
         await SettingsManager.update(settings)
-      },
+      }
     )
 
-    ipcMain.handle(ElectronAPIEventKeys.SettingsDetectPath, () => {
+    secureIpcHandle(ElectronAPIEventKeys.SettingsDetectPath, () => {
       return SettingsManager.detectGamePath({
         namespaceId: 'fn',
       })
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AccountsOrderingSync,
       async (_, accounts: AccountDataRecord) => {
         await AccountsManager.reorder(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.CustomizableMenuSettingsUpdate,
-      async (
-        _,
-        key: keyof CustomizableMenuSettings,
-        visibility: boolean,
-      ) => {
+      async (_, key: keyof CustomizableMenuSettings, visibility: boolean) => {
         await CustomizableMenuSettingsManager.update(key, visibility)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.CustomProcessKill, () => {
+    secureIpcOn(ElectronAPIEventKeys.CustomProcessKill, () => {
       CustomProcess.kill()
     })
 
@@ -431,11 +543,29 @@ const gotTheLock = app.requestSingleInstanceLock()
      * General Methods
      */
 
-    ipcMain.on(ElectronAPIEventKeys.OpenExternalURL, (_, url: string) => {
-      shell.openExternal(url)
+    secureIpcOn(ElectronAPIEventKeys.OpenExternalURL, (_, url: string) => {
+      if (typeof url !== 'string' || url.length > 2_048) {
+        return
+      }
+
+      try {
+        const parsed = new URL(url)
+
+        if (
+          parsed.protocol !== 'https:' ||
+          parsed.username ||
+          parsed.password
+        ) {
+          return
+        }
+
+        void shell.openExternal(parsed.toString())
+      } catch {
+        // Ignore malformed URLs from the renderer.
+      }
     })
 
-    ipcMain.on(ElectronAPIEventKeys.CloseWindow, () => {
+    secureIpcOn(ElectronAPIEventKeys.CloseWindow, () => {
       if (SystemTray.isActive) {
         MainWindow.closeApp()
       } else {
@@ -443,7 +573,7 @@ const gotTheLock = app.requestSingleInstanceLock()
       }
     })
 
-    ipcMain.on(ElectronAPIEventKeys.MinimizeWindow, () => {
+    secureIpcOn(ElectronAPIEventKeys.MinimizeWindow, () => {
       if (SystemTray.isActive) {
         MainWindow.instance.hide()
       } else {
@@ -455,38 +585,35 @@ const gotTheLock = app.requestSingleInstanceLock()
      * Windows shell surfaces
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaskbarProgress,
       (_, value: number | null | 'indeterminate') => {
         Taskbar.setProgress(value)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaskbarBadge,
       (_, dataUrl: string | null, description: string) => {
         Taskbar.setBadge(dataUrl, description)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaskbarJumpList,
-      (
-        _,
-        accounts: Array<{ accountId: string; displayName: string }>,
-      ) => {
+      (_, accounts: Array<{ accountId: string; displayName: string }>) => {
         Taskbar.setJumpList(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.NativeNotify,
       (_, payload: NativeNotificationPayload) => {
         NativeNotifications.send(payload)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TraySummary,
       (
         _,
@@ -494,20 +621,20 @@ const gotTheLock = app.requestSingleInstanceLock()
           primaryName: string | null
           running: Array<string>
           total: number
-        },
+        }
       ) => {
         SystemTray.updateSummary(summary)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.ContextMenuPopup,
       (event, requestId: string, items: Array<ContextMenuRequestItem>) => {
         NativeContextMenu.popup(event.sender, requestId, items)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.MaximizeWindow, () => {
+    secureIpcOn(ElectronAPIEventKeys.MaximizeWindow, () => {
       if (MainWindow.instance.isMaximized()) {
         MainWindow.instance.unmaximize()
       } else {
@@ -519,37 +646,37 @@ const gotTheLock = app.requestSingleInstanceLock()
      * The caption buttons are drawn by Windows, so their colours do not follow
      * the renderer's theme class — they have to be repainted explicitly.
      */
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.WindowChromeTheme,
       (_, theme: WindowChromeTheme) => {
         try {
           MainWindow.instance.setTitleBarOverlay(
-            WindowChrome.overlay(theme === 'light' ? 'light' : 'dark'),
+            WindowChrome.overlay(theme === 'light' ? 'light' : 'dark')
           )
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
           // Not every platform has an overlay to repaint.
         }
-      },
+      }
     )
 
     /**
      * Events
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.OnRemoveAccount,
       async (_, accountId: string) => {
         await AccountsManager.remove(accountId)
-      },
+      }
     )
 
     /**
      * Requests
      */
 
-    // ipcMain.on(
+    // secureIpcOn(
     //   ElectronAPIEventKeys.RequestProviderAndAccessTokenOnStartup,
     //   async (_, account: AccountData) => {
     //     const response = await AntiCheatProvider.request(account)
@@ -565,42 +692,42 @@ const gotTheLock = app.requestSingleInstanceLock()
      * Authentication
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.CreateAuthWithExchange,
       async (_, code: string) => {
         await Authentication.exchange(code)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.CreateAuthWithAuthorization,
       async (_, code: string) => {
         await Authentication.authorization(code)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.CreateAuthWithDevice,
       async (_, data: AuthenticationByDeviceProperties) => {
         await Authentication.device(data)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.OpenEpicGamesSettings,
       async (_, account: AccountData) => {
         await Authentication.openEpicGamesSettings(account)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.GenerateExchangeCode,
       async (_, account: AccountData) => {
         await Authentication.generateExchangeCode(account)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.RequestNewVersionStatus, async () => {
+    secureIpcOn(ElectronAPIEventKeys.RequestNewVersionStatus, async () => {
       await Application.checkVersion()
     })
 
@@ -608,511 +735,491 @@ const gotTheLock = app.requestSingleInstanceLock()
      * Launcher
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.LauncherStart,
       async (_, account: AccountData) => {
         await FortniteLauncher.start(account)
-      },
+      }
     )
 
     /**
      * STW Operations
      */
 
-    ipcMain.on(ElectronAPIEventKeys.ServerStatusRequest, async () => {
+    secureIpcOn(ElectronAPIEventKeys.ServerStatusRequest, async () => {
       await ServerStatus.request()
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AccountHealthRequest,
       async (_, accounts: Array<AccountData>) => {
         await AccountHealth.request(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.ExpeditionsRequest,
       async (_, accounts: Array<AccountData>) => {
         await Expeditions.request(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.ExpeditionsCollect,
       async (_, accounts: Array<AccountData>) => {
         await Expeditions.collect(accounts)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.ItemDatabaseRequest, async () => {
+    secureIpcOn(
+      ElectronAPIEventKeys.ExpeditionsAction,
+      async (_, config: Parameters<typeof Expeditions.action>[0]) => {
+        await Expeditions.action(config)
+      }
+    )
+
+    secureIpcOn(ElectronAPIEventKeys.ItemDatabaseRequest, async () => {
+      const { ItemDatabase } = await loadItemDatabase()
       await ItemDatabase.request()
     })
 
-    ipcMain.on(ElectronAPIEventKeys.ItemDatabaseRefresh, async () => {
+    secureIpcOn(ElectronAPIEventKeys.ItemDatabaseRefresh, async () => {
+      const { ItemDatabase } = await loadItemDatabase()
       await ItemDatabase.request(true)
     })
 
-    ipcMain.on(ElectronAPIEventKeys.TimelineRequest, async () => {
+    secureIpcOn(ElectronAPIEventKeys.TimelineRequest, async () => {
       await Timeline.request()
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.LoadoutsRequest,
       async (_, account: AccountData) => {
         await Loadouts.request(account)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.LoadoutEdit,
       async (_, account: AccountData, request: LoadoutEditRequest) => {
         await Loadouts.edit(account, request)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.ItemAction,
       async (_, account: AccountData, request: ItemActionRequest) => {
         await ItemActions.perform(account, request)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.QuestsRequest,
       async (_, account: AccountData) => {
         await Quests.request(account)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.QuestsPin,
       async (_, account: AccountData, pinnedQuestIds: Array<string>) => {
         await Quests.pin(account, pinnedQuestIds)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.InventoryRequest,
       async (_, accounts: Array<AccountData>) => {
         await Inventory.request(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.InventoryRecycle,
       async (
         _,
         accounts: Array<AccountData>,
-        selection: Record<string, Array<string>>,
+        selection: Record<string, Array<string>>
       ) => {
         await Inventory.recycle(accounts, selection)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.ShopRequest,
       async (_, accounts: Array<AccountData>) => {
         await Shop.request(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.ShopPurchase,
       async (
         _,
         account: AccountData,
-        offer: Parameters<typeof Shop.purchase>[1],
+        offer: Parameters<typeof Shop.purchase>[1]
       ) => {
         await Shop.purchase(account, offer)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.ShopOpen,
       async (_, accounts: Array<AccountData>) => {
         await Shop.openLlamas(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.SquadsRequest,
       async (_, account: AccountData) => {
         await Squads.request(account)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.SquadsAssign,
-      async (
-        _,
-        account: AccountData,
-        assignments: Array<SquadAssignment>,
-      ) => {
+      async (_, account: AccountData, assignments: Array<SquadAssignment>) => {
         await Squads.assign(account, assignments)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.FriendsManagerRequest,
       async (_, account: AccountData) => {
         await FriendsManager.request(account)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.FriendsManagerSearch,
       async (_, account: AccountData, query: string) => {
         await FriendsManager.search(account, query)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.FriendsManagerAction,
       async (
         _,
         account: AccountData,
         targetAccountId: string,
-        action: FriendsActionPayload['action'],
+        action: FriendsActionPayload['action']
       ) => {
         await FriendsManager.action(account, targetAccountId, action)
-      },
+      }
     )
 
-    ipcMain.on(
-      ElectronAPIEventKeys.DailyQuestsRequest,
-      async (_, accounts: Array<AccountData>) => {
-        await MCPDailyQuests.request(accounts)
-      },
+    secureIpcOn(
+      ElectronAPIEventKeys.FriendsManagerBulkAction,
+      async (
+        _,
+        account: AccountData,
+        targetAccountIds: Array<string>,
+        action: 'add' | 'remove'
+      ) => {
+        await FriendsManager.bulkAction(account, targetAccountIds, action)
+      }
     )
 
-    ipcMain.on(
-      ElectronAPIEventKeys.DailyQuestReroll,
-      async (_, account: AccountData, questId: string) => {
-        await MCPDailyQuests.reroll(account, questId)
-      },
-    )
-
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.XPBoostsAccountProfileRequest,
       async (_, accounts: Array<AccountData>) => {
         await XPBoostsManager.requestAccounts(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.XPBoostsConsumePersonal,
       async (_, data: XPBoostsConsumePersonalData) => {
         await XPBoostsManager.consumePersonal(data)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.XPBoostsConsumeTeammate,
       async (_, data: XPBoostsConsumeTeammateData) => {
         await XPBoostsManager.consumeTeammate(data)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.XPBoostsSearchUser,
       async (_, config: XPBoostsSearchUserConfig) => {
         await XPBoostsManager.searchUser(
           ElectronAPIEventKeys.XPBoostsSearchUserNotification,
-          config,
+          config
         )
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.XPBoostsGeneralSearchUser,
       async (_, config: XPBoostsSearchUserConfig) => {
         await XPBoostsManager.generalSearchUser(config)
-      },
-    )
-
-    ipcMain.on(
-      ElectronAPIEventKeys.UnlockRequest,
-      async (_, accounts: Array<AccountData>) => {
-        await Unlock.start(accounts)
-      },
+      }
     )
 
     /**
      * Party
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.PartyClaimAction,
       async (_, selectedAccount: Array<AccountData>) => {
         await ClaimRewards.start(selectedAccount)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.PartyKickAction,
       async (
         _,
         selectedAccount: AccountData,
         accounts: AccountDataList,
-        claimState: boolean,
+        claimState: boolean
       ) => {
-        await Party.kickPartyMembers(
-          selectedAccount,
-          accounts,
-          claimState,
-          {
-            force: true,
-          },
-        )
-      },
+        await Party.kickPartyMembers(selectedAccount, accounts, claimState, {
+          force: true,
+        })
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.PartyLeaveAction,
       async (
         _,
         selectedAccounts: AccountList,
         accounts: AccountDataList,
-        claimState: boolean,
+        claimState: boolean
       ) => {
         await Party.leaveParty(selectedAccounts, accounts, claimState)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.PartyLoadFriends, async () => {
+    secureIpcOn(ElectronAPIEventKeys.PartyLoadFriends, async () => {
       await Party.loadFriends()
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.PartyAddNewFriendAction,
       async (_, account: AccountData, displayName: string) => {
         await Party.addNewFriend(account, displayName)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.PartyInviteAction,
       async (_, account: AccountData, accountIds: Array<string>) => {
         await Party.invite(account, accountIds)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.PartyRemoveFriendAction,
       async (
         _,
         data: {
           accountId: string
           displayName: string
-        },
+        }
       ) => {
         await Party.removeFriend(data)
-      },
+      }
     )
 
     /**
      * Advanced Mode
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.HomeFetchPlayerRequest,
       async (_, config: AlertsDoneSearchPlayerConfig) => {
         await AlertsDone.fetchPlayerData(config)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.HomeWorldInfoRequest,
       async (_, accountId?: string) => {
         await WorldInfoManager.requestForHome(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.WorldInfoRequestData,
       async (_, accountId?: string) => {
         await WorldInfoManager.requestForAdvanceSection(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.WorldInfoSaveFile,
       async (_, data: SaveWorldInfoData) => {
         await WorldInfoManager.saveFile(data)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.WorldInfoRequestFiles, async () => {
+    secureIpcOn(ElectronAPIEventKeys.WorldInfoRequestFiles, async () => {
       await WorldInfoManager.requestFiles()
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.WorldInfoDeleteFile,
       async (_, data: WorldInfoFileData) => {
         await WorldInfoManager.deleteFile(data)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.WorldInfoExportFile,
       async (_, data: WorldInfoFileData) => {
         await WorldInfoManager.exportWorldInfoFile(data)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.WorldInfoOpenFile,
       async (_, data: WorldInfoFileData) => {
         await WorldInfoManager.openWorldInfoFile(data)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.WorldInfoRenameFile,
       async (_, data: WorldInfoFileData, newFilename: string) => {
         await WorldInfoManager.renameFile(data, newFilename)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.MatchmakingTrackStatus,
       async (_, account: AccountData, accountId: string) => {
         await MatchmakingTrack.status(account, accountId)
-      },
+      }
     )
 
     /**
      * Automation
      */
 
-    ipcMain.on(
-      ElectronAPIEventKeys.AutomationServiceRequestData,
-      async () => {
-        await Automation.load()
-      },
-    )
+    secureIpcOn(ElectronAPIEventKeys.AutomationServiceRequestData, async () => {
+      await Automation.load()
+    })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceStart,
       async (_, accountId: string) => {
         await Automation.addAccount(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceReload,
       async (_, accountId: string) => {
         await Automation.reload(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceRemove,
       async (_, accountId: string) => {
         await Automation.removeAccount(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceActionUpdate,
-      async (
-        _,
-        accountId: string,
-        config: AutomationServiceActionConfig,
-      ) => {
+      async (_, accountId: string, config: AutomationServiceActionConfig) => {
         await Automation.updateAction(accountId, config)
-      },
+      }
     )
 
     /**
      * Taxi Service
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceAddAccounts,
       async (_, origin: Array<string>, destination: Array<string>) => {
         await TaxiService.sendRequests(origin, destination)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceRequestData,
       async () => {
         await TaxiService.load()
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceStart,
       async (_, accountId: string) => {
         await TaxiService.addAccount(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceReload,
       async (_, ids: Array<string>) => {
         await TaxiService.reload(ids)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceRemove,
       async (_, accountId: string) => {
         await TaxiService.removeAccount(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceActionUpdate,
-      async (
-        _,
-        accountId: string,
-        config: TaxiServiceServiceActionConfig,
-      ) => {
+      async (_, accountId: string, config: TaxiServiceServiceActionConfig) => {
         await TaxiService.updateAction(accountId, config)
-      },
+      }
     )
 
     /**
      * Urns
      */
 
-    ipcMain.on(ElectronAPIEventKeys.UrnsServiceRequestData, async () => {
+    secureIpcOn(ElectronAPIEventKeys.UrnsServiceRequestData, async () => {
       await AutoPinUrns.load()
     })
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.UrnsServiceAdd,
       async (_, accountId: string) => {
         await AutoPinUrns.addAccount(accountId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.UrnsServiceUpdate,
       async (
         _,
         accountId: string,
         type: 'mini-bosses' | 'urns',
-        value: boolean,
+        value: boolean
       ) => {
         await AutoPinUrns.updateAccount(accountId, type, value)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.UrnsServiceRemove,
       async (_, accountId: string) => {
         await AutoPinUrns.removeAccount(accountId)
-      },
+      }
     )
 
     /**
      * Auto-llamas
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasLoadAccountsRequest,
       async () => {
         await AutoLlamas.load()
@@ -1130,31 +1237,31 @@ const gotTheLock = app.requestSingleInstanceLock()
           }),
           type: ProcessLlamaType.Survivor,
         })
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasAccountAdd,
       async (_, accounts: AutoLlamasAccountAddParams) => {
         await AutoLlamas.addAccount(accounts)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasAccountUpdate,
       async (_, data: AutoLlamasAccountUpdateParams) => {
         await AutoLlamas.updateAccounts(data)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasAccountRemove,
       async (_, data: Array<string> | null) => {
         await AutoLlamas.removeAccounts(data)
-      },
+      }
     )
 
-    ipcMain.on(ElectronAPIEventKeys.AutoLlamasAccountCheck, async () => {
+    secureIpcOn(ElectronAPIEventKeys.AutoLlamasAccountCheck, async () => {
       await AutoLlamas.check()
     })
 
@@ -1162,57 +1269,57 @@ const gotTheLock = app.requestSingleInstanceLock()
      * V-Bucks Information
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.VBucksInformationRequest,
       async (_, accounts: Array<AccountData>) => {
         await VBucksInformation.requestBulkInfo(accounts)
-      },
+      }
     )
 
     /**
      * Redeem Codes
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.RedeemCodesRedeem,
       async (_, accounts: Array<AccountData>, codes: Array<string>) => {
         await RedeemCodes.redeem(accounts, codes)
-      },
+      }
     )
 
     /**
      * Accounts
      */
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.UpdateAccountBasicInfo,
       async (_, account: AccountBasicInfo) => {
         await AccountsManager.add(account)
         MainWindow.instance.webContents.send(
-          ElectronAPIEventKeys.ResponseUpdateAccountBasicInfo,
+          ElectronAPIEventKeys.ResponseUpdateAccountBasicInfo
         )
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.DevicesAuthRequestData,
       async (_, account: AccountData) => {
         await DevicesAuthManager.load(account)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.DevicesAuthRemove,
       async (_, account: AccountData, deviceId: string) => {
         await DevicesAuthManager.remove(account, deviceId)
-      },
+      }
     )
 
-    ipcMain.on(
+    secureIpcOn(
       ElectronAPIEventKeys.EULAVerificationRequest,
       async (_, accountIds: Array<string>) => {
         await EULATracking.verify(accountIds)
-      },
+      }
     )
 
     /**
@@ -1234,9 +1341,13 @@ const gotTheLock = app.requestSingleInstanceLock()
         tz: 'UTC',
       },
       () => {
-        WorldInfoManager.requestForHome().catch(() => {})
-        WorldInfoManager.requestForAdvanceSection().catch(() => {})
-      },
+        WorldInfoManager.requestForHome().catch((error) => {
+          RuntimeLog.error('schedule:world-info-home', error)
+        })
+        WorldInfoManager.requestForAdvanceSection().catch((error) => {
+          RuntimeLog.error('schedule:world-info-advanced', error)
+        })
+      }
     )
 
     schedule.scheduleJob(
@@ -1259,7 +1370,7 @@ const gotTheLock = app.requestSingleInstanceLock()
           }),
           type: ProcessLlamaType.FreeUpgrade,
         })
-      },
+      }
     )
 
     schedule.scheduleJob(
@@ -1282,26 +1393,12 @@ const gotTheLock = app.requestSingleInstanceLock()
           }),
           type: ProcessLlamaType.Survivor,
         })
-      },
+      }
     )
 
     /**
      * Auto Daily Quests (ClientQuestLogin)
      */
-
-    const runAutoDailyQuests = async () => {
-      const settings = await SettingsManager.getData()
-
-      if (!settings.autoDailyQuests) {
-        return
-      }
-
-      const accounts = AccountsManager.getAccounts()
-
-      if (accounts.size > 0) {
-        MCPClientQuestLogin.save([...accounts.values()])
-      }
-    }
 
     schedule.scheduleJob(
       {
@@ -1319,9 +1416,6 @@ const gotTheLock = app.requestSingleInstanceLock()
       },
       runAutoDailyQuests
     )
-
-    // Startup trigger: run once after accounts have loaded
-    setTimeout(runAutoDailyQuests, 30_000)
   })
 
   // Quit when all windows are closed, except on macOS. There, it's common

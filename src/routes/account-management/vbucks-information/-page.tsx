@@ -79,7 +79,7 @@ function Content() {
               })}
             </span>
             <span className="flex items-center gap-1.5 text-3xl font-bold tabular-nums">
-              <img
+              <img decoding="async" loading="lazy"
                 src={vbucksImageUrl}
                 className="size-7"
                 alt="vbucks"
@@ -117,7 +117,7 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
           {parseCustomDisplayName(account)}
         </p>
         <p className="mt-1 flex items-center gap-1.5 text-xl font-bold tabular-nums">
-          <img
+          <img decoding="async" loading="lazy"
             src={vbucksImageUrl}
             className="size-5"
             alt="vbucks"

@@ -33,6 +33,10 @@ export function Segmented<T extends string>({
         className
       )}
     >
+      {/*
+        h-7 inside the 2px track: 28 + 4 puts the whole control at the standard
+        32px, so a Segmented lines up with the buttons beside it in a toolbar.
+      */}
       {options.map((option) => {
         const active = option.value === value
 
@@ -44,10 +48,10 @@ export function Segmented<T extends string>({
             aria-selected={active}
             disabled={option.disabled}
             className={cn(
-              'rounded-[calc(var(--radius)-4px)] px-3 py-1.5 text-xs font-semibold transition-colors',
-              'disabled:cursor-not-allowed disabled:opacity-40',
+              'h-7 rounded-lg px-3 text-xs font-semibold transition-colors',
+              'disabled:opacity-40',
               active
-                ? 'bg-primary/15 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]'
+                ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/25'
                 : 'text-muted-foreground hover:text-foreground'
             )}
             onClick={() => onChange(option.value)}

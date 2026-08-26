@@ -3,14 +3,14 @@ import type { ItemRecordMap } from '../../kernel/core/item-database'
 
 import { Lock, Zap } from 'lucide-react'
 
-import { resolveItemArt } from './item-icon'
+import { itemBadge, resolveItemArt } from './item-icon'
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuTrigger,
 } from '../ui/context-menu'
 
-import { RarityType } from '../../config/constants/resources'
+import { rarityStyle } from '../page/rarity'
 
 import { cn } from '../../lib/utils'
 
@@ -22,26 +22,16 @@ import { cn } from '../../lib/utils'
  * level in the corner. Those plates ship with the app already
  * (`assets/images/rarities/*.png`, used here as the tile background), so
  * this is the real thing rather than an approximation of it.
+ *
+ * That plate is the game's own artwork, so it states the tier in the game's
+ * own colours whatever we do — which is exactly why the chrome around it can
+ * afford the restraint ladder the rest of the app runs on. The border tints
+ * from Rare up and takes the neutral hairline below it, and nothing is lost
+ * by that, because the tier is still legible in the plate underneath. A shelf
+ * of Nuts & Bolts therefore does not compete with the one Legendary schematic
+ * standing in it. The name bar carries no rarity at all: it is a caption, and
+ * a caption is not where a page spends its colour.
  */
-
-/** The in-game rarity colours, for the border and the name bar. */
-const rarityBorder: Record<string, string> = {
-  [RarityType.Common]: 'border-[#9ba0a5]',
-  [RarityType.Uncommon]: 'border-[#5ecc32]',
-  [RarityType.Rare]: 'border-[#43aff5]',
-  [RarityType.Epic]: 'border-[#b054e8]',
-  [RarityType.Legendary]: 'border-[#f5a742]',
-  [RarityType.Mythic]: 'border-[#f5e142]',
-}
-
-const rarityBar: Record<string, string> = {
-  [RarityType.Common]: 'bg-[#4a4f54]/95',
-  [RarityType.Uncommon]: 'bg-[#2c6b1a]/95',
-  [RarityType.Rare]: 'bg-[#1d5c8c]/95',
-  [RarityType.Epic]: 'bg-[#5b2a80]/95',
-  [RarityType.Legendary]: 'bg-[#8a5410]/95',
-  [RarityType.Mythic]: 'bg-[#8a7a10]/95',
-}
 
 export type ItemTileSize = 'small' | 'default' | 'large'
 
@@ -90,7 +80,6 @@ export function ItemTile({
 }) {
   const art = resolveItemArt(templateId, records)
   const label = name ?? art.name
-  const rarity = art.rarity
 
   const box = {
     small: 'w-16',
@@ -105,16 +94,18 @@ export function ItemTile({
       aria-pressed={onClick ? selected : undefined}
       className={cn(
         'group relative block shrink-0 overflow-hidden rounded-lg border-2 text-left',
-        'transition-transform duration-100',
+        'transition-transform',
         box,
-        rarityBorder[rarity] ?? 'border-border',
+        art.accent ? 'border-[color:var(--rarity)]' : 'border-border/60',
         onClick && !disabled && 'hover:-translate-y-0.5 hover:brightness-110',
         selected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
         disabled && 'opacity-60',
+        '[content-visibility:auto] [contain-intrinsic-size:6rem_8rem]',
         className
       )}
       disabled={onClick ? disabled : undefined}
       onClick={onClick}
+      style={rarityStyle(art.accent)}
       title={title ?? label}
       type={onClick ? 'button' : undefined}
     >
@@ -125,6 +116,8 @@ export function ItemTile({
             alt=""
             aria-hidden
             className="absolute inset-0 size-full object-cover"
+            decoding="async"
+            loading="lazy"
             src={art.frame}
           />
         )}
@@ -132,6 +125,7 @@ export function ItemTile({
           <img
             alt=""
             className="absolute inset-0 size-full object-contain"
+            decoding="async"
             loading="lazy"
             src={art.imgUrl}
           />
@@ -140,14 +134,14 @@ export function ItemTile({
         {/* Power is what the game shows and what people compare; tier is a
             secondary detail, so it only appears when power is unknown. */}
         {typeof power === 'number' && power > 0 ? (
-          <span className="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-black/70 px-1 text-[0.6rem] font-bold leading-tight text-white">
-            <Zap className="size-2 text-yellow-300" />
-            {power}
+          <span className={cn(itemBadge, 'left-1 top-1')}>
+            <Zap className="size-2 text-muted-foreground" />
+            <span className="figure">{power}</span>
           </span>
         ) : (
           typeof tier === 'number' &&
           tier > 0 && (
-            <span className="absolute left-1 top-1 rounded bg-black/65 px-1 text-[0.6rem] font-bold leading-tight text-white">
+            <span className={cn(itemBadge, 'figure left-1 top-1')}>
               T{tier}
             </span>
           )
@@ -155,7 +149,7 @@ export function ItemTile({
 
         {locked && (
           <span
-            className="absolute right-1 top-1 grid size-4 place-items-center rounded bg-black/65 text-white"
+            className={cn(itemBadge, 'right-1 top-1 px-0.5')}
             title="Favourited or equipped — cannot be recycled"
           >
             <Lock className="size-2.5" />
@@ -163,7 +157,7 @@ export function ItemTile({
         )}
 
         {typeof quantity === 'number' && quantity > 1 && (
-          <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[0.6rem] font-bold leading-tight tabular-nums text-white">
+          <span className={cn(itemBadge, 'figure bottom-1 right-1')}>
             {quantity > 9999
               ? `${Math.round(quantity / 1000)}k`
               : quantity.toLocaleString()}
@@ -171,26 +165,19 @@ export function ItemTile({
         )}
 
         {typeof level === 'number' && level > 0 && (
-          <span className="absolute bottom-1 left-1 rounded bg-black/70 px-1 text-[0.6rem] font-bold leading-tight tabular-nums text-white">
+          <span className={cn(itemBadge, 'figure bottom-1 left-1')}>
             {level}
           </span>
         )}
       </span>
 
       {/* Name bar. */}
-      <span
-        className={cn(
-          'block px-1.5 py-1 text-center',
-          rarityBar[rarity] ?? 'bg-muted'
-        )}
-      >
-        <span className="line-clamp-2 text-[0.6rem] font-semibold leading-tight text-white">
+      <span className="block bg-card/80 px-1.5 py-1 text-center">
+        <span className="line-clamp-2 text-[0.75rem] font-medium leading-tight text-foreground">
           {label}
         </span>
         {footer && (
-          <span className="mt-0.5 block truncate text-[0.55rem] leading-tight text-white/70">
-            {footer}
-          </span>
+          <span className="micro-label mt-1 block truncate">{footer}</span>
         )}
       </span>
     </Element>

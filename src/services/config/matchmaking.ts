@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Matchmaking Service
  */
 
-export const matchmakingService = axios.create({
+export const matchmakingService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/matchmaking/session',
 })

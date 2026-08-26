@@ -2,6 +2,7 @@ import { Check, CheckCheck, ChevronsUpDown, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../ui/button'
+import { Checkbox } from '../ui/checkbox'
 import {
   Command,
   CommandEmpty,
@@ -22,7 +23,8 @@ import { cn, parseCustomDisplayName } from '../../lib/utils'
  *
  * Everything about "who is this app pointed at" happens in this one dropdown:
  * clicking a name makes it the account, the box beside each name adds it to
- * the bulk scope, and All/Clear covers the two moves people actually make.
+ * the bulk scope, and the strip under the list covers the two moves people
+ * actually make.
  * No page carries its own picker and the rail carries no account list —
  * having the same choice in two places meant neither could be trusted.
  */
@@ -63,7 +65,7 @@ export function AccountList() {
           className={cn(
             // h-7 rather than the 32px standard: this one sits inside the
             // 40px titlebar, alongside the search field and friends toggle.
-            'not-draggable-region flex h-7 justify-between pl-3 pr-2 select-none text-left text-xs w-52',
+            'not-draggable-region flex h-7 w-52 justify-between pl-3 pr-2 text-left text-xs select-none',
             {
               'justify-center px-2': accounts.length < 1,
             }
@@ -75,19 +77,19 @@ export function AccountList() {
         >
           {accounts.length > 0 ? (
             <>
-              <span className="block truncate max-w-[10rem] w-full">
+              <span className="block w-full max-w-[10rem] truncate">
                 {triggerLabel}
               </span>
-              <ChevronsUpDown className="h-4 ml-auto opacity-50 shrink-0 w-4" />
+              <ChevronsUpDown className="ml-auto size-4 shrink-0 opacity-50" />
             </>
           ) : (
-            <span className="leading-4 text-balance truncate">
+            <span className="truncate text-balance leading-4">
               {t('form.accounts.no-registered-accounts')}
             </span>
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-60">
+      <PopoverContent className="w-60 p-0">
         <Command
           filter={customFilter}
           loop
@@ -116,6 +118,7 @@ export function AccountList() {
 
                 return (
                   <CommandItem
+                    className="gap-2"
                     key={account.accountId}
                     value={account.accountId}
                     keywords={createKeywords(account)}
@@ -124,7 +127,7 @@ export function AccountList() {
                   >
                     <Check
                       className={cn(
-                        'mr-2 h-4 w-4 shrink-0',
+                        'size-4 shrink-0',
                         isCurrent ? 'opacity-100' : 'opacity-0'
                       )}
                     />
@@ -139,24 +142,22 @@ export function AccountList() {
                       multi-select somewhere else is how the app ended up with
                       twelve pickers.
                     */}
-                    <button
-                      type="button"
+                    <Checkbox
                       aria-label={
                         isInScope ? 'Remove from scope' : 'Add to scope'
                       }
-                      className={cn(
-                        'ml-auto grid size-4 shrink-0 place-items-center rounded-[3px] border',
-                        isInScope
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-muted-foreground/50'
-                      )}
-                      onClick={(event) => {
-                        event.stopPropagation()
+                      checked={isInScope}
+                      className="ml-auto"
+                      size="sm"
+                      /*
+                       * The row itself switches account on click, so the box
+                       * has to keep its own click to itself.
+                       */
+                      onClick={(event) => event.stopPropagation()}
+                      onCheckedChange={() =>
                         onToggleMember(account.accountId)
-                      }}
-                    >
-                      {isInScope && <Check className="size-3" />}
-                    </button>
+                      }
+                    />
                   </CommandItem>
                 )
               })}
@@ -165,31 +166,62 @@ export function AccountList() {
 
           {accounts.length > 1 && (
             <div className="flex items-center gap-1 border-t border-border/60 px-1.5 py-1">
-              <span className="px-1 text-[0.6875rem] tabular-nums text-muted-foreground">
-                {members.length} of {accounts.length} in scope
+              <span className="figure mr-auto px-1 text-[0.6875rem] text-muted-foreground">
+                {t('form.multi.select.counter', {
+                  selected: members.length,
+                  total: accounts.length,
+                })}
               </span>
-              <button
-                type="button"
-                className="ml-auto flex items-center gap-1 rounded px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                onClick={onSelectAll}
+              <ScopeAction
                 disabled={allSelected}
+                onClick={onSelectAll}
               >
                 <CheckCheck className="size-3" />
-                All
-              </button>
-              <button
-                type="button"
-                className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                onClick={onClearScope}
+                {t('form.multi.select.all')}
+              </ScopeAction>
+              <ScopeAction
+                /* The scope may never be emptied, so the last member stays. */
                 disabled={members.length <= 1}
+                onClick={onClearScope}
               >
                 <X className="size-3" />
-                Clear
-              </button>
+                {t('form.multi.select.clear')}
+              </ScopeAction>
             </div>
           )}
         </Command>
       </PopoverContent>
     </Popover>
+  )
+}
+
+/**
+ * A scope-strip action.
+ *
+ * A `Button` at its own smallest size, pulled down again: the strip is 240px
+ * wide and carries two labelled actions beside a counter, which the 32px
+ * control height cannot fit. Everything that decides how it behaves — the
+ * ghost hover, the disabled treatment, the icon gap — still comes from the
+ * primitive.
+ */
+function ScopeAction({
+  children,
+  disabled,
+  onClick,
+}: {
+  children: React.ReactNode
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <Button
+      className="h-6 gap-1 px-1.5 text-[0.6875rem] font-medium text-muted-foreground"
+      disabled={disabled}
+      size="sm"
+      variant="ghost"
+      onClick={onClick}
+    >
+      {children}
+    </Button>
   )
 }

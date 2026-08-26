@@ -11,8 +11,17 @@ import type {
 import type { TaxiServiceAccountFileDataList } from '../../types/taxi-service'
 import type { AutoPinUrnDataList } from '../../types/urns'
 
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import path from 'node:path'
+import { app, safeStorage } from 'electron'
 
 import { defaultMissionInterval } from '../../config/constants/automation'
 import { defaultClaimingRewardsDelay } from '../../config/constants/mcp'
@@ -30,21 +39,50 @@ import {
 } from '../../lib/validations/schemas/settings'
 import { taxiServiceFileSchema } from '../../lib/validations/schemas/taxi-service'
 
+import { RuntimeLog } from '../runtime-log'
+
 export class DataDirectory {
   private static devPrefix = 'dev-'
+  private static encryptedPrefix = 'enc:v1:'
+  private static writeQueues = new Map<string, Promise<void>>()
+
+  private static encryptCredential(value: string) {
+    if (
+      value.startsWith(DataDirectory.encryptedPrefix) ||
+      !safeStorage.isEncryptionAvailable()
+    ) {
+      return value
+    }
+
+    return `${DataDirectory.encryptedPrefix}${safeStorage.encryptString(value).toString('base64')}`
+  }
+
+  private static decryptCredential(value: string) {
+    if (!value.startsWith(DataDirectory.encryptedPrefix)) {
+      return value
+    }
+
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('Secure account storage is unavailable.')
+    }
+
+    return safeStorage.decryptString(
+      Buffer.from(value.slice(DataDirectory.encryptedPrefix.length), 'base64')
+    )
+  }
 
   /**
    * Folders
    */
 
   private static dataDirectoryPath = path.join(
-    `${process.env.APPDATA}`,
-    'penny-launcher-data',
+    app.getPath('appData'),
+    'penny-launcher-data'
   )
 
   private static worldInfoDirectoryPath = path.join(
     DataDirectory.dataDirectoryPath,
-    'world-info',
+    'world-info'
   )
 
   /**
@@ -54,19 +92,19 @@ export class DataDirectory {
   private static accountsFilePath = MAIN_WINDOW_VITE_DEV_SERVER_URL
     ? path.join(
         DataDirectory.dataDirectoryPath,
-        `${DataDirectory.devPrefix}accounts.json`,
+        `${DataDirectory.devPrefix}accounts.json`
       )
     : path.join(DataDirectory.dataDirectoryPath, 'accounts.json')
   private static accountsDefaultData: AccountList = []
 
   private static appLanguageFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'i18n.json',
+    'i18n.json'
   )
 
   private static settingsFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'settings.json',
+    'settings.json'
   )
   private static settingsDefaultData: Settings = {
     autoDailyQuests: true,
@@ -80,53 +118,47 @@ export class DataDirectory {
 
   private static devSettingsFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'dev-settings.json',
+    'dev-settings.json'
   )
   private static devSettingsDefaultData: DevSettings = {}
 
   private static customizableMenuSettingsFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'customizable-menu.json',
+    'customizable-menu.json'
   )
   private static customizableMenuSettingsDefaultData: CustomizableMenuSettings =
     {}
 
-
-
   private static friendsFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'friends.json',
+    'friends.json'
   )
   private static friendsDefaultData: FriendRecord = {}
 
   static automationFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'automation.json',
+    'automation.json'
   )
   private static automationDefaultData: AutomationAccountFileDataList = {}
 
   static taxiServiceFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'taxi-service.json',
+    'taxi-service.json'
   )
-  private static taxiServiceDefaultData: TaxiServiceAccountFileDataList =
-    {}
+  private static taxiServiceDefaultData: TaxiServiceAccountFileDataList = {}
 
-  static urnsFilePath = path.join(
-    DataDirectory.dataDirectoryPath,
-    'urns.json',
-  )
+  static urnsFilePath = path.join(DataDirectory.dataDirectoryPath, 'urns.json')
   private static urnsDefaultData: AutoPinUrnDataList = {}
 
   static autoLlamasFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'auto-llamas.json',
+    'auto-llamas.json'
   )
   private static autoLlamasDefaultData: AutoLlamasRecord = {}
 
   static miniBossesFilePath = path.join(
     DataDirectory.dataDirectoryPath,
-    'mini-bosses.json',
+    'mini-bosses.json'
   )
   private static miniBossesDefaultData: AutoPinUrnDataList = {}
 
@@ -194,14 +226,55 @@ export class DataDirectory {
     const result = await DataDirectory.getOrCreateAccountsJsonFile()
 
     try {
-      const list = accountListSchema.safeParse(JSON.parse(result))
-      const accounts = list.success ? list.data : []
+      const rawAccounts: unknown = JSON.parse(result)
+      const list = accountListSchema.safeParse(rawAccounts)
+      const storedAccounts = list.success ? list.data : []
+      let hadDecryptFailure = false
+      const accounts = storedAccounts.flatMap((account) => {
+        try {
+          return [
+            {
+              ...account,
+              deviceId: DataDirectory.decryptCredential(account.deviceId),
+              secret: DataDirectory.decryptCredential(account.secret),
+            },
+          ]
+        } catch (error) {
+          hadDecryptFailure = true
+          RuntimeLog.error(`accounts:decrypt:${account.accountId}`, error)
+          return []
+        }
+      })
+
+      if (
+        Array.isArray(rawAccounts) &&
+        rawAccounts.length !== storedAccounts.length
+      ) {
+        RuntimeLog.error(
+          'accounts:validation',
+          new Error(
+            `${rawAccounts.length - storedAccounts.length} invalid account record(s) were ignored.`
+          )
+        )
+      }
+
+      if (
+        !hadDecryptFailure &&
+        safeStorage.isEncryptionAvailable() &&
+        storedAccounts.some(
+          (account) =>
+            !account.secret.startsWith(DataDirectory.encryptedPrefix) ||
+            !account.deviceId.startsWith(DataDirectory.encryptedPrefix)
+        )
+      ) {
+        await DataDirectory.updateAccountsFile(accounts)
+      }
 
       return { accounts }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { accounts: DataDirectory.accountsDefaultData }
@@ -227,7 +300,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return data
@@ -249,7 +322,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { settings: DataDirectory.settingsDefaultData }
@@ -274,7 +347,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { devSettings: DataDirectory.devSettingsDefaultData }
@@ -290,9 +363,7 @@ export class DataDirectory {
       await DataDirectory.getOrCreateCustomizableMenuSettingsJsonFile()
 
     try {
-      const list = customizableMenuSettingsSchema.safeParse(
-        JSON.parse(result),
-      )
+      const list = customizableMenuSettingsSchema.safeParse(JSON.parse(result))
       const customizableMenu = list.success
         ? list.data
         : DataDirectory.customizableMenuSettingsDefaultData
@@ -301,7 +372,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return {
@@ -325,7 +396,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { friends: DataDirectory.friendsDefaultData }
@@ -349,7 +420,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { automation: DataDirectory.automationDefaultData }
@@ -373,7 +444,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { taxiService: DataDirectory.taxiServiceDefaultData }
@@ -395,7 +466,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { urns: DataDirectory.urnsDefaultData }
@@ -419,7 +490,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { autoLlamas: DataDirectory.autoLlamasDefaultData }
@@ -443,7 +514,7 @@ export class DataDirectory {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
     }
 
     return { miniBosses: DataDirectory.miniBossesDefaultData }
@@ -455,7 +526,12 @@ export class DataDirectory {
   static async updateAccountsFile(data: AccountList) {
     await DataDirectory.updateJsonFile(
       DataDirectory.accountsFilePath,
-      data,
+      data.map((account) => ({
+        ...account,
+        deviceId: DataDirectory.encryptCredential(account.deviceId),
+        secret: DataDirectory.encryptCredential(account.secret),
+      })),
+      true
     )
   }
 
@@ -463,21 +539,18 @@ export class DataDirectory {
    * Update settings.json
    */
   static async updateSettingsFile(data: Settings) {
-    await DataDirectory.updateJsonFile(
-      DataDirectory.settingsFilePath,
-      data,
-    )
+    await DataDirectory.updateJsonFile(DataDirectory.settingsFilePath, data)
   }
 
   /**
    * Update settings.json
    */
   static async updateCustomizableMenuSettingsFile(
-    data: CustomizableMenuSettings,
+    data: CustomizableMenuSettings
   ) {
     await DataDirectory.updateJsonFile(
       DataDirectory.customizableMenuSettingsFilePath,
-      data,
+      data
     )
   }
 
@@ -492,22 +565,14 @@ export class DataDirectory {
    * Update automation.json
    */
   static async updateAutomationFile(data: AutomationAccountFileDataList) {
-    await DataDirectory.updateJsonFile(
-      DataDirectory.automationFilePath,
-      data,
-    )
+    await DataDirectory.updateJsonFile(DataDirectory.automationFilePath, data)
   }
 
   /**
    * Update taxi-service.json
    */
-  static async updateTaxiServiceFile(
-    data: TaxiServiceAccountFileDataList,
-  ) {
-    await DataDirectory.updateJsonFile(
-      DataDirectory.taxiServiceFilePath,
-      data,
-    )
+  static async updateTaxiServiceFile(data: TaxiServiceAccountFileDataList) {
+    await DataDirectory.updateJsonFile(DataDirectory.taxiServiceFilePath, data)
   }
 
   /**
@@ -521,28 +586,21 @@ export class DataDirectory {
    * Update auto-llamas.json
    */
   static async updateAutoLlamasFile(data: AutoLlamasRecord) {
-    await DataDirectory.updateJsonFile(
-      DataDirectory.autoLlamasFilePath,
-      data,
-    )
+    await DataDirectory.updateJsonFile(DataDirectory.autoLlamasFilePath, data)
   }
 
   /**
    * Update mini-bosses.json
    */
   static async updateMiniBossesFile(data: AutoPinUrnDataList) {
-    await DataDirectory.updateJsonFile(
-      DataDirectory.miniBossesFilePath,
-      data,
-    )
+    await DataDirectory.updateJsonFile(DataDirectory.miniBossesFilePath, data)
   }
 
   /**
    * Creating World Info directory
    */
   static async checkOrCreateWorldInfoDirectory() {
-    const checkDirectory = () =>
-      readdir(DataDirectory.worldInfoDirectoryPath)
+    const checkDirectory = () => readdir(DataDirectory.worldInfoDirectoryPath)
 
     try {
       await checkDirectory()
@@ -585,7 +643,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -602,7 +660,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -619,7 +677,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -636,7 +694,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -653,7 +711,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -670,7 +728,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -680,15 +738,12 @@ export class DataDirectory {
   private static async getOrCreateUrnsJsonFile() {
     const initialData = DataDirectory.urnsDefaultData
 
-    return await DataDirectory.getOrCreateJsonFile(
-      DataDirectory.urnsFilePath,
-      {
-        defaults: {
-          rawString: JSON.stringify(initialData),
-          value: initialData,
-        },
+    return await DataDirectory.getOrCreateJsonFile(DataDirectory.urnsFilePath, {
+      defaults: {
+        rawString: JSON.stringify(initialData),
+        value: initialData,
       },
-    )
+    })
   }
 
   /**
@@ -704,7 +759,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -721,7 +776,7 @@ export class DataDirectory {
           rawString: JSON.stringify(initialData),
           value: initialData,
         },
-      },
+      }
     )
   }
 
@@ -735,7 +790,7 @@ export class DataDirectory {
         rawString: string
         value: unknown
       }
-    },
+    }
   ) {
     const checkFile = () =>
       readFile(currentPath, {
@@ -753,7 +808,7 @@ export class DataDirectory {
         JSON.stringify(config.defaults.value, null, 2),
         {
           encoding: 'utf8',
-        },
+        }
       )
       result = await checkFile()
     }
@@ -767,19 +822,51 @@ export class DataDirectory {
   private static async updateJsonFile<Data>(
     currentPath: string,
     data: Data,
+    sensitive = false
   ) {
     if (!data) {
       return
     }
 
-    try {
-      await writeFile(currentPath, JSON.stringify(data ?? [], null, 2), {
-        encoding: 'utf8',
+    const previous = DataDirectory.writeQueues.get(currentPath)
+    const queued = (previous ?? Promise.resolve())
+      .catch(() => {})
+      .then(async () => {
+        const temporaryPath = `${currentPath}.tmp`
+        const backupPath = `${currentPath}.bak`
+
+        try {
+          await writeFile(temporaryPath, JSON.stringify(data ?? [], null, 2), {
+            encoding: 'utf8',
+          })
+
+          if (sensitive) {
+            // Never preserve a legacy plaintext credential file as a backup.
+            await rm(backupPath, { force: true }).catch(() => {})
+          } else {
+            await copyFile(currentPath, backupPath).catch(() => {})
+          }
+          await rename(temporaryPath, currentPath)
+
+          if (sensitive) {
+            await copyFile(currentPath, backupPath).catch(() => {})
+          }
+        } catch (error) {
+          await rm(temporaryPath, { force: true }).catch(() => {})
+          throw new Error(`Could not save ${path.basename(currentPath)}.`, {
+            cause: error,
+          })
+        }
       })
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      //
+    DataDirectory.writeQueues.set(currentPath, queued)
+
+    try {
+      await queued
+    } finally {
+      if (DataDirectory.writeQueues.get(currentPath) === queued) {
+        DataDirectory.writeQueues.delete(currentPath)
+      }
     }
   }
 }

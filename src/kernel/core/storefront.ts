@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import { AccountsManager } from '../startup/accounts'
 import { AutoLlamas } from '../startup/auto-llamas'
 import { Authentication } from './authentication'
@@ -46,7 +47,7 @@ export class Storefront {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/storefront.ts', error)
     }
 
     return false

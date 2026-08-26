@@ -12,7 +12,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+          /*
+           * 32px, the same as Button. Every toolbar in the app was ragged
+           * because this shipped the web's touch-sized 40px next to a 32px
+           * button. The bottom edge is a shade stronger than the other
+           * three — what makes a WinUI text field look recessed without a
+           * shadow, and the same stroke `.panel` uses.
+           */
+          'flex h-8 w-full rounded-lg border border-input [border-bottom-color:hsl(var(--control-stroke))] bg-background px-3 py-1 text-sm placeholder:text-muted-foreground file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:opacity-50',
           className
         )}
         ref={ref}

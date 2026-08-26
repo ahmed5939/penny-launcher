@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import { app, Menu, nativeImage, Tray } from 'electron'
 import path from 'node:path'
 
@@ -49,7 +50,7 @@ export class SystemTray {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/system-tray.ts', error)
     }
   }
 

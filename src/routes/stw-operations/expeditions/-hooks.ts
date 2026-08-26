@@ -9,24 +9,27 @@ import { useExpeditionsStore } from '../../../state/stw-operations/expeditions'
 import { useGetAccounts } from '../../../hooks/accounts'
 
 import { toast } from '../../../lib/notifications'
+import type { ExpeditionActionNotification, ExpeditionSlot } from '../../../kernel/core/expeditions'
 
 export function useExpeditionsData() {
   const { t } = useTranslation(['general'])
 
   const { accountsArray } = useGetAccounts()
-  const { data, isCollecting, isLoading } = useExpeditionsStore(
+  const { data, isCollecting, isLoading, pending } = useExpeditionsStore(
     useShallow((state) => ({
       data: state.data,
       isCollecting: state.isCollecting,
       isLoading: state.isLoading,
+      pending: state.pending,
     }))
   )
-  const { updateCollecting, updateData, updateLoading } =
+  const { updateCollecting, updateData, updateLoading, updatePending } =
     useExpeditionsStore(
       useShallow((state) => ({
         updateCollecting: state.updateCollecting,
         updateData: state.updateData,
         updateLoading: state.updateLoading,
+        updatePending: state.updatePending,
       }))
     )
   const {
@@ -55,8 +58,15 @@ export function useExpeditionsData() {
       current.slots.filter((slot) => slot.state === 'in-flight').length,
     0
   )
+  const totalAvailable = parsedData.reduce(
+    (accumulator, current) =>
+      accumulator +
+      current.slots.filter((slot) => slot.state === 'available').length,
+    0
+  )
 
-  const isDisabledForm = isSelectedEmpty || isLoading || !areThereAccounts
+  const isDisabledForm =
+    isSelectedEmpty || isLoading || pending.length > 0 || !areThereAccounts
   const isDisabledCollect =
     isDisabledForm || isCollecting || totalReady <= 0
 
@@ -121,6 +131,27 @@ export function useExpeditionsData() {
     }
   }, [selectedAccounts])
 
+  useEffect(() => {
+    const listener = window.electronAPI.notificationExpeditionAction(
+      async (response) => {
+        updatePending(response.expeditionId, false)
+        if (response.errorMessage) {
+          toast(response.errorMessage)
+        } else {
+          const messages: Record<ExpeditionActionNotification['action'], string> = {
+            abandon: 'Expedition abandoned',
+            collect: 'Expedition collected',
+            start: 'Expedition dispatched',
+          }
+          toast(messages[response.action])
+        }
+        handleLoad()
+      }
+    )
+
+    return () => listener.removeListener()
+  }, [selectedAccounts])
+
   const handleLoad = () => {
     const currentAccounts = getAccounts()
 
@@ -157,6 +188,14 @@ export function useExpeditionsData() {
     handleLoad()
   }, [scopeKey])
 
+  /** Keep completion states and countdowns useful while this page stays open. */
+  useEffect(() => {
+    if (scopeKey.length === 0) return
+
+    const interval = window.setInterval(handleLoad, 60_000)
+    return () => window.clearInterval(interval)
+  }, [scopeKey])
+
   const handleCollect = () => {
     if (isDisabledCollect) {
       return
@@ -183,6 +222,30 @@ export function useExpeditionsData() {
     window.electronAPI.collectExpeditions(currentAccounts)
   }
 
+  const handleAction = (
+    accountId: string,
+    slot: ExpeditionSlot,
+    action: ExpeditionActionNotification['action']
+  ) => {
+    const account = accountsArray.find((item) => item.accountId === accountId)
+    if (!account || pending.includes(slot.itemId)) return
+
+    if (
+      action === 'abandon' &&
+      !window.confirm('Abandon this expedition? Its current progress will be lost.')
+    ) return
+
+    updatePending(slot.itemId, true)
+    window.electronAPI.expeditionAction({
+      account,
+      action,
+      expeditionId: slot.itemId,
+      expeditionTemplate: slot.templateId,
+      itemIds: slot.suggestedHeroIds,
+      squadId: slot.squadId ?? undefined,
+    })
+  }
+
   return {
     accounts,
     data: parsedData,
@@ -191,12 +254,15 @@ export function useExpeditionsData() {
     isDisabledForm,
     isLoading,
     parsedSelectedAccounts,
+    pending,
     /** How many accounts the collect button is about to act on. */
     scopeCount: selectedAccounts.length,
     totalInFlight,
+    totalAvailable,
     totalReady,
 
     handleCollect,
+    handleAction,
     handleLoad,
     handleUpdateAccounts,
   }

@@ -14,6 +14,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useDocumentVisible } from '../../../hooks/ui/document-visibility'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -35,7 +36,6 @@ import {
 
 import { parseResource } from '../../../lib/parsers/resources'
 import { numberWithCommaSeparator } from '../../../lib/parsers/numbers'
-import { whatIsThis } from '../../../lib/callbacks'
 import { cn } from '../../../lib/utils'
 
 /**
@@ -169,7 +169,7 @@ function RewardNames({
           <span
             className={cn('flex gap-1.5 items-center', className)}
           >
-            <img
+            <img decoding="async" loading="lazy"
               src={reward.imgUrl}
               className="size-5 object-contain"
               alt=""
@@ -189,14 +189,18 @@ function RewardNames({
 
 function useSessionClock(lastUpdated: string | null) {
   const [now, setNow] = useState(() => Date.now())
+  const isVisible = useDocumentVisible()
 
   useEffect(() => {
+    setNow(Date.now())
+    if (!isVisible) return
+
     const interval = window.setInterval(() => setNow(Date.now()), 1_000)
 
     return () => {
       window.clearInterval(interval)
     }
-  }, [])
+  }, [isVisible])
 
   if (!lastUpdated) {
     return null
@@ -336,7 +340,7 @@ export function LiveMissionCard({
               <div className="relative flex-shrink-0">
                 <span className="flex items-center justify-center rounded-xl border bg-surface/80 size-14 border-[color:var(--zone-color)]/50">
                   {mission ? (
-                    <img
+                    <img decoding="async" loading="lazy"
                       src={mission.ui.mission.zone.type.imageUrl}
                       className="size-10"
                       alt=""
@@ -439,7 +443,6 @@ export function LiveMissionCard({
                       onClick={handleOpenPennyDB(
                         player.displayName ?? player.id
                       )}
-                      onAuxClick={whatIsThis()}
                       title={t('matchmaking-track.live.pennydb')}
                     >
                       <span className="max-w-40 truncate">
@@ -485,7 +488,7 @@ export function LiveMissionCard({
                   </SectionLabel>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {modifiers.map((modifier) => (
-                      <img
+                      <img decoding="async" loading="lazy"
                         src={modifier.imageUrl}
                         className="size-6"
                         key={modifier.id}

@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type {
   SaveWorldInfoData,
   WorldInfoDeleteResponse,
@@ -46,7 +47,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -71,7 +72,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -103,7 +104,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -147,7 +148,7 @@ export class WorldInfoManager {
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-          //
+          RuntimeLog.error('caught:core/world-info.ts', error)
         }
 
         return null
@@ -176,7 +177,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
   }
 
@@ -198,7 +199,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -272,7 +273,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     defaultResponse()
@@ -296,7 +297,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -332,7 +333,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -379,7 +380,7 @@ export class WorldInfoManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/world-info.ts', error)
     }
 
     return defaultWorldInfo

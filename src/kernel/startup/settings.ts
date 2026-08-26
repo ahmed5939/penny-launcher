@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type {
   AppLanguageSettings,
   CustomizableMenuSettings,
@@ -113,7 +114,7 @@ export class SettingsManager {
       if (SystemTray.isActive) {
         SystemTray.create({
           onOpen: async () => {
-            MainWindow.instance.show()
+            MainWindow.showAndFocus()
           },
         })
       } else {
@@ -170,7 +171,7 @@ export class SettingsManager {
         appVersion = asset.data.buildVersion
         name = asset.data.appName
       } catch (error) {
-        //
+        RuntimeLog.error('caught:startup/settings.ts', error)
       }
 
       if (token !== null) {
@@ -287,7 +288,7 @@ export class AppLanguage {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:startup/settings.ts', error)
     }
   }
 }
@@ -324,7 +325,7 @@ function detectGameData({ namespaceId }: GameContext): DetectGameResult {
       path: currentPath,
     }
   } catch (error) {
-    //
+    RuntimeLog.error('caught:startup/settings.ts', error)
   }
 
   return {

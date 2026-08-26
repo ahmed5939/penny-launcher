@@ -52,7 +52,7 @@ export function notificationXPBoostsAccounts(
     _: IpcRendererEvent,
     value: Array<XPBoostsData>
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.XPBoostsAccountProfileResponse,
@@ -75,7 +75,7 @@ export function notificationFindAPlayerWhoWillReceiveXPBoosts(
     _: IpcRendererEvent,
     value: XPBoostsSearchUserResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.XPBoostsSearchUserNotification,
@@ -98,7 +98,7 @@ export function notificationGeneralFindAPlayerWhoWillReceiveXPBoosts(
     _: IpcRendererEvent,
     value: XPBoostsSearchUserResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.XPBoostsGeneralSearchUserNotification,
@@ -121,7 +121,7 @@ export function notificationConsumePersonalXPBoosts(
     _: IpcRendererEvent,
     value: XPBoostsConsumePersonalResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.XPBoostsConsumePersonalNotification,
@@ -144,7 +144,7 @@ export function notificationConsumeTeammateXPBoosts(
     _: IpcRendererEvent,
     value: XPBoostsConsumeTeammateResponse
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.XPBoostsConsumeTeammateNotification,
@@ -164,7 +164,7 @@ export function notificationConsumeTeammateProgressionXPBoosts(
   callback: () => Promise<void>
 ) {
   const customCallback = () => {
-    callback().catch(() => {})
+    callback().catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.XPBoostsConsumeTeammateProgressionNotification,

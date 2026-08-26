@@ -21,7 +21,7 @@ export function responseItemDatabase(
     _: IpcRendererEvent,
     response: ItemDatabasePayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ItemDatabaseResponse,

@@ -68,7 +68,7 @@ export function RouteComponent() {
             <BetaBadge />
           </span>
         }
-        description="Starts Storm Shield Endurance with the scoped account, waits it out, returns, claims and loops — no screenshots, no image setup. F8 stops it at any time."
+        description="Starts Storm Shield Endurance with the scoped account, verifies every screen, retries missed clicks, recovers rewards and loops. F8 stops it at any time."
         status={
           status ? (
             status.phase === 'error' ? (
@@ -184,7 +184,7 @@ export function RouteComponent() {
 
                 <FieldRow
                   label="Run length (minutes)"
-                  hint="The runner leaves the zone after this long. A full 30-wave Endurance fits in the default."
+                  hint="Expected run duration. The runner then allows up to 45 more minutes for the results screen before using the fallback exit."
                 >
                   <Input
                     className="w-24"

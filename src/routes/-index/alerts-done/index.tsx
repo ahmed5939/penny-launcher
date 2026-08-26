@@ -1,4 +1,5 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
+import { Image } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -14,8 +15,15 @@ import { toast } from '../../../lib/notifications'
 export function AlertsDone() {
   return (
     <>
-      <SearchForm />
-      <ScreenshotGeneration />
+      {/*
+        The same 8px inset as the screenshot container below, so the form and
+        the record it produces share one left edge — the container keeps its
+        own padding because that inset is what gives the exported PNG a margin.
+      */}
+      <div className="px-2">
+        <SearchForm />
+        <ScreenshotGeneration />
+      </div>
       <div
         className="pb-14 px-2"
         id="alerts-done-container"
@@ -56,7 +64,7 @@ function ScreenshotGeneration() {
       const { domToBlob } = await import('modern-screenshot')
 
       const data = await domToBlob($element, {
-        backgroundColor: 'hsl(240 3% 6%)',
+        backgroundColor: 'hsl(335 24% 4%)',
         type: 'image/png',
       })
 
@@ -77,17 +85,25 @@ function ScreenshotGeneration() {
   }
 
   return (
-    <div className="flex justify-end">
+    <div className="mt-6 flex justify-end">
+      {/*
+        A secondary command, not the screen's action: the payoff here is the
+        record below it, so the button matches the mission list's command bar
+        rather than competing with the search form above.
+      */}
       <Button
-        className="relative h-8 mt-5 text-sm w-36"
+        className="h-8 shrink-0 gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]"
+        size="sm"
+        variant="secondary"
         onClick={handleGeneration}
         disabled={isLoading}
       >
         {isLoading ? (
-          <UpdateIcon className="animate-spin h-4" />
+          <UpdateIcon className="size-3.5 animate-spin" />
         ) : (
-          t('generate-screenshot')
+          <Image className="size-3.5" />
         )}
+        {t('generate-screenshot')}
       </Button>
     </div>
   )

@@ -52,7 +52,7 @@ export function enduranceNotification(
   callback: (value: EnduranceEvent) => Promise<void>,
 ) {
   const customCallback = (_: IpcRendererEvent, value: EnduranceEvent) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.EnduranceNotification,

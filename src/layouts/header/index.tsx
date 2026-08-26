@@ -11,10 +11,12 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { Button } from '../../components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet'
 
 import { AccountList } from '../../components/account-list'
 import { HistoryMenu } from '../../components/menu/history'
+import { Kbd } from '../../components/page'
 import { PennyAvatar } from '../../components/branding/penny-portrait'
 
 import { useUISidebarHistory } from '../../hooks/ui/sidebars'
@@ -22,7 +24,6 @@ import { useUISidebarHistory } from '../../hooks/ui/sidebars'
 import { useFriendsManagerStore } from '../../state/management/friends-manager'
 
 import { cn } from '../../lib/utils'
-import { whatIsThis } from '../../lib/callbacks'
 
 /**
  * Titlebar.
@@ -45,12 +46,11 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { t } = useTranslation(['general'])
 
   return (
-    <header className="app-draggable-region titlebar-area mica-chrome relative z-20 flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b border-border/60 bg-surface/80 pl-3 backdrop-blur">
+    <header className="app-draggable-region titlebar-area chrome-surface relative z-20 flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b border-border/60 pl-3">
       <Link
         to="/"
-        className="not-draggable-region group flex items-center gap-2 rounded-md py-1 pr-1"
+        className="not-draggable-region group flex items-center gap-2 rounded-lg py-1 pr-1"
         title="Penny"
-        onAuxClick={whatIsThis()}
       >
         <PennyAvatar className="size-[22px] shadow-[0_0_10px_hsl(var(--primary)/0.45)] transition-transform group-hover:scale-105" />
         <span className="brand-text text-[0.9375rem] font-bold leading-none tracking-tight">
@@ -64,15 +64,19 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
           'not-draggable-region group flex h-7 w-56 items-center gap-2 rounded-lg',
           'border border-border/70 bg-background/60 pl-2.5 pr-1.5',
           'text-xs text-muted-foreground transition-colors',
-          'hover:border-primary/40 hover:text-foreground'
+          'hover:border-primary/40 hover:bg-accent/30 hover:text-foreground'
         )}
         onClick={onOpenPalette}
       >
         <Search className="size-3.5 shrink-0" />
-        <span className="truncate">{t('actions.search')}</span>
-        <kbd className="ml-auto shrink-0 rounded border border-border/70 bg-muted px-1 py-0.5 font-sans text-[0.625rem] leading-none">
-          Ctrl K
-        </kbd>
+        <span className="flex-1 truncate text-left">{t('actions.search')}</span>
+        {/*
+          `Kbd` draws the chip but takes no class of its own, so the wrapper is
+          what stops the label beside it from squeezing the shortcut.
+        */}
+        <span className="shrink-0">
+          <Kbd>Ctrl K</Kbd>
+        </span>
       </button>
 
       <div className="not-draggable-region ml-auto flex items-center gap-1 pr-1">
@@ -100,12 +104,6 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
   )
 }
 
-const iconButtonClassName = cn(
-  'inline-flex size-8 items-center justify-center rounded-md',
-  'text-muted-foreground transition-colors',
-  'hover:bg-accent/60 hover:text-foreground'
-)
-
 /**
  * Friends toggle.
  *
@@ -126,10 +124,10 @@ function FriendsToggle() {
     <button
       type="button"
       className={cn(
-        'flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors',
+        'flex h-7 items-center gap-1.5 rounded-lg border px-2 text-xs font-medium transition-colors',
         isOpen
           ? 'border-primary/40 bg-primary/15 text-primary'
-          : 'border-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+          : 'border-transparent text-muted-foreground hover:bg-accent/30 hover:text-foreground'
       )}
       title={isOpen ? 'Hide friends' : 'Show friends'}
       onClick={togglePanel}
@@ -139,7 +137,7 @@ function FriendsToggle() {
       {total > 0 && (
         <span
           className={cn(
-            'rounded px-1 text-[0.625rem] font-semibold tabular-nums',
+            'figure rounded-lg px-1 text-[0.625rem] font-semibold',
             isOpen ? 'bg-primary/20' : 'bg-muted'
           )}
         >
@@ -160,15 +158,20 @@ function TitlebarButton({
   to: string
 }) {
   return (
-    <Link
-      to={to}
-      className={iconButtonClassName}
-      title={label}
-      onAuxClick={whatIsThis()}
+    <Button
+      asChild
+      className="text-muted-foreground"
+      size="icon"
+      variant="ghost"
     >
-      {children}
-      <span className="sr-only">{label}</span>
-    </Link>
+      <Link
+        to={to}
+        title={label}
+      >
+        {children}
+        <span className="sr-only">{label}</span>
+      </Link>
+    </Button>
   )
 }
 
@@ -181,14 +184,16 @@ function HistorySheet() {
       onOpenChange={changeVisibility}
     >
       <SheetTrigger asChild>
-        <button
+        <Button
           type="button"
-          className={iconButtonClassName}
+          className="text-muted-foreground"
+          size="icon"
+          variant="ghost"
           title="History"
         >
           <History className="size-4" />
           <span className="sr-only">toggle history sidebar</span>
-        </button>
+        </Button>
       </SheetTrigger>
       <SheetContent
         className="flex flex-col p-0"

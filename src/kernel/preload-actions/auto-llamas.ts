@@ -43,7 +43,7 @@ export function notificationAutoLlamasCheckLoading(
   callback: () => Promise<void>
 ) {
   const customCallback = () => {
-    callback().catch(() => {})
+    callback().catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.AutoLlamasAccountCheckLoading,

@@ -22,6 +22,7 @@ import {
 } from '../../../components/page'
 
 import { useItemDatabaseStore } from '../../../state/items/database'
+import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { cn } from '../../../lib/utils'
 
@@ -47,6 +48,8 @@ export function RouteComponent() {
 }
 
 function Content() {
+  useRequestItemDatabase()
+
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
   const [search, setSearch] = useState('')
   const [seasons, setSeasons] = useState<Array<TimelineSeason>>([])

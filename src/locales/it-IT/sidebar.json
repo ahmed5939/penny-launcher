@@ -5,7 +5,6 @@
       "auto-kick": "Auto-caccia",
       "taxi-service": "Servizio Taxi",
       "party": "Party",
-      "daily-quests": "Missioni Giornaliere",
       "expeditions": "Spedizioni",
       "squad-presets": "Squadre Sopravvissuti",
       "inventory": "Deposito",
@@ -15,9 +14,8 @@
       "timeline": "Cronologia Eventi",
       "shop": "Negozio STW",
       "xp-boosts": "Incrementi PE",
-      "auto-pin-urns": "Auto-fissa Rovine",
-      "auto-llamas": "Auto-lama",
-      "unlock": "Sblocca Ricompense SSD"
+      "auto-pin-urns": "Monitor missione delle urne",
+      "auto-llamas": "Auto-lama"
     },
     "auto-kick-status": {
       "issue": "Errore",

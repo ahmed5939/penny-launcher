@@ -7,7 +7,6 @@ import type { RatingTables } from '../../config/constants/fortnite/power'
 
 import {
   ArrowUp,
-  Lock,
   Recycle,
   RefreshCw,
   Sparkles,
@@ -27,22 +26,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog'
+import { Callout } from '../page'
+import { accentByRarity, rarityStyle } from '../page/rarity'
 
 import { getItemRecord } from '../../state/items/database'
 
 import { computeItemPower } from '../../config/constants/fortnite/power'
 import { peglegImageURL } from '../../config/constants/pegleg'
-import { RarityType } from '../../config/constants/resources'
+import { RarityType, rarities } from '../../config/constants/resources'
 
 import { cn } from '../../lib/utils'
 
-const rarityText: Record<string, string> = {
-  [RarityType.Common]: 'text-[#9ba0a5]',
-  [RarityType.Uncommon]: 'text-[#5ecc32]',
-  [RarityType.Rare]: 'text-[#43aff5]',
-  [RarityType.Epic]: 'text-[#b054e8]',
-  [RarityType.Legendary]: 'text-[#f5a742]',
-  [RarityType.Mythic]: 'text-[#f5e142]',
+/**
+ * The item database spells a rarity as the word a player reads
+ * ("Legendary"), while the app's ladder is keyed by `RarityType`. One reverse
+ * lookup, built from `rarities` itself so the two cannot drift, and the
+ * ladder does the rest: nothing below Rare has an entry, so a Common perk
+ * gets a grey pip rather than a colour that says nothing.
+ */
+const rarityTypeByName = new Map<string, RarityType>(
+  (Object.entries(rarities) as Array<[RarityType, string]>).map(
+    ([type, name]): [string, RarityType] => [name, type]
+  )
+)
+
+function accentForRarityName(name: string | null | undefined) {
+  const type = name ? rarityTypeByName.get(name) : undefined
+
+  return type ? accentByRarity[type] ?? null : null
 }
 
 export type ItemDetailSubject = {
@@ -114,16 +125,24 @@ export function ItemDetailDialog({
           <>
             <DialogHeader>
               <div className="flex items-start gap-4">
-                <span className="relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-lg border-2 border-border">
+                <span
+                  className={cn(
+                    'relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-xl border-2',
+                    art.accent
+                      ? 'border-[color:var(--rarity)]'
+                      : 'border-border/60'
+                  )}
+                  style={rarityStyle(art.accent)}
+                >
                   {art.frame && (
-                    <img
+                    <img decoding="async" loading="lazy"
                       alt=""
                       aria-hidden
                       className="absolute inset-0 size-full object-cover"
                       src={art.frame}
                     />
                   )}
-                  <img
+                  <img decoding="async" loading="lazy"
                     alt=""
                     className="relative size-full object-contain"
                     src={
@@ -140,9 +159,10 @@ export function ItemDetailDialog({
                   </DialogTitle>
                   <p
                     className={cn(
-                      'mt-1 text-xs font-semibold uppercase tracking-wide',
-                      rarityText[art.rarity]
+                      'micro-label mt-1.5',
+                      art.accent && 'text-[color:var(--rarity)]'
                     )}
+                    style={rarityStyle(art.accent)}
                   >
                     {[
                       record?.rarity,
@@ -155,17 +175,19 @@ export function ItemDetailDialog({
                       .join(' · ')}
                   </p>
                   {power !== null && (
-                    <p className="mt-1.5 flex items-center gap-1 text-base font-bold leading-none">
-                      <Zap className="size-4 text-yellow-300" />
-                      {power}
-                      <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                        Power
+                    <p className="mt-2 flex items-center gap-1.5 leading-none">
+                      <Zap className="size-4 text-muted-foreground" />
+                      <span className="figure text-base font-bold">
+                        {power}
                       </span>
+                      <span className="micro-label">Power</span>
                     </p>
                   )}
                   <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
                     {typeof subject.level === 'number' && (
-                      <span>Level {subject.level}</span>
+                      <span>
+                        Level <span className="figure">{subject.level}</span>
+                      </span>
                     )}
                     {subject.personality && (
                       <span>{subject.personality}</span>
@@ -183,12 +205,11 @@ export function ItemDetailDialog({
             </DialogHeader>
 
             {subject.lockedReason && (
-              <p className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/[0.07] px-3 py-2 text-xs">
-                <Lock className="size-3.5 shrink-0 text-warning" />
+              <Callout tone="warning">
                 {subject.lockedReason === 'favorite'
                   ? 'Favourited in game — protected from recycling.'
                   : 'Assigned to a squad or hero loadout — protected from recycling.'}
-              </p>
+              </Callout>
             )}
 
             {onAction && subject.itemId && (
@@ -253,7 +274,7 @@ export function ItemDetailDialog({
 
                     return (
                       <li
-                        className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-surface/50 py-1 pl-1 pr-2.5 text-xs"
+                        className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/40 py-1 pl-1 pr-2.5 text-xs"
                         key={ability}
                       >
                         <ItemIcon
@@ -292,18 +313,22 @@ export function ItemDetailDialog({
                 icon={Recycle}
                 title="Recycles for"
               >
-                <span className="flex items-center gap-2 text-sm tabular-nums">
+                <span className="flex items-center gap-2 text-sm">
                   <ItemIcon
                     records={records}
                     templateId={record.recycle.result}
                   />
-                  {record.recycle.amount.toLocaleString()}{' '}
-                  {getItemRecord(records, record.recycle.result)?.name ?? ''}
+                  <span className="figure font-semibold">
+                    {record.recycle.amount.toLocaleString()}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {getItemRecord(records, record.recycle.result)?.name ?? ''}
+                  </span>
                 </span>
               </Section>
             )}
 
-            <p className="select-all break-all rounded-lg bg-muted/40 px-3 py-2 font-mono text-[0.65rem] text-muted-foreground">
+            <p className="select-all break-all rounded-lg bg-muted/40 px-3 py-2 font-mono text-[0.625rem] text-muted-foreground ring-1 ring-inset ring-border/60">
               {subject.templateId}
             </p>
           </>
@@ -406,7 +431,7 @@ function UpgradeActions({
       </div>
 
       {confirming && (
-        <p className="text-[0.65rem] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Press again to go ahead, or click elsewhere to leave it.
         </p>
       )}
@@ -438,25 +463,21 @@ function PerkRow({
   const [swapping, setSwapping] = useState(false)
 
   const perkRecord = getItemRecord(records, alteration)
+  const accent = accentForRarityName(perkRecord?.rarity)
   const upgrade = perkRecord?.upgradeCost ?? {}
   const options = (pool?.options ?? []).filter(
     (option) => option !== alteration
   )
 
   return (
-    <li className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2">
+    <li className="panel px-3 py-2">
       <div className="flex items-start gap-2">
         <span
           className={cn(
             'mt-1.5 size-1.5 shrink-0 rounded-full',
-            perkRecord?.rarity === 'Legendary'
-              ? 'bg-[#f5a742]'
-              : perkRecord?.rarity === 'Epic'
-                ? 'bg-[#b054e8]'
-                : perkRecord?.rarity === 'Rare'
-                  ? 'bg-[#43aff5]'
-                  : 'bg-muted-foreground'
+            accent ? 'bg-[color:var(--rarity)]' : 'bg-muted-foreground/50'
           )}
+          style={rarityStyle(accent)}
         />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold">
@@ -464,11 +485,11 @@ function PerkRow({
           </p>
 
           {Object.keys(upgrade).length > 0 && (
-            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[0.65rem] text-muted-foreground">
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
               <span>Upgrade costs</span>
               {Object.entries(upgrade).map(([costId, amount]) => (
                 <span
-                  className="inline-flex items-center gap-1 tabular-nums"
+                  className="inline-flex items-center gap-1"
                   key={costId}
                 >
                   <ItemIcon
@@ -476,7 +497,7 @@ function PerkRow({
                     size="small"
                     templateId={costId}
                   />
-                  {amount.toLocaleString()}
+                  <span className="figure">{amount.toLocaleString()}</span>
                 </span>
               ))}
             </p>
@@ -520,12 +541,12 @@ function PerkRow({
       {swapping && onAction && (
         <div className="mt-2 space-y-1.5 border-t border-border/50 pt-2">
           {Object.keys(pool?.respecCost ?? {}).length > 0 && (
-            <p className="flex flex-wrap items-center gap-1.5 text-[0.65rem] text-muted-foreground">
+            <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
               <span>Each change costs</span>
               {Object.entries(pool?.respecCost ?? {}).map(
                 ([costId, amount]) => (
                   <span
-                    className="inline-flex items-center gap-1 tabular-nums"
+                    className="inline-flex items-center gap-1"
                     key={costId}
                   >
                     <ItemIcon
@@ -533,7 +554,7 @@ function PerkRow({
                       size="small"
                       templateId={costId}
                     />
-                    {amount.toLocaleString()}
+                    <span className="figure">{amount.toLocaleString()}</span>
                   </span>
                 )
               )}
@@ -542,7 +563,7 @@ function PerkRow({
           <div className="flex flex-wrap gap-1.5">
             {options.map((option) => (
               <button
-                className="rounded-md border border-border/70 px-2 py-1 text-[0.65rem] transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50"
+                className="rounded-lg border border-border/70 px-2 py-1 text-xs transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50"
                 disabled={isBusy}
                 key={option}
                 onClick={() => {
@@ -578,8 +599,8 @@ function Section({
 }) {
   return (
     <div className="space-y-2">
-      <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        <Icon className="size-3" />
+      <p className="section-label flex items-center gap-1.5">
+        <Icon className="size-3 text-muted-foreground" />
         {title}
       </p>
       {children}
@@ -601,7 +622,7 @@ function PerkBlock({
       icon={icon}
       title={label}
     >
-      <div className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2">
+      <div className="panel px-3 py-2">
         <p className="text-[0.8125rem] font-semibold">{perk.name}</p>
         {perk.description && (
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
@@ -632,7 +653,7 @@ function CostSection({
       <ul className="flex flex-wrap gap-2">
         {Object.entries(cost).map(([templateId, amount]) => (
           <li
-            className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-surface/50 py-1 pl-1 pr-2.5 text-xs tabular-nums"
+            className="flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/40 py-1 pl-1 pr-2.5 text-xs"
             key={templateId}
           >
             <ItemIcon
@@ -640,7 +661,9 @@ function CostSection({
               size="small"
               templateId={templateId}
             />
-            {amount.toLocaleString()}
+            <span className="figure font-semibold">
+              {amount.toLocaleString()}
+            </span>
             <span className="text-muted-foreground">
               {getItemRecord(records, templateId)?.name ?? ''}
             </span>

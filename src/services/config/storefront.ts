@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Storefront Service
  */
 
-export const storefrontService = axios.create({
+export const storefrontService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/storefront/v2',
 })

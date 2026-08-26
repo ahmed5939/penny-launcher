@@ -12,7 +12,7 @@ export function notificationClaimedRewards(
     _: IpcRendererEvent,
     value: Array<RewardsNotification>
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ClaimRewardsClientNotification,
@@ -35,7 +35,7 @@ export function notificationGlobalSyncClaimedRewards(
     _: IpcRendererEvent,
     value: Array<RewardsNotification>
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ClaimRewardsClientGlobalSyncNotification,
@@ -55,7 +55,7 @@ export function notificationGlobalClaimedRewards(
   callback: () => Promise<void>
 ) {
   const customCallback = () => {
-    callback().catch(() => {})
+    callback().catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ClaimRewardsClientGlobalAutoClaimedNotification,
@@ -75,7 +75,7 @@ export function notificationAutoKick(
   callback: (total: number) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, total: number) => {
-    callback(total).catch(() => {})
+    callback(total).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyKickActionGlobalNotification,

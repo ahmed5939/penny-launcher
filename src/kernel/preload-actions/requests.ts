@@ -29,7 +29,7 @@ import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 //     _: IpcRendererEvent,
 //     response: AntiCheatProviderCallbackResponseParam
 //   ) => {
-//     callback(response).catch(() => {})
+//     callback(response).catch(console.error)
 //   }
 //   const rendererInstance = ipcRenderer.on(
 //     ElectronAPIEventKeys.ResponseProviderAndAccessTokenOnStartup,
@@ -58,7 +58,7 @@ export function responseNewVersionStatus(
     _: IpcRendererEvent,
     response: NewVersionStatusCallbackResponseParam
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ResponseNewVersionStatus,

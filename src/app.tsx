@@ -5,6 +5,7 @@ import timezone from 'dayjs/plugin/timezone'
 import utc from 'dayjs/plugin/utc'
 import dayjs from 'dayjs'
 import { createRoot } from 'react-dom/client'
+import { useEffect, useState } from 'react'
 
 import { IndexComponent } from './routes'
 import { routeTree } from './routeTree.gen'
@@ -50,14 +51,8 @@ function render() {
     <ThemeProvider>
       <LoadSettings />
       <LoadAccounts />
-      <LoadFriends />
       <LoadItemDatabase />
-      <LoadHomeWorldInfo />
-      <LoadWorldInfoData />
-      {/* <LoadWorldInfoFiles /> */}
-      <LoadAutomation />
-      <LoadAutoLlamas />
-      <LauncherNotifications />
+      <DeferredBootstrap />
 
       <RouterProvider
         router={router}
@@ -72,10 +67,46 @@ function render() {
   )
 }
 
-localeReady
-  .catch((error: unknown) => {
-    console.error('[penny] locale init failed, rendering anyway', error)
-  })
-  .finally(render)
+function DeferredBootstrap() {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const windowWithIdle = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
+      cancelIdleCallback?: (id: number) => void
+    }
+    const id = windowWithIdle.requestIdleCallback
+      ? windowWithIdle.requestIdleCallback(() => setReady(true), { timeout: 1_500 })
+      : window.setTimeout(() => setReady(true), 250)
+
+    return () => {
+      if (windowWithIdle.cancelIdleCallback && windowWithIdle.requestIdleCallback) {
+        windowWithIdle.cancelIdleCallback(id)
+      } else {
+        window.clearTimeout(id)
+      }
+    }
+  }, [])
+
+  if (!ready) return null
+
+  return (
+    <>
+      <LoadFriends />
+      <LoadHomeWorldInfo />
+      <LoadWorldInfoData />
+      <LoadAutomation />
+      <LoadAutoLlamas />
+      <LauncherNotifications />
+    </>
+  )
+}
+
+// i18next starts loading immediately, but translation chunks no longer hold
+// the first frame hostage. React updates consumers when the resources land.
+void localeReady.catch((error: unknown) => {
+  console.error('[penny] locale init failed', error)
+})
+render()
 
 export { router }

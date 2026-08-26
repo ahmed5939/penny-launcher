@@ -56,7 +56,6 @@ export const customizableMenuSettingsSchema = z
     autoKick: z.boolean().default(true),
     taxiService: z.boolean().default(true),
     party: z.boolean().default(true),
-    dailyQuests: z.boolean().default(true),
     expeditions: z.boolean().default(true),
     squadPresets: z.boolean().default(true),
     inventory: z.boolean().default(true),
@@ -68,7 +67,6 @@ export const customizableMenuSettingsSchema = z
     xpBoosts: z.boolean().default(true),
     autoPinUrns: z.boolean().default(true),
     autoLlamas: z.boolean().default(true),
-    unlock: z.boolean().default(true),
 
     accountManagement: z.boolean().default(true),
     vbucksInformation: z.boolean().default(true),

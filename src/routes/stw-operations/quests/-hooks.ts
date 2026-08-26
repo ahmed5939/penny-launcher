@@ -6,6 +6,7 @@ import {
   getItemRecord,
   useItemDatabaseStore,
 } from '../../../state/items/database'
+import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
@@ -37,6 +38,8 @@ function categoryRank(category: string) {
 }
 
 export function useQuestsData() {
+  useRequestItemDatabase()
+
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null
 

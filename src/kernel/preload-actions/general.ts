@@ -30,7 +30,7 @@ export function notificationDevSettings(
   callback: (value: DevSettings) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, value: DevSettings) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.DevSettingsResponse,
@@ -50,7 +50,7 @@ export function responseSettings(
   callback: (value: Settings) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, value: Settings) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.OnLoadSettings,
@@ -70,7 +70,7 @@ export function notificationCustomProcessStatus(
   callback: (value: boolean) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, value: boolean) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.CustomProcessStatus,

@@ -24,6 +24,7 @@ export function useFriendsPanel() {
     isOpen,
     isSearching,
     loadedFor,
+    limitsReached,
     pending,
     searchResults,
   } = useFriendsManagerStore(
@@ -34,6 +35,7 @@ export function useFriendsPanel() {
       isOpen: state.isOpen,
       isSearching: state.isSearching,
       loadedFor: state.loadedFor,
+      limitsReached: state.limitsReached,
       pending: state.pending,
       searchResults: state.searchResults,
     }))
@@ -58,11 +60,34 @@ export function useFriendsPanel() {
 
   useEffect(() => {
     const listener = window.electronAPI.responseFriends(async (response) => {
+      const previousState = useFriendsManagerStore.getState()
+      const previousIncoming = previousState.entries
+        .filter((entry) => entry.kind === 'incoming')
+        .map((entry) => entry.accountId)
       setResponse({
         accountId: response.accountId,
         entries: response.entries,
         errorMessage: response.errorMessage,
+        limitsReached: response.limitsReached,
       })
+
+      const rules = JSON.parse(
+        localStorage.getItem('penny-notification-rules') ?? '{}'
+      ) as { friendRequests?: boolean }
+      const newRequests = response.entries.filter(
+        (entry) =>
+          entry.kind === 'incoming' && !previousIncoming.includes(entry.accountId)
+      )
+      if (
+        rules.friendRequests !== false &&
+        previousState.loadedFor === response.accountId &&
+        newRequests.length > 0
+      ) {
+        window.electronAPI.sendNativeNotification({
+          title: 'New friend request',
+          body: newRequests.map((entry) => entry.displayName).join(', '),
+        })
+      }
     })
 
     return () => {
@@ -89,15 +114,27 @@ export function useFriendsPanel() {
   useEffect(() => {
     const listener = window.electronAPI.notificationFriendsAction(
       async (response) => {
-        setPending(response.targetAccountId, false)
+        if (response.targetAccountId === '__bulk__') {
+          useFriendsManagerStore.setState({ pending: [] })
+        } else {
+          setPending(response.targetAccountId, false)
+        }
 
         if (response.errorMessage) {
           toast(response.errorMessage)
 
+          if (response.targetAccountId === '__bulk__') {
+            handleReload()
+          }
+
           return
         }
 
-        toast(actionMessages[response.action])
+        toast(
+          response.total
+            ? `${actionMessages[response.action]} (${response.total})`
+            : actionMessages[response.action]
+        )
 
         /** The list is stale as soon as an action lands. */
         handleReload()
@@ -175,6 +212,25 @@ export function useFriendsPanel() {
     window.electronAPI.friendsAction(selected, targetAccountId, 'add')
   }
 
+  const handleBulk = (
+    targetAccountIds: Array<string>,
+    action: 'add' | 'remove'
+  ) => {
+    if (!selected || targetAccountIds.length === 0) {
+      return
+    }
+
+    if (
+      action === 'remove' &&
+      !window.confirm(`Remove all ${targetAccountIds.length} requests?`)
+    ) {
+      return
+    }
+
+    targetAccountIds.forEach((accountId) => setPending(accountId, true))
+    window.electronAPI.friendsBulkAction(selected, targetAccountIds, action)
+  }
+
   const grouped = useMemo(() => {
     const needle = filter.trim().toLowerCase()
     const matching = needle
@@ -199,6 +255,7 @@ export function useFriendsPanel() {
     isLoading,
     isOpen,
     isSearching,
+    limitsReached,
     pending,
     query,
     searchResults,
@@ -207,6 +264,7 @@ export function useFriendsPanel() {
     closePanel,
     handleAction,
     handleAdd,
+    handleBulk,
     handleReload,
     setFilter,
     setQuery,

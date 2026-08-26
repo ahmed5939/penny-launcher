@@ -16,7 +16,7 @@ export function responseServerStatus(
     _: IpcRendererEvent,
     response: ServerStatusPayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ServerStatusResponse,

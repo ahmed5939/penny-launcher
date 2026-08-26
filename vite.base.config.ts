@@ -29,7 +29,7 @@ export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
     root,
     mode,
     build: {
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 750,
       // Prevent multiple builds from interfering with each other.
       emptyOutDir: false,
       // 🚧 Multiple builds may conflict.

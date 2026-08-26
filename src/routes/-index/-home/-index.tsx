@@ -61,7 +61,7 @@ export function HomeAlerts() {
 
   return (
     <>
-      <h2 className="mb-2 px-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground/55">
+      <h2 className="micro-label mb-2 px-0.5">
         {t('home.alerts.title')}
       </h2>
       <ul className="gap-3 grid grid-cols-2 sm:grid-cols-4">
@@ -91,16 +91,16 @@ export function HomeAlerts() {
         />
       </ul>
 
-      <div className="space-y-1">
+      <div className="mt-6 space-y-6">
         {loading.isFetching ? (
-          <div className="mt-6 space-y-6">
+          <div className="space-y-6">
             <LoadingMissions
-              total={2}
+              total={3}
               section
               showTitle
             />
             <LoadingMissions
-              total={2}
+              total={3}
               section
               showTitle
             />
@@ -135,7 +135,7 @@ function PreviewItem({
     <li className="panel-interactive group relative flex items-center gap-3 overflow-hidden p-3">
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
       <div className="relative flex size-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-inset ring-primary/20">
-        <img
+        <img decoding="async" loading="lazy"
           src={imageUrl}
           className="size-7"
         />

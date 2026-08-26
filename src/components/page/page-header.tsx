@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { cn } from '../../lib/utils'
+import { IconWell } from './icon-well'
 
 /**
  * The masthead every tool page opens with.
@@ -33,22 +33,17 @@ export function PageHeader({
     <header className="relative -mx-1 mb-1 select-none">
       <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
         {Icon && (
-          <span
-            className={cn(
-              'relative mt-0.5 grid size-11 shrink-0 place-items-center rounded-xl',
-              'border border-primary/25 bg-gradient-to-br from-primary/25 to-brand-to/10',
-              'text-primary shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.06)]'
-            )}
-          >
-            <Icon className="size-5" />
-          </span>
+          <IconWell
+            className="mt-0.5"
+            icon={Icon}
+            size="lg"
+            tone="accent"
+          />
         )}
 
         <div className="min-w-0 flex-1">
           {section && (
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              {section}
-            </p>
+            <p className="mb-1.5 micro-label">{section}</p>
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="text-xl font-bold leading-tight tracking-tight sm:text-[1.375rem]">

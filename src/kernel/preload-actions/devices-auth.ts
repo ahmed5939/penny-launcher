@@ -25,7 +25,7 @@ export function notificationDevicesAuthData(
     _: IpcRendererEvent,
     value: Array<DeviceAuthInfoWithStates>
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.DevicesAuthResponseData,
@@ -54,7 +54,7 @@ export function notificationDevicesAuthRemove(
     deviceId: string,
     status: boolean
   ) => {
-    callback(account, deviceId, status).catch(() => {})
+    callback(account, deviceId, status).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.DevicesAuthRemoveNotification,

@@ -118,11 +118,6 @@ export enum ElectronAPIEventKeys {
    * STW Operations
    */
 
-  DailyQuestsRequest = 'daily-quests:request',
-  DailyQuestsNotification = 'daily-quests:notification',
-  DailyQuestReroll = 'daily-quests:reroll',
-  DailyQuestRerollNotification = 'daily-quests:reroll:notification',
-
   XPBoostsAccountProfileRequest = 'xpboosts:account-profile:request',
   XPBoostsAccountProfileResponse = 'xpboosts:account-profile:response',
   XPBoostsSearchUser = 'xpboosts:search:user',
@@ -134,9 +129,6 @@ export enum ElectronAPIEventKeys {
   XPBoostsConsumeTeammate = 'xpboosts:consume:teammate',
   XPBoostsConsumeTeammateNotification = 'xpboosts:consume:teammate:notification',
   XPBoostsConsumeTeammateProgressionNotification = 'xpboosts:consume:teammate:progression:notification',
-
-  UnlockRequest = 'unlock:request',
-  UnlockNotification = 'unlock:notification',
 
   /**
    * Party
@@ -288,6 +280,7 @@ export enum ElectronAPIEventKeys {
   FriendsManagerSearch = 'friends-manager:search',
   FriendsManagerSearchResponse = 'friends-manager:search:response',
   FriendsManagerAction = 'friends-manager:action',
+  FriendsManagerBulkAction = 'friends-manager:bulk-action',
   FriendsManagerActionNotification = 'friends-manager:action:notification',
 
   /**
@@ -305,6 +298,8 @@ export enum ElectronAPIEventKeys {
   ExpeditionsResponse = 'expeditions:response',
   ExpeditionsCollect = 'expeditions:collect',
   ExpeditionsCollectNotification = 'expeditions:collect:notification',
+  ExpeditionsAction = 'expeditions:action',
+  ExpeditionsActionNotification = 'expeditions:action:notification',
 
   /**
    * Item database

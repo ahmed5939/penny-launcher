@@ -1,5 +1,6 @@
 import type {
   FriendEntry,
+  FriendsPayload,
   FriendsSearchResult,
 } from '../../kernel/core/friends-manager'
 
@@ -10,6 +11,7 @@ export type FriendsManagerState = {
   errorMessage: string | null
   /** Account id the loaded list belongs to. */
   loadedFor: string | null
+  limitsReached: FriendsPayload['limitsReached']
   isLoading: boolean
   isOpen: boolean
   isSearching: boolean
@@ -24,6 +26,7 @@ export type FriendsManagerState = {
     accountId: string
     entries: Array<FriendEntry>
     errorMessage?: string
+    limitsReached?: FriendsPayload['limitsReached']
   }) => void
   setSearching: (value: boolean) => void
   setSearchResults: (results: Array<FriendsSearchResult>) => void
@@ -36,6 +39,7 @@ export const useFriendsManagerStore = create<FriendsManagerState>()(
     entries: [],
     errorMessage: null,
     loadedFor: null,
+    limitsReached: undefined,
     isLoading: false,
     isOpen: false,
     isSearching: false,
@@ -50,12 +54,13 @@ export const useFriendsManagerStore = create<FriendsManagerState>()(
           ? [...new Set([...state.pending, accountId])]
           : state.pending.filter((item) => item !== accountId),
       })),
-    setResponse: ({ accountId, entries, errorMessage }) =>
+    setResponse: ({ accountId, entries, errorMessage, limitsReached }) =>
       set({
         entries,
         errorMessage: errorMessage ?? null,
         isLoading: false,
         loadedFor: accountId,
+        limitsReached,
       }),
     setSearching: (value) => set({ isSearching: value }),
     setSearchResults: (results) =>

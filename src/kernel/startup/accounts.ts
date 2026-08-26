@@ -18,6 +18,15 @@ export class AccountsManager {
   private static _accounts: Collection<string, AccountData> =
     new Collection()
 
+  static toRenderer(account: AccountData): AccountData {
+    return {
+      ...account,
+      accessToken: undefined,
+      deviceId: '',
+      secret: '',
+    }
+  }
+
   static async load() {
     const result = await DataDirectory.getAccountsFile()
     const accounts: AccountDataList = result.accounts.map((account) => {
@@ -32,7 +41,7 @@ export class AccountsManager {
     })
 
     const accountsRecord = accounts.reduce((accumulator, current) => {
-      accumulator[current.accountId] = current
+      accumulator[current.accountId] = AccountsManager.toRenderer(current)
 
       AccountsManager._accounts.set(current.accountId, current)
 
@@ -110,20 +119,20 @@ export class AccountsManager {
   }
 
   static async reorder(accounts: AccountDataRecord) {
-    const removeExtraProperties = Object.values(accounts).map(
-      ({
-        accountId,
-        deviceId,
-        displayName,
-        secret,
-        customDisplayName,
-      }) => ({
-        accountId,
-        deviceId,
-        displayName,
-        secret,
-        customDisplayName,
-      })
+    const removeExtraProperties = Object.values(accounts).flatMap(
+      ({ accountId, displayName, customDisplayName }) => {
+        const stored = AccountsManager._accounts.get(accountId)
+
+        return stored
+          ? [{
+              accountId,
+              deviceId: stored.deviceId,
+              displayName,
+              secret: stored.secret,
+              customDisplayName,
+            }]
+          : []
+      },
     )
 
     await DataDirectory.updateAccountsFile(removeExtraProperties)

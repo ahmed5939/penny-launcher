@@ -7,9 +7,8 @@ import { useAccountListStore } from '../../state/accounts/list'
 import { useAccountScopeStore } from '../../state/accounts/scope'
 
 export function LoadAccounts() {
-  const { accounts, addOrUpdate, register } = useAccountListStore(
+  const { addOrUpdate, register } = useAccountListStore(
     useShallow((state) => ({
-      accounts: state.accounts,
       addOrUpdate: state.addOrUpdate,
       register: state.register,
     }))
@@ -48,7 +47,7 @@ export function LoadAccounts() {
     return () => {
       syncAccessTokenListener.removeListener()
     }
-  }, [accounts])
+  }, [addOrUpdate])
 
   return null
 }

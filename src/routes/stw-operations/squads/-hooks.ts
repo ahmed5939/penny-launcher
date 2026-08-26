@@ -9,6 +9,7 @@ import {
   getItemRecord,
   useItemDatabaseStore,
 } from '../../../state/items/database'
+import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
@@ -41,6 +42,8 @@ export type SquadView = {
 }
 
 export function useSquadsData() {
+  useRequestItemDatabase()
+
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null
 

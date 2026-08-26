@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../../runtime-log'
 import type { AccountData } from '../../../types/accounts'
 
 import { Authentication } from '../authentication'
@@ -31,14 +32,14 @@ export class MCPClientQuestLogin {
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
-            //
+            RuntimeLog.error('caught:core/mcp/client-quest-login.ts', error)
           }
         })
       )
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/mcp/client-quest-login.ts', error)
     }
   }
 }

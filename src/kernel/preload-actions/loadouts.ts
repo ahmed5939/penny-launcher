@@ -28,7 +28,7 @@ export function notificationLoadoutEdit(
     _: IpcRendererEvent,
     response: LoadoutEditNotification
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.LoadoutEditNotification,
@@ -51,7 +51,7 @@ export function responseLoadouts(
     _: IpcRendererEvent,
     response: LoadoutsPayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.LoadoutsResponse,

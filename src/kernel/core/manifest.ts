@@ -1,17 +1,21 @@
-import { readdirSync, readFileSync } from 'node:fs'
+import { RuntimeLog } from '../runtime-log'
+import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { SettingsManager } from '../startup/settings'
 
 export class Manifest {
-  static getData() {
+  private static cached: Awaited<ReturnType<typeof Manifest.readData>> | undefined
+  private static pending: ReturnType<typeof Manifest.readData> | null = null
+
+  private static async readData() {
     try {
       const manifestsDirectory =
         'C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests'
 
-      const getFile = (filename: string) => {
+      const getFile = async (filename: string) => {
         const filePath = path.join(manifestsDirectory, filename)
-        const file = JSON.parse(readFileSync(filePath).toString()) as {
+        const file = JSON.parse(await readFile(filePath, 'utf8')) as {
           AppVersionString: string
           LaunchCommand: string
           DisplayName: string
@@ -28,34 +32,43 @@ export class Manifest {
         }
       }
 
-      const responseItem = readdirSync(manifestsDirectory).find(
-        (filename) => {
-          if (filename.endsWith('item')) {
-            return getFile(filename).DisplayName === 'fortnite'
-          }
-
-          return false
-        }
+      const filenames = (await readdir(manifestsDirectory)).filter((filename) =>
+        filename.endsWith('item')
+      )
+      const manifests = await Promise.all(filenames.map(getFile))
+      const manifestItem = manifests.find(
+        ({ DisplayName }) => DisplayName === 'fortnite'
       )
 
-      if (responseItem) {
-        const manifestItem = getFile(responseItem)
-
+      if (manifestItem) {
         return manifestItem
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/manifest.ts', error)
     }
 
     return null
   }
 
+  static async getData(force = false) {
+    if (!force && Manifest.cached !== undefined) return Manifest.cached
+    if (!force && Manifest.pending) return Manifest.pending
+
+    Manifest.pending = Manifest.readData().then((value) => {
+      Manifest.cached = value
+      Manifest.pending = null
+      return value
+    })
+
+    return Manifest.pending
+  }
+
   static async getUserAgent() {
-    const userAgent = Manifest.getData()?.UserAgent
+    const userAgent = (await Manifest.getData())?.UserAgent
     const settings = await SettingsManager.getData()
 
-    return userAgent ?? settings.userAgent
+    return userAgent || settings.userAgent
   }
 }

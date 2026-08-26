@@ -4,19 +4,11 @@ import { useShallow } from 'zustand/react/shallow'
 import { useItemDatabaseStore } from '../../state/items/database'
 
 /**
- * Pulls the item database in at startup.
- *
- * It is cached on disk after the first run, so this is usually a file read;
- * the first launch downloads ~13MB in the main process. Nothing waits on it
- * — every screen falls back to decoded template ids until it lands.
+ * Registers the single global response listener. Feature pages request the
+ * large database only when one of them is actually opened.
  */
 export function LoadItemDatabase() {
-  const { update, updateLoading } = useItemDatabaseStore(
-    useShallow((state) => ({
-      update: state.update,
-      updateLoading: state.updateLoading,
-    }))
-  )
+  const update = useItemDatabaseStore((state) => state.update)
 
   useEffect(() => {
     const listener = window.electronAPI.responseItemDatabase(
@@ -25,13 +17,30 @@ export function LoadItemDatabase() {
       }
     )
 
-    updateLoading(true)
-    window.electronAPI.requestItemDatabase()
-
     return () => {
       listener.removeListener()
     }
   }, [])
 
   return null
+}
+
+let requestStarted = false
+
+export function useRequestItemDatabase() {
+  const { isLoading, total, updateLoading } = useItemDatabaseStore(
+    useShallow((state) => ({
+      isLoading: state.isLoading,
+      total: state.total,
+      updateLoading: state.updateLoading,
+    }))
+  )
+
+  useEffect(() => {
+    if (requestStarted || isLoading || total > 0) return
+
+    requestStarted = true
+    updateLoading(true)
+    window.electronAPI.requestItemDatabase()
+  }, [isLoading, total, updateLoading])
 }

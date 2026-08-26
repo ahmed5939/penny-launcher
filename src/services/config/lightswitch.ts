@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Lightswitch Service
  */
 
-export const lightswitchService = axios.create({
+export const lightswitchService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://lightswitch-public-service-prod.ol.epicgames.com/lightswitch/api/service',
 })

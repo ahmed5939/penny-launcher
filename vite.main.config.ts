@@ -15,7 +15,7 @@ export default defineConfig((env) => {
   const define = getBuildDefine(forgeEnv)
   const config: UserConfig = {
     build: {
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 750,
       lib: {
         entry: forgeConfigSelf.entry!,
         fileName: () => '[name].js',

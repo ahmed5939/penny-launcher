@@ -1,4 +1,5 @@
 import type { LightswitchStatus } from '../../services/endpoints/lightswitch'
+import axios from 'axios'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
@@ -30,6 +31,13 @@ export type ServerStatusEntry = {
 }
 
 export type ServerStatusPayload = {
+  diagnostics?: {
+    city: string | null
+    continent: string | null
+    country: string | null
+    latencyMs: number
+    subdivision: string | null
+  }
   entries: Array<ServerStatusEntry>
   errorMessage?: string
 }
@@ -51,11 +59,39 @@ export class ServerStatus {
 
       token = auth.data.access_token
 
+      const latencyStartedAt = Date.now()
       const response = await getLightswitchStatusBulk(trackedServiceIds, {
         headers: {
           Authorization: `bearer ${token}`,
         },
       })
+      const latencyMs = Date.now() - latencyStartedAt
+
+      const region = await axios
+        .get<{
+          city?: { names?: { en?: string } }
+          continent?: { code?: string; names?: { en?: string } }
+          country?: { iso_code?: string; names?: { en?: string } }
+          subdivisions?: Array<{ names?: { en?: string } }>
+        }>('https://ip-data-service-prod.ecbc.live.use1a.on.epicgames.com/region', {
+          headers: { Authorization: `bearer ${token}` },
+          timeout: 10_000,
+        })
+        .catch(() => null)
+
+      payload.diagnostics = {
+        city: region?.data.city?.names?.en ?? null,
+        continent:
+          region?.data.continent?.names?.en ??
+          region?.data.continent?.code ??
+          null,
+        country:
+          region?.data.country?.names?.en ??
+          region?.data.country?.iso_code ??
+          null,
+        latencyMs,
+        subdivision: region?.data.subdivisions?.[0]?.names?.en ?? null,
+      }
 
       payload.entries = trackedServiceIds.map((serviceId) => {
         const match = response.data.find(

@@ -24,7 +24,10 @@ export type FriendKind = 'blocked' | 'friend' | 'incoming' | 'outgoing'
 
 export type FriendEntry = {
   accountId: string
+  alias: string
+  created: string
   displayName: string
+  favorite: boolean
   /**
    * Where `displayName` came from. `id` means we found nothing usable, and
    * a PennyDB lookup would be pointless.
@@ -33,12 +36,18 @@ export type FriendEntry = {
   kind: FriendKind
   linked: Array<FriendLinkedAccount>
   mutual: number
+  note: string
 }
 
 export type FriendsPayload = {
   accountId: string
   entries: Array<FriendEntry>
   errorMessage?: string
+  limitsReached?: {
+    accepted: boolean
+    incoming: boolean
+    outgoing: boolean
+  }
 }
 
 export type FriendsSearchResult = {
@@ -60,6 +69,7 @@ export type FriendsActionPayload = {
   action: 'add' | 'block' | 'remove' | 'unblock'
   errorMessage?: string
   targetAccountId: string
+  total?: number
 }
 
 /** Epic caps the bulk account lookup at 100 ids. */
@@ -107,25 +117,43 @@ export class FriendsManager {
       > = [
           ...summary.data.friends.map((item) => ({
             accountId: item.accountId,
+            alias: item.alias ?? '',
+            created: item.created ?? '',
+            favorite: item.favorite ?? false,
             kind: 'friend' as const,
             mutual: item.mutual ?? 0,
+            note: item.note ?? '',
           })),
           ...summary.data.incoming.map((item) => ({
             accountId: item.accountId,
+            alias: item.alias ?? '',
+            created: item.created ?? '',
+            favorite: item.favorite ?? false,
             kind: 'incoming' as const,
             mutual: item.mutual ?? 0,
+            note: item.note ?? '',
           })),
           ...summary.data.outgoing.map((item) => ({
             accountId: item.accountId,
+            alias: item.alias ?? '',
+            created: item.created ?? '',
+            favorite: item.favorite ?? false,
             kind: 'outgoing' as const,
             mutual: item.mutual ?? 0,
+            note: item.note ?? '',
           })),
           ...summary.data.blocklist.map((item) => ({
             accountId: item.accountId,
+            alias: item.alias ?? '',
+            created: item.created ?? '',
+            favorite: item.favorite ?? false,
             kind: 'blocked' as const,
             mutual: 0,
+            note: item.note ?? '',
           })),
         ]
+
+      payload.limitsReached = summary.data.limitsReached
 
       const names = await FriendsManager.resolveNames(
         accessToken,
@@ -140,6 +168,7 @@ export class FriendsManager {
           nameSource: names[item.accountId]?.nameSource ?? 'id',
         }))
         .toSorted((itemA, itemB) =>
+          Number(itemB.favorite) - Number(itemA.favorite) ||
           itemA.displayName.localeCompare(itemB.displayName)
         )
 
@@ -287,6 +316,51 @@ export class FriendsManager {
     } catch (error: any) {
       payload.errorMessage =
         error?.response?.data?.errorMessage ?? 'Action failed'
+    }
+
+    return FriendsManager.sendAction(payload)
+  }
+
+  static async bulkAction(
+    account: AccountData,
+    targetAccountIds: Array<string>,
+    action: 'add' | 'remove'
+  ) {
+    const uniqueIds = [...new Set(targetAccountIds)].slice(0, 500)
+    const payload: FriendsActionPayload = {
+      action,
+      targetAccountId: '__bulk__',
+      total: uniqueIds.length,
+    }
+
+    try {
+      const accessToken = await Authentication.verifyAccessToken(account)
+
+      if (!accessToken) {
+        payload.errorMessage = 'Could not authenticate this account'
+        return FriendsManager.sendAction(payload)
+      }
+
+      const request = action === 'add' ? addFriend : removeFriend
+      const results: Array<PromiseSettledResult<unknown>> = []
+
+      // Keep concurrency modest; Epic rate-limits large friends lists.
+      for (const batch of chunk(uniqueIds, 10)) {
+        results.push(
+          ...(await Promise.allSettled(
+            batch.map((friendId) =>
+              request({ accessToken, accountId: account.accountId, friendId })
+            )
+          ))
+        )
+      }
+      const failed = results.filter((result) => result.status === 'rejected').length
+
+      if (failed > 0) {
+        payload.errorMessage = `${uniqueIds.length - failed} succeeded; ${failed} failed`
+      }
+    } catch {
+      payload.errorMessage = 'Bulk action failed'
     }
 
     return FriendsManager.sendAction(payload)

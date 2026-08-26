@@ -17,7 +17,6 @@ import { Route as AccountRouteImport } from './routes/account/route'
 import { Route as IndexImport } from './routes/index'
 import { Route as StwOperationsXpboostsRouteImport } from './routes/stw-operations/xpboosts/route'
 import { Route as StwOperationsUrnsRouteImport } from './routes/stw-operations/urns/route'
-import { Route as StwOperationsUnlockRouteImport } from './routes/stw-operations/unlock/route'
 import { Route as StwOperationsTimelineRouteImport } from './routes/stw-operations/timeline/route'
 import { Route as StwOperationsTaxiServiceRouteImport } from './routes/stw-operations/taxi-service/route'
 import { Route as StwOperationsSquadsRouteImport } from './routes/stw-operations/squads/route'
@@ -28,7 +27,6 @@ import { Route as StwOperationsLoadoutsRouteImport } from './routes/stw-operatio
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
 import { Route as StwOperationsExpeditionsRouteImport } from './routes/stw-operations/expeditions/route'
 import { Route as StwOperationsEnduranceRouteImport } from './routes/stw-operations/endurance/route'
-import { Route as StwOperationsDailyQuestsRouteImport } from './routes/stw-operations/daily-quests/route'
 import { Route as StwOperationsCompendiumRouteImport } from './routes/stw-operations/compendium/route'
 import { Route as StwOperationsAutomationRouteImport } from './routes/stw-operations/automation/route'
 import { Route as StwOperationsAutoLlamasRouteImport } from './routes/stw-operations/auto-llamas/route'
@@ -76,11 +74,6 @@ const StwOperationsXpboostsRouteRoute = StwOperationsXpboostsRouteImport.update(
 
 const StwOperationsUrnsRouteRoute = StwOperationsUrnsRouteImport.update({
   path: '/stw-operations/urns',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const StwOperationsUnlockRouteRoute = StwOperationsUnlockRouteImport.update({
-  path: '/stw-operations/unlock',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -139,12 +132,6 @@ const StwOperationsExpeditionsRouteRoute =
 const StwOperationsEnduranceRouteRoute =
   StwOperationsEnduranceRouteImport.update({
     path: '/stw-operations/endurance',
-    getParentRoute: () => rootRoute,
-  } as any)
-
-const StwOperationsDailyQuestsRouteRoute =
-  StwOperationsDailyQuestsRouteImport.update({
-    path: '/stw-operations/daily-quests',
     getParentRoute: () => rootRoute,
   } as any)
 
@@ -313,10 +300,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsCompendiumRouteImport
       parentRoute: typeof rootRoute
     }
-    '/stw-operations/daily-quests': {
-      preLoaderRoute: typeof StwOperationsDailyQuestsRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/stw-operations/endurance': {
       preLoaderRoute: typeof StwOperationsEnduranceRouteImport
       parentRoute: typeof rootRoute
@@ -357,10 +340,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsTimelineRouteImport
       parentRoute: typeof rootRoute
     }
-    '/stw-operations/unlock': {
-      preLoaderRoute: typeof StwOperationsUnlockRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/stw-operations/urns': {
       preLoaderRoute: typeof StwOperationsUrnsRouteImport
       parentRoute: typeof rootRoute
@@ -397,7 +376,6 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsAutoLlamasRouteRoute,
   StwOperationsAutomationRouteRoute,
   StwOperationsCompendiumRouteRoute,
-  StwOperationsDailyQuestsRouteRoute,
   StwOperationsEnduranceRouteRoute,
   StwOperationsExpeditionsRouteRoute,
   StwOperationsInventoryRouteRoute,
@@ -408,7 +386,6 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsSquadsRouteRoute,
   StwOperationsTaxiServiceRouteRoute,
   StwOperationsTimelineRouteRoute,
-  StwOperationsUnlockRouteRoute,
   StwOperationsUrnsRouteRoute,
   StwOperationsXpboostsRouteRoute,
   AccountsAddTypeRoute,

@@ -12,7 +12,6 @@ import {
   UserPlus,
 } from 'lucide-react'
 
-import { whatIsThis } from '../../lib/callbacks'
 
 /**
  * Epic account hub: everything that belongs to the Epic account (not to
@@ -90,7 +89,6 @@ export function AccountHub() {
             to={item.to}
             params={item.params}
             className="panel-interactive group flex h-full items-start gap-3 p-4"
-            onAuxClick={whatIsThis()}
           >
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-inset ring-primary/20">
               <item.icon className="size-5" />

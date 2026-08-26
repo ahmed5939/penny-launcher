@@ -16,7 +16,7 @@ export function responseTimeline(
     _: IpcRendererEvent,
     response: TimelinePayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.TimelineResponse,

@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type {
   XPBoostsSearchUserConfig,
   XPBoostsSearchUserData,
@@ -66,7 +67,7 @@ export class LookupManager {
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-          //
+          RuntimeLog.error('caught:core/lookup.ts', error)
         }
       }
 
@@ -132,7 +133,7 @@ export class LookupManager {
 
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (error) {
-          //
+          RuntimeLog.error('caught:core/lookup.ts', error)
         }
 
         defaultResponse.errorCode =

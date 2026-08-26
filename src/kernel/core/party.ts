@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type { PartyData } from '../../types/services/party'
 import type {
   AccountBasicInfo,
@@ -157,7 +158,7 @@ export class Party {
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
           } catch (error) {
-            //
+            RuntimeLog.error('caught:core/party.ts', error)
           }
         } else {
           /**
@@ -219,7 +220,7 @@ export class Party {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/party.ts', error)
     }
 
     MainWindow.instance.webContents.send(kickNotification, 0)
@@ -289,7 +290,7 @@ export class Party {
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        //
+        RuntimeLog.error('caught:core/party.ts', error)
       }
     }
 
@@ -374,7 +375,7 @@ export class Party {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/party.ts', error)
     }
   }
 
@@ -441,7 +442,7 @@ export class Party {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/party.ts', error)
     }
 
     sendResponse()
@@ -520,7 +521,7 @@ export class Party {
 
                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   } catch (error) {
-                    //
+                    RuntimeLog.error('caught:core/party.ts', error)
                   }
 
                   try {
@@ -537,7 +538,7 @@ export class Party {
 
                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
                   } catch (error) {
-                    //
+                    RuntimeLog.error('caught:core/party.ts', error)
                   }
                 }
               }
@@ -569,7 +570,7 @@ export class Party {
 
                   // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 } catch (error) {
-                  //
+                  RuntimeLog.error('caught:core/party.ts', error)
                 }
               }
             }
@@ -606,7 +607,7 @@ export class Party {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/party.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -641,7 +642,7 @@ export class Party {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/party.ts', error)
     }
 
     MainWindow.instance.webContents.send(
@@ -684,7 +685,7 @@ export class Party {
 
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        //
+        RuntimeLog.error('caught:core/party.ts', error)
       }
 
       if (!newAccessToken) {

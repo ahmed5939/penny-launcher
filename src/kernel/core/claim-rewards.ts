@@ -1,3 +1,4 @@
+import { RuntimeLog } from '../runtime-log'
 import type {
   MCPClaimDifficultyIncreaseRewardsResponse,
   MCPClaimMissionAlertRewardsResponse,
@@ -316,7 +317,7 @@ export class ClaimRewards {
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      //
+      RuntimeLog.error('caught:core/claim-rewards.ts', error)
     }
 
     return null

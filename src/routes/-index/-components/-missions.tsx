@@ -1,12 +1,17 @@
-import type { CSSProperties, PropsWithChildren } from 'react'
+import type { PropsWithChildren } from 'react'
 import type { WorldInfoMission } from '../../../types/data/advanced-mode/world-info'
+import type { RewardLike } from './-mission-data'
 
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { Image, SquareCheckBigIcon, SquareIcon } from 'lucide-react'
+import {
+  ChevronDown,
+  Image,
+  SquareCheckBigIcon,
+  SquareIcon,
+  Zap,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-import { rarities } from '../../../config/constants/resources'
 
 import {
   Accordion,
@@ -16,15 +21,31 @@ import {
 } from '../../../components/ui/accordion'
 import { Button } from '../../../components/ui/button'
 
-import { RewardChip } from './-reward-chip'
+import { RewardLine, RewardPayload } from './-reward-chip'
+
+import {
+  missionTypeLabel,
+  resolveBrief,
+  stripColon,
+} from './-mission-data'
 
 import { useAlertsDoneMarkedActions } from '../../../hooks/alerts/alerts-done'
 
 import { useAccountScopeStore } from '../../../state/accounts/scope'
 
 import { toast } from '../../../lib/notifications'
-import { assets } from '../../../lib/repository'
+import { numberWithCommaSeparator } from '../../../lib/parsers/numbers'
 import { cn } from '../../../lib/utils'
+
+export const missionFrameClassName = 'mission-brief-frame'
+
+/*
+ * Exported so the loading skeleton is built from the same two strings the real
+ * row is built from. A hand-copied silhouette drifts the first time a column
+ * width changes, and the page reflows the moment data lands.
+ */
+export const missionCardClassName =
+  'mission-brief min-h-16 w-full overflow-hidden rounded-xl border border-border/70 bg-card [border-bottom-color:hsl(var(--control-stroke))]'
 
 export function MissionsContainer({
   children,
@@ -34,16 +55,7 @@ export function MissionsContainer({
 }>) {
   return (
     <Accordion
-      className={cn(
-        'gap-0.5 grid grid-cols-1',
-        '[&_.item]:border-b-0',
-        '[&_.img-rarity]:flex-shrink-0 [&_.img-rarity:not(.img-small)]:size-4 [&_.img-rarity]:size-3',
-        '[&_.img-type]:flex-shrink-0 [&_.img-type]:size-6',
-        '[&_.img-modifier]:flex-shrink-0 [&_.img-modifier]:size-6',
-        '[&_.img-alert]:flex-shrink-0 [&_.img-alert]:size-4',
-        '[&_.power]:border [&_.power]:border-primary/30 [&_.power]:bg-primary/10 [&_.power]:text-primary [&_.power]:flex-shrink-0 [&_.power]:pl-0.5 [&_.power]:pr-2 [&_.power]:py-1 [&_.power]:rounded [&_.power]:text-xs [&_.power]:font-medium',
-        className,
-      )}
+      className={cn('grid grid-cols-1 gap-1.5', className)}
       type="multiple"
     >
       {children}
@@ -51,21 +63,30 @@ export function MissionsContainer({
   )
 }
 
+/*
+ * No `children`. The row renders its own reward content from `data`, and
+ * leaving the slot open would let a caller go back to hand-assembling an icon
+ * run — silently, since an ignored `children` is not a type error.
+ */
 export function MissionItem({
-  data,
-  children,
   className,
+  data,
+  featured,
   hideCompletedCheck,
   hideScreenshotButton,
-}: PropsWithChildren<{
+}: {
   className?: string
   data: WorldInfoMission
+  /**
+   * The reward the calling section exists to show. When set it becomes the
+   * payload and drops out of the meta strip; when omitted the payload falls
+   * back to the first alert reward, else the biggest base reward.
+   */
+  featured?: RewardLike
   hideCompletedCheck?: boolean
   hideScreenshotButton?: boolean
-}>) {
-  const { t } = useTranslation(['alerts'], {
-    keyPrefix: 'information',
-  })
+}) {
+  const { t } = useTranslation(['alerts'])
 
   const {
     raw: {
@@ -80,158 +101,337 @@ export function MissionItem({
     missionGuid,
   })
 
+  const brief = resolveBrief(data, featured)
+  const showCheck = selected !== null && !hideCompletedCheck
+  const isBanked = isCompleted && !hideCompletedCheck
+  const typeLabel = missionTypeLabel(mission.zone.type.id)
+
   return (
-    <div className="flex gap-2 items-start">
-      <div
-        className={cn('flex gap-1 items-start rounded w-full', {
-          'bg-[rgb(52_211_117_/_10%)]': isCompleted && !hideCompletedCheck,
-        })}
+    <div
+      className={cn(
+        'group/brief',
+        missionFrameClassName,
+        isBanked && 'opacity-60',
+      )}
+    >
+      {/*
+        Read-only. Completion is synced from the account's own mission alert
+        claim record, so a manual tick could only ever disagree with what Epic
+        already knows.
+
+        The empty span keeps the gutter reserved when the tick is hidden, so an
+        Alerts Done row lines up with an Alerts Overview row.
+      */}
+      {showCheck ? (
+        <span
+          className={cn(
+            'flex h-16 items-center justify-center',
+            isCompleted ? 'text-success' : 'text-muted-foreground/40',
+          )}
+          title={t(
+            isCompleted
+              ? 'information.completed-from-account'
+              : 'information.not-completed-yet',
+          )}
+        >
+          {isCompleted ? (
+            <SquareCheckBigIcon size={14} />
+          ) : (
+            <SquareIcon size={14} />
+          )}
+        </span>
+      ) : (
+        <span aria-hidden />
+      )}
+
+      <AccordionItem
+        className={cn('item group/item min-w-0 border-b-0', className)}
+        id={`mission-${missionGuid}`}
+        value={missionGuid}
       >
         {/*
-          Read-only. Completion is synced from the account's own mission
-          alert claim record, so a manual tick could only ever disagree with
-          what Epic already knows.
+          `hideIcon` frees the chevron from the trigger's own flex row so it can
+          sit in the card's last column, on the same x-coordinate as every other
+          row's chevron.
         */}
-        {selected !== null && !hideCompletedCheck && (
+        <AccordionTrigger
+          className="block w-full p-0 text-left hover:no-underline"
+          hideIcon
+        >
           <span
             className={cn(
-              'flex shrink-0 size-7 items-center justify-center text-muted-foreground/60',
-              {
-                'text-[var(--zone-color-stonewood)]': isCompleted,
-              },
+              missionCardClassName,
+              'mission-preview text-left transition-colors group-hover/brief:border-primary/40',
             )}
-            title={
-              isCompleted
-                ? t('completed-from-account')
-                : t('not-completed-yet')
-            }
           >
-            {isCompleted ? (
-              <SquareCheckBigIcon size={14} />
-            ) : (
-              <SquareIcon size={14} />
-            )}
-          </span>
-        )}
+            <span
+              aria-hidden
+              className="h-full w-full"
+              style={{ backgroundColor: mission.zone.color }}
+            />
 
-        <AccordionItem
-          className={cn('item w-full', className)}
-          id={`mission-${missionGuid}`}
-          value={missionGuid}
-        >
-          <AccordionTrigger className="trigger rounded-lg border border-transparent bg-card/50 pr-2 py-0 transition-colors hover:border-primary/30 hover:bg-accent/50 hover:no-underline">
-            <span className="mission-preview flex gap-1 items-center max-w-[29.375rem] overflow-hidden px-2 py-0.5">
-              {!mission.zone.iconUrl ? (
-                <span
-                  className={cn(
-                    'border border-opacity-40 flex flex-shrink-0 font-bold items-center justify-center relative rounded size-5 text-xs uppercase',
-                    'border-[color:var(--zone-color)] text-[color:var(--zone-color)]',
-                  )}
-                  style={
-                    {
-                      '--zone-color': mission.zone.color,
-                    } as CSSProperties
-                  }
-                >
-                  {mission.zone.letter}
-                </span>
-              ) : (
+            <span
+              className="relative flex items-center justify-center border-r border-border/50"
+              style={{ color: mission.zone.color }}
+            >
+              {/*
+                Tailwind's opacity modifiers cannot compose with an arbitrary
+                hex arriving from data, so the fill is currentColor at 8%.
+              */}
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-current opacity-[0.08]"
+              />
+              {mission.zone.iconUrl ? (
                 <img
                   src={mission.zone.iconUrl}
-                  className="img-type"
+                  alt=""
+                  className="relative size-5 object-contain"
+                  loading="lazy"
                 />
-              )}
-              <img
-                src={mission.zone.type.imageUrl}
-                className="img-type"
-              />
-              <span className="power">⚡{powerLevel}</span>
-              {children}
-            </span>
-          </AccordionTrigger>
-
-          <AccordionContent className="px-4 py-2">
-            <div className="border-l-8 border-l-muted-foreground/10 pl-2 text-sm">
-              <div className="inline-flex gap-1">
-                <span className="flex-shrink-0 text-muted-foreground">
-                  {t('tile-index')}
+              ) : (
+                <span className="figure relative text-[0.9375rem] font-bold leading-none">
+                  {mission.zone.letter}
                 </span>
-                {data.raw.mission.tileIndex}
-              </div>
-              <div className="flex flex-col">
-                <div className="inline-flex gap-1">
-                  <span className="flex-shrink-0 text-muted-foreground">
-                    {t('alert-guid')}
-                  </span>
-                  {alert.rewards.length > 0
-                    ? data.raw.alert?.missionAlertGuid ?? 'N/A'
-                    : 'N/A'}
-                </div>
-                <div className="inline-flex gap-1">
-                  <span className="flex-shrink-0 text-muted-foreground">
-                    {t('mission-guid')}
-                  </span>
-                  {data.raw.mission.missionGuid ?? 'N/A'}
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 items-start my-2">
-              {alert.rewards.length > 0 && (
-                <section>
-                  <h2>{t('alert-rewards')}</h2>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {alert.rewards.map((reward) => (
-                      <RewardChip
-                        isAlert
-                        key={reward.itemId}
-                        reward={reward}
-                        size="large"
-                      />
-                    ))}
-                  </div>
-                </section>
               )}
+            </span>
 
-              <div className="gap-2 grid grid-cols-1">
-                {mission.rewards.length > 0 && (
+            {/* `min-w-0` or the grid refuses to shrink this column. */}
+            <span className="flex min-w-0 items-center gap-3 py-2.5 pl-3 pr-2">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/40 ring-1 ring-inset ring-border/60 transition-colors group-hover/brief:ring-primary/25">
+                <img
+                  src={mission.zone.type.imageUrl}
+                  alt=""
+                  className="size-6 object-contain"
+                  loading="lazy"
+                />
+              </span>
+
+              <span className="flex min-w-0 flex-col gap-1.5">
+                {/*
+                  The tile index is the only identifier a mission without a
+                  mapped category has; a row with no words at all is the thing
+                  this redesign exists to remove.
+                */}
+                <span className="truncate text-sm font-semibold leading-tight text-foreground">
+                  {typeLabel ?? `#${data.raw.mission.tileIndex}`}
+                </span>
+
+                <span className="flex min-w-0 items-center gap-2 text-[0.6875rem] leading-none text-muted-foreground/70">
+                  {brief.meta.map((reward) => (
+                    <span
+                      className="flex shrink-0 items-center gap-0.5"
+                      key={reward.itemId}
+                    >
+                      <img
+                        src={reward.imageUrl}
+                        alt=""
+                        className={cn(
+                          'size-4 shrink-0 object-contain',
+                          reward.isBad &&
+                            'rounded-sm ring-1 ring-inset ring-destructive/60',
+                        )}
+                        loading="lazy"
+                      />
+                      {reward.quantity > 1 && (
+                        <span className="figure">
+                          ×{numberWithCommaSeparator(reward.quantity)}
+                        </span>
+                      )}
+                      {reward.isBad && (
+                        <span className="font-semibold uppercase tracking-[0.06em] text-destructive">
+                          {t('sections.twine-peaks.mid')}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+
+                  {brief.meta.length > 0 && mission.modifiers.length > 0 && (
+                    <span
+                      aria-hidden
+                      className="h-3 w-px shrink-0 bg-border"
+                    />
+                  )}
+
+                  {/* A modifier is a caveat, not a headline: greyscale until hover. */}
+                  {mission.modifiers.slice(0, 5).map((modifier) => (
+                    <img
+                      src={modifier.imageUrl}
+                      alt=""
+                      className="size-4 shrink-0 object-contain opacity-50 grayscale transition-opacity group-hover/brief:opacity-80 group-hover/brief:grayscale-0"
+                      key={modifier.id}
+                      loading="lazy"
+                    />
+                  ))}
+                  {mission.modifiers.length > 5 && (
+                    <span className="figure shrink-0 text-muted-foreground/50">
+                      +{mission.modifiers.length - 5}
+                    </span>
+                  )}
+                </span>
+              </span>
+            </span>
+
+            {/*
+              A requirement, not a score. Power sits on a discrete ladder
+              (1, 3, … 76, 100, 140, 160), so a bar filling toward 160 would
+              read as progress the number does not represent; the bolt carries
+              the unit instead, and says it in no language.
+
+              Ventures zones with no published power report -1, hence the dash.
+            */}
+            <span className="flex items-center justify-end gap-1 border-l border-border/40 px-3">
+              <Zap
+                aria-hidden
+                className="size-3 shrink-0 fill-current text-primary/50"
+              />
+              <span className="figure text-xl font-bold leading-none text-foreground/90">
+                {powerLevel > 0 ? powerLevel : '—'}
+              </span>
+            </span>
+
+            {/*
+              The payload bay. Primary-tinted only while the reward is still
+              claimable — a banked mission keeps its width but stops asking for
+              attention.
+            */}
+            <span
+              className={cn(
+                'flex items-center border-l px-2.5',
+                brief.payloadIsAlert && !isBanked
+                  ? 'border-primary/25 bg-primary/[0.07]'
+                  : 'border-border/40 bg-muted/20',
+              )}
+            >
+              {brief.payload ? (
+                <RewardPayload
+                  extraCount={brief.extraAlertCount}
+                  isBanked={isBanked}
+                  reward={brief.payload}
+                />
+              ) : (
+                /* Never a skeleton: the bay holds its width so rows stay aligned. */
+                <span className="micro-label">—</span>
+              )}
+            </span>
+
+            <span className="flex items-center justify-center text-muted-foreground/40">
+              <ChevronDown className="size-3.5 transition-transform duration-200 group-data-[state=open]/item:rotate-180" />
+            </span>
+          </span>
+        </AccordionTrigger>
+
+        <AccordionContent className="px-0 pb-0 pt-1.5">
+          {/*
+            59px = 3px rail + 44px identity + 12px, so the detail hangs off the
+            same optical axis as the title it belongs to.
+          */}
+          <div className="ml-[3.6875rem] rounded-xl border border-border/60 bg-surface/60 p-4 [border-bottom-color:hsl(var(--control-stroke))]">
+            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1fr)_13rem]">
+              <div className="min-w-0 space-y-4">
+                {alert.rewards.length > 0 && (
                   <section>
-                    <h2>{t('base-rewards')}</h2>
-                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {mission.rewards.map((reward) => (
-                        <RewardChip
+                    <h3 className="micro-label mb-1">
+                      {stripColon(t('information.alert-rewards'))}
+                    </h3>
+                    <ul className="divide-y divide-border/40">
+                      {alert.rewards.map((reward) => (
+                        <RewardLine
+                          isAlert
                           key={reward.itemId}
                           reward={reward}
                         />
                       ))}
-                    </div>
+                    </ul>
                   </section>
                 )}
 
+                {mission.rewards.length > 0 && (
+                  <section>
+                    <h3 className="micro-label mb-1">
+                      {stripColon(t('information.base-rewards'))}
+                    </h3>
+                    <ul className="divide-y divide-border/40">
+                      {mission.rewards.map((reward) => (
+                        <RewardLine
+                          isBad={reward.isBad}
+                          key={reward.itemId}
+                          reward={reward}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+
+              <div className="min-w-0">
                 {mission.modifiers.length > 0 && (
                   <section>
-                    <h2>{t('modifiers')}</h2>
-                    <div className="flex flex-wrap gap-x-1 gap-y-1 mt-1">
+                    <h3 className="micro-label mb-2">
+                      {stripColon(t('information.modifiers'))}
+                    </h3>
+                    {/* Full colour here: expanded, the modifiers are the subject. */}
+                    <div className="grid grid-cols-5 gap-1.5">
                       {mission.modifiers.map((modifier) => (
-                        <div
-                          className="flex gap-1 items-center"
+                        <span
+                          className="grid size-8 place-items-center rounded-lg bg-muted/40 ring-1 ring-inset ring-border/50"
                           key={modifier.id}
                         >
                           <img
                             src={modifier.imageUrl}
-                            className="img-modifier"
+                            alt=""
+                            className="size-5 object-contain"
+                            loading="lazy"
                           />
-                        </div>
+                        </span>
                       ))}
                     </div>
                   </section>
                 )}
+
+                {/*
+                  Searching by guid is a real workflow, so these three stay
+                  selectable — but they are reference material, not the reason
+                  anyone opened the row, so they sit under everything else.
+                */}
+                <dl className="mt-4 space-y-1.5 border-t border-border/40 pt-3 text-[0.6875rem]">
+                  <div>
+                    <dt className="text-muted-foreground/50">
+                      {stripColon(t('information.tile-index'))}
+                    </dt>
+                    <dd className="select-text break-all font-mono text-muted-foreground/80">
+                      {data.raw.mission.tileIndex}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground/50">
+                      {stripColon(t('information.alert-guid'))}
+                    </dt>
+                    <dd className="select-text break-all font-mono text-muted-foreground/80">
+                      {alert.rewards.length > 0
+                        ? data.raw.alert?.missionAlertGuid ?? 'N/A'
+                        : 'N/A'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground/50">
+                      {stripColon(t('information.mission-guid'))}
+                    </dt>
+                    <dd className="select-text break-all font-mono text-muted-foreground/80">
+                      {data.raw.mission.missionGuid ?? 'N/A'}
+                    </dd>
+                  </div>
+                </dl>
               </div>
             </div>
-          </AccordionContent>
-        </AccordionItem>
-      </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
 
-      {!hideScreenshotButton && (
+      {/* Outside the id element, so the button is never inside the screenshot. */}
+      {hideScreenshotButton ? (
+        <span aria-hidden />
+      ) : (
         <ScreenshotButton id={`mission-${missionGuid}`} />
       )}
     </div>
@@ -266,7 +466,7 @@ function ScreenshotButton({ id }: { id: string }) {
       const { domToBlob } = await import('modern-screenshot')
 
       const data = await domToBlob($element, {
-        backgroundColor: 'hsl(240 3% 6%)',
+        backgroundColor: 'hsl(335 24% 4%)',
         type: 'image/png',
       })
 
@@ -287,66 +487,18 @@ function ScreenshotButton({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex-shrink-0">
+    <div className="flex h-16 items-center justify-center">
       <Button
-        className="p-0 size-7"
+        className="size-7 p-0 text-muted-foreground/50 hover:text-foreground"
         variant="ghost"
         onClick={handleGeneration}
       >
         {isLoading ? (
-          <UpdateIcon className="animate-spin h-4" />
+          <UpdateIcon className="size-4 animate-spin" />
         ) : (
-          <Image className="size-5 text-muted-foreground" />
+          <Image className="size-4" />
         )}
       </Button>
     </div>
-  )
-}
-
-export function SchematicRarity({
-  preview,
-  reward,
-}: {
-  preview?: boolean
-  reward: WorldInfoMission['ui']['alert']['rewards'][number]
-}) {
-  return (
-    reward.type === 'trap' &&
-    rarities[reward.rarity] && (
-      <span className="flex flex-shrink-0 items-center text-center text-muted-foreground">
-        {!preview && '('}
-        <img
-          src={assets(reward.rarity)}
-          className={cn('img-rarity', {
-            'img-small': preview,
-          })}
-        />
-        {!preview && ')'}
-      </span>
-    )
-  )
-}
-
-export function Modifiers({
-  data,
-}: {
-  data: WorldInfoMission['ui']['mission']['modifiers']
-}) {
-  return (
-    data.length > 0 && (
-      <>
-        {' '}
-        •
-        <span className="flex flex-shrink-0 gap-0.5">
-          {data.slice(0, 5).map((modifier) => (
-            <img
-              src={modifier.imageUrl}
-              className="img-modifier"
-              key={modifier.id}
-            />
-          ))}
-        </span>
-      </>
-    )
   )
 }

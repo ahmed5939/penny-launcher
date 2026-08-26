@@ -226,6 +226,11 @@ function scan(source: GrayImage, template: GrayImage) {
     }
   }
 
+  // Report confidence using all template pixels at the refined location,
+  // matching OpenCV's TM_CCOEFF_NORMED semantics much more closely than the
+  // coarse search samples alone.
+  best.correlation = correlationAt(source, template, best.x, best.y, 1)
+
   return best
 }
 
@@ -247,6 +252,9 @@ function buildScaleCandidates(sourceHeight: number) {
 
   // Bundled references were captured around a 1600px-tall client.
   add(1)
+  // These are the exact scale candidates used by the reference macro.
+  add(0.95)
+  add(1.05)
   add(sourceHeight / 1600)
 
   for (const base of [...candidates]) {
@@ -401,10 +409,10 @@ export class Vision {
         best = candidate
       }
 
-      const confidence = Math.max(
-        0,
-        Math.min(1, (candidate.correlation + 1) / 2),
-      )
+      // cv2.TM_CCOEFF_NORMED (used by the reference macro) reports the
+      // normalized correlation directly. Do not remap [-1, 1] to [0, 1]:
+      // that turns a weak 0.76 match into an apparent 0.88 match.
+      const confidence = Math.max(0, Math.min(1, candidate.correlation))
 
       if (confidence >= threshold) {
         break
@@ -417,10 +425,7 @@ export class Vision {
       )
     }
 
-    const confidence = Math.max(
-      0,
-      Math.min(1, (best.correlation + 1) / 2),
-    )
+    const confidence = Math.max(0, Math.min(1, best.correlation))
     const rectangle: Region = {
       x: best.x + offsetX,
       y: best.y + offsetY,

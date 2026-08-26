@@ -63,10 +63,11 @@ export function PlatformIcon({
   if (!key) {
     return (
       <span
-        className={cn(
-          'text-[0.6rem] font-semibold uppercase text-muted-foreground',
-          className
-        )}
+        /*
+         * The caption rank, not a size of its own: a three-letter platform
+         * abbreviation is a label, and the app has exactly two label ranks.
+         */
+        className={cn('micro-label', className)}
         title={platform}
       >
         {platform.slice(0, 3)}

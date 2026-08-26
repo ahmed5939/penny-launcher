@@ -1,7 +1,7 @@
-import type { ExpeditionsEntry } from '../../../kernel/core/expeditions'
+import type { ExpeditionActionNotification, ExpeditionSlot, ExpeditionsEntry } from '../../../kernel/core/expeditions'
 
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { CheckCheck, Compass, Timer } from 'lucide-react'
+import { CheckCheck, Compass, Play, Timer, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import Masonry from 'react-responsive-masonry'
 import dayjs from 'dayjs'
@@ -49,12 +49,15 @@ function Content() {
   const {
     data,
     handleCollect,
+    handleAction,
     handleLoad,
     isCollecting,
     isDisabledCollect,
     isDisabledForm,
     isLoading,
     scopeCount,
+    pending,
+    totalAvailable,
     totalInFlight,
     totalReady,
   } = useExpeditionsData()
@@ -102,7 +105,7 @@ function Content() {
 
       {data.length > 0 && (
         <>
-          <StatRow className="lg:grid-cols-3">
+          <StatRow className="lg:grid-cols-4">
             <StatTile
               icon={CheckCheck}
               label="Ready to collect"
@@ -114,6 +117,7 @@ function Content() {
               label="In flight"
               value={totalInFlight}
             />
+            <StatTile icon={Play} label="Available" value={totalAvailable} />
             <StatTile
               icon={Compass}
               label="Accounts checked"
@@ -129,6 +133,8 @@ function Content() {
               <AccountExpeditions
                 entry={entry}
                 key={entry.accountId}
+                onAction={handleAction}
+                pending={pending}
               />
             ))}
           </Masonry>
@@ -140,7 +146,19 @@ function Content() {
   )
 }
 
-function AccountExpeditions({ entry }: { entry: ExpeditionsEntry }) {
+function AccountExpeditions({
+  entry,
+  onAction,
+  pending,
+}: {
+  entry: ExpeditionsEntry
+  onAction: (
+    accountId: string,
+    slot: ExpeditionSlot,
+    action: ExpeditionActionNotification['action']
+  ) => void
+  pending: Array<string>
+}) {
   const { accountList } = useGetAccounts()
 
   const account = accountList[entry.accountId]
@@ -205,9 +223,14 @@ function AccountExpeditions({ entry }: { entry: ExpeditionsEntry }) {
                     ))}
                   </span>
                 )}
+                {slot.state === 'available' && (
+                  <span className="mt-1 block text-[0.6rem] text-muted-foreground">
+                    Recommended team: {slot.suggestedHeroIds.length}/{slot.criteria.length} heroes
+                  </span>
+                )}
               </span>
 
-              <span className="shrink-0 text-right">
+              <span className="flex shrink-0 flex-col items-end gap-1 text-right">
                 {slot.state === 'ready' ? (
                   <span className="text-xs font-semibold text-success">
                     Ready
@@ -234,6 +257,27 @@ function AccountExpeditions({ entry }: { entry: ExpeditionsEntry }) {
                       </span>
                     )}
                   </>
+                )}
+                {pending.includes(slot.itemId) ? (
+                  <UpdateIcon className="size-4 animate-spin text-muted-foreground" />
+                ) : slot.state === 'ready' ? (
+                  <Button size="sm" className="h-7 px-2 text-[0.65rem]" onClick={() => onAction(entry.accountId, slot, 'collect')}>
+                    <CheckCheck className="size-3" /> Collect
+                  </Button>
+                ) : slot.state === 'in-flight' ? (
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[0.65rem] text-destructive" onClick={() => onAction(entry.accountId, slot, 'abandon')}>
+                    <XCircle className="size-3" /> Abandon
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="h-7 px-2 text-[0.65rem]"
+                    disabled={!slot.squadId || slot.suggestedHeroIds.length !== slot.criteria.length}
+                    title={!slot.squadId || slot.suggestedHeroIds.length !== slot.criteria.length ? 'Not enough eligible heroes' : 'Send the recommended hero team'}
+                    onClick={() => onAction(entry.accountId, slot, 'start')}
+                  >
+                    <Play className="size-3" /> Dispatch
+                  </Button>
                 )}
               </span>
             </li>

@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { create as createAxios } from 'axios'
 
 import { Manifest } from '../../kernel/core/manifest'
 
@@ -6,7 +6,8 @@ import { Manifest } from '../../kernel/core/manifest'
  * Launcher Service
  */
 
-export const launcherService = axios.create({
+export const launcherService = createAxios({
+  timeout: 20_000,
   baseURL:
     'https://launcher-public-service-prod.ol.epicgames.com/launcher/api',
 })

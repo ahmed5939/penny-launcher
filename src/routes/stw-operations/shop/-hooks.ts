@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 
 import { useItemDatabaseStore } from '../../../state/items/database'
 import { useShopStore } from '../../../state/stw-operations/shop'
+import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
@@ -13,6 +14,8 @@ import { rarityLabels } from '../../../config/constants/fortnite/items'
 import { toast } from '../../../lib/notifications'
 
 export function useShopData() {
+  useRequestItemDatabase()
+
   /** One account's shop — the X-Ray rolls are rolled per account. */
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null

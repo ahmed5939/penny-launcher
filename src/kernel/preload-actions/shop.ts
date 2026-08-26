@@ -36,7 +36,7 @@ export function responseShop(
   callback: (response: ShopPayload) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, response: ShopPayload) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ShopResponse,
@@ -59,7 +59,7 @@ export function notificationShopPurchase(
     _: IpcRendererEvent,
     response: ShopPurchaseNotification
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ShopPurchaseNotification,
@@ -82,7 +82,7 @@ export function notificationShopOpen(
     _: IpcRendererEvent,
     response: ShopOpenNotification
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ShopOpenNotification,

@@ -9,9 +9,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../ui/accordion'
+import { Button } from '../ui/button'
 import { ScrollArea } from '../ui/scroll-area'
 import { SheetClose } from '../ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
+
+import { EmptyState, RewardLine } from '../page'
 
 import {
   useClaimedRewards,
@@ -19,7 +22,6 @@ import {
 } from '../../hooks/stw-operations/claimed-rewards'
 import { useGetAccounts } from '../../hooks/accounts'
 
-import { numberWithCommaSeparator } from '../../lib/parsers/numbers'
 import { parseResource } from '../../lib/parsers/resources'
 import { getShortDateFormat } from '../../lib/dates'
 import { assets } from '../../lib/repository'
@@ -38,68 +40,102 @@ export function HistoryMenu() {
   const dataOrderByDesc = data.toReversed()
 
   return (
-    <>
-      <Tabs
-        className="w-full"
-        defaultValue={defaultSelectedTab}
-      >
-        <div className="app-draggable-region flex gap-1.5 h-[var(--header-height)] items-center px-1.5">
-          <TabsList className="not-draggable-region">
-            <TabsTrigger value={HistoryTabs.History}>
-              {t('history', {
-                ns: 'general',
-              })}
-            </TabsTrigger>
-            <TabsTrigger value={HistoryTabs.Summary}>
-              {t('summary', {
-                ns: 'general',
-              })}
-            </TabsTrigger>
-          </TabsList>
-          <SheetClose className="not-draggable-region ml-auto mr-3">
-            <X />
+    /*
+     * The flyout is a full-height column, so every pane below measures itself
+     * against its parent rather than against `100vh` minus a guess at the
+     * chrome above it.
+     */
+    <Tabs
+      className="flex min-h-0 flex-1 flex-col"
+      defaultValue={defaultSelectedTab}
+    >
+      {/*
+        The flyout's own header strip, at the panel gutter — deliberately not
+        the titlebar's height token and not a drag region. A second draggable
+        strip inside a modal overlay makes every control in it opt back out
+        one by one.
+      */}
+      <header className="flex shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2.5">
+        <TabsList>
+          <TabsTrigger value={HistoryTabs.History}>
+            {t('history', {
+              ns: 'general',
+            })}
+          </TabsTrigger>
+          <TabsTrigger value={HistoryTabs.Summary}>
+            {t('summary', {
+              ns: 'general',
+            })}
+          </TabsTrigger>
+        </TabsList>
+        <SheetClose asChild>
+          <Button
+            className="ml-auto size-7"
+            size="icon"
+            variant="ghost"
+          >
+            <X className="size-4" />
             <span className="sr-only">close history sidebar</span>
-          </SheetClose>
-        </div>
-        <TabsContent
-          value={HistoryTabs.History}
-          className="mt-0 mx-1.5"
-        >
-          <div className="border-l-4 italic mb-1.5 pl-2 py-1 text-muted-foreground text-xs">
-            {t('history.note')}
+          </Button>
+        </SheetClose>
+      </header>
+
+      <HistoryPane value={HistoryTabs.History}>
+        <PaneNote>{t('history.note')}</PaneNote>
+        {dataOrderByDesc.length > 0 ? (
+          <div className="divide-y divide-border/60">
+            {dataOrderByDesc.map((item) => (
+              <RewardSection
+                data={item}
+                key={item.id}
+              />
+            ))}
           </div>
-          <ScrollArea className="h-[calc(100vh-var(--header-height)-1.875rem-0.375rem)]">
-            {dataOrderByDesc.length > 0 ? (
-              <>
-                <div className="flex-1 pb-6 space-y-2">
-                  {dataOrderByDesc.map((item) => (
-                    <div
-                      className="border-b pb-2 text-foreground/90 last:border-b-0"
-                      key={item.id}
-                    >
-                      <RewardSection data={item} />
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <EmptyHistoryMessage title={t('history.empty')} />
-            )}
-          </ScrollArea>
-        </TabsContent>
-        <TabsContent
-          value={HistoryTabs.Summary}
-          className="mt-0 mx-1.5"
-        >
-          <div className="border-l-4 italic mb-1.5 mt-2- pl-2 py-1 text-muted-foreground text-xs">
-            {t('summary.note')}
-          </div>
-          <ScrollArea className="h-[calc(100vh-var(--header-height)-1.875rem-0.375rem)]">
-            <SummarySection />
-          </ScrollArea>
-        </TabsContent>
-      </Tabs>
-    </>
+        ) : (
+          <EmptyState title={t('history.empty')} />
+        )}
+      </HistoryPane>
+
+      <HistoryPane value={HistoryTabs.Summary}>
+        <PaneNote>{t('summary.note')}</PaneNote>
+        <SummarySection />
+      </HistoryPane>
+    </Tabs>
+  )
+}
+
+/**
+ * One tab's scrolling pane.
+ *
+ * `data-[state=active]:flex` rather than a bare `flex`: Radix hides an
+ * inactive tab with the `hidden` attribute, and a display utility from the
+ * later cascade layer would override it and show every tab at once.
+ */
+function HistoryPane({
+  children,
+  value,
+}: {
+  children: React.ReactNode
+  value: HistoryTabs
+}) {
+  return (
+    <TabsContent
+      className="mt-0 min-h-0 flex-1 data-[state=active]:flex data-[state=active]:flex-col"
+      value={value}
+    >
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-2 px-3 pb-6 pt-3">{children}</div>
+      </ScrollArea>
+    </TabsContent>
+  )
+}
+
+/** The "this is temporary" caveat, demoted to the caption it is. */
+function PaneNote({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+      {children}
+    </p>
   )
 }
 
@@ -111,12 +147,12 @@ function SummarySection() {
   const isEmpty = Object.values(globalSummary.rewards).length <= 0
 
   if (isEmpty) {
-    return <EmptyHistoryMessage title={t('summary.empty')} />
+    return <EmptyState title={t('summary.empty')} />
   }
 
   return (
     <Accordion
-      className="w-full"
+      className="w-full space-y-1"
       type="multiple"
       defaultValue={['summary']}
     >
@@ -124,15 +160,13 @@ function SummarySection() {
         className="border-none"
         value="summary"
       >
-        <AccordionTrigger className="bg-muted-foreground/5 px-2 py-2">
-          {t('summary.all-accounts')}
-        </AccordionTrigger>
-        <AccordionContent className="px-2 py-2">
+        <SummaryTrigger>{t('summary.all-accounts')}</SummaryTrigger>
+        <AccordionContent className="px-1 pb-2 pt-1">
           <DateRange
             startsAt={globalSummary.startsAt}
             endsAt={globalSummary.endsAt}
           />
-          <ul className="space-y-1">
+          <ul>
             <RewardItems rewards={globalSummary.rewards} />
             <AccoladesItem accolades={globalSummary.accolades} />
           </ul>
@@ -145,18 +179,17 @@ function SummarySection() {
           value={account.accountId}
           key={account.accountId}
         >
-          <AccordionTrigger className="bg-muted-foreground/5 px-2 py-2">
+          <SummaryTrigger>
             {t(parseCustomDisplayName(accountList[account.accountId]), {
               ns: 'general',
             })}
-            :
-          </AccordionTrigger>
-          <AccordionContent className="px-2 py-2">
+          </SummaryTrigger>
+          <AccordionContent className="px-1 pb-2 pt-1">
             <DateRange
               startsAt={account.startsAt}
               endsAt={account.endsAt}
             />
-            <ul className="space-y-1">
+            <ul>
               <RewardItems rewards={account.rewards} />
               <AccoladesItem accolades={account.accolades} />
             </ul>
@@ -164,6 +197,19 @@ function SummarySection() {
         </AccordionItem>
       ))}
     </Accordion>
+  )
+}
+
+/**
+ * A summary group's header. Its title is an account name as often as it is a
+ * heading, so it stays at body weight instead of taking the section rank —
+ * uppercasing somebody's display name is not a heading, it is shouting.
+ */
+function SummaryTrigger({ children }: { children: React.ReactNode }) {
+  return (
+    <AccordionTrigger className="break-all rounded-lg bg-muted/40 px-3 py-2 text-left text-[0.8125rem] font-medium">
+      {children}
+    </AccordionTrigger>
   )
 }
 
@@ -177,7 +223,7 @@ function DateRange({
   const { t } = useTranslation(['general'])
 
   return (
-    <div className="mb-2 text-muted-foreground text-xs">
+    <div className="mb-1 space-y-0.5 text-xs text-muted-foreground">
       <div>
         {t('first-claim', {
           date: startsAt === '' ? 'N/A' : getShortDateFormat(startsAt),
@@ -200,18 +246,20 @@ function RewardSection({ data }: { data: RewardsNotification }) {
   const { accountList } = useGetAccounts()
 
   return (
-    <div className="px-2">
-      <div className="font-bold mb-2 break-all">
-        {t(parseCustomDisplayName(accountList[data.accountId]))}:
-      </div>
-      <ul className="space-y-1">
+    <section className="py-2 first:pt-0 last:pb-0">
+      <header className="flex items-baseline gap-2">
+        <h3 className="min-w-0 flex-1 break-all text-[0.8125rem] font-medium">
+          {t(parseCustomDisplayName(accountList[data.accountId]))}
+        </h3>
+        <span className="figure shrink-0 text-xs text-muted-foreground">
+          {getShortDateFormat(data.createdAt)}
+        </span>
+      </header>
+      <ul>
         <RewardItems rewards={data.rewards} />
         <AccoladesItem accolades={data.accolades} />
       </ul>
-      <div className="mt-1 text-muted-foreground text-xs">
-        {getShortDateFormat(data.createdAt)}
-      </div>
-    </div>
+    </section>
   )
 }
 
@@ -221,19 +269,22 @@ function RewardItems({ rewards }: Pick<RewardsNotification, 'rewards'>) {
     parseResource({ key, quantity }),
   )
 
+  /*
+   * `rarity` and `type` are handed over already resolved. `RewardLine` would
+   * otherwise re-derive them from the id, and the answer it reached would be
+   * the one this parse already has.
+   */
   return items.map((item) => (
-    <li key={item.itemType}>
-      <figure className="flex gap-1 items-center">
-        <img
-          src={item.imgUrl}
-          className="size-6"
-          alt={item.name}
-        />
-        <figcaption className="break-all">
-          {numberWithCommaSeparator(item.quantity)} &times; {item.name}
-        </figcaption>
-      </figure>
-    </li>
+    <RewardLine
+      key={item.itemType}
+      reward={{
+        imageUrl: item.imgUrl,
+        itemId: item.itemType,
+        quantity: item.quantity,
+        rarity: item.rarity,
+        type: item.type,
+      }}
+    />
   ))
 }
 
@@ -241,29 +292,18 @@ function AccoladesItem({
   accolades,
 }: Pick<RewardsNotification, 'accolades'>) {
   return (
-    <li>
-      <figure className="flex gap-1 items-center">
-        <img
-          src={assets('brxp')}
-          className="size-6"
-          alt="Accolades"
-        />
-        <figcaption className="break-all">
-          {numberWithCommaSeparator(
-            accolades.totalMissionXPRedeemed +
-              accolades.totalQuestXPRedeemed,
-          )}{' '}
-          &times; Accolades
-        </figcaption>
-      </figure>
-    </li>
-  )
-}
-
-function EmptyHistoryMessage({ title }: { title: string }) {
-  return (
-    <div className="flex items-center justify-center px-5 text-balance text-center text-muted-foreground min-h-[calc(100vh-var(--header-height)-1.875rem-0.375rem)]">
-      {title}
-    </div>
+    <RewardLine
+      reward={{
+        imageUrl: assets('brxp'),
+        /*
+         * Account XP has no item id, and nothing resolves this one — which is
+         * what the row wants: the name falls back to the id itself and no
+         * rarity is claimed for a currency that has none.
+         */
+        itemId: 'Accolades',
+        quantity:
+          accolades.totalMissionXPRedeemed + accolades.totalQuestXPRedeemed,
+      }}
+    />
   )
 }

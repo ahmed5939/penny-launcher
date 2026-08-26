@@ -73,7 +73,7 @@ export function removeFriend(data: {
 
 export function notificationClaimRewards(callback: () => Promise<void>) {
   const customCallback = () => {
-    callback().catch(() => {})
+    callback().catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyClaimActionNotification,
@@ -93,7 +93,7 @@ export function notificationKick(
   callback: (total: number) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, total: number) => {
-    callback(total).catch(() => {})
+    callback(total).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyKickActionNotification,
@@ -113,7 +113,7 @@ export function notificationLeave(
   callback: (total: number) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, total: number) => {
-    callback(total).catch(() => {})
+    callback(total).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyLeaveActionNotification,
@@ -136,7 +136,7 @@ export function notificationAddNewFriend(
     _: IpcRendererEvent,
     value: AddNewFriendNotification
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyAddNewFriendActionNotification,
@@ -156,7 +156,7 @@ export function notificationLoadFriends(
   callback: (value: FriendRecord) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, value: FriendRecord) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyLoadFriendsNotification,
@@ -179,7 +179,7 @@ export function notificationInvite(
     _: IpcRendererEvent,
     value: Array<InviteNotification>
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyInviteActionNotification,
@@ -208,7 +208,7 @@ export function notificationRemoveFriend(
       status: boolean
     }
   ) => {
-    callback(value).catch(() => {})
+    callback(value).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.PartyRemoveFriendActionNotification,

@@ -19,7 +19,6 @@ import {
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 import { useHandlers } from './-actions'
 
-import { whatIsThis } from '../../../lib/callbacks'
 import { cn, parseCustomDisplayName } from '../../../lib/utils'
 
 export function RouteComponent() {
@@ -129,7 +128,6 @@ function Content() {
             href={settingsUrl}
             title={settingsUrl}
             onClick={handleOpenURL}
-            onAuxClick={whatIsThis()}
           >
             <Trans
               ns="account-management"

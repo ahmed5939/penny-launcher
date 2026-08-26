@@ -14,7 +14,7 @@ export default defineConfig((env) => {
   const { forgeConfigSelf } = forgeEnv
   const config: UserConfig = {
     build: {
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 750,
       rollupOptions: {
         external,
         // Preload scripts may contain Web assets, so use the `build.rollupOptions.input` instead `build.lib.entry`.

@@ -73,6 +73,21 @@ module.exports = {
         md: 'var(--radius)',
         sm: 'calc(var(--radius) - 2px)',
       },
+      /*
+       * Segoe UI Variable ships three optical sizes in one family, and the
+       * base layer already opts headings into Display. This exposes the same
+       * face to figures — power levels, quantities, counts — so numerals get
+       * the size they were drawn for instead of Text's tighter fitting.
+       */
+      fontFamily: {
+        display: [
+          "'Segoe UI Variable Display'",
+          "'Segoe UI Variable'",
+          "'Segoe UI'",
+          'system-ui',
+          'sans-serif',
+        ],
+      },
       keyframes: {
         'accordion-down': {
           from: { height: '0' },

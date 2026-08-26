@@ -7,7 +7,6 @@ import packageJson from '../../../../package.json'
 
 import { PageHeader, Panel } from '../../../components/page'
 
-import { whatIsThis } from '../../../lib/callbacks'
 import { cn } from '../../../lib/utils'
 
 const links = {
@@ -58,7 +57,6 @@ export function ComponentRoute() {
                   href={packageJson.repository.url}
                   className="link"
                   onClick={openURL(packageJson.repository.url)}
-                  onAuxClick={whatIsThis()}
                 >
                   Ciensprog <ExternalLink className="h-3 w-3" />
                 </a>
@@ -72,7 +70,6 @@ export function ComponentRoute() {
                   href={links.kuda}
                   className="link"
                   onClick={openURL(links.kuda)}
-                  onAuxClick={whatIsThis()}
                 >
                   Kuda <ExternalLink className="h-3 w-3" />
                 </a>
@@ -86,7 +83,6 @@ export function ComponentRoute() {
                   href={links.LeleDerGrasshalmi}
                   className="link"
                   onClick={openURL(links.LeleDerGrasshalmi)}
-                  onAuxClick={whatIsThis()}
                 >
                   LeleDerGrasshalmi <ExternalLink className="h-3 w-3" />
                 </a>{' '}
@@ -95,7 +91,6 @@ export function ComponentRoute() {
                   href={links.HyperionCSharp}
                   className="link"
                   onClick={openURL(links.HyperionCSharp)}
-                  onAuxClick={whatIsThis()}
                 >
                   HyperionCSharp <ExternalLink className="h-3 w-3" />
                 </a>
@@ -119,7 +114,6 @@ export function ComponentRoute() {
                     href="https://discord.gg/vphWQWFNf9"
                     className="link font-bold italic text-muted-foreground underline"
                     onClick={openURL('https://discord.gg/vphWQWFNf9')}
-                    onAuxClick={whatIsThis()}
                   >
                     Mia <ExternalLink className="h-3 w-3" />
                   </a>{' '}
@@ -132,7 +126,6 @@ export function ComponentRoute() {
                   href={links.SaseQ}
                   className="link"
                   onClick={openURL(links.SaseQ)}
-                  onAuxClick={whatIsThis()}
                 >
                   SaseQ <ExternalLink className="h-3 w-3" />
                 </a>{' '}
@@ -141,7 +134,6 @@ export function ComponentRoute() {
                   href={links.PRO100KatYT}
                   className="link"
                   onClick={openURL(links.PRO100KatYT)}
-                  onAuxClick={whatIsThis()}
                 >
                   PRO100KatYT <ExternalLink className="h-3 w-3" />
                 </a>

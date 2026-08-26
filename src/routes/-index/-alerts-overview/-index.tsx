@@ -11,7 +11,10 @@ import {
   SheetTrigger,
 } from '../../../components/ui/sheet'
 import { EmptyResults } from '../-components/-empty'
-import { LoadingMissions } from '../-components/-loading'
+import {
+  LoadingMissions,
+  LoadingRewardsSummary,
+} from '../-components/-loading'
 import { RewardsSummaryList } from '../-components/-rewards-summary-list'
 import { TitleSection } from '../-components/-title'
 import { AlertFilters } from './-filters'
@@ -38,10 +41,14 @@ export function AlertsOverview() {
 
   return (
     <>
-      <div className="flex gap-4 items-center">
+      {/*
+        A command bar for the list below it, not a form floating above it: the
+        hairline underneath is what attaches the two.
+      */}
+      <div className="flex items-center gap-2 border-b border-border/60 pb-3">
         <div className="flex flex-grow items-center relative">
           <Input
-            className={cn('h-9', {
+            className={cn('h-8 text-[0.8125rem]', {
               'pr-9': inputSearch.length > 0,
             })}
             placeholder={t('filters.search.input.placeholder')}
@@ -52,7 +59,7 @@ export function AlertsOverview() {
           />
           {inputSearch.length > 0 && (
             <Button
-              className="absolute right-1 rounded size-7"
+              className="absolute right-1 size-6 rounded"
               size="icon"
               variant="ghost"
               onClick={clearInputSearch}
@@ -65,12 +72,12 @@ export function AlertsOverview() {
         <Sheet>
           <SheetTrigger asChild>
             <Button
-              className="flex-shrink-0"
+              className="h-8 shrink-0 gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]"
               variant="secondary"
               size="sm"
               disabled={loading.isFetching || loading.isReloading}
             >
-              <Filter className="mr-2 w-4" />
+              <Filter className="size-3.5" />
               {t('filters.search.submit-button')}
             </Button>
           </SheetTrigger>
@@ -96,16 +103,25 @@ export function AlertsOverview() {
         </Sheet>
       </div>
 
-      <div className="space-y-1">
+      {/*
+        64px rows with a 6px gutter need real air between zones, or the
+        sections run together into one undifferentiated column.
+      */}
+      <div className="space-y-6">
         {loading.isFetching ? (
           <div className="mt-6 space-y-6">
+            {/*
+              The summary panel holds its space too, so nothing below it jumps
+              down the page when the totals resolve.
+            */}
+            <LoadingRewardsSummary />
             <LoadingMissions
-              total={2}
+              total={3}
               section
               showTitle
             />
             <LoadingMissions
-              total={2}
+              total={3}
               section
               showTitle
             />
@@ -113,9 +129,13 @@ export function AlertsOverview() {
         ) : (
           <>
             <section
-              className="space-y-2-"
+              className="mt-2"
               aria-labelledby="section-summary"
             >
+              {/*
+                No `accent`: the totals are not a zone, so they take the
+                primary tick.
+              */}
               <TitleSection
                 deps={data}
                 id="section-summary"

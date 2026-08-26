@@ -54,8 +54,14 @@ export function MainLayout({ children }: PropsWithChildren) {
         */}
         <div className="mica-content flex min-w-0 flex-1">
           <div className="flex min-w-0 flex-1 flex-col">
+            {/*
+              `flex-1 min-h-0` rather than a `100vh` subtraction: every
+              ancestor up to the window is already a flex box, so the pane
+              takes whatever the titlebar and the status bar leave it and
+              cannot fall out of step with either one's height.
+            */}
             <ScrollArea
-              className="h-[calc(100vh-var(--header-height)-1.5rem)]"
+              className="min-h-0 flex-1"
               viewportClassName="main-wrapper-content"
             >
               <main className="flex w-full flex-col gap-4 p-5 lg:gap-6">

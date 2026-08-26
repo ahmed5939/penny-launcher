@@ -107,7 +107,7 @@ export function Combobox({
               'flex justify-between max-w-96 pl-3 pr-2 select-none w-full disabled:hover:bg-background',
               className
             )}
-            size="sm"
+            size="default"
             variant="outline"
             role="combobox"
             aria-expanded={open}
@@ -139,7 +139,7 @@ export function Combobox({
         </PopoverTrigger>
         {currentValues.length > 0 && (
           <button
-            className="absolute p-0.5 right-7 text-muted-foreground hover:text-white"
+            className="absolute p-0.5 right-7 text-muted-foreground hover:text-foreground"
             onClick={clearValues}
           >
             <X className="size-4" />

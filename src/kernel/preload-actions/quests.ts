@@ -22,7 +22,7 @@ export function responseQuests(
   callback: (response: QuestsPayload) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, response: QuestsPayload) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.QuestsResponse,
@@ -45,7 +45,7 @@ export function notificationQuestsPin(
     _: IpcRendererEvent,
     response: QuestsPinNotification
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.QuestsPinNotification,

@@ -31,11 +31,24 @@ export function friendsAction(
   )
 }
 
+export function friendsBulkAction(
+  account: AccountData,
+  targetAccountIds: Array<string>,
+  action: 'add' | 'remove'
+) {
+  ipcRenderer.send(
+    ElectronAPIEventKeys.FriendsManagerBulkAction,
+    account,
+    targetAccountIds,
+    action
+  )
+}
+
 export function responseFriends(
   callback: (response: FriendsPayload) => Promise<void>
 ) {
   const customCallback = (_: IpcRendererEvent, response: FriendsPayload) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.FriendsManagerResponse,
@@ -58,7 +71,7 @@ export function responseFriendsSearch(
     _: IpcRendererEvent,
     response: FriendsSearchPayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.FriendsManagerSearchResponse,
@@ -81,7 +94,7 @@ export function notificationFriendsAction(
     _: IpcRendererEvent,
     response: FriendsActionPayload
   ) => {
-    callback(response).catch(() => {})
+    callback(response).catch(console.error)
   }
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.FriendsManagerActionNotification,
