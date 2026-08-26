@@ -87,6 +87,25 @@ async function copyMainProcessDependencies(buildPath: string) {
 
     await cp(source, path.join(buildPath, 'node_modules', name), {
       recursive: true,
+      /**
+       * Electron-rebuild leaves compiler toolchains nested inside native
+       * modules — node-process-watcher grows a 210 MB nw-gyp/clang tree on
+       * CI. Those are install-time only; genuine nested runtime deps
+       * (stanza's, electron-squirrel-startup's) have ordinary names and
+       * pass through.
+       */
+      filter: (fileSource) => {
+        const segments = path
+          .relative(root, fileSource)
+          .split(path.sep)
+
+        return !segments.some(
+          (segment) =>
+            segment === 'nw-gyp' ||
+            segment === 'node-gyp' ||
+            segment === '.bin'
+        )
+      },
     })
 
     const manifest = JSON.parse(manifestRaw) as {
