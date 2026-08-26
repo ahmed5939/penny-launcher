@@ -312,14 +312,29 @@ process.on('uncaughtExceptionMonitor', (error) => {
     })
 
     // and load the index.html of the app.
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-      mainWindow.webContents.openDevTools({
-        mode: 'undocked',
-      })
+    try {
+      if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+        await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
 
-      await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
-    } else {
-      await mainWindow.loadFile(rendererFilePath)
+        // Open DevTools only once the first navigation has settled. Opening an
+        // undocked window beforehand aborts the in-flight load, and that
+        // rejection used to escape createWindow() and abort app.on('ready')
+        // before a single IPC channel was registered.
+        mainWindow.webContents.openDevTools({
+          mode: 'undocked',
+        })
+      } else {
+        await mainWindow.loadFile(rendererFilePath)
+      }
+    } catch (error) {
+      // ERR_ABORTED (-3) only means a newer navigation superseded this one, so
+      // the window still ends up loaded. Startup must survive it either way:
+      // everything registered after this point depends on it.
+      if ((error as { errno?: number })?.errno !== -3) {
+        throw error
+      }
+
+      RuntimeLog.error('startup:renderer-load-superseded', error)
     }
 
     return mainWindow
