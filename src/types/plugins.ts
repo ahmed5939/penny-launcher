@@ -23,6 +23,7 @@ export type PluginSummary = {
   source: PluginSource
   status: 'active' | 'error'
   error: string | null
+  repository: string | null
   /** Whether the plugin exposes a window/action the user can open. */
   canOpen: boolean
 }
