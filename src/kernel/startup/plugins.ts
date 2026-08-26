@@ -8,7 +8,7 @@ import type {
   PluginSummary,
 } from '../../types/plugins'
 
-import { cp, mkdir, readdir, readFile, rm } from 'node:fs/promises'
+import { access, cp, mkdir, readdir, readFile, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 
@@ -79,15 +79,16 @@ export class PluginManager {
     await PluginManager.load().catch(() => {})
 
     return PluginManager.plugins.map<PluginSummary>((plugin) => ({
-        id: plugin.manifest.id,
-        name: plugin.manifest.name,
-        description: plugin.manifest.description ?? null,
-        version: plugin.manifest.version ?? null,
-        source: plugin.source,
-        status: plugin.status,
-        error: plugin.error,
-        canOpen: typeof plugin.controller?.open === 'function',
-      }))
+      id: plugin.manifest.id,
+      name: plugin.manifest.name,
+      description: plugin.manifest.description ?? null,
+      version: plugin.manifest.version ?? null,
+      source: plugin.source,
+      status: plugin.status,
+      error: plugin.error,
+      repository: plugin.manifest.repository ?? null,
+      canOpen: typeof plugin.controller?.open === 'function',
+    }))
   }
 
   static async marketplace(): Promise<Array<MarketplacePlugin>> {
@@ -129,6 +130,16 @@ export class PluginManager {
     const destination = path.join(PluginManager.userDirectory, pluginId)
 
     try {
+      await access(destination)
+      return {
+        ok: false,
+        error: 'An add-on folder with this name already exists.',
+      }
+    } catch {
+      // Expected: installation always starts with a new destination folder.
+    }
+
+    try {
       await cp(selected.directory, destination, {
         recursive: true,
         errorOnExist: true,
@@ -167,7 +178,7 @@ export class PluginManager {
     const installedPlugin = PluginManager.plugins.find(
       (plugin) => plugin.manifest.id === pluginId,
     )
-    const plugin = catalogPlugin ?? installedPlugin
+    const plugin = installedPlugin ?? catalogPlugin
 
     if (!plugin) {
       return { ok: false, error: 'Add-on documentation was not found.' }

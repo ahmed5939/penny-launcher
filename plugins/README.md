@@ -1,9 +1,9 @@
 # Penny Launcher plugins
 
-A plugin is a plain CommonJS folder — no build step, no bundler. The launcher
-loads every folder in here (shipped with the app as `resources/plugins`) and
-every folder in `%APPDATA%\penny-launcher-data\plugins` (user drop-ins), then
-shows them on the **Plugins** page.
+A plugin is a plain CommonJS folder — no build step, no bundler. Marketplace
+packages are kept under `marketplace/` as readable source and are inert until
+the user clicks **Install**. Installation copies the chosen package to
+`%APPDATA%\penny-launcher-data\plugins`, the only directory Penny executes.
 
 ## Folder contract
 
@@ -22,7 +22,9 @@ my-plugin/
   "name": "My Plugin",
   "description": "One-line description shown on the Plugins page.",
   "version": "1.0.0",
-  "entry": "main.js"
+  "entry": "main.js",
+  "readme": "README.md",
+  "repository": "https://github.com/owner/repository"
 }
 ```
 
@@ -33,6 +35,7 @@ function activate(context) {
   // context.storageDirectory — per-plugin folder under the launcher's data
   //                            directory; persist anything here.
   // context.getMainWindow()  — the launcher's BrowserWindow (or null).
+  // context.openRoute(path)  — opens a launcher page owned by the add-on.
 
   return {
     // Optional. Backs the "Open" button on the Plugins page.
@@ -50,5 +53,5 @@ require the launcher's dependencies (e.g. `uiohook-napi`) by name.
 If `activate()` throws, the plugin shows on the Plugins page with an error
 badge instead of breaking startup.
 
-Built-in and user plugins share one id namespace; a built-in plugin wins over
-a user plugin with the same id.
+Every marketplace package should include a README and a public source link so
+people can understand, audit and reuse the code before installing it.
