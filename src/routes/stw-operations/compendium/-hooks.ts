@@ -24,6 +24,15 @@ export type CompendiumEntry = {
   tiers: number
 }
 
+const rarityRank: Record<string, number> = {
+  Common: 0,
+  Uncommon: 1,
+  Rare: 2,
+  Epic: 3,
+  Legendary: 4,
+  Mythic: 5,
+}
+
 const familyPrefix: Record<CompendiumFamily, string> = {
   hero: 'hero:',
   melee: 'schematic:',
@@ -71,6 +80,9 @@ export function useCompendiumData() {
 
   const records = useItemDatabaseStore((state) => state.records)
   const ratings = useItemDatabaseStore((state) => state.ratings)
+  const alterationPools = useItemDatabaseStore(
+    (state) => state.alterationPools
+  )
   const isLoading = useItemDatabaseStore((state) => state.isLoading)
   const total = useItemDatabaseStore((state) => state.total)
 
@@ -91,7 +103,7 @@ export function useCompendiumData() {
         return
       }
 
-      const key = `${record.name}::${record.subType ?? ''}::${record.rarity ?? ''}`
+      const key = `${record.name}::${record.subType ?? ''}`
       const current = grouped.get(key)
 
       if (!current) {
@@ -101,16 +113,24 @@ export function useCompendiumData() {
           subType: record.subType,
           rarity: record.rarity,
           tier: record.tier,
-          tiers: 1,
+          tiers: Math.max(1, record.tier),
         })
 
         return
       }
 
-      current.tiers += 1
+      current.tiers = Math.max(current.tiers, record.tier)
 
-      if (record.tier > current.tier) {
+      const rarityIsHigher =
+        (rarityRank[record.rarity ?? ''] ?? -1) >
+        (rarityRank[current.rarity ?? ''] ?? -1)
+
+      if (
+        rarityIsHigher ||
+        (record.rarity === current.rarity && record.tier > current.tier)
+      ) {
         current.templateId = templateId
+        current.rarity = record.rarity
         current.tier = record.tier
       }
     })
@@ -137,6 +157,7 @@ export function useCompendiumData() {
   }, [deferredSearch, entries])
 
   return {
+    alterationPools,
     entries: filtered,
     family,
     isLoading,

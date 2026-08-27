@@ -118,6 +118,17 @@ export function useInventoryData() {
     return {
       lockedCount: items.filter((item) => item.lockedReason !== null).length,
       rows: mapped.filter((item) => {
+        // Craft-only ammo, building and utility recipes also use the
+        // Schematic prefix. They are not manageable weapon/trap schematics.
+        if (
+          item.kind === 'schematic' &&
+          !['Melee', 'Ranged', 'Trap'].includes(
+            getItemRecord(records, item.templateId)?.category ?? ''
+          )
+        ) {
+          return false
+        }
+
         if (!filters.kinds.includes(item.kind)) {
           return false
         }

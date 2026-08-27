@@ -28,6 +28,20 @@ import { cn, parseCustomDisplayName } from '../../../lib/utils'
 const categoryLabels: Record<string, string> = {
   DailyQuests: 'Daily Quests',
   Other: 'Other',
+  LTE_OUTLANDISH: 'Outlandish',
+  LTE_RAPTOR: 'Raptor',
+  LTE_REPEATABLE: 'Repeatable Missions',
+}
+
+function categoryLabel(category: string) {
+  return (
+    categoryLabels[category] ??
+    category
+      .replace(/^LTE_/i, '')
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  )
 }
 
 export function RouteComponent() {
@@ -141,7 +155,7 @@ function Content() {
               key={category}
             >
               <h2 className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {categoryLabels[category] ?? category} · {quests.length}
+                {categoryLabel(category)} · {quests.length}
               </h2>
               <div className="grid gap-2 xl:grid-cols-2">
                 {quests.map((quest) => (

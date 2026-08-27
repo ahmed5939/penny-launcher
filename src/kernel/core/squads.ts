@@ -49,7 +49,9 @@ export type SquadsAssignNotification = {
   errorMessage?: string
 }
 
-const knownSquadIds = new Set(survivorSquads.map((squad) => squad.id))
+const knownSquadIds = new Map(
+  survivorSquads.map((squad) => [squad.id.toLowerCase(), squad.id])
+)
 
 /**
  * Survivor squad management.
@@ -121,10 +123,11 @@ export class Squads {
        * Heroes use the same squad mechanism for their own loadouts, so an
        * unrecognised squad id means this worker is not a survivor slot.
        */
-      const squadId =
-        rawSquadId.length > 0 && knownSquadIds.has(rawSquadId)
-          ? rawSquadId
-          : null
+      // Profile squad ids are not consistently cased. Keep the canonical id
+      // after a case-insensitive match so it maps to the correct card.
+      const squadId = rawSquadId
+        ? (knownSquadIds.get(rawSquadId.toLowerCase()) ?? null)
+        : null
 
       payload.survivors.push({
         itemId,

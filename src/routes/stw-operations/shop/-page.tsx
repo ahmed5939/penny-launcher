@@ -265,6 +265,9 @@ function OfferCard({
   /** X-Ray llamas advertise a generic grant; the roll is the real content. */
   const contents = offer.preroll ?? offer.itemGrants
   const isDiscounted = offer.finalPrice < offer.regularPrice
+  const purchaseLimit =
+    offer.dailyLimit || offer.weeklyLimit || offer.monthlyLimit
+  const soldOut = purchaseLimit > 0 && offer.purchased >= purchaseLimit
 
   return (
     <Panel>
@@ -293,6 +296,9 @@ function OfferCard({
                 `leaves ${dayjs(offer.saleExpiration).fromNow()}`,
               offer.dailyLimit > 0 && `${offer.dailyLimit}/day`,
               offer.weeklyLimit > 0 && `${offer.weeklyLimit}/week`,
+              offer.monthlyLimit > 0 && `${offer.monthlyLimit}/month`,
+              purchaseLimit > 0 &&
+                `${Math.min(offer.purchased, purchaseLimit)}/${purchaseLimit} purchased`,
             ]
               .filter(Boolean)
               .join(' · ') || 'No purchase limit'}
@@ -337,6 +343,7 @@ function OfferCard({
             isPurchaseLocked ||
             isPurchasing ||
             !offer.affordable ||
+            soldOut ||
             offer.currency === 'RealMoney'
           }
           onClick={onPurchase}
@@ -345,6 +352,8 @@ function OfferCard({
         >
           {isPurchasing ? (
             <UpdateIcon className="animate-spin" />
+          ) : soldOut ? (
+            'Purchased · limit reached'
           ) : offer.currency === 'RealMoney' ? (
             'Real money only'
           ) : offer.affordable ? (

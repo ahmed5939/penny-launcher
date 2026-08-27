@@ -53,6 +53,7 @@ function Content() {
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
 
   const {
+    alterationPools,
     entries,
     family,
     isLoading,
@@ -128,6 +129,7 @@ function Content() {
       )}
 
       <ItemDetailDialog
+        alterationPools={alterationPools}
         onOpenChange={(open) => {
           if (!open) {
             setDetail(null)

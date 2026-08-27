@@ -11,6 +11,7 @@ import { decodeItemTemplate } from '../../config/constants/fortnite/items'
 
 import {
   getQueryProfile,
+  getQueryProfileMainProfile,
   populatePrerolledOffers,
   purchaseCatalogEntry,
   setOpenCardPackBatch,
@@ -63,6 +64,8 @@ export type ShopOffer = {
   dailyLimit: number
   weeklyLimit: number
   monthlyLimit: number
+  /** Purchases already made during this offer's active limit window. */
+  purchased: number
   /** ISO date this specific offer stops being available. */
   saleExpiration: string | null
   itemGrants: Array<ShopGrant>
@@ -206,8 +209,12 @@ export class Shop {
       accountId: account.accountId,
     })
 
-    const [profile, catalog] = await Promise.all([
+    const [profile, commonCore, catalog] = await Promise.all([
       getQueryProfile({
+        accessToken,
+        accountId: account.accountId,
+      }),
+      getQueryProfileMainProfile({
         accessToken,
         accountId: account.accountId,
       }),
@@ -265,9 +272,31 @@ export class Shop {
         currency.quantity,
       ])
     )
+    const commonProfile = commonCore.data.profileChanges[0]?.profile
+    const purchaseCounts = new Map<string, number>()
+    const addPurchases = (values: Record<string, number> | undefined) => {
+      Object.entries(values ?? {}).forEach(([offerId, count]) => {
+        purchaseCounts.set(
+          offerId,
+          Math.max(purchaseCounts.get(offerId) ?? 0, count)
+        )
+      })
+    }
+
+    addPurchases(commonProfile?.stats.attributes.daily_purchases?.purchaseList)
+    addPurchases(commonProfile?.stats.attributes.weekly_purchases?.purchaseList)
+    addPurchases(commonProfile?.stats.attributes.monthly_purchases?.purchaseList)
+    Object.values(commonProfile?.items ?? {}).forEach((item) =>
+      addPurchases(item.attributes?.event_purchases)
+    )
 
     entry.expiration = catalog.data.expiration ?? null
-    entry.offers = Shop.parseCatalog(catalog.data, prerollsByOfferId, balances)
+    entry.offers = Shop.parseCatalog(
+      catalog.data,
+      prerollsByOfferId,
+      balances,
+      purchaseCounts
+    )
     entry.currencies.sort((currencyA, currencyB) =>
       currencyA.label.localeCompare(currencyB.label)
     )
@@ -278,7 +307,8 @@ export class Shop {
   private static parseCatalog(
     catalog: StorefrontCatalogResponse,
     prerollsByOfferId: Map<string, Array<ShopGrant>>,
-    balances: Map<string, number>
+    balances: Map<string, number>,
+    purchaseCounts: Map<string, number>
   ) {
     const offers: Array<ShopOffer> = []
 
@@ -318,6 +348,7 @@ export class Shop {
           dailyLimit: catalogEntry.dailyLimit,
           weeklyLimit: catalogEntry.weeklyLimit,
           monthlyLimit: catalogEntry.monthlyLimit,
+          purchased: purchaseCounts.get(catalogEntry.offerId) ?? 0,
           saleExpiration: price.saleExpiration ?? null,
           itemGrants: catalogEntry.itemGrants.map((grant) =>
             toGrant(grant.templateId, grant.quantity)

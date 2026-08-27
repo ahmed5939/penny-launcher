@@ -56,6 +56,40 @@ function accentForRarityName(name: string | null | undefined) {
   return type ? accentByRarity[type] ?? null : null
 }
 
+const alterationWords: Record<string, string> = {
+  afflicted: 'afflicted',
+  afflictedenemy: 'afflicted enemies',
+  critdmg: 'critical damage',
+  critrating: 'critical rating',
+  damage: 'damage',
+  headshotdamage: 'headshot damage',
+  knockbackaoe: 'area knockback',
+  ranged: 'ranged',
+  weapon: 'weapon',
+}
+
+/** Human fallback for alteration ids missing from the extracted name table. */
+function alterationName(templateId: string) {
+  const raw = (templateId.split(':').pop() ?? templateId)
+    .replace(/^aid_[ag]_/, '')
+    .replace(/_alt\d+$/i, '')
+  const words = raw
+    .split('_')
+    .filter((word) => word !== 'att' && word !== 'ondmg')
+    .map((word) => alterationWords[word.toLowerCase()] ?? word)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return words
+    ? words.charAt(0).toUpperCase() + words.slice(1)
+    : 'Unknown perk'
+}
+
+function displayAlteration(records: ItemRecordMap, templateId: string) {
+  return getItemRecord(records, templateId)?.name ?? alterationName(templateId)
+}
+
 export type ItemDetailSubject = {
   templateId: string
   /**
@@ -246,6 +280,37 @@ export function ItemDetailDialog({
                 </ul>
               </Section>
             )}
+
+            {!subject.alterations &&
+              record?.alterationRow &&
+              (alterationPools?.[record.alterationRow]?.length ?? 0) > 0 && (
+                <Section
+                  icon={Sparkles}
+                  title="Available perks"
+                >
+                  <ul className="space-y-1.5">
+                    {alterationPools?.[record.alterationRow]?.map(
+                      (slot, slotIndex) => (
+                        <li
+                          className="panel px-3 py-2"
+                          key={`${record.alterationRow}-${slotIndex}`}
+                        >
+                          <p className="section-label mb-1.5">
+                            Slot {slotIndex + 1}
+                            {slot.requiredLevel > 0 &&
+                              ` · unlocks at level ${slot.requiredLevel}`}
+                          </p>
+                          <p className="text-xs leading-relaxed text-muted-foreground">
+                            {[...new Set(slot.options.map((option) =>
+                              displayAlteration(records, option)
+                            ))].join(' · ')}
+                          </p>
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </Section>
+              )}
 
             {record?.perk && (
               <PerkBlock
@@ -481,7 +546,7 @@ function PerkRow({
         />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold">
-            {perkRecord?.name ?? alteration.split(':').pop()}
+            {displayAlteration(records, alteration)}
           </p>
 
           {Object.keys(upgrade).length > 0 && (
@@ -577,8 +642,7 @@ function PerkRow({
                 }}
                 type="button"
               >
-                {getItemRecord(records, option)?.name ??
-                  option.split(':').pop()}
+                {displayAlteration(records, option)}
               </button>
             ))}
           </div>
