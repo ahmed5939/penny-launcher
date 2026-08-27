@@ -122,10 +122,14 @@ export function resolveItemArt(
   const record = records ? getItemRecord(records, templateId) : null
 
   if (record) {
+    const image = templateId.startsWith('Hero:')
+      ? (record.largeImage ?? record.image)
+      : record.image
+
     return {
       accent: resolveAccent(templateId, resource),
       frame: assets(frameByRarity[resource.rarity] ?? 'c'),
-      imgUrl: record.image ? peglegImageURL(record.image) : undefined,
+      imgUrl: image ? peglegImageURL(image) : undefined,
       name: record.name,
       rarity: resource.rarity,
       /** The database name beats anything we decode ourselves. */

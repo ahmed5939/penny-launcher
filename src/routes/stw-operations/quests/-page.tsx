@@ -38,6 +38,8 @@ function categoryLabel(category: string) {
     categoryLabels[category] ??
     category
       .replace(/^LTE_/i, '')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/([A-Za-z])(\d)/g, '$1 $2')
       .replace(/_/g, ' ')
       .toLowerCase()
       .replace(/\b\w/g, (letter) => letter.toUpperCase())
@@ -264,6 +266,11 @@ function QuestCard({
                     records={records}
                     size="small"
                     templateId={reward.item}
+                    title={
+                      reward.item.startsWith('STWAccoladeReward:')
+                        ? 'Battle Pass XP'
+                        : undefined
+                    }
                   />
                   {reward.quantity.toLocaleString()}
                 </li>

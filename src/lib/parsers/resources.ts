@@ -65,6 +65,14 @@ export function parseResource({
     type: null,
   }
 
+  if (key.startsWith('STWAccoladeReward:')) {
+    data.imgUrl = assets('brxp')
+    data.name = 'Battle Pass XP'
+    data.type = 'resource'
+
+    return data
+  }
+
   const resource = getKey(newKey, resourcesJson)
 
   if (resource) {

@@ -154,6 +154,19 @@ function toGrant(templateId: string, quantity: number): ShopGrant {
   }
 }
 
+function usableExpiration(value: string | null | undefined) {
+  if (!value) return null
+
+  const timestamp = new Date(value).getTime()
+  const year = new Date(value).getUTCFullYear()
+
+  // Epic uses extreme min/max dates as “no expiry” sentinels. Rendering one
+  // produced strings such as “leaves in 7973 years”.
+  return Number.isFinite(timestamp) && year >= 2020 && year <= 2100
+    ? value
+    : null
+}
+
 export class Shop {
   static async request(accounts: Array<AccountData>) {
     accounts.forEach((account) => {
@@ -349,7 +362,7 @@ export class Shop {
           weeklyLimit: catalogEntry.weeklyLimit,
           monthlyLimit: catalogEntry.monthlyLimit,
           purchased: purchaseCounts.get(catalogEntry.offerId) ?? 0,
-          saleExpiration: price.saleExpiration ?? null,
+          saleExpiration: usableExpiration(price.saleExpiration),
           itemGrants: catalogEntry.itemGrants.map((grant) =>
             toGrant(grant.templateId, grant.quantity)
           ),

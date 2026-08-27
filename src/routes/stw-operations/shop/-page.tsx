@@ -229,7 +229,9 @@ function Content() {
                   isPurchasing={purchasingOfferId === offer.offerId}
                   key={offer.offerId}
                   offer={offer}
-                  onPurchase={() => handlePurchase(offer)}
+                  onPurchase={(title) =>
+                    handlePurchase({ ...offer, title })
+                  }
                   records={records}
                 />
               ))}
@@ -259,11 +261,23 @@ function OfferCard({
   isPurchaseLocked: boolean
   isPurchasing: boolean
   offer: ShopOffer
-  onPurchase: () => void
+  onPurchase: (title: string) => void
   records: ItemRecordMap
 }) {
   /** X-Ray llamas advertise a generic grant; the roll is the real content. */
   const contents = offer.preroll ?? offer.itemGrants
+  const primary = contents[0]
+  const primaryArt = primary
+    ? resolveItemArt(primary.templateId, records)
+    : null
+  const hasInternalTitle =
+    offer.title.includes('[VIRTUAL]') ||
+    offer.title.includes('GameItem:') ||
+    offer.title.includes('AccountResource:')
+  const offerLabel =
+    hasInternalTitle && primaryArt?.preferName
+      ? primaryArt.name
+      : offer.title
   const isDiscounted = offer.finalPrice < offer.regularPrice
   const purchaseLimit =
     offer.dailyLimit || offer.weeklyLimit || offer.monthlyLimit
@@ -272,19 +286,19 @@ function OfferCard({
   return (
     <Panel>
       <header className="flex items-start gap-3 border-b border-border/60 px-4 py-3">
-        {offer.itemGrants[0] && (
+        {primary && (
           <ItemIcon
             records={records}
             size="large"
-            templateId={offer.itemGrants[0].templateId}
-            title={offer.title}
+            templateId={primary.templateId}
+            title={offerLabel}
           />
         )}
 
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5">
             <span className="truncate text-[0.8125rem] font-medium">
-              {offer.title}
+              {offerLabel}
             </span>
             {offer.preroll && (
               <Sparkles className="size-3 shrink-0 text-primary" />
@@ -346,7 +360,7 @@ function OfferCard({
             soldOut ||
             offer.currency === 'RealMoney'
           }
-          onClick={onPurchase}
+          onClick={() => onPurchase(offerLabel)}
           size="sm"
           variant={offer.affordable ? 'default' : 'secondary'}
         >

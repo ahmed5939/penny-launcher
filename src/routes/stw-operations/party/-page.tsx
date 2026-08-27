@@ -5,7 +5,6 @@ import { Callout, PageHeader } from '../../../components/page'
 
 import { KickAllPartyCard } from './-kick-all-party'
 import { ClaimRewardsCard } from './-claim-rewards'
-import { InviteCard } from './-invite'
 import { LeavePartyCard } from './-leave-party'
 
 import { useClaimedRewardsNotifications } from './-hooks'
@@ -33,8 +32,6 @@ export function RouteComponent() {
         <LeavePartyCard />
         <ClaimRewardsCard />
       </div>
-
-      <InviteCard />
 
       <Callout
         tone="info"

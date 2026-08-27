@@ -9,15 +9,23 @@ import { peglegResourcesBaseURL } from '../../config/constants/pegleg'
 import { DataDirectory } from '../startup/data-directory'
 import { MainWindow } from '../startup/windows/main'
 
-const cacheVersion = 1
+const cacheVersion = 2
 
 /** The schedule shifts when Epic re-orders a season; check weekly. */
 const cacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000
 
 export type TimelineQuestline = {
+  name: string | null
   description: string | null
   eventFlag: string | null
   color: string | null
+  keyItems: Array<string>
+  startWeek: number | null
+  endWeek: number | null
+}
+
+export type TimelineEvent = TimelineQuestline & {
+  style: string | null
 }
 
 export type TimelineSeason = {
@@ -33,6 +41,7 @@ export type TimelineSeason = {
   /** One entry per week — the items that week's event shop stocks. */
   eventShop: Array<Array<string>>
   questlines: Array<TimelineQuestline>
+  events: Array<TimelineEvent>
   venturesModifiers: Array<string>
 }
 
@@ -50,11 +59,25 @@ type RawTimeline = {
     displayName?: string
     duration?: number
     eventShop?: Array<Array<string>>
+    events?: Array<{
+      color?: string
+      description?: string
+      displayName?: string
+      endWeek?: number
+      eventFlag?: string
+      keyItems?: Array<string>
+      startWeek?: number
+      style?: string
+    }>
     llamaType?: string
     questlines?: Array<{
       color?: string
       description?: string
+      displayName?: string
+      endWeek?: number
       eventFlag?: string
+      keyItems?: Array<string>
+      startWeek?: number
     }>
     style?: string
     venturesModifiers?: Array<string>
@@ -221,9 +244,23 @@ export class Timeline {
         llamaType: season.llamaType ?? null,
         eventShop: season.eventShop ?? [],
         questlines: (season.questlines ?? []).map((questline) => ({
+          name: questline.displayName ?? null,
           description: questline.description ?? null,
           eventFlag: questline.eventFlag ?? null,
           color: questline.color ?? null,
+          keyItems: questline.keyItems ?? [],
+          startWeek: questline.startWeek ?? null,
+          endWeek: questline.endWeek ?? null,
+        })),
+        events: (season.events ?? []).map((event) => ({
+          name: event.displayName ?? null,
+          description: event.description ?? null,
+          eventFlag: event.eventFlag ?? null,
+          color: event.color ?? null,
+          keyItems: event.keyItems ?? [],
+          startWeek: event.startWeek ?? null,
+          endWeek: event.endWeek ?? null,
+          style: event.style ?? null,
         })),
         venturesModifiers: season.venturesModifiers ?? [],
       } as TimelineSeason

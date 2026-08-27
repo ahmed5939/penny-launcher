@@ -94,7 +94,19 @@ function Content() {
 
       if (
         season.questlines.some((questline) =>
-          (questline.description ?? '').toLowerCase().includes(needle)
+          `${questline.name ?? ''} ${questline.description ?? ''}`
+            .toLowerCase()
+            .includes(needle)
+        )
+      ) {
+        return true
+      }
+
+      if (
+        season.events.some((event) =>
+          `${event.name ?? ''} ${event.description ?? ''}`
+            .toLowerCase()
+            .includes(needle)
         )
       ) {
         return true
@@ -256,10 +268,57 @@ function SeasonRow({
                 <ul className="space-y-1.5">
                   {season.questlines.map((questline, index) => (
                     <li
-                      className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2 text-xs leading-relaxed text-muted-foreground"
+                      className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2"
                       key={`${questline.eventFlag}-${index}`}
                     >
-                      {questline.description ?? questline.eventFlag}
+                      <p className="text-xs font-semibold text-foreground">
+                        {questline.name ??
+                          questline.eventFlag?.split('.').pop() ??
+                          'Questline'}
+                        <WeekRange entry={questline} />
+                      </p>
+                      {questline.description && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {questline.description}
+                        </p>
+                      )}
+                      <KeyItems
+                        items={questline.keyItems}
+                        onInspect={onInspect}
+                        records={records}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {season.events.length > 0 && (
+              <div className="space-y-2">
+                <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  <CalendarRange className="size-3" />
+                  Limited-time events
+                </p>
+                <ul className="grid gap-2 lg:grid-cols-2">
+                  {season.events.map((event, index) => (
+                    <li
+                      className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2"
+                      key={`${event.eventFlag}-${index}`}
+                    >
+                      <p className="text-xs font-semibold text-foreground">
+                        {event.name ?? event.eventFlag?.split('.').pop() ?? 'Event'}
+                        <WeekRange entry={event} />
+                      </p>
+                      {event.description && (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {event.description}
+                        </p>
+                      )}
+                      <KeyItems
+                        items={event.keyItems}
+                        onInspect={onInspect}
+                        records={records}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -299,5 +358,48 @@ function SeasonRow({
         )}
       </Panel>
     </li>
+  )
+}
+
+function WeekRange({
+  entry,
+}: {
+  entry: { startWeek: number | null; endWeek: number | null }
+}) {
+  if (entry.startWeek === null && entry.endWeek === null) return null
+
+  return (
+    <span className="ml-2 font-normal text-muted-foreground">
+      · week {entry.startWeek ?? 1}
+      {entry.endWeek !== null && entry.endWeek !== entry.startWeek
+        ? `–${entry.endWeek}`
+        : ''}
+    </span>
+  )
+}
+
+function KeyItems({
+  items,
+  onInspect,
+  records,
+}: {
+  items: Array<string>
+  onInspect: (subject: ItemDetailSubject) => void
+  records: ItemRecordMap
+}) {
+  if (items.length <= 0) return null
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {items.map((templateId) => (
+        <ItemTile
+          key={templateId}
+          onClick={() => onInspect({ templateId })}
+          records={records}
+          size="small"
+          templateId={templateId}
+        />
+      ))}
+    </div>
   )
 }
