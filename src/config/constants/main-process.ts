@@ -392,6 +392,7 @@ export enum ElectronAPIEventKeys {
   PluginReadme = 'plugins:readme',
   PluginsDirectoryOpen = 'plugins:directory:open',
   PluginOpen = 'plugins:open',
+  PluginNavigate = 'plugins:navigate',
 
   /**
    * Endurance

@@ -24,6 +24,7 @@ import path from 'node:path'
 
 import { app, shell } from 'electron'
 
+import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 import { DataDirectory } from './data-directory'
 import { MainWindow } from './windows/main'
 
@@ -445,9 +446,16 @@ export class PluginManager {
         getMainWindow: () => MainWindow.instance ?? null,
         openRoute: (route) => {
           if (!route.startsWith('/')) return
-          MainWindow.instance?.webContents.executeJavaScript(
-            `window.history.pushState({}, '', ${JSON.stringify(route)}); window.dispatchEvent(new PopStateEvent('popstate'))`
-          )
+
+          const window = MainWindow.instance
+
+          if (!window || window.isDestroyed()) return
+
+          // Let the renderer's router own navigation. Injecting pushState into
+          // a packaged file:// page turns the current URL into a nonexistent
+          // Windows filesystem path; a subsequent reload then loses the route
+          // and returns to the home screen.
+          window.webContents.send(ElectronAPIEventKeys.PluginNavigate, route)
         },
       })
 

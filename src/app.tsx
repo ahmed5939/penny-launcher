@@ -37,6 +37,14 @@ dayjs.extend(utc)
 const root = createRoot(document.getElementById('app')!)
 const router = createRouter({ routeTree })
 
+// Add-ons request routes through the main process. Keep that bridge inside
+// TanStack Router so packaged file:// URLs are never manipulated directly.
+window.electronAPI.pluginNavigation(async (route) => {
+  if (!route.startsWith('/')) return
+
+  router.history.push(route)
+})
+
 /**
  * Locale data is fetched lazily, so give the starting language a chance to
  * land before the first paint — it is a single small chunk, far cheaper than

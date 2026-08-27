@@ -3,6 +3,12 @@ import type { MarketplacePlugin, PluginSummary } from '../../types/plugins'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
+function errorMessage(error: unknown) {
+  return error instanceof Error && error.message
+    ? error.message
+    : 'IPC request failed.'
+}
+
 export function usePluginsData() {
   const [installed, setInstalled] = useState<Array<PluginSummary> | null>(null)
   const [marketplace, setMarketplace] = useState<Array<MarketplacePlugin> | null>(null)
@@ -18,9 +24,10 @@ export function usePluginsData() {
         setInstalled(installedPlugins)
         setMarketplace(marketplacePlugins)
       })
-      .catch(() => {
+      .catch((error) => {
         setInstalled([])
         setMarketplace([])
+        toast(`Add-ons could not be loaded: ${errorMessage(error)}`)
       })
   }, [])
 
@@ -39,7 +46,9 @@ export function usePluginsData() {
         toast(`${plugin.name} installed.`)
         refresh()
       })
-      .catch(() => toast(`${plugin.name} could not be installed.`))
+      .catch((error) =>
+        toast(`${plugin.name} could not be installed: ${errorMessage(error)}`)
+      )
       .finally(() => setPendingId(null))
   }, [refresh])
 
@@ -52,8 +61,8 @@ export function usePluginsData() {
           toast(result.error ?? `${plugin.name} could not be opened.`)
         }
       })
-      .catch(() => {
-        toast(`${plugin.name} could not be opened.`)
+      .catch((error) => {
+        toast(`${plugin.name} could not be opened: ${errorMessage(error)}`)
       })
       .finally(() => {
         setPendingId(null)
@@ -69,7 +78,9 @@ export function usePluginsData() {
         }
         setReadme({ name: plugin.name, content: result.content })
       })
-      .catch(() => toast('README could not be opened.'))
+      .catch((error) =>
+        toast(`README could not be opened: ${errorMessage(error)}`)
+      )
   }, [])
 
   return {

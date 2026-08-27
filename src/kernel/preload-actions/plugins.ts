@@ -5,6 +5,7 @@ import type {
   PluginReadmeResult,
   PluginSummary,
 } from '../../types/plugins'
+import type { IpcRendererEvent } from 'electron'
 
 import { ipcRenderer } from 'electron'
 
@@ -34,4 +35,19 @@ export function openPluginsDirectory(): Promise<void> {
 
 export function openPlugin(pluginId: string): Promise<PluginOpenResult> {
   return ipcRenderer.invoke(ElectronAPIEventKeys.PluginOpen, pluginId)
+}
+
+export function pluginNavigation(
+  callback: (route: string) => Promise<void>,
+) {
+  const listener = (_: IpcRendererEvent, route: string) => {
+    callback(route).catch(console.error)
+  }
+
+  ipcRenderer.on(ElectronAPIEventKeys.PluginNavigate, listener)
+
+  return {
+    removeListener: () =>
+      ipcRenderer.removeListener(ElectronAPIEventKeys.PluginNavigate, listener),
+  }
 }
