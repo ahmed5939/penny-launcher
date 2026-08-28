@@ -36,6 +36,7 @@ describe('navigation', () => {
 
     expect(betaItems.map((item) => item.to)).toEqual([
       '/stw-operations/endurance',
+      '/stw-operations/leaderboards',
       '/stw-operations/outpost',
     ])
   })

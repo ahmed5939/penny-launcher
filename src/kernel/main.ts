@@ -54,6 +54,7 @@ import { FortniteLauncher } from './core/launcher'
 import { FriendsManager } from './core/friends-manager'
 import { Inventory } from './core/inventory'
 import { ItemActions } from './core/item-actions'
+import { Leaderboard } from './core/leaderboard'
 import { Loadouts } from './core/loadouts'
 import { MCPClientQuestLogin } from './core/mcp'
 import { MatchmakingTrack } from './core/matchmaking-track'
@@ -850,6 +851,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(ElectronAPIEventKeys.TimelineRequest, async () => {
       await Timeline.request()
     })
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LeaderboardRequest,
+      async (_, metric: string, force?: boolean) => {
+        await Leaderboard.request(metric, Boolean(force))
+      }
+    )
 
     secureIpcOn(
       ElectronAPIEventKeys.LoadoutsRequest,

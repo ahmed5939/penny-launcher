@@ -26,6 +26,7 @@ import {
   Swords,
   Ticket,
   Trash2,
+  Trophy,
   UserPlus,
   Users,
   UserX,
@@ -202,6 +203,12 @@ export const navSections: Array<NavSection> = [
         icon: Store,
         label: 'sidebar:stw-operations.options.shop',
         to: '/stw-operations/shop',
+      },
+      {
+        beta: true,
+        icon: Trophy,
+        label: 'stw-operations:leaderboards.title',
+        to: '/stw-operations/leaderboards',
       },
       {
         can: 'timeline',
