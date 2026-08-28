@@ -15,6 +15,7 @@ import { parseCustomDisplayName } from '../../lib/utils'
 
 export function useAccountList() {
   const accountList = useAccountListStore((state) => state.accounts)
+  const idsList = useAccountListStore((state) => state.idsList)
   /**
    * Writes the global scope rather than a picker-local `selected` field. This
    * is the whole point of the change: choosing here now reaches every tool
@@ -24,7 +25,9 @@ export function useAccountList() {
     useAccountScope()
   const selected = usePrimaryAccount()
   const [open, setOpen] = useState(false)
-  const accounts = Object.values(accountList)
+  const accounts = idsList
+    .map((accountId) => accountList[accountId])
+    .filter((account): account is AccountData => account !== undefined)
 
   const createKeywords = (account: AccountData) => {
     const _keys: Array<string> = [account.displayName]

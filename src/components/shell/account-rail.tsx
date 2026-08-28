@@ -1,26 +1,39 @@
-import type { NavItem } from '../../config/navigation'
+import type { MenuKey, NavItem } from '../../config/navigation'
 
 import { Link, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
-import { navSections } from '../../config/navigation'
+import { navSections, resolveNavLabel, visibilityKeys } from '../../config/navigation'
 import { AutomationStatusType } from '../../config/constants/automation'
 
 import { BetaBadge } from '../navigation/beta-badge'
 import { StatusDot } from '../page'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '../ui/context-menu'
+
+import { RailAccountSwitcher } from './rail-account-switcher'
+import { RailCustomize } from './rail-customize'
 
 import { useGetAccounts } from '../../hooks/accounts'
 import { useGetAutomationDataStatus } from '../../hooks/stw-operations/automation'
 import { useGetTaxiServiceDataStatus } from '../../hooks/stw-operations/taxi-service'
-import { useCustomizableMenuSettingsVisibility } from '../../hooks/settings'
+import {
+  useCustomizableMenuSettingsActions,
+  useCustomizableMenuSettingsVisibility,
+} from '../../hooks/settings'
 
 import { cn } from '../../lib/utils'
 
 /**
- * Navigation rail. Destinations only, grouped by job.
+ * Navigation rail: accounts, then destinations, then customize.
  *
- * Quiet group labels replace a wall of 20 undifferentiated links. Every
- * destination is still one click — the labels are not menus.
+ * The roster sits at the top so switching accounts is one click, the way
+ * the rest of the desktop launcher is. Destinations honour the customizable
+ * menu; hidden tools stay in ⌘K rather than disappearing from the app.
  */
 export function AccountRail() {
   const { t } = useTranslation(['sidebar', 'general'])
@@ -35,8 +48,10 @@ export function AccountRail() {
   const statuses = { 'auto-kick': autoKick, 'taxi-service': taxi }
 
   return (
-    <aside className="chrome-surface flex w-48 shrink-0 flex-col border-r border-border/60">
-      <nav className="flex-1 overflow-y-auto px-1.5 py-1.5">
+    <aside className="chrome-surface flex w-52 shrink-0 flex-col border-r border-border/60">
+      <RailAccountSwitcher />
+
+      <nav className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5">
         {navSections.map((section, sectionIndex) => {
           const validateChildren = section.items.length > 0
 
@@ -62,13 +77,14 @@ export function AccountRail() {
                   <div className="mx-2 my-1.5 h-px bg-border/60" />
                 )}
                 <NavRow
+                  hideKeys={section.can ? [section.can] : []}
                   isActive={pathname === section.to}
                   item={{
                     icon: section.icon,
                     label: section.label,
                     to: section.to,
                   }}
-                  label={t(section.label)}
+                  label={resolveNavLabel(t, section.label)}
                 />
               </div>
             ) : null
@@ -84,12 +100,13 @@ export function AccountRail() {
               {items.map((item) => (
                 <NavRow
                   key={`${item.to}-${item.label}`}
+                  hideKeys={visibilityKeys(item)}
                   // Match up to the first `$param`, so a parameterized entry
                   // highlights for every value of the parameter.
                   isActive={pathname.startsWith(item.to.split('/$')[0])}
                   isDisabled={item.needsAccount && !areThereAccounts}
                   item={item}
-                  label={item.label === 'EULA' ? 'EULA' : t(item.label)}
+                  label={resolveNavLabel(t, item.label)}
                   status={item.status ? statuses[item.status] : null}
                 />
               ))}
@@ -97,23 +114,29 @@ export function AccountRail() {
           )
         })}
       </nav>
+
+      <RailCustomize />
     </aside>
   )
 }
 
 function NavRow({
+  hideKeys,
   isActive,
   isDisabled,
   item,
   label,
   status,
 }: {
+  hideKeys: Array<MenuKey>
   isActive: boolean
   isDisabled?: boolean
   item: Pick<NavItem, 'beta' | 'icon' | 'params' | 'to'> & { label: string }
   label: string
   status?: AutomationStatusType | null
 }) {
+  const { t } = useTranslation(['sidebar'])
+  const { updateMenuOption } = useCustomizableMenuSettingsActions()
   const Icon = item.icon
 
   const body = (
@@ -139,11 +162,9 @@ function NavRow({
     isDisabled && 'pointer-events-none opacity-45'
   )
 
-  if (isDisabled) {
-    return <span className={className}>{body}</span>
-  }
-
-  return (
+  const row = isDisabled ? (
+    <span className={className}>{body}</span>
+  ) : (
     <Link
       to={item.to}
       params={item.params}
@@ -154,5 +175,28 @@ function NavRow({
       )}
       {body}
     </Link>
+  )
+
+  if (hideKeys.length === 0) {
+    return row
+  }
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div>{row}</div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem
+          onSelect={() => {
+            for (const key of hideKeys) {
+              updateMenuOption(key)(false)
+            }
+          }}
+        >
+          {t('sidebar:customize.hide')}
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

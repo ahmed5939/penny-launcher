@@ -49,6 +49,7 @@ export const customizableMenuSettingsRelations: Record<
     'autoPinUrns',
     'autoLlamas',
     'outpost',
+    'endurance',
   ],
   accountManagement: [
     'vbucksInformation',
@@ -68,6 +69,27 @@ export const customizableMenuSettingsRelations: Record<
   ],
 }
 
+export function isMenuOptionVisible(
+  data: CustomizableMenuSettings,
+  key: keyof CustomizableMenuSettings,
+  validateItems = false,
+): boolean {
+  const keyValidation = data[key] ?? true
+
+  if (validateItems) {
+    const childItems =
+      customizableMenuSettingsRelations[
+        key as keyof typeof customizableMenuSettingsRelations
+      ]
+
+    if (childItems !== undefined) {
+      return childItems.some((item) => data[item] ?? true) && keyValidation
+    }
+  }
+
+  return keyValidation
+}
+
 export const useCustomizableMenuSettingsStore =
   create<CustomizableMenuSettingsState>()(
     immer((set) => ({
@@ -80,7 +102,7 @@ export const useCustomizableMenuSettingsStore =
         set((state) => {
           state.data[key] = visibility
 
-          window.electronAPI.customizableMenuDataUpdate(key, visibility)
+          window.electronAPI?.customizableMenuDataUpdate(key, visibility)
         })
       },
     })),
