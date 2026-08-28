@@ -1,4 +1,5 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
+import dayjs from 'dayjs'
 import { Coins } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import Masonry from 'react-responsive-masonry'
@@ -6,11 +7,15 @@ import Masonry from 'react-responsive-masonry'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import {
+  Chip,
   PageHeader,
   Panel,
 } from '../../../components/page'
 
-import { VBucksInformationData } from '../../../state/management/vbucks-information'
+import type {
+  VBucksInformationData,
+  VBucksInformationPurchase,
+} from '../../../state/management/vbucks-information'
 
 import { useParseAccountInfo, useVBucksInformationData } from './-hooks'
 
@@ -19,6 +24,38 @@ import { assets } from '../../../lib/repository'
 import { parseCustomDisplayName } from '../../../lib/utils'
 
 const vbucksImageUrl = assets('currency_mtxswap')
+
+/**
+ * The standard V-Bucks bundles, by granted amount — used to name history
+ * entries ("2,800 V-Bucks") instead of showing a bare number.
+ */
+const KNOWN_BUNDLES: Array<[number, string]> = [
+  [13500, '13,500 V-Bucks'],
+  [5000, '5,000 V-Bucks'],
+  [2800, '2,800 V-Bucks'],
+  [1000, '1,000 V-Bucks'],
+]
+
+function bundleLabel(amount: number): string {
+  return (
+    KNOWN_BUNDLES.find(([value]) => value === amount)?.[1] ??
+    `${numberWithCommaSeparator(amount)} V-Bucks`
+  )
+}
+
+function bundleCounts(
+  history: Array<VBucksInformationPurchase>,
+): Array<{ amount: number; count: number }> {
+  const counts = new Map<number, number>()
+
+  for (const purchase of history) {
+    counts.set(purchase.amount, (counts.get(purchase.amount) ?? 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .map(([amount, count]) => ({ amount, count }))
+    .sort((a, b) => b.amount - a.amount)
+}
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar', 'account-management'])
@@ -181,6 +218,47 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
                 </li>
               ))}
             </ul>
+          )}
+
+          {breakdown.purchaseHistory.length > 0 && (
+            <div className="mt-3 border-t border-border/40 pt-2">
+              <p className="micro-label text-muted-foreground">
+                Purchase history · {breakdown.purchaseCount}{' '}
+                {breakdown.purchaseCount === 1 ? 'purchase' : 'purchases'}
+              </p>
+
+              {bundleCounts(breakdown.purchaseHistory).length > 0 && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {bundleCounts(breakdown.purchaseHistory).map(
+                    ({ amount, count }) => (
+                      <Chip key={amount} tone={count > 1 ? 'accent' : 'neutral'}>
+                        {bundleLabel(amount)}
+                        {count > 1 && ` ×${count}`}
+                      </Chip>
+                    ),
+                  )}
+                </div>
+              )}
+
+              <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto pr-1">
+                {breakdown.purchaseHistory.map((purchase, index) => (
+                  <li
+                    className="flex items-center justify-between gap-3 text-xs"
+                    key={`${purchase.date ?? 'unknown'}-${index}`}
+                  >
+                    <span className="min-w-0 truncate text-muted-foreground">
+                      {purchase.date
+                        ? dayjs(purchase.date).format('MMM D, YYYY')
+                        : 'Unknown date'}
+                      {purchase.platform && ` · ${purchase.platform}`}
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums">
+                      {numberWithCommaSeparator(purchase.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
       )}

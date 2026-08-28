@@ -45,9 +45,14 @@ type MainProfileStats = {
   mtx_platform?: string;
   mtx_purchase_history?: {
     purchases?: Array<{
-      lootResult?: Array<unknown>;
+      appStore?: string;
+      lootResult?: Array<{
+        itemType?: string;
+        quantity?: number;
+      }>;
       mtxQuantity?: number;
       platform?: string;
+      purchaseDate?: string;
       quantity?: number;
       totalMtxPaid?: number;
     }>;
@@ -153,34 +158,34 @@ export class VBucksInformation {
           });
 
           /**
-           * Purchase history sits in the profile stats — every past
-           * real-money purchase with its platform and bundle size.
+           * Full purchase history — every real-money V-Bucks purchase the
+           * profile records. The granted bundle size comes from the
+           * loot result's currency grant when present, falling back to
+           * whatever amount field the record carries.
            */
-          for (const purchase of stats.attributes.mtx_purchase_history
-            ?.purchases ?? []) {
-            const quantity =
-              purchase.totalMtxPaid ??
-              purchase.quantity ??
-              purchase.mtxQuantity ??
-              0;
+          const purchaseHistory = (stats.attributes.mtx_purchase_history
+            ?.purchases ?? [])
+            .map((purchase) => {
+              const currencyGrant = purchase.lootResult?.find((entry) =>
+                entry.itemType?.startsWith("Currency:Mtx"),
+              );
 
-            if (quantity <= 0) {
-              continue;
-            }
+              const amount =
+                currencyGrant?.quantity ??
+                purchase.totalMtxPaid ??
+                purchase.quantity ??
+                purchase.mtxQuantity ??
+                0;
 
-            const platform = purchase.lootResult?.length
-              ? "Store purchase"
-              : `${getPlatformName(purchase.platform ?? "Unknown")} — purchased`;
-            const groupKey = `history-${quantity}-${platform}`;
-
-            sources[groupKey] ??= {
-              amount: quantity,
-              count: 0,
-              platform: `${platform} (history)`,
-              type: "purchased",
-            };
-            sources[groupKey].count++;
-          }
+              return {
+                amount,
+                date: purchase.purchaseDate ?? null,
+                platform:
+                  purchase.platform ?? purchase.appStore ?? null,
+              };
+            })
+            .filter((purchase) => purchase.amount > 0)
+            .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
 
           const breakdown: VBucksInformationBreakdown = {
             complimentary,
@@ -196,6 +201,8 @@ export class VBucksInformation {
             giftsRemaining:
               stats.attributes.gift_history?.num_gifts_remaining ?? null,
             purchased,
+            purchaseCount: purchaseHistory.length,
+            purchaseHistory,
             sources: Object.values(sources).sort((a, b) => b.amount - a.amount),
             total: purchased + earned + complimentary,
           };

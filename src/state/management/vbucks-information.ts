@@ -14,6 +14,13 @@ export type VBucksInformationSource = {
   type: 'complimentary' | 'earned' | 'purchased'
 }
 
+/** One real-money V-Bucks purchase, ungrouped, newest first. */
+export type VBucksInformationPurchase = {
+  amount: number
+  date: string | null
+  platform: string | null
+}
+
 export type VBucksInformationBreakdown = {
   complimentary: number
   creatorCode: string | null
@@ -23,6 +30,8 @@ export type VBucksInformationBreakdown = {
   giftsAllowed: boolean
   giftsRemaining: number | null
   purchased: number
+  purchaseCount: number
+  purchaseHistory: Array<VBucksInformationPurchase>
   sources: Array<VBucksInformationSource>
   total: number
 }
