@@ -14,9 +14,10 @@ Endurance with the currently selected account.
 
 ## Install and use
 
-Open **Add-ons**, choose **Discover**, review this README and the source, then
-select **Install**. The add-on appears under **Installed**, where **Open** takes
-you to its controls.
+Open **Add-ons**, search if you need to, review this README and the source,
+then select **Install**. The add-on appears under **Installed**, where
+**Open** takes you to its controls. If Penny DB is unreachable, this package
+still appears because it ships with Penny.
 
 Automation controls your game window. Test calibration with supervision before
 leaving a run unattended.

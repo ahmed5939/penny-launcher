@@ -435,6 +435,42 @@ process.on('uncaughtExceptionMonitor', (error) => {
       import('./startup/plugins').then(({ PluginManager }) => PluginManager.open(pluginId))
     )
 
+    secureIpcHandle(ElectronAPIEventKeys.PluginUninstall, (_, pluginId: string) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.uninstall(pluginId))
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.PluginUpdate, (_, pluginId: string) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.update(pluginId))
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.PluginSetEnabled,
+      (_, pluginId: string, enabled: boolean) =>
+        import('./startup/plugins').then(({ PluginManager }) =>
+          PluginManager.setEnabled(pluginId, enabled)
+        )
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.PluginMarketplaceRefresh, () =>
+      import('./startup/plugins').then(({ PluginManager }) =>
+        PluginManager.marketplace(true)
+      )
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.PluginMarketplaceSettingsGet, () =>
+      import('./startup/plugins').then(({ PluginManager }) =>
+        PluginManager.getSettings()
+      )
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.PluginMarketplaceSettingsUpdate,
+      (_, patch: { allowUnsignedRemote?: boolean; catalogUrl?: string }) =>
+        import('./startup/plugins').then(({ PluginManager }) =>
+          PluginManager.updateSettings(patch)
+        )
+    )
+
     /**
      * Endurance
      */

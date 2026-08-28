@@ -393,6 +393,12 @@ export enum ElectronAPIEventKeys {
   PluginsDirectoryOpen = 'plugins:directory:open',
   PluginOpen = 'plugins:open',
   PluginNavigate = 'plugins:navigate',
+  PluginUninstall = 'plugins:uninstall',
+  PluginUpdate = 'plugins:update',
+  PluginSetEnabled = 'plugins:set-enabled',
+  PluginMarketplaceRefresh = 'plugins:marketplace:refresh',
+  PluginMarketplaceSettingsGet = 'plugins:marketplace:settings:get',
+  PluginMarketplaceSettingsUpdate = 'plugins:marketplace:settings:update',
 
   /**
    * Endurance

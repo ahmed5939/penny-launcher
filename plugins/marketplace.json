@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-28T00:00:00.000Z",
+  "plugins": [
+    {
+      "id": "endurance",
+      "name": "Endurance Automation",
+      "version": "1.0.0",
+      "description": "Starts Storm Shield Endurance, waits for completion, claims rewards and repeats for the currently scoped account.",
+      "author": "Penny contributors",
+      "category": "Automation",
+      "homepage": "https://github.com/ahmed5939/penny-launcher/tree/main/plugins/marketplace/endurance",
+      "repository": "https://github.com/ahmed5939/penny-launcher/tree/main/plugins/marketplace/endurance",
+      "minLauncherVersion": "1.0.0",
+      "bundled": true,
+      "screenshots": []
+    }
+  ]
+}

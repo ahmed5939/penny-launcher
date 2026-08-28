@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pennydb.net/schemas/marketplace.json",
+  "title": "Penny Launcher marketplace catalog",
+  "description": "Host this document at https://pennydb.net/api/marketplace (or any HTTPS URL the launcher is configured to fetch). Adding a plugin here lists it in Penny without a launcher rebuild.",
+  "type": "object",
+  "required": ["plugins"],
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Catalog format version. Launchers understand 1 and ignore unknown fields."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this catalog was published."
+    },
+    "plugins": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/plugin" }
+    }
+  },
+  "$defs": {
+    "plugin": {
+      "type": "object",
+      "required": ["id", "name"],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]{1,64}$",
+          "description": "Stable add-on id. Must match plugin.json id inside the archive."
+        },
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "description": "Semver, e.g. 1.2.0" },
+        "description": { "type": "string" },
+        "author": { "type": "string" },
+        "category": { "type": "string" },
+        "homepage": { "type": "string", "format": "uri" },
+        "repository": { "type": "string", "format": "uri" },
+        "readmeUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "HTTPS README shown when the package is not installed yet."
+        },
+        "minLauncherVersion": {
+          "type": "string",
+          "description": "Oldest Penny version that may install this listing."
+        },
+        "screenshots": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "string", "format": "uri" },
+          "description": "HTTPS images on pennydb.net or raw.githubusercontent.com (renderer CSP)."
+        },
+        "bundled": {
+          "type": "boolean",
+          "description": "Also ships inside the launcher. Install copies the local folder when no newer remote archive is listed."
+        },
+        "download": {
+          "description": "npm-style .tgz (gzip ustar). Relative URLs resolve against the catalog URL.",
+          "oneOf": [
+            { "type": "string", "format": "uri" },
+            {
+              "type": "object",
+              "required": ["url"],
+              "properties": {
+                "url": { "type": "string" },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-fA-F]{64}$",
+                  "description": "SHA-256 of the archive bytes, lowercase hex."
+                },
+                "signature": {
+                  "type": "string",
+                  "description": "Optional base64 Ed25519 signature of the 32-byte SHA-256 digest."
+                },
+                "format": { "type": "string", "enum": ["tarball"] }
+              }
+            }
+          ]
+        },
+        "downloadUrl": { "type": "string" },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$"
+        },
+        "integrity": {
+          "type": "object",
+          "properties": {
+            "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+            "signature": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
