@@ -19,6 +19,7 @@ import { FetchAlertsButton } from './-index/-components/-fetch-alerts-button'
 import { HomeGameInstall } from './-index/-game-install'
 import { HomeHero } from './-index/-hero'
 import { HomeAlerts } from './-index/-home/-index'
+import { PennyDBMissionBoard } from './-index/-home/-pennydb-board'
 import { AlertsDone } from './-index/alerts-done'
 // import { HeaderNavigation } from './-index/-header-navigation'
 import { Route as RootRoute } from './__root'
@@ -100,6 +101,7 @@ const MainContent = memo(() => {
               <AutomationChips />
               <div className="mt-5">
                 <HomeAlerts />
+                <PennyDBMissionBoard />
               </div>
             </>
           )}

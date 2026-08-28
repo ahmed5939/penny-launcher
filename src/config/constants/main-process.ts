@@ -170,6 +170,8 @@ export enum ElectronAPIEventKeys {
   HomeWorldInfoResponse = 'home:world-info:response',
   HomeFetchPlayerRequest = 'home:fetch-player:request',
   HomeFetchPlayerResponse = 'home:fetch-player:response',
+  HomePennyDBMissionsRequest = 'home:pennydb-missions:request',
+  HomePennyDBMissionsResponse = 'home:pennydb-missions:response',
 
   WorldInfoRequestData = 'advanced-mode:world-info:request:data',
   WorldInfoResponseData = 'advanced-mode:world-info:response:data',

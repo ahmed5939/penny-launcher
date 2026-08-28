@@ -167,6 +167,29 @@
       "llamas": "Upgrade llamas",
       "perk-up": "Uncommon PERK-UP!"
     },
+    "mission-board": {
+      "title": "Daily missions",
+      "source": "Penny DB",
+      "refresh": "Refresh",
+      "updated": "Updated {{time}}",
+      "empty": "No missions match this filter",
+      "error": "Couldn't load Penny DB missions",
+      "filter-all": "All",
+      "filter-alerts": "Alerts",
+      "filter-vbucks": "V-Bucks",
+      "zone-all": "All zones",
+      "vbucks-count": "{{count}} V-Bucks",
+      "alerts-count": "{{count}} alerts",
+      "open-site": "Penny DB",
+      "alert": "Alert",
+      "zones": {
+        "stonewood": "Stonewood",
+        "plankerton": "Plankerton",
+        "canny-valley": "Canny Valley",
+        "twine-peaks": "Twine Peaks",
+        "ventures": "Ventures"
+      }
+    },
     "tabs": {
       "play": "Home",
       "missions": "Missions",
