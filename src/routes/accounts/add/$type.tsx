@@ -27,10 +27,9 @@ export const Route = createRoute({
 /**
  * One page for linking an account, whatever the credential.
  *
- * The three sign-in methods used to be three separate sidebar destinations —
- * an Aerial inheritance that made "add an account" look like three different
- * chores. They are one chore with three ways in, so the method is picked
- * here, in place, and the URL still carries the type for deep links.
+ * Four ways in (authorization code, exchange code, device auth, Aerial
+ * import). The method is picked here; the URL still carries the type for
+ * deep links.
  */
 
 type MethodType = 'authorization-code' | 'exchange-code' | 'device-auth'
@@ -48,21 +47,21 @@ const methods: Array<Method> = [
     type: 'authorization-code',
     icon: KeyRound,
     labelKey: 'accounts.options.auth',
-    hint: 'Sign in on epicgames.com and paste the code it gives you. The quickest way in.',
+    hint: 'Sign in on epicgames.com and paste the code.',
     component: <AuthorizationCodePage />,
   },
   {
     type: 'exchange-code',
     icon: UserPlus,
     labelKey: 'accounts.options.exchange',
-    hint: 'Paste an exchange code — or generate one from an account already linked here.',
+    hint: 'Paste an exchange code, or generate one from an account already here.',
     component: <ExchangeCodePage />,
   },
   {
     type: 'device-auth',
     icon: Smartphone,
     labelKey: 'accounts.options.device',
-    hint: 'Enter the account ID, device ID and secret from a saved device auth.',
+    hint: 'Account ID, device ID, and secret from a saved device auth.',
     component: <DeviceAuthPage />,
   },
 ]
@@ -80,20 +79,12 @@ function ComponentRoute() {
     <>
       <PageHeader
         icon={UserPlus}
-        section={t('accounts.title', {
-          ns: 'sidebar',
-        })}
         title="Add account"
-        description="Link an Epic Games account to the launcher. Every method ends in the same place — pick whichever credential you have at hand."
+        description="Same four methods as before — pick the credential you have."
       />
 
       <div className="flex w-full max-w-4xl flex-col gap-6 lg:flex-row lg:items-start">
-        {/*
-          The method rail. Cards rather than a Segmented: a first-time user
-          does not know these words, so each option carries the sentence
-          that tells them whether it is theirs.
-        */}
-        <div className="flex shrink-0 flex-col gap-2 lg:w-72">
+        <div className="flex shrink-0 flex-col gap-2 lg:w-64">
           <div
             role="tablist"
             aria-label="Sign-in method"
@@ -109,7 +100,7 @@ function ComponentRoute() {
                   role="tab"
                   aria-selected={active}
                   className={cn(
-                    'panel-interactive flex items-start gap-3 p-3.5 text-left',
+                    'panel-interactive flex items-start gap-3 p-3 text-left',
                     active &&
                       'border-primary/50 bg-primary/[0.08] hover:bg-primary/[0.08]'
                   )}
@@ -123,13 +114,13 @@ function ComponentRoute() {
                 >
                   <span
                     className={cn(
-                      'grid size-9 shrink-0 place-items-center rounded-lg ring-1 ring-inset transition-colors',
+                      'grid size-8 shrink-0 place-items-center rounded-lg ring-1 ring-inset transition-colors',
                       active
                         ? 'bg-primary/15 text-primary ring-primary/25'
                         : 'bg-surface/70 text-muted-foreground ring-border/70'
                     )}
                   >
-                    <method.icon className="size-[1.125rem]" />
+                    <method.icon className="size-4" />
                   </span>
                   <span className="min-w-0">
                     <span
@@ -142,7 +133,7 @@ function ComponentRoute() {
                         ns: 'sidebar',
                       })}
                     </span>
-                    <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                    <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
                       {method.hint}
                     </span>
                   </span>
@@ -159,8 +150,8 @@ function ComponentRoute() {
 
           <ActionTile
             icon={Import}
-            title="Import from Aerial Launcher"
-            description="Already used Aerial on this PC? Bring every linked account over in one click."
+            title="Import from Aerial"
+            description="Bring every Aerial Launcher account on this PC across in one click."
             disabled={isImporting}
             onClick={importFromAerial}
             trailing={

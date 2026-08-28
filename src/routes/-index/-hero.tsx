@@ -54,7 +54,7 @@ export function HomeHero() {
       : t('home.ready')
 
   return (
-    <section className="relative mb-6 select-none overflow-hidden rounded-xl border border-border/70">
+    <section className="relative mb-4 select-none overflow-hidden rounded-xl border border-border/70">
       {/* Backdrop: brand gradient plus two soft light sources. */}
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(336_45%_10%)] via-[hsl(335_38%_7%)] to-[hsl(322_42%_9%)]" />
       <div className="absolute -right-24 -top-32 size-80 rounded-full bg-primary/20 blur-3xl" />
@@ -67,7 +67,7 @@ export function HomeHero() {
       <PennyRender className="absolute -bottom-16 -right-16 hidden h-[128%] w-auto opacity-[0.10] [mask-image:linear-gradient(to_left,black_30%,transparent_80%)] sm:block" />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
-      <div className="relative flex flex-col gap-7 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8">
+      <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-primary/80">
             {customProcessIsRunning && (
@@ -105,7 +105,7 @@ export function HomeHero() {
             )}
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-2.5">
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
             {!hasAccounts ? (
               <Button
                 className="h-11 rounded-lg bg-gradient-to-r from-brand-from to-brand-to px-7 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-black/40 hover:brightness-110"

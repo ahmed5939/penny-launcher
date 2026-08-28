@@ -5,7 +5,6 @@ import { UpdateIcon } from '@radix-ui/react-icons'
 import { Crown, RefreshCw, Swords, UserX, Users, X, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemTile } from '../../../components/items/item-tile'
@@ -46,12 +45,7 @@ export function RouteComponent() {
       <PageHeader
         icon={Swords}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.squad-presets')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('stw-operations.options.squad-presets')}
         description="All eight survivor squads. Click a slot to fill it, and match personalities to the squad lead for the full bonus."
       />
       <Content />

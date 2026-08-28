@@ -5,7 +5,6 @@ import { CheckCheck, Clock3, Compass, Play, ShieldAlert, Timer, Users, XCircle }
 import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs'
 import { Callout, EmptyState, PageHeader, Panel, StatRow, StatTile, StatusPill } from '../../../components/page'
@@ -23,7 +22,7 @@ export function RouteComponent() {
       <PageHeader
         icon={Compass}
         section={t('stw-operations.title')}
-        title={<span className="flex items-center gap-2">{t('stw-operations.options.expeditions')}<BetaBadge /></span>}
+        title={t('stw-operations.options.expeditions')}
         description="Refresh offers, build an eligible hero team, dispatch expeditions, and collect rewards."
       />
       <ExpeditionBoard />

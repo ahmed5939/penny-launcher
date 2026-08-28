@@ -1,15 +1,9 @@
 import { BellRing } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from '../../components/ui/alert'
 import { Button } from '../../components/ui/button'
 
 import { useCheckNewVersion } from './hooks'
-
 
 export function CheckNewVersion() {
   const { t } = useTranslation(['general'])
@@ -21,27 +15,27 @@ export function CheckNewVersion() {
   }
 
   return (
-    <div className="-mt-4 -mx-4 p-4 lg:-mt-6 lg:-mx-6 lg:p-6">
-      <Alert className="border-2 outline outline-offset-2 outline-[0.375rem] outline-muted-foreground/20 rounded">
-        <BellRing className="h-4 w-4" />
-        <AlertTitle>
+    <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2">
+      <BellRing className="size-4 shrink-0 text-primary" />
+      <p className="min-w-0 flex-1 text-sm">
+        <span className="font-semibold">
           {t('version.title', {
             version: data.version,
           })}
-        </AlertTitle>
-        <AlertDescription>
-          {t('version.description')}{' '}
-          <Button
-            className="px-0 underline whitespace-normal"
-            size="sm"
-            variant="link"
-            onClick={handleGoToNewRelease}
-            asChild
-          >
-            <a href={data.link}>{data.link}</a>
-          </Button>
-        </AlertDescription>
-      </Alert>
+        </span>
+        <span className="text-muted-foreground">
+          {' — '}
+          {t('version.description')}
+        </span>
+      </p>
+      <Button
+        className="shrink-0"
+        size="sm"
+        variant="secondary"
+        onClick={handleGoToNewRelease}
+      >
+        {t('version.action')}
+      </Button>
     </div>
   )
 }

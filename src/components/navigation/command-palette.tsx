@@ -66,7 +66,6 @@ export function CommandPalette({
         <CommandEmpty>{t('general:no-item-found')}</CommandEmpty>
 
         {navSections.map((section) => {
-          // See TopNav: child validation is meaningless for empty sections.
           const validateChildren = section.items.length > 0
 
           if (
@@ -84,7 +83,20 @@ export function CommandPalette({
               !(item.needsAccount && !areThereAccounts)
           )
 
-          if (items.length === 0) {
+          const sectionDestination =
+            items.length === 0 && section.to
+              ? [
+                  {
+                    beta: undefined,
+                    icon: section.icon,
+                    label: section.label,
+                    params: undefined,
+                    to: section.to,
+                  },
+                ]
+              : items
+
+          if (sectionDestination.length === 0) {
             return null
           }
 
@@ -93,7 +105,7 @@ export function CommandPalette({
               key={section.key}
               heading={t(section.label)}
             >
-              {items.map((item) => {
+              {sectionDestination.map((item) => {
                 const Icon = item.icon
                 const label =
                   item.label === 'EULA' ? 'EULA' : t(item.label)
@@ -113,7 +125,7 @@ export function CommandPalette({
                   >
                     <Icon className="size-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{label}</span>
-                    {item.beta && <BetaBadge />}
+                    {'beta' in item && item.beta && <BetaBadge />}
                   </CommandItem>
                 )
               })}

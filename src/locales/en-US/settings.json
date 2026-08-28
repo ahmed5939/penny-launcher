@@ -46,6 +46,10 @@
       },
       "tray": {
         "label": "Hide to system tray"
+      },
+      "discord-rpc": {
+        "label": "Discord Rich Presence",
+        "note": "Shows In launcher, In Save the World, or In Battle Royale on your Discord profile. Runs in Penny, never inside Fortnite."
       }
     }
   },

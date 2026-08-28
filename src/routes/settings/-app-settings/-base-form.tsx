@@ -206,6 +206,29 @@ export function AppSettingsBaseForm() {
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="discordRichPresence"
+            render={({ field }) => (
+              <FormItem className="flex items-start space-y-0">
+                <div className="pr-4">
+                  <FormLabel>
+                    {t('app-settings.form.discord-rpc.label')}
+                  </FormLabel>
+                  <span className="mt-1 block text-muted-foreground text-xs">
+                    {t('app-settings.form.discord-rpc.note')}
+                  </span>
+                </div>
+                <FormControl className="ml-auto">
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <Button
           type="submit"

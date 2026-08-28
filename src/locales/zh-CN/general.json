@@ -71,7 +71,8 @@
   },
   "version": {
     "title": "新版本 {{version}}",
-    "description": "您可以从这里下载新版本（.exe 文件）："
+    "description": "您可以从这里下载新版本（.exe 文件）：",
+    "action": "打开发布页"
   },
   "community-info": {
     "message": "Join our <2>Discord Community<1/></2> to know more about what's coming on next updates!!!"

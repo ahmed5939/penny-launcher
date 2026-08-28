@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { Switch } from '../../../components/ui/switch'
 import {
@@ -40,12 +39,7 @@ export function RouteComponent() {
       <PageHeader
         icon={Activity}
         section={t('advanced-mode.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('advanced-mode.options.server-status')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('advanced-mode.options.server-status')}
         description="Live availability of the Epic Games services this launcher depends on."
         status={
           isUnknown ? (
@@ -113,8 +107,12 @@ export function RouteComponent() {
       {entries.length === 0 ? (
         <EmptyState
           icon={Activity}
-          title={isLoading ? 'Checking services…' : 'No status yet'}
-          description="Epic's status service has not answered yet."
+          title={isLoading ? 'Checking services…' : errorMessage ? 'Could not reach Epic' : 'No status yet'}
+          description={
+            errorMessage
+              ? errorMessage
+              : 'Press Check again to ask Epic whether Fortnite is up.'
+          }
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

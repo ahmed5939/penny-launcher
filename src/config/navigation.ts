@@ -18,6 +18,7 @@ import {
   Pin,
   Puzzle,
   Radar,
+  Repeat,
   ScrollText,
   Smartphone,
   Store,
@@ -33,14 +34,19 @@ import {
 /**
  * The app's navigation, described once.
  *
- * Both the top section menus and the ⌘K palette read from here, so a tool
- * can never appear in one and be missing from the other.
+ * Both the rail and the ⌘K palette read from here, so a tool can never
+ * appear in one and be missing from the other.
+ *
+ * Grouping is by job, not by the old Aerial menu names: launch/home first,
+ * then background automations, then the STW tools you open by hand, then
+ * account admin and diagnostics. Every previous destination is still here
+ * (including taxi, endurance, auto-llamas, auto-kick).
  */
 
 export type MenuKey = keyof CustomizableMenuSettings
 
 export type NavItem = {
-  /** Newly added, still settling — renders a BETA badge wherever it appears. */
+  /** Still settling — a small badge, not a quarantine. */
   beta?: boolean
   /** Customisable-menu key controlling visibility. */
   can?: MenuKey
@@ -70,15 +76,15 @@ export type NavSection = {
 export const navSections: Array<NavSection> = [
   {
     key: 'home',
-    label: 'general:go-to-current-alerts',
+    label: 'sidebar:home',
     icon: LayoutDashboard,
     to: '/',
     can: 'currentAlerts',
     items: [],
   },
   {
-    key: 'operations',
-    label: 'sidebar:stw-operations.title',
+    key: 'automate',
+    label: 'sidebar:groups.automate',
     icon: Zap,
     can: 'stwOperations',
     items: [
@@ -103,66 +109,10 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/party',
       },
       {
-        beta: true,
-        can: 'expeditions',
-        icon: Compass,
-        label: 'sidebar:stw-operations.options.expeditions',
-        to: '/stw-operations/expeditions',
-      },
-      {
-        beta: true,
-        can: 'squadPresets',
-        icon: Swords,
-        label: 'sidebar:stw-operations.options.squad-presets',
-        to: '/stw-operations/squads',
-      },
-      {
-        beta: true,
-        can: 'inventory',
-        icon: Boxes,
-        label: 'sidebar:stw-operations.options.inventory',
-        to: '/stw-operations/inventory',
-      },
-      {
-        beta: true,
-        can: 'compendium',
-        icon: BookOpen,
-        label: 'sidebar:stw-operations.options.compendium',
-        to: '/stw-operations/compendium',
-      },
-      {
-        beta: true,
-        can: 'loadouts',
-        icon: Users,
-        label: 'sidebar:stw-operations.options.loadouts',
-        to: '/stw-operations/loadouts',
-      },
-      {
-        beta: true,
-        can: 'quests',
-        icon: ScrollText,
-        label: 'sidebar:stw-operations.options.quests',
-        to: '/stw-operations/quests',
-      },
-      {
-        beta: true,
-        can: 'timeline',
-        icon: CalendarRange,
-        label: 'sidebar:stw-operations.options.timeline',
-        to: '/stw-operations/timeline',
-      },
-      {
-        beta: true,
-        can: 'shop',
-        icon: Store,
-        label: 'sidebar:stw-operations.options.shop',
-        to: '/stw-operations/shop',
-      },
-      {
-        can: 'xpBoosts',
-        icon: Zap,
-        label: 'sidebar:stw-operations.options.xp-boosts',
-        to: '/stw-operations/xpboosts',
+        can: 'autoLlamas',
+        icon: Gift,
+        label: 'sidebar:stw-operations.options.auto-llamas',
+        to: '/stw-operations/auto-llamas',
       },
       {
         can: 'autoPinUrns',
@@ -171,32 +121,105 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/urns',
       },
       {
-        can: 'autoLlamas',
-        icon: Gift,
-        label: 'sidebar:stw-operations.options.auto-llamas',
-        to: '/stw-operations/auto-llamas',
+        // Vision-driven menu walker — usable, but still the most experimental
+        // tool in the rail, so it keeps a small badge.
+        beta: true,
+        can: 'endurance',
+        icon: Repeat,
+        label: 'sidebar:stw-operations.options.endurance',
+        to: '/stw-operations/endurance',
+      },
+    ],
+  },
+  {
+    key: 'stw',
+    label: 'sidebar:groups.stw',
+    icon: Swords,
+    can: 'stwOperations',
+    items: [
+      {
+        can: 'inventory',
+        icon: Boxes,
+        label: 'sidebar:stw-operations.options.inventory',
+        to: '/stw-operations/inventory',
+      },
+      {
+        can: 'loadouts',
+        icon: Users,
+        label: 'sidebar:stw-operations.options.loadouts',
+        to: '/stw-operations/loadouts',
+      },
+      {
+        can: 'squadPresets',
+        icon: Swords,
+        label: 'sidebar:stw-operations.options.squad-presets',
+        to: '/stw-operations/squads',
+      },
+      {
+        can: 'quests',
+        icon: ScrollText,
+        label: 'sidebar:stw-operations.options.quests',
+        to: '/stw-operations/quests',
+      },
+      {
+        can: 'expeditions',
+        icon: Compass,
+        label: 'sidebar:stw-operations.options.expeditions',
+        to: '/stw-operations/expeditions',
+      },
+      {
+        can: 'shop',
+        icon: Store,
+        label: 'sidebar:stw-operations.options.shop',
+        to: '/stw-operations/shop',
+      },
+      {
+        can: 'timeline',
+        icon: CalendarRange,
+        label: 'sidebar:stw-operations.options.timeline',
+        to: '/stw-operations/timeline',
+      },
+      {
+        can: 'compendium',
+        icon: BookOpen,
+        label: 'sidebar:stw-operations.options.compendium',
+        to: '/stw-operations/compendium',
+      },
+      {
+        can: 'xpBoosts',
+        icon: Zap,
+        label: 'sidebar:stw-operations.options.xp-boosts',
+        to: '/stw-operations/xpboosts',
       },
     ],
   },
   {
     key: 'accounts',
-    label: 'sidebar:account-management.title',
+    label: 'sidebar:groups.account',
     icon: Users,
     to: '/account',
     can: 'accountManagement',
     items: [
       {
-        can: 'vbucksInformation',
-        icon: Coins,
-        label: 'sidebar:account-management.options.vbucks-information',
-        to: '/account-management/vbucks-information',
+        // One entry for all three sign-in methods; the page switches between
+        // them in place. The legacy per-method toggles still gate it together.
+        canAny: ['authorizationCode', 'exchangeCode', 'deviceAuth'],
+        icon: UserPlus,
+        label: 'Add account',
+        params: { type: 'authorization-code' },
+        to: '/accounts/add/$type',
       },
       {
-        beta: true,
         can: 'profile',
         icon: HeartPulse,
         label: 'sidebar:account-management.options.profile',
         to: '/account-management/profile',
+      },
+      {
+        can: 'vbucksInformation',
+        icon: Coins,
+        label: 'sidebar:account-management.options.vbucks-information',
+        to: '/account-management/vbucks-information',
       },
       {
         can: 'redeemCodes',
@@ -226,15 +249,6 @@ export const navSections: Array<NavSection> = [
         to: '/account-management/eula',
       },
       {
-        // One entry for all three sign-in methods; the page switches between
-        // them in place. The legacy per-method toggles still gate it together.
-        canAny: ['authorizationCode', 'exchangeCode', 'deviceAuth'],
-        icon: UserPlus,
-        label: 'Add account',
-        params: { type: 'authorization-code' },
-        to: '/accounts/add/$type',
-      },
-      {
         can: 'removeAccount',
         icon: Trash2,
         label: 'sidebar:accounts.options.remove',
@@ -245,7 +259,7 @@ export const navSections: Array<NavSection> = [
   },
   {
     key: 'advanced',
-    label: 'sidebar:advanced-mode.title',
+    label: 'sidebar:groups.tools',
     icon: Radar,
     can: 'advancedMode',
     items: [
@@ -257,7 +271,6 @@ export const navSections: Array<NavSection> = [
         to: '/advanced-mode/matchmaking-track',
       },
       {
-        beta: true,
         can: 'serverStatus',
         icon: Activity,
         label: 'sidebar:advanced-mode.options.server-status',

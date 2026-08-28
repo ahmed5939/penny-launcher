@@ -20,6 +20,7 @@ export function useSetupForm() {
     missionInterval,
     path,
     systemTray,
+    discordRichPresence,
     userAgent,
   } = useSettingsStore(
     useShallow((state) => ({
@@ -29,6 +30,7 @@ export function useSetupForm() {
       missionInterval: state.missionInterval,
       path: state.path,
       systemTray: state.systemTray,
+      discordRichPresence: state.discordRichPresence,
       userAgent: state.userAgent,
     })),
   )
@@ -42,6 +44,7 @@ export function useSetupForm() {
       missionInterval,
       path,
       systemTray,
+      discordRichPresence,
       userAgent,
     },
   })

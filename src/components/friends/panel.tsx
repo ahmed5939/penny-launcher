@@ -14,7 +14,6 @@ import {
   X,
 } from 'lucide-react'
 
-import { BetaBadge } from '../navigation/beta-badge'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
@@ -82,7 +81,6 @@ export function FriendsPanel() {
         }
         actions={
           <>
-            <BetaBadge />
             <Button
               className="size-7"
               disabled={isLoading || !selected}

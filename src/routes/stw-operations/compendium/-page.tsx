@@ -6,7 +6,6 @@ import { BookOpen, Search } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { GoToTop } from '../../../components/go-to-top'
 import { Input } from '../../../components/ui/input'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
@@ -36,12 +35,7 @@ export function RouteComponent() {
       <PageHeader
         icon={BookOpen}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.compendium')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('stw-operations.options.compendium')}
         description="Every hero, weapon, trap, defender and survivor in the game — whether you own it or not. No account needed."
       />
       <Content />

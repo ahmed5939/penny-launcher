@@ -3,8 +3,6 @@ import type { MouseEvent } from 'react'
 import { ExternalLink, Heart } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import packageJson from '../../../../package.json'
-
 import { PageHeader, Panel } from '../../../components/page'
 
 import { cn } from '../../../lib/utils'
@@ -54,9 +52,21 @@ export function ComponentRoute() {
           <ul className="list">
               <li className="item">
                 <a
-                  href={packageJson.repository.url}
+                  href="https://github.com/ahmed5939"
                   className="link"
-                  onClick={openURL(packageJson.repository.url)}
+                  onClick={openURL('https://github.com/ahmed5939')}
+                >
+                  Ahmed (ahmed5939) <ExternalLink className="h-3 w-3" />
+                </a>
+                <div>
+                  Current maintainer of Penny Launcher.
+                </div>
+              </li>
+              <li className="item">
+                <a
+                  href="https://github.com/Ciensprog/Aerial-Launcher"
+                  className="link"
+                  onClick={openURL('https://github.com/Ciensprog/Aerial-Launcher')}
                 >
                   Ciensprog <ExternalLink className="h-3 w-3" />
                 </a>

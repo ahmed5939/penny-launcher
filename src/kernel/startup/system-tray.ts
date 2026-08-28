@@ -2,6 +2,13 @@ import { RuntimeLog } from '../runtime-log'
 import { app, Menu, nativeImage, Tray } from 'electron'
 import path from 'node:path'
 
+import {
+  DiscordPresence,
+  trayLaunchLabels,
+  type TrayLaunchSummary,
+} from '../core/discord-presence'
+import { FortniteLauncher } from '../core/launcher'
+import { AccountsManager } from './accounts'
 import { MainWindow } from './windows/main'
 
 export class SystemTray {
@@ -56,9 +63,8 @@ export class SystemTray {
 
   /**
    * The tray menu is where this app actually lives — with the window hidden,
-   * it is the whole UI. "Open" and "Exit" was not a menu, it was a shortcut.
-   * This one answers what is in scope and what is running without restoring
-   * the window at all.
+   * it is the whole UI. Launching Fortnite for the selected account is the
+   * one action that should not require restoring the window.
    */
   private static buildMenu(onOpen: () => Promise<void>) {
     if (!SystemTray.current) {
@@ -66,6 +72,9 @@ export class SystemTray {
     }
 
     const { primaryName, running, total } = SystemTray.summary
+    const { launchEnabled, launchLabel } = trayLaunchLabels(
+      SystemTray.summary
+    )
 
     SystemTray.current.setContextMenu(
       Menu.buildFromTemplate([
@@ -94,6 +103,14 @@ export class SystemTray {
         },
         { type: 'separator' },
         {
+          label: launchLabel,
+          type: 'normal',
+          enabled: launchEnabled,
+          click: () => {
+            SystemTray.launchSelected()
+          },
+        },
+        {
           label: 'Open Penny',
           type: 'normal',
           click: () => {
@@ -113,23 +130,44 @@ export class SystemTray {
     SystemTray.onOpenHandler = onOpen
   }
 
+  /**
+   * Official FortniteLauncher.exe only, same path Settings already stores.
+   * Looks the account up in main so the tray never carries device secrets.
+   */
+  private static launchSelected() {
+    const accountId = SystemTray.summary.primaryId
+
+    if (!accountId) {
+      return
+    }
+
+    const account = AccountsManager.getAccountById(accountId)
+
+    if (!account) {
+      return
+    }
+
+    FortniteLauncher.start(account).catch((error) => {
+      RuntimeLog.error('caught:startup/system-tray.ts', error)
+    })
+  }
+
   private static onOpenHandler: (() => Promise<void>) | null = null
 
-  private static summary: {
-    primaryName: string | null
-    running: Array<string>
-    total: number
-  } = { primaryName: null, running: [], total: 0 }
+  private static summary: TrayLaunchSummary = {
+    gameRunning: false,
+    primaryId: null,
+    primaryName: null,
+    running: [],
+    total: 0,
+  }
 
   /**
    * Called by the renderer whenever the scope or a running service changes.
    */
-  static updateSummary(summary: {
-    primaryName: string | null
-    running: Array<string>
-    total: number
-  }) {
+  static updateSummary(summary: TrayLaunchSummary) {
     SystemTray.summary = summary
+    DiscordPresence.setAccountName(summary.primaryName)
 
     if (SystemTray.current && SystemTray.onOpenHandler) {
       SystemTray.buildMenu(SystemTray.onOpenHandler)
