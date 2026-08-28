@@ -1122,6 +1122,168 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     /**
+     * File Tweaks
+     */
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevBuildsStatus,
+      async () => {
+        const { getDevBuildsStatus } = await import(
+          './core/file-tweaks/dev-builds'
+        )
+
+        return getDevBuildsStatus()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevBuildsToggle,
+      async () => {
+        const { toggleDevBuilds } = await import(
+          './core/file-tweaks/dev-builds'
+        )
+
+        return toggleDevBuilds()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevStairsStatus,
+      async () => {
+        const { getDevStairsStatus } = await import(
+          './core/file-tweaks/dev-stairs'
+        )
+
+        return getDevStairsStatus()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevStairsToggle,
+      async () => {
+        const { toggleDevStairs } = await import(
+          './core/file-tweaks/dev-stairs'
+        )
+
+        return toggleDevStairs()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksAirStrikeStatus,
+      async () => {
+        const { getAirStrikeStatus } = await import(
+          './core/file-tweaks/airstrike'
+        )
+
+        return getAirStrikeStatus()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksAirStrikeToggle,
+      async () => {
+        const { toggleAirStrike } = await import(
+          './core/file-tweaks/airstrike'
+        )
+
+        return toggleAirStrike()
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksTrapsData, async () => {
+      const {
+        getBaseStatus,
+        getModifiedTraps,
+        getTrapFamilyInfo,
+        getTrapHeightScale,
+        getTrapList,
+        getTrapNamedConfigs,
+      } = await import('./core/file-tweaks/trap-height')
+
+      return {
+        base: await getBaseStatus(),
+        families: getTrapFamilyInfo(),
+        heightScale: getTrapHeightScale(),
+        modified: getModifiedTraps(),
+        namedConfigs: getTrapNamedConfigs(),
+        traps: getTrapList(),
+      }
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapStatus,
+      (_, guid: string) => {
+        return import('./core/file-tweaks/trap-height').then((module) =>
+          module.getTrapStatus(guid)
+        )
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapApply,
+      (_, guid: string, heightHex: string) => {
+        return import('./core/file-tweaks/trap-height').then((module) =>
+          module.applyTrapHeight(guid, heightHex)
+        )
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapRevert,
+      (_, guid: string) => {
+        return import('./core/file-tweaks/trap-height').then((module) =>
+          module.revertTrapHeight(guid)
+        )
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapsRevertAll,
+      async () => {
+        const { revertAllTrapHeights } = await import(
+          './core/file-tweaks/trap-height'
+        )
+
+        return revertAllTrapHeights()
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksBaseStatus, async () => {
+      const { getBaseStatus } = await import('./core/file-tweaks/trap-height')
+
+      return getBaseStatus()
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksBaseApply,
+      (_, uuValue: number) => {
+        return import('./core/file-tweaks/trap-height').then((module) =>
+          module.applyBaseHeight(uuValue)
+        )
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksBaseRevert, async () => {
+      const { revertBaseHeight } = await import(
+        './core/file-tweaks/trap-height'
+      )
+
+      return revertBaseHeight()
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksWorkerPower,
+      async (_, account: AccountData, mode: 'high' | 'low') => {
+        const { generateWorkerPower } = await import(
+          './core/file-tweaks/worker-power'
+        )
+
+        return generateWorkerPower(account, mode)
+      }
+    )
+
+    /**
      * Automation
      */
 

@@ -452,6 +452,19 @@ function AdvancedModeSection() {
             onCheckedChange={updateMenuOption('worldInfo')}
           />
         </div>
+        <div className="item">
+          <Label
+            className="title"
+            htmlFor="file-tweaks"
+          >
+            File Tweaks
+          </Label>
+          <Switch
+            id="file-tweaks"
+            checked={getMenuOptionVisibility('fileTweaks')}
+            onCheckedChange={updateMenuOption('fileTweaks')}
+          />
+        </div>
       </div>
     </div>
   )

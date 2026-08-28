@@ -80,6 +80,7 @@ export const customizableMenuSettingsSchema = z
     matchmakingTrack: z.boolean().default(true),
     serverStatus: z.boolean().default(true),
     worldInfo: z.boolean().default(true),
+    fileTweaks: z.boolean().default(true),
 
     myAccounts: z.boolean().default(true),
     showTotalAccounts: z.boolean().default(true),
