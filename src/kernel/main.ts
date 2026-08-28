@@ -59,6 +59,7 @@ import { MCPClientQuestLogin } from './core/mcp'
 import { MatchmakingTrack } from './core/matchmaking-track'
 import { Manifest } from './core/manifest'
 import { Party } from './core/party'
+import { PennyDBMissions } from './core/pennydb-missions'
 import { Quests } from './core/quests'
 import { RedeemCodes } from './core/redeem-codes'
 import { ServerStatus } from './core/server-status'
@@ -1103,6 +1104,10 @@ process.on('uncaughtExceptionMonitor', (error) => {
         await WorldInfoManager.requestForHome(accountId)
       }
     )
+
+    secureIpcOn(ElectronAPIEventKeys.HomePennyDBMissionsRequest, async () => {
+      await PennyDBMissions.request()
+    })
 
     secureIpcOn(
       ElectronAPIEventKeys.WorldInfoRequestData,

@@ -114,3 +114,93 @@ export function getPennyDBProfile(displayName: string) {
 export function pennyDBProfileUrl(displayName: string) {
   return `https://pennydb.net/profile/${encodeURIComponent(displayName)}`
 }
+
+export const pennyDBMissionZones = [
+  'stonewood',
+  'plankerton',
+  'canny_valley',
+  'twine_peaks',
+  'ventures',
+] as const
+
+export type PennyDBMissionZone = (typeof pennyDBMissionZones)[number]
+
+export const pennyDBZoneLetters: Record<PennyDBMissionZone, string> = {
+  stonewood: 'S',
+  plankerton: 'P',
+  canny_valley: 'C',
+  twine_peaks: 'T',
+  ventures: 'V',
+}
+
+export const pennyDBZoneColors: Record<PennyDBMissionZone, string> = {
+  stonewood: 'var(--zone-color-stonewood)',
+  plankerton: 'var(--zone-color-plankerton)',
+  canny_valley: 'var(--zone-color-canny-valley)',
+  twine_peaks: 'var(--zone-color-twine-peaks)',
+  ventures: 'var(--zone-color-ventures)',
+}
+
+export type PennyDBMissionModifier = {
+  icon?: string
+  name?: string
+}
+
+export type PennyDBMissionReward = {
+  icon?: string
+  itemInfo?: Record<string, unknown>
+  itemType?: string
+  name?: string
+  quantity?: number
+  rarity?: string | null
+  reward_value_modifier?: boolean
+}
+
+export type PennyDBMission = {
+  alertRewards?: Array<PennyDBMissionReward>
+  missionType?: {
+    icon?: string
+    name?: string
+  }
+  modifiers?: Array<PennyDBMissionModifier>
+  pl?: string
+  rewards?: Array<PennyDBMissionReward>
+}
+
+export type PennyDBMissionsByZone = Partial<
+  Record<PennyDBMissionZone, Array<PennyDBMission>>
+>
+
+export type PennyDBMissionsResponse = {
+  missions?: PennyDBMissionsByZone
+}
+
+/**
+ * Today's STW missions, grouped by zone. Public, no account, read-only —
+ * this is the board on Home, not a purchase or claim path.
+ */
+export function getPennyDBMissions() {
+  return pennydbService.get<PennyDBMissionsResponse>('/')
+}
+
+export function isPennyDBVBuckReward(reward: PennyDBMissionReward) {
+  const itemType = reward.itemType?.toLowerCase() ?? ''
+  const name = (reward.name ?? '').toLowerCase().replace(/[\s-]/g, '')
+
+  return (
+    itemType.includes('currency_mtxswap') ||
+    itemType.includes('mtxswap') ||
+    name.includes('vbuck')
+  )
+}
+
+export function missionHasPennyDBVBucks(mission: PennyDBMission) {
+  return (
+    (mission.rewards?.some(isPennyDBVBuckReward) ?? false) ||
+    (mission.alertRewards?.some(isPennyDBVBuckReward) ?? false)
+  )
+}
+
+export function missionHasPennyDBAlert(mission: PennyDBMission) {
+  return (mission.alertRewards?.length ?? 0) > 0
+}

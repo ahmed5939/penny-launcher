@@ -20,6 +20,7 @@ import { LoadAutoLlamas } from './bootstrap/components/load-auto-llamas'
 import { LoadAutomation } from './bootstrap/components/load-automation'
 import { LoadFriends } from './bootstrap/components/load-friends'
 import { LoadItemDatabase } from './bootstrap/components/load-item-database'
+import { LoadPennyDBMissions } from './bootstrap/components/load-pennydb-missions'
 import { LoadSettings } from './bootstrap/components/load-settings'
 import { LauncherNotifications } from './bootstrap/components/launcher-notifications'
 
@@ -131,6 +132,7 @@ function DeferredBootstrap() {
     <>
       <LoadFriends />
       <LoadHomeWorldInfo />
+      <LoadPennyDBMissions />
       <LoadWorldInfoData />
       <LoadAutomation />
       <LoadAutoLlamas />
