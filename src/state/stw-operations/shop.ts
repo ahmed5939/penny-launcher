@@ -1,4 +1,9 @@
-import type { ShopEntry, ShopSection } from '../../kernel/core/shop'
+import type {
+  ShopCatalogPayload,
+  ShopEntry,
+  ShopSection,
+  ShopView,
+} from '../../kernel/core/shop'
 
 import { create } from 'zustand'
 
@@ -10,6 +15,10 @@ export type ShopState = {
   purchasingOfferId: string | null
   section: ShopSection
   selectedAccounts: Array<string>
+  view: ShopView
+  catalog: ShopCatalogPayload | null
+  catalogLoading: boolean
+  catalogSection: string
 
   updateAccounts: (accountIds: Array<string>) => void
   updateData: (data: Record<string, ShopEntry>, reset?: boolean) => void
@@ -17,6 +26,10 @@ export type ShopState = {
   updateOpening: (value: boolean) => void
   updatePurchasing: (offerId: string | null) => void
   updateSection: (section: ShopSection) => void
+  updateView: (view: ShopView) => void
+  updateCatalog: (catalog: ShopCatalogPayload) => void
+  updateCatalogLoading: (value: boolean) => void
+  updateCatalogSection: (section: string) => void
 }
 
 export const useShopStore = create<ShopState>()((set) => ({
@@ -26,6 +39,10 @@ export const useShopStore = create<ShopState>()((set) => ({
   purchasingOfferId: null,
   section: 'llamas',
   selectedAccounts: [],
+  view: 'account',
+  catalog: null,
+  catalogLoading: false,
+  catalogSection: 'all',
 
   updateAccounts: (accountIds) =>
     set({
@@ -39,4 +56,8 @@ export const useShopStore = create<ShopState>()((set) => ({
   updateOpening: (value) => set({ isOpening: value }),
   updatePurchasing: (offerId) => set({ purchasingOfferId: offerId }),
   updateSection: (section) => set({ section }),
+  updateView: (view) => set({ view }),
+  updateCatalog: (catalog) => set({ catalog }),
+  updateCatalogLoading: (value) => set({ catalogLoading: value }),
+  updateCatalogSection: (section) => set({ catalogSection: section }),
 }))

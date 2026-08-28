@@ -397,6 +397,9 @@ export enum ElectronAPIEventKeys {
   ShopPurchaseNotification = 'shop:purchase:notification',
   ShopOpen = 'shop:open',
   ShopOpenNotification = 'shop:open:notification',
+  /** Public PennyDB catalog — read-only, not a purchase path. */
+  ShopCatalogRequest = 'shop:catalog:request',
+  ShopCatalogResponse = 'shop:catalog:response',
 
   /**
    * Schedules

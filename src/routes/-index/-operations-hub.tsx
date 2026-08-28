@@ -100,8 +100,10 @@ const items: Array<HubItem> = [
     to: '/stw-operations/timeline',
   },
   {
-    title: 'Shop',
-    description: 'X-Ray llama contents, event and weekly stores',
+    beta: true,
+    title: 'STW shop',
+    description:
+      'X-Ray llama contents, event and weekly stores, and the public Penny DB catalog',
     icon: Store,
     to: '/stw-operations/shop',
   },

@@ -13,48 +13,43 @@ import { rarityLabels } from '../../../config/constants/fortnite/items'
 
 import { toast } from '../../../lib/notifications'
 
-export function useShopData() {
+/**
+ * IPC listeners and auto-loads for both the account shop and the public
+ * catalog. Must stay mounted while this page is open so a purchase started
+ * from Browse still gets the MCP response and toast.
+ */
+export function useShopPage() {
   useRequestItemDatabase()
 
-  /** One account's shop — the X-Ray rolls are rolled per account. */
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null
 
-  const records = useItemDatabaseStore((state) => state.records)
-
-  const { data, isLoading, isOpening, purchasingOfferId, section } =
-    useShopStore(
-      useShallow((state) => ({
-        data: state.data,
-        isLoading: state.isLoading,
-        isOpening: state.isOpening,
-        purchasingOfferId: state.purchasingOfferId,
-        section: state.section,
-      }))
-    )
+  const { catalog, catalogLoading, view } = useShopStore(
+    useShallow((state) => ({
+      catalog: state.catalog,
+      catalogLoading: state.catalogLoading,
+      view: state.view,
+    }))
+  )
   const {
+    updateCatalog,
+    updateCatalogLoading,
     updateData,
     updateLoading,
     updateOpening,
     updatePurchasing,
-    updateSection,
+    updateView,
   } = useShopStore(
     useShallow((state) => ({
+      updateCatalog: state.updateCatalog,
+      updateCatalogLoading: state.updateCatalogLoading,
       updateData: state.updateData,
       updateLoading: state.updateLoading,
       updateOpening: state.updateOpening,
       updatePurchasing: state.updatePurchasing,
-      updateSection: state.updateSection,
+      updateView: state.updateView,
     }))
   )
-
-  const entry = accountId ? data[accountId] : undefined
-  const offers = (entry?.offers ?? []).filter(
-    (offer) => offer.section === section
-  )
-
-  const isDisabledOpen =
-    isOpening || !accountId || (entry?.unopenedLlamas ?? 0) <= 0
 
   useEffect(() => {
     const listener = window.electronAPI.responseShop(async (response) => {
@@ -129,7 +124,10 @@ export function useShopData() {
           toast(`Epic reported an error: ${failed[0].errorMessage}`)
         }
 
-        handleLoad()
+        if (selected) {
+          updateLoading(true)
+          window.electronAPI.requestShop([selected])
+        }
       }
     )
 
@@ -137,6 +135,78 @@ export function useShopData() {
       listener.removeListener()
     }
   }, [accountId])
+
+  useEffect(() => {
+    const listener = window.electronAPI.responseShopCatalog(
+      async (response) => {
+        updateCatalogLoading(false)
+        updateCatalog(response)
+      }
+    )
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [])
+
+  /** Switching account in the title bar reloads the shop. */
+  useEffect(() => {
+    if (accountId && selected) {
+      updateLoading(true)
+      window.electronAPI.requestShop([selected])
+    }
+  }, [accountId])
+
+  useEffect(() => {
+    if (view === 'browse' && catalog === null && !catalogLoading) {
+      updateCatalogLoading(true)
+      window.electronAPI.requestShopCatalog()
+    }
+  }, [view])
+
+  return {
+    updateView,
+    view,
+  }
+}
+
+export function useShopData() {
+  const { selected } = useGetSelectedAccount()
+  const accountId = selected?.accountId ?? null
+
+  const records = useItemDatabaseStore((state) => state.records)
+
+  const { data, isLoading, isOpening, purchasingOfferId, section } =
+    useShopStore(
+      useShallow((state) => ({
+        data: state.data,
+        isLoading: state.isLoading,
+        isOpening: state.isOpening,
+        purchasingOfferId: state.purchasingOfferId,
+        section: state.section,
+      }))
+    )
+  const {
+    updateLoading,
+    updateOpening,
+    updatePurchasing,
+    updateSection,
+  } = useShopStore(
+    useShallow((state) => ({
+      updateLoading: state.updateLoading,
+      updateOpening: state.updateOpening,
+      updatePurchasing: state.updatePurchasing,
+      updateSection: state.updateSection,
+    }))
+  )
+
+  const entry = accountId ? data[accountId] : undefined
+  const offers = (entry?.offers ?? []).filter(
+    (offer) => offer.section === section
+  )
+
+  const isDisabledOpen =
+    isOpening || !accountId || (entry?.unopenedLlamas ?? 0) <= 0
 
   const handleLoad = () => {
     if (!selected) {
@@ -146,13 +216,6 @@ export function useShopData() {
     updateLoading(true)
     window.electronAPI.requestShop([selected])
   }
-
-  /** Switching account in the title bar reloads the shop. */
-  useEffect(() => {
-    if (accountId) {
-      handleLoad()
-    }
-  }, [accountId])
 
   const handlePurchase = (offer: ShopOffer, quantity = 1) => {
     if (!selected || purchasingOfferId !== null) {
@@ -199,5 +262,68 @@ export function useShopData() {
     handleOpenLlamas,
     handlePurchase,
     updateSection,
+  }
+}
+
+export function useShopCatalog() {
+  const { selected } = useGetSelectedAccount()
+  const accountId = selected?.accountId ?? null
+
+  const { catalog, catalogLoading, catalogSection, data, purchasingOfferId } =
+    useShopStore(
+      useShallow((state) => ({
+        catalog: state.catalog,
+        catalogLoading: state.catalogLoading,
+        catalogSection: state.catalogSection,
+        data: state.data,
+        purchasingOfferId: state.purchasingOfferId,
+      }))
+    )
+  const { updateCatalogLoading, updateCatalogSection, updatePurchasing } =
+    useShopStore(
+      useShallow((state) => ({
+        updateCatalogLoading: state.updateCatalogLoading,
+        updateCatalogSection: state.updateCatalogSection,
+        updatePurchasing: state.updatePurchasing,
+      }))
+    )
+
+  const accountOffers = accountId ? (data[accountId]?.offers ?? []) : []
+  const offersById = new Map(
+    accountOffers.map((offer) => [offer.offerId, offer])
+  )
+
+  const handleLoadCatalog = () => {
+    updateCatalogLoading(true)
+    window.electronAPI.requestShopCatalog()
+  }
+
+  const handlePurchase = (offer: ShopOffer, quantity = 1) => {
+    if (!selected || purchasingOfferId !== null) {
+      return
+    }
+
+    updatePurchasing(offer.offerId)
+
+    window.electronAPI.purchaseShopOffer(selected, {
+      offerId: offer.offerId,
+      title: offer.title,
+      currency: offer.currency,
+      currencySubType: offer.currencySubType,
+      finalPrice: offer.finalPrice,
+      quantity,
+    })
+  }
+
+  return {
+    account: selected ?? null,
+    catalog,
+    catalogLoading,
+    catalogSection,
+    handleLoadCatalog,
+    handlePurchase,
+    offersById,
+    purchasingOfferId,
+    updateCatalogSection,
   }
 }

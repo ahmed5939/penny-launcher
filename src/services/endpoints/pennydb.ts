@@ -245,3 +245,33 @@ export function getPennyDBLeaderboard(metric: PennyDBLeaderboardMetric) {
     params: { metric },
   })
 }
+
+/**
+ * One catalog row from `GET /stw-shop`. Limits of `-1` mean "no cap".
+ * `title` is often blank for gold-store items; `name` is the display name.
+ */
+export type PennyDBShopOfferRaw = {
+  currency?: string
+  currency_image?: string
+  currency_readable?: string
+  dailyLimit?: number
+  description?: string
+  devName?: string
+  image_link?: string
+  monthlyLimit?: number
+  name?: string
+  offerId?: string
+  price?: number
+  templateId?: string
+  title?: string
+  weeklyLimit?: number
+}
+
+export type PennyDBShopResponse = {
+  storefronts?: Record<string, Array<PennyDBShopOfferRaw>>
+}
+
+/** Public STW llama / event / weekly catalog. No auth, no purchase. */
+export function getPennyDBStwShop() {
+  return pennydbService.get<PennyDBShopResponse>('/stw-shop')
+}
