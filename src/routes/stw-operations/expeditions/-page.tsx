@@ -154,7 +154,9 @@ function ReadOnlyExpeditionStatus() {
     const listener = window.electronAPI.responseExpeditions(async (response) => {
       setData((current) => ({ ...current, ...response }))
     })
-    return () => listener.removeListener()
+    return () => {
+      listener.removeListener()
+    }
   }, [])
 
   useEffect(() => {

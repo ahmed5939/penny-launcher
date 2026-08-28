@@ -50,7 +50,9 @@ export function usePlayerSuggestions({
       }
     )
 
-    return () => listener.removeListener()
+    return () => {
+      listener.removeListener()
+    }
   }, [])
 
   useEffect(() => {

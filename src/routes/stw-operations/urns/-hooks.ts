@@ -81,7 +81,9 @@ export function useData() {
       }))
     })
 
-    return () => listener.removeListener()
+    return () => {
+      listener.removeListener()
+    }
   }, [])
 
   const customFilter: ComboboxProps['customFilter'] = (

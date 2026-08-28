@@ -33,6 +33,10 @@ export type AutoExpeditionResult = {
 }
 
 const defaults: AutoExpeditionsData = {}
+const accountDefaults: AutoExpeditionConfig = {
+  enabled: false,
+  rewardTypes: [],
+}
 const cycleInterval = 60 * 60 * 1000
 const initialDelay = 2 * 1000
 
@@ -48,8 +52,9 @@ export class AutoExpeditions {
   static async update(accountId: string, partial: Partial<AutoExpeditionConfig>) {
     const data = await AutoExpeditions.getData()
     data[accountId] = {
-      enabled: false,
-      rewardTypes: [],
+      ...accountDefaults,
+      // Record<> types this as always present, but a brand-new account has
+      // no entry yet — the defaults above are what fill it in.
       ...data[accountId],
       ...partial,
     }
