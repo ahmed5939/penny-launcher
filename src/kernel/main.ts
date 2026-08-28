@@ -17,6 +17,7 @@ import type { SquadAssignment } from './core/squads'
 import type { AuthenticationByDeviceProperties } from '../types/authentication'
 import type { AutomationServiceActionConfig } from '../types/automation'
 import type { CustomizableMenuSettings, Settings } from '../types/settings'
+import type { GameInstallOpenTarget } from '../types/game-install'
 import type { EnduranceConfig } from '../types/endurance'
 import type { TaxiServiceServiceActionConfig } from '../types/taxi-service'
 import type { Event as ElectronEvent } from 'electron'
@@ -78,6 +79,7 @@ import {
 import { AutoPinUrns } from './startup/auto-pin-urns'
 import { Automation } from './startup/automation'
 import { DataDirectory } from './startup/data-directory'
+import { GameInstallManager } from './startup/game-install'
 import {
   AppLanguage,
   CustomizableMenuSettingsManager,
@@ -531,10 +533,34 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     secureIpcHandle(ElectronAPIEventKeys.SettingsDetectPath, () => {
-      return SettingsManager.detectGamePath({
-        namespaceId: 'fn',
-      })
+      return GameInstallManager.detectAndApply()
     })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.GameInstallStatus,
+      (_, forceLatest?: boolean) => {
+        return GameInstallManager.getStatus(forceLatest === true)
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.GameInstallDetect, () => {
+      return GameInstallManager.detectAndApply()
+    })
+
+    secureIpcHandle(ElectronAPIEventKeys.GameInstallChooseFolder, () => {
+      return GameInstallManager.chooseFolder()
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.GameInstallOpenOfficial,
+      (_, target: GameInstallOpenTarget) => {
+        if (target !== 'updater' && target !== 'egl' && target !== 'xbox') {
+          return { ok: false, method: 'none' }
+        }
+
+        return GameInstallManager.openOfficialApp(target)
+      }
+    )
 
     secureIpcOn(
       ElectronAPIEventKeys.AccountsOrderingSync,

@@ -90,7 +90,8 @@
     "button": "Launch Game",
     "notifications": {
       "success": "The game has been launched with the account {{name}}",
-      "error": "An error has occurred launching game with account {{name}}, try again later"
+      "error": "An error has occurred launching game with account {{name}}, try again later",
+      "missing": "FortniteLauncher.exe was not found. Choose the Win64 folder or install Fortnite from Epic or Xbox."
     }
   },
   "close-game": {
@@ -169,6 +170,34 @@
       "play": "Play",
       "missions": "Missions",
       "operations": "Operations"
+    },
+    "game": {
+      "title": "Fortnite install",
+      "missing-title": "Fortnite is not installed",
+      "missing-description": "Penny launches the official FortniteLauncher.exe only. Choose the Win64 folder, or open Epic Games Launcher or the Xbox PC app to install the game.",
+      "choose-folder": "Choose folder",
+      "open-egl": "Open Epic Games Launcher",
+      "open-xbox": "Open Xbox",
+      "path": "Path",
+      "version": "Installed",
+      "latest": "Latest",
+      "disk": "On disk",
+      "last-checked": "Last checked",
+      "up-to-date": "Up to date",
+      "update-available": "Update available",
+      "unknown": "Unknown",
+      "check": "Check for update",
+      "update": "Update",
+      "incomplete": "Install is incomplete",
+      "update-started": "Opened the official updater. Finish the update in Epic Games Launcher or the Xbox app.",
+      "update-failed": "Could not open the official updater.",
+      "folder-invalid": "That folder does not contain FortniteLauncher.exe.",
+      "source-settings": "Saved path",
+      "source-egl-manifest": "Epic Games Launcher",
+      "source-egl-installed": "Epic Games Launcher",
+      "source-program-files": "Program Files",
+      "source-xbox": "Xbox PC app",
+      "note": "Updates are installed by Epic or Xbox. Penny does not download or patch game files."
     }
   },
   "account-selected": "Selected account: <2>{{name}}</2>",

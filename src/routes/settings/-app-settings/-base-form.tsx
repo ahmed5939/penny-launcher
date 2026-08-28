@@ -27,7 +27,7 @@ import { useSetupForm } from '../-hooks'
 export function AppSettingsBaseForm() {
   const { t } = useTranslation(['settings', 'general'])
 
-  const { form, onDetectPath, onSubmit } = useSetupForm()
+  const { form, onChooseFolder, onDetectPath, onSubmit } = useSetupForm()
   const [$detectPathInput, $detectPathButton] = useInputPaddingButton()
 
   return (
@@ -42,7 +42,12 @@ export function AppSettingsBaseForm() {
             name="path"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t('app-settings.form.path.label')}</FormLabel>
+                <FormLabel>
+                  {t('app-settings.form.path.label')}{' '}
+                  <span className="block text-muted-foreground text-xs">
+                    {t('app-settings.form.path.note')}
+                  </span>
+                </FormLabel>
                 <FormControl>
                   <div className="flex items-center relative rounded-md">
                     <Input
@@ -62,6 +67,14 @@ export function AppSettingsBaseForm() {
                     </Button>
                   </div>
                 </FormControl>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2 w-full"
+                  onClick={onChooseFolder}
+                >
+                  {t('app-settings.form.path.browse')}
+                </Button>
                 <FormMessage />
               </FormItem>
             )}

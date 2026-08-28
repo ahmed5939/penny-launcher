@@ -10,6 +10,7 @@ import { PennyRender } from '../../components/branding/penny-portrait'
 import { Button } from '../../components/ui/button'
 
 import { useGetAccounts, useGetSelectedAccount } from '../../hooks/accounts'
+import { useGameInstall } from '../../hooks/game-install'
 import { useCustomProcessStatus } from '../../hooks/settings'
 import { useAlertsSummary, useAutomationServices } from './-hooks'
 
@@ -30,12 +31,14 @@ export function HomeHero() {
   const { accountsArray } = useGetAccounts()
   const { selected } = useGetSelectedAccount()
   const { customProcessIsRunning } = useCustomProcessStatus()
+  const { status: gameInstall } = useGameInstall({ autoLoad: false })
   const { running, services } = useAutomationServices()
   const alerts = useAlertsSummary()
 
   const elapsed = useSessionTimer(customProcessIsRunning)
 
   const hasAccounts = accountsArray.length > 0
+  const installMissing = gameInstall?.install.found === false
   const displayName = selected ? parseCustomDisplayName(selected) : null
 
   const handleLaunch = () => {
@@ -124,7 +127,11 @@ export function HomeHero() {
                   'shadow-lg shadow-black/40 transition-all hover:brightness-110',
                   'disabled:opacity-40 disabled:shadow-none'
                 )}
-                disabled={selected === null || customProcessIsRunning}
+                disabled={
+                  selected === null ||
+                  customProcessIsRunning ||
+                  installMissing
+                }
                 onClick={handleLaunch}
               >
                 <Rocket className="mr-2 size-4" />

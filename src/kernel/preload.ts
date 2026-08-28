@@ -16,6 +16,7 @@ import * as enduranceActions from './preload-actions/endurance'
 import * as eventActions from './preload-actions/events'
 import * as expeditionsActions from './preload-actions/expeditions'
 import * as friendsManagerActions from './preload-actions/friends-manager'
+import * as gameInstallActions from './preload-actions/game-install'
 import * as generalActions from './preload-actions/general'
 import * as shellActions from './preload-actions/shell'
 import * as inventoryActions from './preload-actions/inventory'
@@ -55,6 +56,7 @@ export const availableElectronAPIs = {
   ...eventActions,
   ...expeditionsActions,
   ...friendsManagerActions,
+  ...gameInstallActions,
   ...generalActions,
   ...shellActions,
   ...inventoryActions,

@@ -17,7 +17,10 @@
         }
       },
       "path": {
-        "label": "Custom path"
+        "label": "Custom path",
+        "note": "Folder that contains FortniteLauncher.exe (usually FortniteGame\\Binaries\\Win64).",
+        "browse": "Browse",
+        "invalid": "That folder does not contain FortniteLauncher.exe."
       },
       "user-agent": {
         "label": "Custom User Agent",
