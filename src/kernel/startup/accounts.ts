@@ -19,6 +19,7 @@ import { accountListSchema } from '../../lib/validations/schemas/accounts'
 import { MainWindow } from './windows/main'
 import { Automation } from './automation'
 import { DataDirectory } from './data-directory'
+import { PluginBridge } from './plugin-api'
 import { RuntimeLog } from '../runtime-log'
 
 export class AccountsManager {
@@ -59,6 +60,7 @@ export class AccountsManager {
       ElectronAPIEventKeys.OnAccountsLoaded,
       accountsRecord
     )
+    PluginBridge.emit('accounts-changed')
   }
 
   static async add(data: AccountBasicInfo) {
@@ -90,6 +92,7 @@ export class AccountsManager {
     })
 
     await DataDirectory.updateAccountsFile(accounts)
+    PluginBridge.emit('accounts-changed')
   }
 
   /**
@@ -171,6 +174,7 @@ export class AccountsManager {
       return accumulator
     }, {} as AccountDataRecord)
 
+    PluginBridge.emit('accounts-changed')
     respond({
       status: 'success',
       imported: fresh.length,
@@ -189,6 +193,7 @@ export class AccountsManager {
     Automation.removeAccount(accountId)
 
     await DataDirectory.updateAccountsFile(accounts)
+    PluginBridge.emit('accounts-changed')
   }
 
   static getAccounts(): Collection<string, AccountData> {

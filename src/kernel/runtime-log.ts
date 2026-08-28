@@ -15,8 +15,8 @@ function describe(error: unknown) {
 export class RuntimeLog {
   private static queue: Promise<void> = Promise.resolve()
 
-  static error(scope: string, error: unknown) {
-    const line = `${new Date().toISOString()} ERROR ${scope} ${describe(error)}\n`
+  private static append(level: string, scope: string, value: unknown) {
+    const line = `${new Date().toISOString()} ${level} ${scope} ${describe(value)}\n`
 
     RuntimeLog.queue = RuntimeLog.queue
       .then(async () => {
@@ -25,5 +25,13 @@ export class RuntimeLog {
         await appendFile(path.join(directory, 'penny-runtime.log'), line, 'utf8')
       })
       .catch(() => {})
+  }
+
+  static error(scope: string, error: unknown) {
+    RuntimeLog.append('ERROR', scope, error)
+  }
+
+  static info(scope: string, message: unknown) {
+    RuntimeLog.append('INFO', scope, message)
   }
 }

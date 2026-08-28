@@ -26,6 +26,8 @@ import { LauncherNotifications } from './bootstrap/components/launcher-notificat
 import { Toaster } from './components/ui/sonner'
 import { ThemeProvider } from './components/theme-provider'
 
+import { useAccountScopeStore } from './state/accounts/scope'
+
 import 'dayjs/locale/es'
 import { localeReady } from './locale'
 
@@ -43,6 +45,31 @@ window.electronAPI.pluginNavigation(async (route) => {
   if (!route.startsWith('/')) return
 
   router.history.push(route)
+})
+
+// The account scope lives in this process; add-ons run in the main process.
+// Mirror every scope change across so context.accounts.getScoped() answers
+// without plugins reaching into renderer state.
+const reportAccountScope = (state: {
+  primary: string | null
+  members: Array<string>
+}) => {
+  window.electronAPI.syncAccountScopeForPlugins({
+    primary: state.primary,
+    members: state.members,
+  })
+}
+
+reportAccountScope(useAccountScopeStore.getState())
+useAccountScopeStore.subscribe((state, previous) => {
+  if (
+    state.primary === previous.primary &&
+    state.members === previous.members
+  ) {
+    return
+  }
+
+  reportAccountScope(state)
 })
 
 /**

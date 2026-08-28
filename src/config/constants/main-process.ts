@@ -393,6 +393,7 @@ export enum ElectronAPIEventKeys {
   PluginsDirectoryOpen = 'plugins:directory:open',
   PluginOpen = 'plugins:open',
   PluginNavigate = 'plugins:navigate',
+  PluginAccountScopeSync = 'plugins:account-scope:sync',
 
   /**
    * Endurance

@@ -37,6 +37,17 @@ export function openPlugin(pluginId: string): Promise<PluginOpenResult> {
   return ipcRenderer.invoke(ElectronAPIEventKeys.PluginOpen, pluginId)
 }
 
+/**
+ * Reports the renderer's account scope to the main process so add-ons can
+ * ask who the app is currently about (context.accounts.getScoped()).
+ */
+export function syncAccountScopeForPlugins(scope: {
+  primary: string | null
+  members: Array<string>
+}) {
+  ipcRenderer.send(ElectronAPIEventKeys.PluginAccountScopeSync, scope)
+}
+
 export function pluginNavigation(
   callback: (route: string) => Promise<void>,
 ) {

@@ -11,7 +11,46 @@ export type PluginManifest = {
   repository?: string
   /** Entry file relative to the plugin folder. Defaults to main.js */
   entry?: string
+  /**
+   * Minimum plugin API version the add-on needs (see PLUGIN_API_VERSION).
+   * Omitted means "any" — the original three-member context is enough.
+   */
+  apiVersion?: number
 }
+
+/** Account fields plugins may see. Never tokens, device ids or secrets. */
+export type PluginAccountInfo = {
+  accountId: string
+  displayName: string
+  customDisplayName: string
+}
+
+/** The renderer's account scope, as raw ids. */
+export type PluginAccountScopeIds = {
+  primary: string | null
+  members: Array<string>
+}
+
+/** The renderer's account scope, resolved to visible account info. */
+export type PluginAccountScope = {
+  primary: PluginAccountInfo | null
+  members: Array<PluginAccountInfo>
+}
+
+/** Settings plugins may read — a stable subset, not the raw settings file. */
+export type PluginSettings = {
+  /** Directory containing the Fortnite Win64 binaries. */
+  gamePath: string
+  /** Process name the launcher watches for (e.g. the game executable). */
+  customProcess: string
+  /** User agent the launcher presents to Epic services. */
+  userAgent: string
+}
+
+export type PluginEventName =
+  | 'accounts-changed'
+  | 'account-scope-changed'
+  | 'settings-changed'
 
 export type PluginSource = 'user'
 

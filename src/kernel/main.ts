@@ -78,6 +78,7 @@ import {
 import { AutoPinUrns } from './startup/auto-pin-urns'
 import { Automation } from './startup/automation'
 import { DataDirectory } from './startup/data-directory'
+import { PluginBridge } from './startup/plugin-api'
 import {
   AppLanguage,
   CustomizableMenuSettingsManager,
@@ -433,6 +434,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
 
     secureIpcHandle(ElectronAPIEventKeys.PluginOpen, (_, pluginId: string) =>
       import('./startup/plugins').then(({ PluginManager }) => PluginManager.open(pluginId))
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.PluginAccountScopeSync,
+      (_, scope: unknown) => {
+        PluginBridge.setAccountScope(scope)
+      }
     )
 
     /**

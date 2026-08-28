@@ -1,13 +1,18 @@
 import { RuntimeLog } from '../runtime-log'
 import type {
   MarketplacePlugin,
+  PluginAccountInfo,
+  PluginAccountScope,
   PluginActionResult,
+  PluginEventName,
   PluginManifest,
   PluginOpenResult,
   PluginReadmeResult,
+  PluginSettings,
   PluginSource,
   PluginSummary,
 } from '../../types/plugins'
+import type { AccountData } from '../../types/accounts'
 import type { Dirent } from 'node:fs'
 
 import {
@@ -25,8 +30,15 @@ import path from 'node:path'
 import { app, shell } from 'electron'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
+import { AccountsManager } from './accounts'
 import { DataDirectory } from './data-directory'
 import { MainWindow } from './windows/main'
+import {
+  PLUGIN_API_VERSION,
+  PluginBridge,
+  PluginStorage,
+} from './plugin-api'
+import { SettingsManager } from './settings'
 
 /**
  * What a plugin's activate() may hand back. Everything is optional — a
@@ -42,11 +54,36 @@ type PluginModule = {
 }
 
 type PluginContext = {
+  /** Version of this context contract. See PLUGIN_API_VERSION. */
+  apiVersion: number
+  /** The plugin's own parsed manifest. */
+  manifest: PluginManifest
   /** Per-plugin directory under the launcher's data folder. */
   storageDirectory: string
   getMainWindow: () => Electron.BrowserWindow | null
   /** Navigate the launcher to a page owned by the plugin. */
   openRoute: (route: string) => void
+  /** Write a line to the launcher's runtime log, tagged with the plugin id. */
+  log: (message: unknown) => void
+  /** Read-only view of the user's accounts — never tokens or secrets. */
+  accounts: {
+    list: () => Array<PluginAccountInfo>
+    /** Who the app is currently about, as selected in the UI. */
+    getScoped: () => PluginAccountScope
+  }
+  /** Launcher change events. on() returns an unsubscribe function. */
+  events: {
+    on: (
+      event: PluginEventName,
+      listener: (payload: unknown) => unknown
+    ) => () => void
+  }
+  /** Durable JSON key/value storage under storageDirectory. */
+  storage: PluginStorage
+  /** Read-only stable subset of the launcher's settings. */
+  settings: {
+    get: () => Promise<PluginSettings>
+  }
 }
 
 type LoadedPlugin = {
@@ -290,6 +327,7 @@ export class PluginManager {
       })
     )
 
+    PluginBridge.clearAll()
     PluginManager.plugins = []
     PluginManager.loading = null
   }
@@ -421,6 +459,16 @@ export class PluginManager {
     }
 
     try {
+      if (
+        typeof manifest.apiVersion === 'number' &&
+        manifest.apiVersion > PLUGIN_API_VERSION
+      ) {
+        throw new Error(
+          `This add-on needs plugin API v${manifest.apiVersion}; ` +
+            `this launcher provides v${PLUGIN_API_VERSION}. Update Penny.`
+        )
+      }
+
       const storageDirectory = path.join(
         DataDirectory.getDataDirectoryPath(),
         'plugin-data',
@@ -441,30 +489,96 @@ export class PluginManager {
         throw new Error('The plugin entry does not export activate().')
       }
 
-      const controller = await pluginModule.activate({
-        storageDirectory,
-        getMainWindow: () => MainWindow.instance ?? null,
-        openRoute: (route) => {
-          if (!route.startsWith('/')) return
-
-          const window = MainWindow.instance
-
-          if (!window || window.isDestroyed()) return
-
-          // Let the renderer's router own navigation. Injecting pushState into
-          // a packaged file:// page turns the current URL into a nonexistent
-          // Windows filesystem path; a subsequent reload then loses the route
-          // and returns to the home screen.
-          window.webContents.send(ElectronAPIEventKeys.PluginNavigate, route)
-        },
-      })
+      const controller = await pluginModule.activate(
+        PluginManager.createContext(manifest, storageDirectory)
+      )
 
       loaded.controller = controller ?? null
     } catch (error) {
       loaded.status = 'error'
       loaded.error = error instanceof Error ? error.message : `${error}`
+
+      // A failed activate() may have left subscriptions behind; a plugin
+      // that never came up should not keep receiving launcher events.
+      PluginBridge.clearPlugin(manifest.id)
     }
 
     PluginManager.plugins.push(loaded)
+  }
+
+  /** Account fields plugins may see — never tokens, device ids or secrets. */
+  private static toAccountInfo(account: AccountData): PluginAccountInfo {
+    return {
+      accountId: account.accountId,
+      displayName: account.displayName,
+      customDisplayName: account.customDisplayName ?? '',
+    }
+  }
+
+  private static createContext(
+    manifest: PluginManifest,
+    storageDirectory: string
+  ): PluginContext {
+    return {
+      apiVersion: PLUGIN_API_VERSION,
+      manifest: { ...manifest },
+      storageDirectory,
+      getMainWindow: () => MainWindow.instance ?? null,
+      openRoute: (route) => {
+        if (!route.startsWith('/')) return
+
+        const window = MainWindow.instance
+
+        if (!window || window.isDestroyed()) return
+
+        // Let the renderer's router own navigation. Injecting pushState into
+        // a packaged file:// page turns the current URL into a nonexistent
+        // Windows filesystem path; a subsequent reload then loses the route
+        // and returns to the home screen.
+        window.webContents.send(ElectronAPIEventKeys.PluginNavigate, route)
+      },
+      log: (message) => {
+        RuntimeLog.info(`plugin:${manifest.id}`, message)
+      },
+      accounts: {
+        list: () =>
+          [...AccountsManager.getAccounts().values()].map(
+            PluginManager.toAccountInfo
+          ),
+        getScoped: (): PluginAccountScope => {
+          const scope = PluginBridge.getAccountScope()
+          const resolve = (accountId: string | null) => {
+            if (!accountId) return null
+
+            const account = AccountsManager.getAccountById(accountId)
+
+            return account ? PluginManager.toAccountInfo(account) : null
+          }
+
+          return {
+            primary: resolve(scope.primary),
+            members: scope.members
+              .map(resolve)
+              .filter((item): item is PluginAccountInfo => item !== null),
+          }
+        },
+      },
+      events: {
+        on: (event, listener) =>
+          PluginBridge.on(manifest.id, event, listener),
+      },
+      storage: new PluginStorage(storageDirectory),
+      settings: {
+        get: async (): Promise<PluginSettings> => {
+          const settings = await SettingsManager.getData()
+
+          return {
+            gamePath: settings.path,
+            customProcess: settings.customProcess,
+            userAgent: settings.userAgent,
+          }
+        },
+      },
+    }
   }
 }

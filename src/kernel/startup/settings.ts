@@ -24,6 +24,7 @@ import { launcherAppClient2 } from '../../config/fortnite/clients'
 import { CustomProcess } from '../core/custom-process'
 import { MainWindow } from './windows/main'
 import { DataDirectory } from './data-directory'
+import { PluginBridge } from './plugin-api'
 import { SystemTray } from './system-tray'
 
 import { launcherAvailablePlatforms } from '../../services/config/launcher'
@@ -130,6 +131,7 @@ export class SettingsManager {
       ElectronAPIEventKeys.OnLoadSettings,
       settings,
     )
+    PluginBridge.emit('settings-changed')
   }
 
   static async detectGamePath(config: GameContext) {

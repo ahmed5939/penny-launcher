@@ -1,5 +1,7 @@
 # Penny Launcher plugins
 
+> Full developer guide: [DEVELOPING.md](./DEVELOPING.md)
+
 A plugin is a plain CommonJS folder — no build step, no bundler. Marketplace
 packages are kept under `marketplace/` as readable source and are inert until
 the user clicks **Install**. Installation copies the chosen package to
@@ -34,8 +36,17 @@ my-plugin/
 function activate(context) {
   // context.storageDirectory — per-plugin folder under the launcher's data
   //                            directory; persist anything here.
+  // context.storage          — async JSON key/value store (get/set/delete/all).
   // context.getMainWindow()  — the launcher's BrowserWindow (or null).
   // context.openRoute(path)  — opens a launcher page owned by the add-on.
+  // context.accounts         — list() and getScoped(); sanitized accounts,
+  //                            never tokens or secrets.
+  // context.events.on(...)   — 'accounts-changed', 'account-scope-changed',
+  //                            'settings-changed'; returns unsubscribe.
+  // context.settings.get()   — stable subset: gamePath, customProcess,
+  //                            userAgent.
+  // context.log(message)     — line in Penny's runtime log, tagged plugin:<id>.
+  // Full reference: DEVELOPING.md.
 
   return {
     // Optional. Backs the "Open" button on the Plugins page.
