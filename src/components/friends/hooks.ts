@@ -4,55 +4,63 @@ import { useShallow } from 'zustand/react/shallow'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useFriendsManagerStore } from '../../state/management/friends-manager'
+import { useAccountListStore } from '../../state/accounts/list'
+import { useAccountScopeStore } from '../../state/accounts/scope'
+
+import { groupFriendEntries } from './group'
 
 import { useGetSelectedAccount } from '../../hooks/accounts'
 
 import { toast } from '../../lib/notifications'
 
+function getSelectedAccount() {
+  const primary = useAccountScopeStore.getState().primary
+
+  if (!primary) {
+    return null
+  }
+
+  return useAccountListStore.getState().accounts[primary] ?? null
+}
+
+function reloadFriends() {
+  const account = getSelectedAccount()
+
+  if (!account) {
+    return
+  }
+
+  useFriendsManagerStore.getState().updateLoading(true)
+  window.electronAPI.requestFriends(account)
+}
+
 /** How long to wait after the last keystroke before hitting Epic's search. */
 const searchDebounceMs = 400
 
-export function useFriendsPanel() {
-  const [filter, setFilter] = useState('')
-  const [query, setQuery] = useState('')
-
+/**
+ * IPC listeners for the friends workspace.
+ *
+ * Mounted once from the docked panel (always in the tree) so the hub page
+ * can reuse the same store without doubling toasts or reloads.
+ */
+export function useFriendsManagerListeners() {
   const { selected } = useGetSelectedAccount()
-  const {
-    entries,
-    errorMessage,
-    isLoading,
-    isOpen,
-    isSearching,
-    loadedFor,
-    limitsReached,
-    pending,
-    searchResults,
-  } = useFriendsManagerStore(
+  const { isHubActive, isOpen, loadedFor } = useFriendsManagerStore(
     useShallow((state) => ({
-      entries: state.entries,
-      errorMessage: state.errorMessage,
-      isLoading: state.isLoading,
+      isHubActive: state.isHubActive,
       isOpen: state.isOpen,
-      isSearching: state.isSearching,
       loadedFor: state.loadedFor,
-      limitsReached: state.limitsReached,
-      pending: state.pending,
-      searchResults: state.searchResults,
     }))
   )
   const {
-    closePanel,
     setPending,
     setResponse,
-    setSearching,
     setSearchResults,
     updateLoading,
   } = useFriendsManagerStore(
     useShallow((state) => ({
-      closePanel: state.closePanel,
       setPending: state.setPending,
       setResponse: state.setResponse,
-      setSearching: state.setSearching,
       setSearchResults: state.setSearchResults,
       updateLoading: state.updateLoading,
     }))
@@ -93,7 +101,7 @@ export function useFriendsPanel() {
     return () => {
       listener.removeListener()
     }
-  }, [])
+  }, [setResponse])
 
   useEffect(() => {
     const listener = window.electronAPI.responseFriendsSearch(
@@ -109,7 +117,7 @@ export function useFriendsPanel() {
     return () => {
       listener.removeListener()
     }
-  }, [])
+  }, [setSearchResults])
 
   useEffect(() => {
     const listener = window.electronAPI.notificationFriendsAction(
@@ -124,7 +132,7 @@ export function useFriendsPanel() {
           toast(response.errorMessage)
 
           if (response.targetAccountId === '__bulk__') {
-            handleReload()
+            reloadFriends()
           }
 
           return
@@ -137,35 +145,140 @@ export function useFriendsPanel() {
         )
 
         /** The list is stale as soon as an action lands. */
-        handleReload()
+        reloadFriends()
       }
     )
 
     return () => {
       listener.removeListener()
     }
-  }, [selected?.accountId])
+  }, [selected?.accountId, setPending])
+
+  useEffect(() => {
+    const listener = window.electronAPI.notificationInvite(async (response) => {
+      const { inviting } = useFriendsManagerStore.getState()
+
+      if (inviting.length === 0) {
+        return
+      }
+
+      inviting.forEach((accountId) => setPending(accountId, false))
+      useFriendsManagerStore.setState({ inviting: [] })
+
+      if (response.length <= 0) {
+        toast('Could not send the party invite. Join a party first?')
+
+        return
+      }
+
+      const totalInvitations = response.filter(
+        (item) => item.type === 'invite'
+      ).length
+      const totalFriendRequests = response.filter(
+        (item) => item.type === 'friend-request'
+      ).length
+      const messages: Array<string> = []
+
+      if (totalInvitations > 0) {
+        messages.push(
+          totalInvitations === 1
+            ? 'Party invite sent'
+            : `${totalInvitations} party invites sent`
+        )
+      }
+
+      if (totalFriendRequests > 0) {
+        messages.push(
+          totalFriendRequests === 1
+            ? 'Friend request sent'
+            : `${totalFriendRequests} friend requests sent`
+        )
+      }
+
+      toast(messages.join('. '))
+    })
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [setPending])
 
   /**
-   * Load on open, and whenever the selected account changes underneath an
-   * open panel — the point of the panel is that it always shows the current
-   * account's friends without being asked.
+   * Load while the panel or the hub is showing this account — the point of
+   * both surfaces is that they always show the current account's friends
+   * without being asked.
    */
   useEffect(() => {
-    if (!isOpen || !selected) {
+    if ((!isOpen && !isHubActive) || !selected) {
       return
     }
 
     if (loadedFor !== selected.accountId) {
-      handleReload()
+      updateLoading(true)
+      window.electronAPI.requestFriends(selected)
     }
-  }, [isOpen, selected?.accountId])
+  }, [isHubActive, isOpen, loadedFor, selected?.accountId, updateLoading])
+}
+
+/**
+ * Filter, search, and per-row actions for a friends surface.
+ *
+ * `active` gates remote search so a closed panel cannot wipe results the
+ * hub page is in the middle of using.
+ */
+export function useFriendsWorkspace({ active }: { active: boolean }) {
+  const [filter, setFilter] = useState('')
+  const [query, setQuery] = useState('')
+
+  const { selected } = useGetSelectedAccount()
+  const {
+    entries,
+    errorMessage,
+    isLoading,
+    isSearching,
+    limitsReached,
+    pending,
+    searchResults,
+  } = useFriendsManagerStore(
+    useShallow((state) => ({
+      entries: state.entries,
+      errorMessage: state.errorMessage,
+      isLoading: state.isLoading,
+      isSearching: state.isSearching,
+      limitsReached: state.limitsReached,
+      pending: state.pending,
+      searchResults: state.searchResults,
+    }))
+  )
+  const {
+    closePanel,
+    openPanel,
+    setInviting,
+    setPending,
+    setSearching,
+    setSearchResults,
+    updateLoading,
+  } = useFriendsManagerStore(
+    useShallow((state) => ({
+      closePanel: state.closePanel,
+      openPanel: state.openPanel,
+      setInviting: state.setInviting,
+      setPending: state.setPending,
+      setSearching: state.setSearching,
+      setSearchResults: state.setSearchResults,
+      updateLoading: state.updateLoading,
+    }))
+  )
 
   /** Debounced remote search; short queries stay local to the filter box. */
   useEffect(() => {
+    if (!active || !selected) {
+      return
+    }
+
     const trimmed = query.trim()
 
-    if (!isOpen || !selected || trimmed.length < 3) {
+    if (trimmed.length < 3) {
       setSearchResults([])
 
       return
@@ -180,7 +293,7 @@ export function useFriendsPanel() {
     return () => {
       clearTimeout(timeout)
     }
-  }, [query, isOpen, selected?.accountId])
+  }, [active, query, selected, setSearchResults, setSearching])
 
   const handleReload = () => {
     if (!selected) {
@@ -231,21 +344,20 @@ export function useFriendsPanel() {
     window.electronAPI.friendsBulkAction(selected, targetAccountIds, action)
   }
 
-  const grouped = useMemo(() => {
-    const needle = filter.trim().toLowerCase()
-    const matching = needle
-      ? entries.filter((entry) =>
-          entry.displayName.toLowerCase().includes(needle)
-        )
-      : entries
-
-    return {
-      blocked: matching.filter((entry) => entry.kind === 'blocked'),
-      friends: matching.filter((entry) => entry.kind === 'friend'),
-      incoming: matching.filter((entry) => entry.kind === 'incoming'),
-      outgoing: matching.filter((entry) => entry.kind === 'outgoing'),
+  const handleInvite = (targetAccountId: string) => {
+    if (!selected) {
+      return
     }
-  }, [entries, filter])
+
+    setPending(targetAccountId, true)
+    setInviting(targetAccountId, true)
+    window.electronAPI.invite(selected, [targetAccountId])
+  }
+
+  const grouped = useMemo(
+    () => groupFriendEntries(entries, filter),
+    [entries, filter]
+  )
 
   return {
     entries,
@@ -253,7 +365,6 @@ export function useFriendsPanel() {
     filter,
     grouped,
     isLoading,
-    isOpen,
     isSearching,
     limitsReached,
     pending,
@@ -265,10 +376,39 @@ export function useFriendsPanel() {
     handleAction,
     handleAdd,
     handleBulk,
+    handleInvite,
     handleReload,
+    openPanel,
     setFilter,
     setQuery,
   }
+}
+
+/** Panel surface: listeners live here because the panel is always mounted. */
+export function useFriendsPanel() {
+  const isOpen = useFriendsManagerStore((state) => state.isOpen)
+
+  useFriendsManagerListeners()
+
+  return {
+    ...useFriendsWorkspace({ active: isOpen }),
+    isOpen,
+  }
+}
+
+/** Hub page: keep the list loaded while this route is showing. */
+export function useFriendsHub() {
+  const setHubActive = useFriendsManagerStore((state) => state.setHubActive)
+
+  useEffect(() => {
+    setHubActive(true)
+
+    return () => {
+      setHubActive(false)
+    }
+  }, [setHubActive])
+
+  return useFriendsWorkspace({ active: true })
 }
 
 const actionMessages: Record<FriendsActionPayload['action'], string> = {

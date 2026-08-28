@@ -26,6 +26,7 @@
   "account-management": {
     "title": "Zarządzanie kontem",
     "options": {
+      "friends": "Znajomi",
       "vbucks-information": "Informacje o V-Dolcach",
       "profile": "Profil",
       "redeem-codes": "Zrealizuj kody",

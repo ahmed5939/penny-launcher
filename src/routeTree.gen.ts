@@ -40,6 +40,7 @@ import { Route as AccountsRemoveRouteImport } from './routes/accounts/remove/rou
 import { Route as AccountManagementVbucksInformationRouteImport } from './routes/account-management/vbucks-information/route'
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
+import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
 import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
 import { Route as AccountManagementEpicGamesSettingsRouteImport } from './routes/account-management/epic-games-settings/route'
 import { Route as AccountManagementDevicesAuthRouteImport } from './routes/account-management/devices-auth/route'
@@ -213,6 +214,12 @@ const AccountManagementProfileRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AccountManagementFriendsRouteRoute =
+  AccountManagementFriendsRouteImport.update({
+    path: '/account-management/friends',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountManagementEulaRouteRoute = AccountManagementEulaRouteImport.update(
   {
     path: '/account-management/eula',
@@ -267,6 +274,10 @@ declare module '@tanstack/react-router' {
     }
     '/account-management/eula': {
       preLoaderRoute: typeof AccountManagementEulaRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/account-management/friends': {
+      preLoaderRoute: typeof AccountManagementFriendsRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/profile': {
@@ -386,6 +397,7 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementDevicesAuthRouteRoute,
   AccountManagementEpicGamesSettingsRouteRoute,
   AccountManagementEulaRouteRoute,
+  AccountManagementFriendsRouteRoute,
   AccountManagementProfileRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
   AccountManagementVbucksInformationRouteRoute,

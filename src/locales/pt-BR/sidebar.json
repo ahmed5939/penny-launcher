@@ -26,6 +26,7 @@
   "account-management": {
     "title": "Gerenciamento de Conta",
     "options": {
+      "friends": "Amigos",
       "vbucks-information": "Informações de V-Bucks",
       "profile": "Perfil",
       "redeem-codes": "Resgatar Códigos",

@@ -40,6 +40,7 @@
   "account-management": {
     "title": "Account",
     "options": {
+      "friends": "Friends",
       "vbucks-information": "V-Bucks",
       "profile": "Profile",
       "redeem-codes": "Redeem",
