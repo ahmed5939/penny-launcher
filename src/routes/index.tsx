@@ -50,9 +50,6 @@ export function IndexComponent() {
 
   return (
     <>
-      {/* <HeaderNavigation /> */}
-      <CheckNewVersion />
-
       <div className="flex flex-grow">
         <div
           {...getRootProps({
@@ -89,6 +86,7 @@ const MainContent = memo(() => {
         defaultValue={defaultTab}
         onValueChange={(value) => setTab(value as IndexTabs)}
       >
+        <CheckNewVersion />
         <NavigationTab />
         <TabsContent
           className="tab-content"

@@ -19,7 +19,6 @@ import {
 import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemIcon, resolveItemArt } from '../../../components/items/item-icon'
@@ -52,12 +51,7 @@ export function RouteComponent() {
       <PageHeader
         icon={Store}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.shop')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('stw-operations.options.shop')}
         description="What is inside every X-Ray llama before you buy it, plus the event and weekly stores."
       />
       <Content />

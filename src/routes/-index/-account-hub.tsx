@@ -12,7 +12,6 @@ import {
   UserPlus,
 } from 'lucide-react'
 
-
 /**
  * Epic account hub: everything that belongs to the Epic account (not to
  * Fortnite the game) in one launcher-style grid — shown under the "Account"
@@ -30,31 +29,31 @@ type HubItem = {
 const items: Array<HubItem> = [
   {
     title: 'Add account',
-    description: 'Link an Epic account — all sign-in methods in one place',
+    description: 'Authorization code, device auth, exchange code, or Aerial import',
     icon: UserPlus,
     to: '/accounts/add/$type',
     params: { type: 'authorization-code' },
   },
   {
-    title: 'Devices auth',
+    title: 'Devices',
     description: 'Manage devices linked to the account',
     icon: Smartphone,
     to: '/account-management/devices-auth',
   },
   {
-    title: 'V-Bucks information',
+    title: 'V-Bucks',
     description: 'Balance across all your accounts',
     icon: Coins,
     to: '/account-management/vbucks-information',
   },
   {
-    title: 'Redeem codes',
+    title: 'Redeem',
     description: 'Redeem codes on one or more accounts',
     icon: Ticket,
     to: '/account-management/redeem-codes',
   },
   {
-    title: 'Epic Games settings',
+    title: 'Epic settings',
     description: 'Open the account settings on epicgames.com',
     icon: Cog,
     to: '/account-management/epic-games-settings',
@@ -66,14 +65,14 @@ const items: Array<HubItem> = [
     to: '/account-management/eula',
   },
   {
-    title: 'Generate exchange code',
+    title: 'Exchange code',
     description: 'Create an exchange code for the selected account',
     icon: KeyRound,
     to: '/accounts/add/$type',
     params: { type: 'exchange-code' },
   },
   {
-    title: 'Remove account',
+    title: 'Remove',
     description: 'Unlink an account from the launcher',
     icon: Trash2,
     to: '/accounts/remove',

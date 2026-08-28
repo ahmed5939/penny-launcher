@@ -2,6 +2,7 @@ import { node_process_watcher } from 'node-process-watcher'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
+import { DiscordPresence } from './discord-presence'
 import { MainWindow } from '../startup/windows/main'
 
 export class CustomProcess {
@@ -25,6 +26,7 @@ export class CustomProcess {
       }
 
       CustomProcess.isRunning = isRunning
+      DiscordPresence.setGameRunning(isRunning)
 
       MainWindow.instance.webContents.send(
         ElectronAPIEventKeys.CustomProcessStatus,

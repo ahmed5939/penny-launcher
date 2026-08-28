@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import schedule from 'node-schedule'
 
 import { CustomProcess } from '../../core/custom-process'
+import { DiscordPresence } from '../../core/discord-presence'
 import { Automation } from '../automation'
 import { SystemTray } from '../system-tray'
 import { RuntimeLog } from '../../runtime-log'
@@ -59,6 +60,7 @@ export class MainWindow {
     })
 
     CustomProcess.destroy()
+    DiscordPresence.destroy()
     SystemTray.destroy()
   }
 

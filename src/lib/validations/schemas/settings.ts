@@ -39,6 +39,7 @@ export const settingsSchema = z.object({
   }),
   path: z.string().trim().min(1),
   systemTray: z.boolean().default(false),
+  discordRichPresence: z.boolean().default(true),
   userAgent: z.string().trim().min(1),
 })
 
@@ -67,6 +68,7 @@ export const customizableMenuSettingsSchema = z
     xpBoosts: z.boolean().default(true),
     autoPinUrns: z.boolean().default(true),
     autoLlamas: z.boolean().default(true),
+    endurance: z.boolean().default(true),
 
     accountManagement: z.boolean().default(true),
     vbucksInformation: z.boolean().default(true),

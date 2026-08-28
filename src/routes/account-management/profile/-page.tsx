@@ -8,7 +8,6 @@ import { UpdateIcon } from '@radix-ui/react-icons'
 import { ExternalLink, HeartPulse } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import {
@@ -19,6 +18,7 @@ import {
 } from '../../../components/ui/tabs'
 import {
   Callout,
+  EmptyState,
   PageHeader,
   Panel,
 } from '../../../components/page'
@@ -40,12 +40,7 @@ export function RouteComponent() {
       <PageHeader
         icon={HeartPulse}
         section={t('account-management.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('account-management.options.profile')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('account-management.options.profile')}
         description="Power, F.O.R.T., loadouts, resources and collection — enriched with PennyDB."
       />
       <Content />
@@ -79,12 +74,28 @@ function Content() {
       </div>
 
       <div className="flex flex-col gap-6">
-        {data.map((entry) => (
-          <ProfileCard
-            entry={entry}
-            key={entry.accountId}
+        {data.length === 0 && !isLoading ? (
+          <EmptyState
+            icon={HeartPulse}
+            title={
+              isDisabledForm
+                ? 'Select an account to load its profile'
+                : 'No profile loaded'
+            }
+            description={
+              isDisabledForm
+                ? 'Pick an account in the titlebar, then load power, F.O.R.T. and collection from Epic.'
+                : 'Load profiles to see power, F.O.R.T., loadouts and collection for the accounts in scope.'
+            }
           />
-        ))}
+        ) : (
+          data.map((entry) => (
+            <ProfileCard
+              entry={entry}
+              key={entry.accountId}
+            />
+          ))
+        )}
       </div>
 
       <GoToTop containerId="selector-card" />

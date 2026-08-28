@@ -633,6 +633,8 @@ process.on('uncaughtExceptionMonitor', (error) => {
       (
         _,
         summary: {
+          gameRunning: boolean
+          primaryId: string | null
           primaryName: string | null
           running: Array<string>
           total: number

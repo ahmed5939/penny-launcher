@@ -94,6 +94,8 @@ export function popupContextMenu(
  * Feeds the tray menu, which with the window hidden is the entire UI.
  */
 export function setTraySummary(summary: {
+  gameRunning: boolean
+  primaryId: string | null
   primaryName: string | null
   running: Array<string>
   total: number

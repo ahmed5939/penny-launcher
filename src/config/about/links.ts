@@ -1,6 +1,6 @@
 /**
- * `author.name` in package.json stays Ciensprog for upstream attribution,
- * so the repo owner is spelled out here instead of derived from it.
+ * `author` in package.json stays Ciensprog for upstream attribution.
+ * Current maintainer is listed under `contributors` (Ahmed / ahmed5939).
  */
 export const repositoryURL = 'https://github.com/ahmed5939/penny-launcher'
 

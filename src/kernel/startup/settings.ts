@@ -22,6 +22,7 @@ import {
 import { launcherAppClient2 } from '../../config/fortnite/clients'
 
 import { CustomProcess } from '../core/custom-process'
+import { DiscordPresence } from '../core/discord-presence'
 import { MainWindow } from './windows/main'
 import { DataDirectory } from './data-directory'
 import { SystemTray } from './system-tray'
@@ -75,6 +76,7 @@ export class SettingsManager {
 
     CustomProcess.setName(settings.customProcess)
     CustomProcess.init()
+    DiscordPresence.init(settings.discordRichPresence)
 
     await SettingsManager.update(settings)
   }
@@ -97,6 +99,9 @@ export class SettingsManager {
       path: result.settings.path ?? defaultSettingsData.path,
       systemTray:
         result.settings.systemTray ?? defaultSettingsData.systemTray,
+      discordRichPresence:
+        result.settings.discordRichPresence ??
+        defaultSettingsData.discordRichPresence,
       userAgent:
         result.settings.userAgent ?? defaultSettingsData.userAgent,
     }
@@ -123,6 +128,7 @@ export class SettingsManager {
     }
 
     CustomProcess.setName(settings.customProcess)
+    DiscordPresence.setEnabled(settings.discordRichPresence !== false)
 
     await DataDirectory.updateSettingsFile(settings)
 

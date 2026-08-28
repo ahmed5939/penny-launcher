@@ -1,21 +1,29 @@
 {
+  "home": "Home",
+  "groups": {
+    "automate": "Automate",
+    "stw": "Save the World",
+    "account": "Account",
+    "tools": "Tools"
+  },
   "stw-operations": {
-    "title": "STW Operations",
+    "title": "Save the World",
     "options": {
       "auto-kick": "Auto-kick",
-      "taxi-service": "Taxi Service",
+      "taxi-service": "Taxi",
       "party": "Party",
       "expeditions": "Expeditions",
-      "squad-presets": "Survivor Squads",
+      "squad-presets": "Squads",
       "inventory": "Vault",
       "compendium": "Compendium",
-      "quests": "Quest Log",
-      "loadouts": "Hero Loadouts",
-      "timeline": "Event Timeline",
-      "shop": "STW Shop",
+      "quests": "Quests",
+      "loadouts": "Loadouts",
+      "timeline": "Timeline",
+      "shop": "Shop",
       "xp-boosts": "XP Boosts",
-      "auto-pin-urns": "Urn Quest Tracker",
-      "auto-llamas": "Auto-llamas"
+      "auto-pin-urns": "Urns",
+      "auto-llamas": "Auto-llamas",
+      "endurance": "Endurance"
     },
     "auto-kick-status": {
       "issue": "Issue",
@@ -23,31 +31,31 @@
     }
   },
   "account-management": {
-    "title": "Account Management",
+    "title": "Account",
     "options": {
-      "vbucks-information": "V-Bucks Information",
+      "vbucks-information": "V-Bucks",
       "profile": "Profile",
-      "redeem-codes": "Redeem Codes",
-      "devices-auth": "Devices Auth",
-      "epic-settings": "Epic Games Settings"
+      "redeem-codes": "Redeem",
+      "devices-auth": "Devices",
+      "epic-settings": "Epic settings"
     }
   },
   "advanced-mode": {
-    "title": "Advanced Mode",
+    "title": "Tools",
     "options": {
-      "matchmaking-track": "Matchmaking Track",
-      "server-status": "Server Status",
-      "world-info": "World Info"
+      "matchmaking-track": "Matchmaking",
+      "server-status": "Servers",
+      "world-info": "World info"
     }
   },
   "accounts": {
     "title": "My Accounts",
     "options": {
       "show-total-accounts": "Show Total Accounts",
-      "auth": "Authorization Code",
-      "exchange": "Exchange Code",
-      "device": "Device Auth",
-      "remove": "Remove Account"
+      "auth": "Authorization code",
+      "exchange": "Exchange code",
+      "device": "Device auth",
+      "remove": "Remove"
     }
   },
   "links": {

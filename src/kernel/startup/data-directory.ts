@@ -113,6 +113,7 @@ export class DataDirectory {
     missionInterval: `${defaultMissionInterval}`,
     path: 'C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64',
     systemTray: false,
+    discordRichPresence: true,
     userAgent: 'Fortnite/++Fortnite+Release-34.40-CL-41753727-Windows',
   }
 

@@ -20,7 +20,7 @@ export function AutomationChips() {
   const { services } = useAutomationServices()
 
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-1.5">
+    <div className="mb-4 flex flex-wrap items-center gap-1.5">
       <span className="mr-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">
         {t('home.services.title')}
       </span>

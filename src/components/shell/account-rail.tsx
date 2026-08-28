@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { navSections } from '../../config/navigation'
 import { AutomationStatusType } from '../../config/constants/automation'
 
+import { BetaBadge } from '../navigation/beta-badge'
 import { StatusDot } from '../page'
 
 import { useGetAccounts } from '../../hooks/accounts'
@@ -16,13 +17,10 @@ import { useCustomizableMenuSettingsVisibility } from '../../hooks/settings'
 import { cn } from '../../lib/utils'
 
 /**
- * Navigation rail. Destinations only.
+ * Navigation rail. Destinations only, grouped by job.
  *
- * The account list that briefly lived up here is gone again — the titlebar
- * picker is the one place accounts are chosen, and two controls for the same
- * scope meant neither could be trusted at a glance. What is left is a plain
- * list of places: no dropdowns, no eyebrow headers shouting in uppercase,
- * one hairline between groups, every item one click.
+ * Quiet group labels replace a wall of 20 undifferentiated links. Every
+ * destination is still one click — the labels are not menus.
  */
 export function AccountRail() {
   const { t } = useTranslation(['sidebar', 'general'])
@@ -56,27 +54,32 @@ export function AccountRail() {
                 item.canAny.some((key) => getMenuOptionVisibility(key)))
           )
 
-          // A section with no children is itself the destination.
+          // A section with no children is itself the destination (Home, Add-ons).
           if (items.length === 0) {
             return section.to ? (
-              <NavRow
-                key={section.key}
-                isActive={pathname === section.to}
-                item={{
-                  icon: section.icon,
-                  label: section.label,
-                  to: section.to,
-                }}
-                label={t(section.label)}
-              />
+              <div key={section.key}>
+                {sectionIndex > 0 && (
+                  <div className="mx-2 my-1.5 h-px bg-border/60" />
+                )}
+                <NavRow
+                  isActive={pathname === section.to}
+                  item={{
+                    icon: section.icon,
+                    label: section.label,
+                    to: section.to,
+                  }}
+                  label={t(section.label)}
+                />
+              </div>
             ) : null
           }
 
           return (
             <div key={section.key}>
-              {/* A hairline is enough to say "new group". */}
               {sectionIndex > 0 && (
-                <div className="mx-2 my-1.5 h-px bg-border/60" />
+                <p className="micro-label px-2 pb-1 pt-3 text-muted-foreground/70">
+                  {t(section.label)}
+                </p>
               )}
               {items.map((item) => (
                 <NavRow
@@ -107,7 +110,7 @@ function NavRow({
 }: {
   isActive: boolean
   isDisabled?: boolean
-  item: Pick<NavItem, 'icon' | 'params' | 'to'> & { label: string }
+  item: Pick<NavItem, 'beta' | 'icon' | 'params' | 'to'> & { label: string }
   label: string
   status?: AutomationStatusType | null
 }) {
@@ -117,6 +120,7 @@ function NavRow({
     <>
       <Icon className="size-4 shrink-0 opacity-75" />
       <span className="flex-1 truncate">{label}</span>
+      {item.beta && <BetaBadge />}
       {status != null && (
         <StatusDot
           tone={

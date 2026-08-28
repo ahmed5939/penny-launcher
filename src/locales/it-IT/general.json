@@ -71,7 +71,8 @@
   },
   "version": {
     "title": "Nuova versione {{version}}",
-    "description": "Puoi scaricare la nuova versione (file .exe) da qui:"
+    "description": "Puoi scaricare la nuova versione (file .exe) da qui:",
+    "action": "Apri versione"
   },
   "community-info": {
     "message": "Unisciti alla nostra <2>Community Discord<1/></2> per saperne di più sulle novità dei prossimi aggiornamenti!!!"

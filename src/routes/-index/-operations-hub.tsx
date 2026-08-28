@@ -13,6 +13,7 @@ import {
   HeartPulse,
   Pin,
   Radar,
+  Repeat,
   ScrollText,
   Store,
   Swords,
@@ -23,11 +24,9 @@ import {
 
 import { BetaBadge } from '../../components/navigation/beta-badge'
 
-
 /**
- * Fortnite operations hub: every STW tool in one launcher-style grid —
- * shown under the "Operations" tab of the detail view. This replaces the
- * old hamburger menu.
+ * Fortnite operations hub: every STW tool in one launcher-style grid.
+ * Kept in sync with `navSections` so a tool cannot vanish from one surface.
  */
 
 type HubItem = {
@@ -46,7 +45,7 @@ const items: Array<HubItem> = [
     to: '/stw-operations/automation',
   },
   {
-    title: 'Taxi service',
+    title: 'Taxi',
     description: 'Run accounts as mission taxis',
     icon: Car,
     to: '/stw-operations/taxi-service',
@@ -58,57 +57,49 @@ const items: Array<HubItem> = [
     to: '/stw-operations/party',
   },
   {
-    beta: true,
     title: 'Expeditions',
     description: 'Collect and re-launch expeditions in bulk',
     icon: Compass,
     to: '/stw-operations/expeditions',
   },
   {
-    beta: true,
-    title: 'Squad presets',
+    title: 'Squads',
     description: 'Save and apply survivor squad loadouts',
     icon: Swords,
     to: '/stw-operations/squads',
   },
   {
-    beta: true,
     title: 'Vault',
     description: 'Every item the account owns, with recycle values',
     icon: Boxes,
     to: '/stw-operations/inventory',
   },
   {
-    beta: true,
     title: 'Compendium',
     description: 'Every hero, weapon and trap in the game',
     icon: BookOpen,
     to: '/stw-operations/compendium',
   },
   {
-    beta: true,
-    title: 'Hero loadouts',
+    title: 'Loadouts',
     description: 'Commanders, support teams, team perks and gadgets',
     icon: Users,
     to: '/stw-operations/loadouts',
   },
   {
-    beta: true,
-    title: 'Quest log',
+    title: 'Quests',
     description: 'Objectives, progress and rewards — pin what matters',
     icon: ScrollText,
     to: '/stw-operations/quests',
   },
   {
-    beta: true,
-    title: 'Event timeline',
+    title: 'Timeline',
     description: 'Ventures seasons and their weekly event shops',
     icon: CalendarRange,
     to: '/stw-operations/timeline',
   },
   {
-    beta: true,
-    title: 'STW shop',
+    title: 'Shop',
     description: 'X-Ray llama contents, event and weekly stores',
     icon: Store,
     to: '/stw-operations/shop',
@@ -126,21 +117,26 @@ const items: Array<HubItem> = [
     to: '/stw-operations/xpboosts',
   },
   {
-    title: 'Urn Quest Tracker',
+    title: 'Urns',
     description: 'Keep urn and mini-boss quests pinned automatically',
     icon: Pin,
     to: '/stw-operations/urns',
   },
   {
     beta: true,
+    title: 'Endurance',
+    description: 'Storm Shield Endurance from outside the game. F8 stops it.',
+    icon: Repeat,
+    to: '/stw-operations/endurance',
+  },
+  {
     title: 'Profile',
     description: 'Power level, F.O.R.T., loadouts and collection at a glance',
     icon: HeartPulse,
     to: '/account-management/profile',
   },
   {
-    beta: true,
-    title: 'Server status',
+    title: 'Servers',
     description: 'Check Fortnite service availability and downtime',
     icon: Activity,
     to: '/advanced-mode/server-status',
@@ -152,7 +148,7 @@ const items: Array<HubItem> = [
     to: '/advanced-mode/world-info',
   },
   {
-    title: 'Matchmaking track',
+    title: 'Matchmaking',
     description: 'Track matchmaking for an account',
     icon: Radar,
     to: '/advanced-mode/matchmaking-track',

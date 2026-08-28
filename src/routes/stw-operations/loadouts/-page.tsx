@@ -19,7 +19,6 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
@@ -80,12 +79,7 @@ export function RouteComponent() {
       <PageHeader
         icon={Users}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.loadouts')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('stw-operations.options.loadouts')}
         description="Build and switch hero loadouts — commander, support team, team perk and gadgets."
       />
       <Content />

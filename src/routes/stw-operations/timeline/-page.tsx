@@ -7,7 +7,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { GoToTop } from '../../../components/go-to-top'
 import { Input } from '../../../components/ui/input'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
@@ -34,12 +33,7 @@ export function RouteComponent() {
       <PageHeader
         icon={CalendarRange}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.timeline')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('stw-operations.options.timeline')}
         description="Every Ventures season in running order, with the items each week's event shop stocks."
       />
       <Content />
@@ -55,6 +49,7 @@ function Content() {
   const [seasons, setSeasons] = useState<Array<TimelineSeason>>([])
   const [currentIndex, setCurrentIndex] = useState(-1)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [hasLoaded, setHasLoaded] = useState(false)
 
   const records = useItemDatabaseStore((state) => state.records)
   const ratings = useItemDatabaseStore((state) => state.ratings)
@@ -65,6 +60,7 @@ function Content() {
         setSeasons(response.seasons)
         setCurrentIndex(response.currentIndex)
         setErrorMessage(response.errorMessage ?? null)
+        setHasLoaded(true)
       }
     )
 
@@ -139,9 +135,13 @@ function Content() {
   if (seasons.length <= 0) {
     return (
       <EmptyState
-        description="Fetching the season schedule."
+        description={
+          hasLoaded
+            ? 'Epic did not return any Ventures seasons. Try again in a moment.'
+            : 'Fetching the season schedule.'
+        }
         icon={CalendarRange}
-        title="Loading timeline"
+        title={hasLoaded ? 'No seasons available' : 'Loading timeline'}
       />
     )
   }

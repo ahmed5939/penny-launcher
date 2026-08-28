@@ -71,7 +71,8 @@
   },
   "version": {
     "title": "Nowa wersja {{version}}",
-    "description": "Możesz pobrać nową wersję (plik .exe) tutaj:"
+    "description": "Możesz pobrać nową wersję (plik .exe) tutaj:",
+    "action": "Otwórz wydanie"
   },
   "community-info": {
     "message": "Dołącz do naszej <2>Społeczności na Discordzie<1/></2>, aby dowiedzieć się więcej o nadchodzących aktualizacjach!!!"

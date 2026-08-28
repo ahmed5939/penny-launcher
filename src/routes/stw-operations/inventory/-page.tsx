@@ -23,7 +23,6 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { Input } from '../../../components/ui/input'
@@ -175,12 +174,7 @@ export function RouteComponent() {
       <PageHeader
         icon={Boxes}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.inventory')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('stw-operations.options.inventory')}
         description="Every hero, schematic, defender and survivor the account owns. Click to select, right-click for actions."
       />
       <Content />

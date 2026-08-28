@@ -71,8 +71,9 @@
     "founder-status": "Founder Status:"
   },
   "version": {
-    "title": "New version {{version}}",
-    "description": "You can download new version (.exe file) from here:"
+    "title": "Penny {{version}} is available",
+    "description": "Download the installer from GitHub Releases.",
+    "action": "Open release"
   },
   "community-info": {
     "message": "Join our <2>Discord Community<1/></2> to know more about what's coming on next updates!!!"
@@ -87,7 +88,7 @@
     "ultimate": "Ultimate Edition"
   },
   "launch-game": {
-    "button": "Launch Game",
+    "button": "Launch Fortnite",
     "notifications": {
       "success": "The game has been launched with the account {{name}}",
       "error": "An error has occurred launching game with account {{name}}, try again later"
@@ -133,18 +134,18 @@
     }
   },
   "home": {
-    "eyebrow": "Fortnite · Save the World",
+    "eyebrow": "Save the World",
     "ready": "Ready to play",
     "playing": "Now playing",
-    "no-account": "No account linked",
-    "no-account-description": "Link an Epic account to launch the game and use every Save the World tool.",
-    "add-account": "Add an account",
-    "select-account": "Pick an account from the titlebar to get started",
+    "no-account": "Add an account to start",
+    "no-account-description": "Authorization code, device auth, exchange code, or import from Aerial.",
+    "add-account": "Add account",
+    "select-account": "Pick an account in the titlebar",
     "session": "Session",
     "stats": {
       "accounts": "Accounts",
       "services": "Automations",
-      "alerts": "Mission alerts"
+      "alerts": "Alerts"
     },
     "services": {
       "title": "Automation",
@@ -154,9 +155,9 @@
       "off": "Off"
     },
     "alerts": {
-      "title": "Alert rewards available",
-      "login-title": "Login required",
-      "login-description": "You need to log in to see mission alerts.",
+      "title": "Alert rewards",
+      "login-title": "Link an account to see alerts",
+      "login-description": "Mission alerts load for the selected Epic account.",
       "empty-title": "No alerts loaded",
       "empty-description": "Refresh to pull the current mission alerts from Fortnite.",
       "refresh": "Refresh alerts",
@@ -166,7 +167,7 @@
       "perk-up": "Uncommon PERK-UP!"
     },
     "tabs": {
-      "play": "Play",
+      "play": "Home",
       "missions": "Missions",
       "operations": "Operations"
     }

@@ -5,7 +5,6 @@ import { UpdateIcon } from '@radix-ui/react-icons'
 import { Pin, RefreshCw, ScrollText, UserX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemIcon } from '../../../components/items/item-icon'
@@ -54,12 +53,7 @@ export function RouteComponent() {
       <PageHeader
         icon={ScrollText}
         section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('stw-operations.options.quests')}
-            <BetaBadge />
-          </span>
-        }
+        title={t('stw-operations.options.quests')}
         description="Every active quest with its objectives, progress and rewards. Pin the ones you are working on."
       />
       <Content />

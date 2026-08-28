@@ -3,30 +3,15 @@
 [![CI](https://github.com/ahmed5939/penny-launcher/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmed5939/penny-launcher/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/ahmed5939/penny-launcher)](https://github.com/ahmed5939/penny-launcher/releases)
 
-> **NOTE:** Currently in development.
+<p align="center">
+  <img src="src/assets/brand/penny-head.png" alt="Penny" width="96" height="96" />
+</p>
 
-A fast Windows desktop application to manage things on Fortnite STW.
+Windows desktop app for managing Fortnite Save the World accounts: launch the official game, watch mission alerts, and run STW tools from one window.
 
-Penny Launcher is a fork of [Aerial Launcher](https://github.com/Ciensprog/Aerial-Launcher) by **Ciensprog** (itself based on Potato Launcher), focused on **performance** and **new features**. All credit for the original application goes to Ciensprog and contributors. Licensed under GPL-3.0.
+Penny is a GPL-3.0 fork of [Aerial Launcher](https://github.com/Ciensprog/Aerial-Launcher) by **Ciensprog** (itself based on Potato Launcher). Maintained by **Ahmed** ([ahmed5939](https://github.com/ahmed5939)). All credit for the original application goes to Ciensprog and contributors.
 
-<!-- TODO: add a screenshot of Penny Launcher here (app-preview.jpg) once captured from the running app. -->
-
-> [!IMPORTANT]
->
-> - No developer of this application is associated with Epic Games.
-> - **_Since this project is Open-Source, be careful if you download an installer from sources other than this repository; other sources may contain malicious code._**
-
-## Table of Contents
-
-- [Penny Launcher](#penny-launcher)
-  - [Installation](#installation)
-    - [Good To Know](#good-to-know)
-      - [Migrating data from Aerial Launcher](#migrating-data-from-aerial-launcher)
-      - [Update Application](#update-application)
-  - [Features](#features)
-  - [Development](#development)
-  - [Credits](#credits)
-  - [🤝 Contributing](#-contributing)
+> Currently in development. Not affiliated with Epic Games. **Not code signed** — Windows SmartScreen will warn on first install. Only download installers from [this repository's Releases](https://github.com/ahmed5939/penny-launcher/releases).
 
 ## Installation
 
@@ -34,7 +19,7 @@ Download the latest installer from the [Releases page](https://github.com/ahmed5
 
 ### Good To Know
 
-Since this application is not code signed, when you try to install it you will see a confirmation dialog from Windows. This only happens the first time you install.
+The first install shows a Windows confirmation dialog because the app is not code signed. That only happens once.
 
 Settings are saved to `C:\Users\YOUR_USER\AppData\Roaming\penny-launcher-data`. Inside this folder you can find an `accounts.json` file with all your added accounts.
 
@@ -48,20 +33,23 @@ Penny Launcher uses its own data folder (`penny-launcher-data`) so it won't coll
 1. Paste them into `C:\Users\YOUR_USER\AppData\Roaming\penny-launcher-data`.
 1. Restart the launcher and your data should be loaded.
 
+Or use **Add account → Import from Aerial** on a PC that already has Aerial installed.
+
 #### Update Application
 
-When a new version is available, you will see a notification in the home section.
+When a new version is available, you will see a notification on the home screen.
 
 ## Features
 
 > Note: new features are still in development.
 
-- Manage multiple Fortnite STW accounts (add via Authorization Code, Device Auth, or Exchange Code).
+- Manage multiple Fortnite STW accounts (add via Authorization Code, Device Auth, Exchange Code, or Aerial import).
 - Custom game path and custom display names per account.
-- Launch the game with the selected account.
+- Launch the official Fortnite binary with the selected account (home button or tray).
 - Generate Exchange Codes.
 - Access the [Penny DB](https://pennydb.net) profile of the selected account.
 - Automation: daily quests, mission scheduling, auto-llamas, and more.
+- Discord Rich Presence from the launcher process only (in launcher / in Save the World / in Battle Royale). Nothing is injected into Fortnite.
 
 ## Development
 
@@ -81,8 +69,9 @@ Releases are automated: pushing a `v*` tag (matching the version in `package.jso
 
 - **Ciensprog** — original developer of [Aerial Launcher](https://github.com/Ciensprog/Aerial-Launcher), the project Penny Launcher is based on.
 - The Aerial Launcher contributors and the wider Fortnite STW community.
+- **Ahmed ([ahmed5939](https://github.com/ahmed5939))** — current Penny maintainer.
 
-## 🤝 Contributing
+## Contributing
 
 1. Create a new branch `git checkout -b new-feature`.
 1. Stage your changes with `git add .`

@@ -24,6 +24,7 @@ export const useSettingsStore = create<SettingsState>()(
     missionInterval: '',
     path: '',
     systemTray: false,
+    discordRichPresence: true,
     userAgent: '',
 
     customProcessIsRunning: false,
@@ -51,6 +52,10 @@ export const useSettingsStore = create<SettingsState>()(
 
       if (settings.systemTray !== undefined) {
         newData.systemTray = settings.systemTray
+      }
+
+      if (settings.discordRichPresence !== undefined) {
+        newData.discordRichPresence = settings.discordRichPresence
       }
 
       if (settings.userAgent !== undefined) {

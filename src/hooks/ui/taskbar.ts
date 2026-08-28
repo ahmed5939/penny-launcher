@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 
 import { useAccountScopeStore } from '../../state/accounts/scope'
 import { useGetAccounts } from '../accounts'
+import { useCustomProcessStatus } from '../settings'
 
 import { parseCustomDisplayName } from '../../lib/utils'
 
@@ -59,6 +60,7 @@ export function useTaskbarSync() {
   const primaryId = useAccountScopeStore((state) => state.primary)
   const setPrimary = useAccountScopeStore((state) => state.setPrimary)
   const { accountsArray } = useGetAccounts()
+  const { customProcessIsRunning } = useCustomProcessStatus()
 
   useEffect(() => {
     const count = members.length
@@ -95,9 +97,11 @@ export function useTaskbarSync() {
     )
 
     window.electronAPI.setTraySummary({
+      gameRunning: customProcessIsRunning,
+      primaryId: primaryId,
       primaryName: primary ? parseCustomDisplayName(primary) : null,
       running: [],
       total: members.length,
     })
-  }, [accountsArray, members, primaryId])
+  }, [accountsArray, customProcessIsRunning, members, primaryId])
 }
