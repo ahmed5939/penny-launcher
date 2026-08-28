@@ -1,5 +1,6 @@
 import type { IpcRendererEvent } from 'electron'
 import type {
+  ShopCatalogPayload,
   ShopOpenNotification,
   ShopPayload,
   ShopPurchaseNotification,
@@ -70,6 +71,33 @@ export function notificationShopPurchase(
     removeListener: () =>
       rendererInstance.removeListener(
         ElectronAPIEventKeys.ShopPurchaseNotification,
+        customCallback
+      ),
+  }
+}
+
+export function requestShopCatalog() {
+  ipcRenderer.send(ElectronAPIEventKeys.ShopCatalogRequest)
+}
+
+export function responseShopCatalog(
+  callback: (response: ShopCatalogPayload) => Promise<void>
+) {
+  const customCallback = (
+    _: IpcRendererEvent,
+    response: ShopCatalogPayload
+  ) => {
+    callback(response).catch(console.error)
+  }
+  const rendererInstance = ipcRenderer.on(
+    ElectronAPIEventKeys.ShopCatalogResponse,
+    customCallback
+  )
+
+  return {
+    removeListener: () =>
+      rendererInstance.removeListener(
+        ElectronAPIEventKeys.ShopCatalogResponse,
         customCallback
       ),
   }

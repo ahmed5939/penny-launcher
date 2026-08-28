@@ -16,7 +16,19 @@ import {
   purchaseCatalogEntry,
   setOpenCardPackBatch,
 } from '../../services/endpoints/mcp'
+import { getPennyDBStwShop } from '../../services/endpoints/pennydb'
 import { getCatalog } from '../../services/endpoints/storefront'
+import {
+  parsePennyDBShop,
+  type ShopCatalogPayload,
+} from './shop-catalog'
+
+export type {
+  ShopCatalogOffer,
+  ShopCatalogPayload,
+  ShopCatalogStorefront,
+  ShopView,
+} from './shop-catalog'
 
 /**
  * The three shelves the app surfaces, and the storefronts Epic files them
@@ -193,6 +205,34 @@ export class Shop {
           )
         })
     })
+  }
+
+  /**
+   * Public PennyDB catalog. Not a purchase path — `purchase` still talks
+   * only to Epic's MCP catalog for the selected account.
+   */
+  static async requestCatalog() {
+    try {
+      const response = await getPennyDBStwShop()
+      const storefronts = parsePennyDBShop(response.data)
+
+      MainWindow.instance.webContents.send(
+        ElectronAPIEventKeys.ShopCatalogResponse,
+        { storefronts } as ShopCatalogPayload
+      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      MainWindow.instance.webContents.send(
+        ElectronAPIEventKeys.ShopCatalogResponse,
+        {
+          errorMessage:
+            error?.response?.data?.errorMessage ??
+            error?.message ??
+            'Unknown Error',
+          storefronts: [],
+        } as ShopCatalogPayload
+      )
+    }
   }
 
   private static async getShop(account: AccountData) {

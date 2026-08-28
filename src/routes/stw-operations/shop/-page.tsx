@@ -3,6 +3,7 @@ import type {
   ShopGrant,
   ShopOffer,
   ShopSection,
+  ShopView,
 } from '../../../kernel/core/shop'
 import type { SegmentedOption } from '../../../components/page'
 
@@ -22,6 +23,7 @@ import dayjs from 'dayjs'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemIcon, resolveItemArt } from '../../../components/items/item-icon'
+import { BetaBadge } from '../../../components/navigation/beta-badge'
 import {
   Callout,
   EmptyState,
@@ -33,9 +35,15 @@ import {
   StatTile,
 } from '../../../components/page'
 
-import { useShopData } from './-hooks'
+import { useShopData, useShopPage } from './-hooks'
+import { ShopCatalog } from './-catalog'
 
 import { parseCustomDisplayName } from '../../../lib/utils'
+
+const viewOptions: Array<SegmentedOption<ShopView>> = [
+  { label: 'Account shop', value: 'account' },
+  { label: 'Browse catalog', value: 'browse' },
+]
 
 const sectionOptions: Array<SegmentedOption<ShopSection>> = [
   { label: 'X-Ray Llamas', value: 'llamas' },
@@ -45,16 +53,29 @@ const sectionOptions: Array<SegmentedOption<ShopSection>> = [
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
+  const { updateView, view } = useShopPage()
 
   return (
     <>
       <PageHeader
         icon={Store}
         section={t('stw-operations.title')}
-        title={t('stw-operations.options.shop')}
-        description="What is inside every X-Ray llama before you buy it, plus the event and weekly stores."
+        title={
+          <span className="flex items-center gap-2">
+            {t('stw-operations.options.shop')}
+            <BetaBadge />
+          </span>
+        }
+        description="What is inside every X-Ray llama before you buy it, plus the event and weekly stores. Browse the public catalog without signing in."
       />
-      <Content />
+      <div className="mb-1">
+        <Segmented
+          onChange={updateView}
+          options={viewOptions}
+          value={view}
+        />
+      </div>
+      {view === 'browse' ? <ShopCatalog /> : <Content />}
     </>
   )
 }

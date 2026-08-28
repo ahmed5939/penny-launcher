@@ -937,6 +937,10 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
+    secureIpcOn(ElectronAPIEventKeys.ShopCatalogRequest, async () => {
+      await Shop.requestCatalog()
+    })
+
     secureIpcOn(
       ElectronAPIEventKeys.SquadsRequest,
       async (_, account: AccountData) => {
