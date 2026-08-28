@@ -48,10 +48,11 @@ export const customizableMenuSettingsRelations: Record<
     'xpBoosts',
     'autoPinUrns',
     'autoLlamas',
-    'endurance',
+    'outpost',
   ],
   accountManagement: [
     'vbucksInformation',
+    'giftsInformation',
     'profile',
     'redeemCodes',
     'devicesAuth',

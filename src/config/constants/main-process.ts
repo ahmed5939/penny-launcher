@@ -190,6 +190,13 @@ export enum ElectronAPIEventKeys {
   MatchmakingTrackStatusNotification = 'advanced-mode:matchmaking-track:status:notification',
 
   /**
+   * Outpost
+   */
+
+  OutpostInfoRequest = 'outpost:info:request',
+  OutpostBaseRequest = 'outpost:base:request',
+
+  /**
    * Automation
    */
 
@@ -220,6 +227,11 @@ export enum ElectronAPIEventKeys {
   TaxiServiceServiceRemoveNotification = 'taxi-service:service:remove:notification',
   TaxiServiceServiceActionUpdate = 'taxi-service:service:action:update',
   TaxiServiceServiceActionUpdateNotification = 'taxi-service:service:action:update:notification',
+
+  TaxiServiceWhitelistAdd = 'taxi-service:whitelist:add',
+  TaxiServiceWhitelistRemove = 'taxi-service:whitelist:remove',
+
+  TaxiServiceServiceLog = 'taxi-service:service:log',
 
   TaxiServiceServiceNotifications = 'taxi-service:service:notifications',
 

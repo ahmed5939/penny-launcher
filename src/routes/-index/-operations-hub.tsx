@@ -15,6 +15,7 @@ import {
   Radar,
   Repeat,
   ScrollText,
+  Shield,
   Store,
   Swords,
   Users,
@@ -146,6 +147,13 @@ const items: Array<HubItem> = [
     description: 'Browse and export world info files',
     icon: Globe,
     to: '/advanced-mode/world-info',
+  },
+  {
+    beta: true,
+    title: 'Outpost',
+    description: 'Storm shields, endurance waves and base scans',
+    icon: Shield,
+    to: '/stw-operations/outpost',
   },
   {
     title: 'Matchmaking',

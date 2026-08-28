@@ -23,6 +23,7 @@ import { Route as StwOperationsSquadsRouteImport } from './routes/stw-operations
 import { Route as StwOperationsShopRouteImport } from './routes/stw-operations/shop/route'
 import { Route as StwOperationsQuestsRouteImport } from './routes/stw-operations/quests/route'
 import { Route as StwOperationsPartyRouteImport } from './routes/stw-operations/party/route'
+import { Route as StwOperationsOutpostRouteImport } from './routes/stw-operations/outpost/route'
 import { Route as StwOperationsLoadoutsRouteImport } from './routes/stw-operations/loadouts/route'
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
 import { Route as StwOperationsExpeditionsRouteImport } from './routes/stw-operations/expeditions/route'
@@ -107,6 +108,11 @@ const StwOperationsQuestsRouteRoute = StwOperationsQuestsRouteImport.update({
 
 const StwOperationsPartyRouteRoute = StwOperationsPartyRouteImport.update({
   path: '/stw-operations/party',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const StwOperationsOutpostRouteRoute = StwOperationsOutpostRouteImport.update({
+  path: '/stw-operations/outpost',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -316,6 +322,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsLoadoutsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/outpost': {
+      preLoaderRoute: typeof StwOperationsOutpostRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/party': {
       preLoaderRoute: typeof StwOperationsPartyRouteImport
       parentRoute: typeof rootRoute
@@ -380,6 +390,7 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsExpeditionsRouteRoute,
   StwOperationsInventoryRouteRoute,
   StwOperationsLoadoutsRouteRoute,
+  StwOperationsOutpostRouteRoute,
   StwOperationsPartyRouteRoute,
   StwOperationsQuestsRouteRoute,
   StwOperationsShopRouteRoute,

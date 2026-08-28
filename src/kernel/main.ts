@@ -1158,6 +1158,28 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     /**
+     * Outpost
+     */
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.OutpostInfoRequest,
+      async (_, account: AccountData) => {
+        const { Outpost } = await import('./core/outpost')
+
+        return Outpost.requestInfo(account)
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.OutpostBaseRequest,
+      async (_, account: AccountData, saveFile: string) => {
+        const { Outpost } = await import('./core/outpost')
+
+        return Outpost.requestBaseData(account, saveFile)
+      }
+    )
+
+    /**
      * Automation
      */
 
@@ -1236,6 +1258,20 @@ process.on('uncaughtExceptionMonitor', (error) => {
       ElectronAPIEventKeys.TaxiServiceServiceActionUpdate,
       async (_, accountId: string, config: TaxiServiceServiceActionConfig) => {
         await TaxiService.updateAction(accountId, config)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.TaxiServiceWhitelistAdd,
+      async (_, accountId: string, displayName: string) => {
+        await TaxiService.addWhitelist(accountId, displayName)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.TaxiServiceWhitelistRemove,
+      async (_, accountId: string, targetId: string) => {
+        await TaxiService.removeWhitelist(accountId, targetId)
       }
     )
 

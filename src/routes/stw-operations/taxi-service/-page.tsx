@@ -1,6 +1,7 @@
 import type {
   TaxiServiceNotificationEventFriendAdded,
   TaxiServiceNotificationEventFriendRequestSend,
+  TaxiServiceNotificationEventLog,
   TaxiServiceNotificationEventPartyInvite,
   TaxiServiceNotificationEventPartyMemberJoined,
 } from '../../../state/stw-operations/taxi-service'
@@ -308,17 +309,130 @@ export function Content() {
                         'stw-operations:taxi-service.card.power-level'
                       )}
                     >
+                      <InputPowerLevel
+                        defaultValue={current.actions.powerLevel}
+                        disabled={disabledActions}
+                        onChange={(value) =>
+                          handleUpdateStatusAction(
+                            'powerLevel',
+                            account.accountId
+                          )(value)
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow
+                      className="py-2.5"
+                      label="Private taxi"
+                    >
                       <Switch
-                        checked={current.actions.high}
+                        checked={current.actions.isPrivate}
                         onCheckedChange={
                           !isLoading
                             ? handleUpdateStatusAction(
-                                'high',
+                                'isPrivate',
                                 account.accountId
                               )
                             : undefined
                         }
                         disabled={disabledActions}
+                      />
+                    </FieldRow>
+                    {current.actions.isPrivate && (
+                      <FieldRow
+                        className="py-2.5"
+                        label="Whitelist"
+                        stacked
+                      >
+                        <InputWhitelist
+                          accountId={account.accountId}
+                          disabled={disabledActions}
+                          entries={current.whitelist ?? []}
+                        />
+                      </FieldRow>
+                    )}
+                    <FieldRow
+                      className="py-2.5"
+                      label="Auto ready"
+                    >
+                      <Switch
+                        checked={current.actions.autoReady}
+                        onCheckedChange={
+                          !isLoading
+                            ? handleUpdateStatusAction(
+                                'autoReady',
+                                account.accountId
+                              )
+                            : undefined
+                        }
+                        disabled={disabledActions}
+                      />
+                    </FieldRow>
+                    <FieldRow
+                      className="py-2.5"
+                      label="Leave after (minutes)"
+                    >
+                      <InputPowerLevel
+                        defaultValue={current.actions.leaveMinutes}
+                        disabled={disabledActions}
+                        max={30}
+                        min={1}
+                        onChange={(value) =>
+                          handleUpdateStatusAction(
+                            'leaveMinutes',
+                            account.accountId
+                          )(value)
+                        }
+                      />
+                    </FieldRow>
+                    <FieldRow
+                      className="py-2.5"
+                      label="Skin (CID)"
+                      stacked
+                    >
+                      <InputActiveStatus
+                        placeholder="CID_028_Athena_Commando_F"
+                        onChange={(value) =>
+                          handleUpdateStatusAction(
+                            'skin',
+                            account.accountId
+                          )(value)
+                        }
+                        defaultValue={current.actions.skin}
+                        disabled={disabledActions}
+                      />
+                    </FieldRow>
+                    <FieldRow
+                      className="py-2.5"
+                      label="Emote (EID)"
+                      stacked
+                    >
+                      <InputActiveStatus
+                        placeholder="EID_Floss"
+                        onChange={(value) =>
+                          handleUpdateStatusAction(
+                            'emote',
+                            account.accountId
+                          )(value)
+                        }
+                        defaultValue={current.actions.emote}
+                        disabled={disabledActions}
+                      />
+                    </FieldRow>
+                    <FieldRow
+                      className="py-2.5"
+                      label="Level"
+                    >
+                      <InputPowerLevel
+                        defaultValue={current.actions.level}
+                        disabled={disabledActions}
+                        max={10000}
+                        min={1}
+                        onChange={(value) =>
+                          handleUpdateStatusAction(
+                            'level',
+                            account.accountId
+                          )(value)
+                        }
                       />
                     </FieldRow>
                     <FieldRow
@@ -441,6 +555,126 @@ function InputActiveStatus({
   )
 }
 
+function InputPowerLevel({
+  defaultValue,
+  disabled,
+  max = 288,
+  min = 1,
+  onChange,
+}: {
+  defaultValue?: number
+  disabled: boolean
+  max?: number
+  min?: number
+  onChange?: (value: number) => void
+}) {
+  const debouncedHandleValue = useDebouncedCallback((value: number) => {
+    onChange?.(value)
+  }, 700)
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsed = Number.parseInt(event.currentTarget.value, 10)
+
+    if (Number.isNaN(parsed)) {
+      return
+    }
+
+    debouncedHandleValue(Math.min(max, Math.max(min, parsed)))
+  }
+
+  return (
+    <Input
+      className="h-8 max-w-24 text-center"
+      defaultValue={defaultValue}
+      disabled={disabled}
+      inputMode="numeric"
+      onChange={handleChange}
+    />
+  )
+}
+
+function InputWhitelist({
+  accountId,
+  disabled,
+  entries,
+}: {
+  accountId: string
+  disabled: boolean
+  entries: Array<{ accountId: string; displayName: string }>
+}) {
+  const $input = useRef<HTMLInputElement>(null)
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault()
+
+    const displayName = $input.current?.value.trim() ?? ''
+
+    if (displayName.length === 0) {
+      return
+    }
+
+    window.electronAPI.taxiServiceWhitelistAdd(accountId, displayName)
+
+    if ($input.current) {
+      $input.current.value = ''
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {entries.length > 0 && (
+        <ul className="space-y-1">
+          {entries.map((entry) => (
+            <li
+              className="flex items-center justify-between gap-2 rounded-lg border border-border/60 px-2 py-1 text-xs"
+              key={entry.accountId}
+            >
+              <span className="min-w-0 truncate">
+                {entry.displayName || entry.accountId}
+              </span>
+              <Button
+                aria-label={`Remove ${entry.displayName || entry.accountId}`}
+                className="size-6 shrink-0 text-muted-foreground"
+                disabled={disabled}
+                onClick={() =>
+                  window.electronAPI.taxiServiceWhitelistRemove(
+                    accountId,
+                    entry.accountId,
+                  )
+                }
+                size="icon"
+                variant="ghost"
+              >
+                <X size={12} />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form
+        className="flex items-center gap-2"
+        onSubmit={handleSubmit}
+      >
+        <Input
+          className="h-8"
+          disabled={disabled}
+          placeholder="Epic display name"
+          ref={$input}
+        />
+        <Button
+          className="h-8 shrink-0"
+          disabled={disabled}
+          size="sm"
+          type="submit"
+          variant="secondary"
+        >
+          Add
+        </Button>
+      </form>
+    </div>
+  )
+}
+
 function InputAddAccounts({
   accountIds,
   disabled = false,
@@ -559,6 +793,18 @@ function NotificationsSidebar() {
                     {data.map((notification) => {
                       if (
                         notification.type ===
+                        TaxiServiceNotificationType.Log
+                      ) {
+                        return (
+                          <NotificationLog
+                            data={notification}
+                            key={notification.id}
+                          />
+                        )
+                      }
+
+                      if (
+                        notification.type ===
                         TaxiServiceNotificationType.FriendRequestSend
                       ) {
                         return (
@@ -615,6 +861,30 @@ function NotificationsSidebar() {
         </SheetContent>
       </Sheet>
     </div>
+  )
+}
+
+function NotificationLog({
+  data,
+}: {
+  data: TaxiServiceNotificationEventLog
+}) {
+  const levelClass = {
+    error: 'text-destructive',
+    info: 'text-muted-foreground',
+    success: 'text-success',
+    warn: 'text-warning',
+  }[data.level]
+
+  return (
+    <li className="flex items-start gap-2 py-1">
+      <span className={cn('micro-label mt-0.5 shrink-0 uppercase', levelClass)}>
+        {data.level}
+      </span>
+      <span className="min-w-0 flex-1 text-xs leading-snug">
+        {data.message}
+      </span>
+    </li>
   )
 }
 

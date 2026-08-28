@@ -116,19 +116,22 @@ export function useParseAccountInfo({
   const { accountList } = useGetAccounts()
 
   const account = accountList[data.accountId]
-  const total = Object.values(data.currency).reduce(
-    (currencyAccumulator, currencyCurrent) => {
-      currencyAccumulator += currencyCurrent.quantity ?? 0
+  const total =
+    data.breakdown?.total ??
+    Object.values(data.currency).reduce(
+      (currencyAccumulator, currencyCurrent) => {
+        currencyAccumulator += currencyCurrent.quantity ?? 0
 
-      return currencyAccumulator
-    },
-    0
-  )
+        return currencyAccumulator
+      },
+      0
+    )
 
   const details = Object.entries(data.currency)
 
   return {
     account,
+    breakdown: data.breakdown ?? null,
     details,
     total,
   }

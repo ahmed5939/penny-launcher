@@ -8,19 +8,31 @@ import {
   taxiServiceServerSchema,
 } from '../lib/validations/schemas/taxi-service'
 
+export type TaxiServiceWhitelistEntry = {
+  accountId: string
+  displayName: string
+}
+
 export type TaxiServiceAccountData = {
   accountId: string
   actions: {
-    high: boolean
-    denyFriendsRequests: boolean
-    activeStatus: string
+    autoReady: boolean
     busyStatus: string
+    denyFriendsRequests: boolean
+    emote: string
+    isPrivate: boolean
+    leaveMinutes: number
+    level: number
+    powerLevel: number
+    skin: string
+    activeStatus: string
   }
   submittings: {
     connecting: boolean
     removing: boolean
   }
   status: AutomationStatusType | null
+  whitelist: Array<TaxiServiceWhitelistEntry>
 }
 
 export type TaxiServiceAccountDataList = Record<
@@ -46,10 +58,17 @@ export type TaxiServiceAccountServerDataList = z.infer<
 
 export type TaxiServiceServiceStatusResponse = {
   accountId: string
-  status: TaxiServiceStatusType
+  status: AutomationStatusType
+}
+
+export type TaxiServiceServiceLogEntry = {
+  accountId: string
+  level: 'error' | 'info' | 'success' | 'warn'
+  message: string
+  timestamp: number
 }
 
 export type TaxiServiceServiceActionConfig = {
   type: keyof TaxiServiceAccountData['actions']
-  value: boolean | string
+  value: boolean | number | string
 }

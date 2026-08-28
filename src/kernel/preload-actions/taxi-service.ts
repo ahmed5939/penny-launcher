@@ -1,6 +1,7 @@
 import type { IpcRendererEvent } from 'electron'
 import type {
   TaxiServiceServiceActionConfig,
+  TaxiServiceServiceLogEntry,
   TaxiServiceServiceStatusResponse,
 } from '../../types/taxi-service'
 
@@ -55,6 +56,48 @@ export function taxiServiceServiceUpdateAction(
     accountId,
     config,
   )
+}
+
+export function taxiServiceWhitelistAdd(
+  accountId: string,
+  displayName: string,
+) {
+  ipcRenderer.send(
+    ElectronAPIEventKeys.TaxiServiceWhitelistAdd,
+    accountId,
+    displayName,
+  )
+}
+
+export function taxiServiceWhitelistRemove(
+  accountId: string,
+  targetId: string,
+) {
+  ipcRenderer.send(
+    ElectronAPIEventKeys.TaxiServiceWhitelistRemove,
+    accountId,
+    targetId,
+  )
+}
+
+export function notificationTaxiServiceServiceLog(
+  callback: (value: TaxiServiceServiceLogEntry) => Promise<void>,
+) {
+  const customCallback = (_: IpcRendererEvent, value: TaxiServiceServiceLogEntry) => {
+    callback(value).catch(console.error)
+  }
+  const rendererInstance = ipcRenderer.on(
+    ElectronAPIEventKeys.TaxiServiceServiceLog,
+    customCallback,
+  )
+
+  return {
+    removeListener: () =>
+      rendererInstance.removeListener(
+        ElectronAPIEventKeys.TaxiServiceServiceLog,
+        customCallback,
+      ),
+  }
 }
 
 export function notificationTaxiServiceServiceData(

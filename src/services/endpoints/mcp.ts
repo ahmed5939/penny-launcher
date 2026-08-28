@@ -21,6 +21,8 @@ import type {
   MCPStorageTransferResponse,
 } from '../../types/services/mcp'
 
+import type { OutpostMetadataProfile } from '../../kernel/core/outpost-types'
+
 import { baseGameService } from '../config/base-game'
 
 export function getQueryProfile({
@@ -39,6 +41,28 @@ export function getQueryProfile({
       },
       params: {
         profileId: 'campaign',
+        rvn: -1,
+      },
+    }
+  )
+}
+
+export function getQueryProfileMetadata({
+  accessToken,
+  accountId,
+}: {
+  accessToken: string
+  accountId: string
+}) {
+  return baseGameService.post<OutpostMetadataProfile>(
+    `/profile/${accountId}/client/QueryProfile`,
+    {},
+    {
+      headers: {
+        Authorization: `bearer ${accessToken}`,
+      },
+      params: {
+        profileId: 'metadata',
         rvn: -1,
       },
     }

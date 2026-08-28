@@ -7,7 +7,7 @@ import { useClaimedRewards } from '../../hooks/stw-operations/claimed-rewards'
 import { useTaxiServiceNotifications } from '../../hooks/stw-operations/taxi-service'
 
 import { useAutomationStore } from '../../state/stw-operations/automation'
-import { useTaxiServiceStore } from '../../state/stw-operations/taxi-service'
+import { TaxiServiceNotificationType, useTaxiServiceStore } from '../../state/stw-operations/taxi-service'
 
 import { toast } from '../../lib/notifications'
 
@@ -178,6 +178,27 @@ export function LoadAutomation() {
     const listener = window.electronAPI.taxiServiceServiceNotifications(
       async (notification) => {
         updateNotificationsData([notification])
+      },
+    )
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [])
+
+  useEffect(() => {
+    const listener = window.electronAPI.notificationTaxiServiceServiceLog(
+      async (entry) => {
+        updateNotificationsData([
+          {
+            accountId: entry.accountId,
+            id: `log-${entry.timestamp}-${Math.random().toString(36).slice(2)}`,
+            level: entry.level,
+            message: entry.message,
+            timestamp: entry.timestamp,
+            type: TaxiServiceNotificationType.Log,
+          },
+        ])
       },
     )
 

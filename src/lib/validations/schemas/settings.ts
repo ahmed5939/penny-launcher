@@ -68,10 +68,12 @@ export const customizableMenuSettingsSchema = z
     xpBoosts: z.boolean().default(true),
     autoPinUrns: z.boolean().default(true),
     autoLlamas: z.boolean().default(true),
+    outpost: z.boolean().default(true),
     endurance: z.boolean().default(true),
 
     accountManagement: z.boolean().default(true),
     vbucksInformation: z.boolean().default(true),
+    giftsInformation: z.boolean().default(true),
     profile: z.boolean().default(true),
     redeemCodes: z.boolean().default(true),
     devicesAuth: z.boolean().default(true),

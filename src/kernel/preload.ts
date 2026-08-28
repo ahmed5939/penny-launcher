@@ -27,6 +27,7 @@ import * as loadoutsActions from './preload-actions/loadouts'
 import * as matchmakingActions from './preload-actions/matchmaking'
 import * as mcpActions from './preload-actions/mcp'
 import * as partyActions from './preload-actions/party'
+import * as outpostActions from './preload-actions/outpost'
 import * as pluginsActions from './preload-actions/plugins'
 import * as questsActions from './preload-actions/quests'
 import * as redeemCodesActions from './preload-actions/redeem-codes'
@@ -65,6 +66,7 @@ export const availableElectronAPIs = {
   ...launcherActions,
   ...loadoutsActions,
   ...partyActions,
+  ...outpostActions,
   ...pluginsActions,
   ...questsActions,
   ...redeemCodesActions,

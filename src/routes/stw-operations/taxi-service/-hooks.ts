@@ -127,7 +127,7 @@ export function useTaxiServiceData() {
 
   const handleUpdateStatusAction =
     (type: keyof TaxiServiceAccountData['actions'], accountId: string) =>
-    (value: boolean | string) => {
+    (value: boolean | number | string) => {
       updateAccountAction(type, {
         accountId,
         value,

@@ -7,8 +7,29 @@ export type VBucksInformationCurrency = {
   quantity: number
 }
 
+export type VBucksInformationSource = {
+  amount: number
+  count: number
+  platform: string
+  type: 'complimentary' | 'earned' | 'purchased'
+}
+
+export type VBucksInformationBreakdown = {
+  complimentary: number
+  creatorCode: string | null
+  creatorSetTime: string | null
+  currentPlatform: string
+  earned: number
+  giftsAllowed: boolean
+  giftsRemaining: number | null
+  purchased: number
+  sources: Array<VBucksInformationSource>
+  total: number
+}
+
 export type VBucksInformationData = {
   accountId: string
+  breakdown?: VBucksInformationBreakdown
   currency: Record<string, VBucksInformationCurrency>
 }
 

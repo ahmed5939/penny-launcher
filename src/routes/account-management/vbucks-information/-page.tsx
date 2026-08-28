@@ -108,7 +108,7 @@ function Content() {
 }
 
 function AccountInfo({ data }: { data: VBucksInformationData }) {
-  const { account, details, total } = useParseAccountInfo({ data })
+  const { account, breakdown, details, total } = useParseAccountInfo({ data })
 
   return (
     <Panel key={data.accountId}>
@@ -125,6 +125,66 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
           {numberWithCommaSeparator(total)}
         </p>
       </header>
+
+      {breakdown && (
+        <div className="border-b border-border/40 px-4 py-3">
+          <div className="grid grid-cols-3 gap-2">
+            <BreakdownStat
+              label="Purchased"
+              value={breakdown.purchased}
+            />
+            <BreakdownStat
+              label="Earned"
+              value={breakdown.earned}
+            />
+            <BreakdownStat
+              label="Complimentary"
+              value={breakdown.complimentary}
+            />
+          </div>
+
+          <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+            <p>
+              Platform: <span className="text-foreground">{breakdown.currentPlatform}</span>
+            </p>
+            <p>
+              Gifts today:{' '}
+              <span className="text-foreground">
+                {breakdown.giftsAllowed
+                  ? breakdown.giftsRemaining !== null
+                    ? `${breakdown.giftsRemaining} remaining`
+                    : 'Allowed'
+                  : 'Not allowed'}
+              </span>
+            </p>
+            {breakdown.creatorCode && (
+              <p>
+                Creator code: <span className="text-foreground">{breakdown.creatorCode}</span>
+              </p>
+            )}
+          </div>
+
+          {breakdown.sources.length > 0 && (
+            <ul className="mt-3 space-y-1 border-t border-border/40 pt-2">
+              {breakdown.sources.map((source) => (
+                <li
+                  className="flex items-center justify-between gap-3 text-xs"
+                  key={`${source.type}-${source.platform}`}
+                >
+                  <span className="min-w-0 truncate text-muted-foreground">
+                    {source.platform}
+                    {source.count > 1 && ` ×${source.count}`}
+                  </span>
+                  <span className="shrink-0 font-semibold tabular-nums">
+                    {numberWithCommaSeparator(source.amount)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {details.length > 0 && (
         <ul className="divide-y divide-border/40">
           {details.map(([templateId, currency]) => (
@@ -143,5 +203,22 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
         </ul>
       )}
     </Panel>
+  )
+}
+
+function BreakdownStat({
+  label,
+  value,
+}: {
+  label: string
+  value: number
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 px-2 py-1.5 text-center">
+      <p className="text-sm font-semibold tabular-nums">
+        {numberWithCommaSeparator(value)}
+      </p>
+      <p className="micro-label text-muted-foreground">{label}</p>
+    </div>
   )
 }

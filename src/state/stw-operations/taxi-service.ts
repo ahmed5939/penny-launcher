@@ -7,6 +7,7 @@ import { immer } from 'zustand/middleware/immer'
 import { create } from 'zustand'
 
 export enum TaxiServiceNotificationType {
+  Log = 'log',
   PartyMemberJoined = 'party:member:joined',
   PartyInvite = 'party:invite',
   FriendAdded = 'friend:added',
@@ -70,6 +71,15 @@ export type TaxiServiceNotificationEventPartyMemberJoined = {
   }>
 }
 
+export type TaxiServiceNotificationEventLog = {
+  id: string
+  type: TaxiServiceNotificationType.Log
+  accountId: string
+  level: 'error' | 'info' | 'success' | 'warn'
+  message: string
+  timestamp: number
+}
+
 export type TaxiServiceState = {
   accounts: TaxiServiceAccountDataList
 
@@ -79,6 +89,7 @@ export type TaxiServiceState = {
       actions: Partial<TaxiServiceAccountData['actions']>
       status: Partial<TaxiServiceAccountData['status']>
       submittings: Partial<TaxiServiceAccountData['submittings']>
+      whitelist: TaxiServiceAccountData['whitelist']
     }>,
   ) => void
   refreshAccounts: (
@@ -96,7 +107,7 @@ export type TaxiServiceState = {
     type: keyof TaxiServiceAccountData['actions'],
     config: {
       accountId: string
-      value: boolean | string
+      value: boolean | number | string
     },
   ) => void
   updateAccountStatus: (
@@ -116,6 +127,7 @@ export type TaxiServiceNotificationsState = {
   data: Array<
     | TaxiServiceNotificationEventFriendAdded
     | TaxiServiceNotificationEventFriendRequestSend
+    | TaxiServiceNotificationEventLog
     | TaxiServiceNotificationEventPartyInvite
     | TaxiServiceNotificationEventPartyMemberJoined
   >
@@ -125,6 +137,7 @@ export type TaxiServiceNotificationsState = {
     value: Array<
       | TaxiServiceNotificationEventFriendAdded
       | TaxiServiceNotificationEventFriendRequestSend
+      | TaxiServiceNotificationEventLog
       | TaxiServiceNotificationEventPartyInvite
       | TaxiServiceNotificationEventPartyMemberJoined
     >,
@@ -142,14 +155,38 @@ export const useTaxiServiceStore = create<TaxiServiceState>()(
         state.accounts[accountId] = {
           accountId,
           actions: {
-            high:
-              defaultConfig?.actions?.high ??
-              current?.actions?.high ??
+            autoReady:
+              defaultConfig?.actions?.autoReady ??
+              current?.actions?.autoReady ??
               true,
             denyFriendsRequests:
               defaultConfig?.actions?.denyFriendsRequests ??
               current?.actions?.denyFriendsRequests ??
               true,
+            emote:
+              defaultConfig?.actions?.emote ??
+              current?.actions?.emote ??
+              'EID_Floss',
+            isPrivate:
+              defaultConfig?.actions?.isPrivate ??
+              current?.actions?.isPrivate ??
+              false,
+            leaveMinutes:
+              defaultConfig?.actions?.leaveMinutes ??
+              current?.actions?.leaveMinutes ??
+              2,
+            level:
+              defaultConfig?.actions?.level ??
+              current?.actions?.level ??
+              100,
+            powerLevel:
+              defaultConfig?.actions?.powerLevel ??
+              current?.actions?.powerLevel ??
+              130,
+            skin:
+              defaultConfig?.actions?.skin ??
+              current?.actions?.skin ??
+              'CID_028_Athena_Commando_F',
             activeStatus:
               defaultConfig?.actions?.activeStatus ??
               current?.actions?.activeStatus ??
@@ -170,6 +207,8 @@ export const useTaxiServiceStore = create<TaxiServiceState>()(
               current?.submittings?.removing ??
               false,
           },
+          whitelist:
+            defaultConfig?.whitelist ?? current?.whitelist ?? [],
         }
       })
     },

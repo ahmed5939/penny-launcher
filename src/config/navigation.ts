@@ -19,6 +19,7 @@ import {
   Puzzle,
   Radar,
   Repeat,
+  Shield,
   ScrollText,
   Smartphone,
   Store,
@@ -184,6 +185,14 @@ export const navSections: Array<NavSection> = [
         icon: BookOpen,
         label: 'sidebar:stw-operations.options.compendium',
         to: '/stw-operations/compendium',
+      },
+      {
+        beta: true,
+        can: 'outpost',
+        icon: Shield,
+        label: 'Outpost',
+        needsAccount: true,
+        to: '/stw-operations/outpost',
       },
       {
         can: 'xpBoosts',

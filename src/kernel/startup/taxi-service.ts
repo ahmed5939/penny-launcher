@@ -5,6 +5,7 @@ import type {
   TaxiServiceAccountFileDataList,
   TaxiServiceAccountServerData,
   TaxiServiceServiceActionConfig,
+  TaxiServiceServiceLogEntry,
   TaxiServiceServiceStatusResponse,
 } from '../../types/taxi-service'
 
@@ -44,11 +45,6 @@ export enum AccountStatus {
   Online = 'online',
 }
 
-export enum FORTStatsNumber {
-  LOW = 0,
-  HIGH = 92765,
-}
-
 export enum MatchmakingResult {
   NotStarted = 'NotStarted',
   Success = 'Success',
@@ -86,14 +82,129 @@ export type PartyMetaSchema = {
   }
 }
 
+type QueueEntry = {
+  accountId: string
+  displayName: string
+  partyId: string
+}
+
 type AccountService = {
   accountId: string
   status: AccountPresence
   client: Client
   currentTimeout?: NodeJS.Timeout | null
+  /** True while the bot serves a passenger — invites then go to the queue. */
+  occupied: boolean
+  /** Pending passengers waiting for the current session to end. */
+  queue: Array<QueueEntry>
+  /** True while leaving one party to join another, so leave handlers don't double-fire. */
+  transitioning: boolean
+  /** Disconnect timestamps within the last 30s, for flap detection. */
+  disconnectLog: Array<number>
 }
 
 const maxRetries = 3
+
+/**
+ * Homebase-rating curve — maps a FORT stat value to the power level the
+ * client presents, interpolated between Epic's known data points. Ported
+ * from the community power-level tables used by taxi bots, so a taxi can
+ * present any power level between 1 and 288 instead of only extremes.
+ */
+const HOMEBASE_RATING_KEYS: Array<[number, number]> = [
+  [0, 1], [236, 2], [364, 3], [432, 4], [512, 5],
+  [704, 7], [932, 8], [1196, 9], [1876, 13], [2740, 16],
+  [3824, 19], [4692, 22], [5460, 24], [6260, 25], [7172, 26],
+  [8084, 29], [9552, 32], [10912, 36], [13104, 41], [14844, 46],
+  [17180, 49], [19008, 53], [20928, 54], [22708, 55], [24588, 57],
+  [26324, 60], [28804, 63], [31312, 68], [35008, 73], [37660, 78],
+  [40380, 81], [42308, 84], [44316, 86], [46448, 87], [48592, 89],
+  [50852, 93], [54480, 96], [58064, 102], [62528, 107], [65472, 113],
+  [68320, 116], [70400, 120], [72384, 121], [74464, 123], [76448, 124],
+  [78528, 126], [80512, 127], [82592, 128], [84576, 130], [86124, 131],
+  [87040, 133], [87520, 134], [87904, 136], [88384, 137], [88768, 139],
+  [89248, 140], [89632, 142], [90112, 143], [90304, 144], [180608, 288],
+]
+
+function evalCurve(key: number): number {
+  const first = HOMEBASE_RATING_KEYS[0]
+  const last = HOMEBASE_RATING_KEYS[HOMEBASE_RATING_KEYS.length - 1]
+
+  if (key <= first[0]) {
+    return first[1]
+  }
+
+  if (key >= last[0]) {
+    return last[1]
+  }
+
+  for (let index = 1; index < HOMEBASE_RATING_KEYS.length; index++) {
+    const [nextTime, nextValue] = HOMEBASE_RATING_KEYS[index]
+
+    if (HOMEBASE_RATING_KEYS[index][0] > key) {
+      const [previousTime, previousValue] = HOMEBASE_RATING_KEYS[index - 1]
+      const factor = (key - previousTime) / (nextTime - previousTime)
+
+      return previousValue * (1 - factor) + nextValue * factor
+    }
+  }
+
+  return last[1]
+}
+
+/**
+ * Finds the per-stat FORT value whose curve evaluation lands on the
+ * requested power level (binary search over stat values, stepped by 16
+ * like the original tooling).
+ */
+function findStatForPowerLevel(targetPowerLevel: number): number {
+  if (targetPowerLevel <= 1) {
+    return 1
+  }
+
+  if (targetPowerLevel >= 288) {
+    return 180_608
+  }
+
+  let low = 1
+  let high = 10_000
+
+  while (low <= high) {
+    const mid = (low + high) >> 1
+    const calculated = evalCurve(mid * 16)
+
+    if (Math.abs(calculated - targetPowerLevel) < 0.5) {
+      return mid
+    }
+
+    if (calculated < targetPowerLevel) {
+      low = mid + 1
+    } else {
+      high = mid - 1
+    }
+  }
+
+  return high
+}
+
+function resolvePowerLevel(
+  actions: Partial<{
+    high?: boolean
+    powerLevel?: number
+  }> | null | undefined
+): number {
+  const configured = actions?.powerLevel
+
+  if (typeof configured === 'number' && configured >= 1) {
+    return Math.min(288, Math.max(1, Math.round(configured)))
+  }
+
+  /**
+   * Legacy configs only had the binary high/low switch — map it onto the
+   * same two power levels it used to send.
+   */
+  return actions?.high === false ? 1 : 130
+}
 
 export class TaxiService {
   private static _accounts: Collection<
@@ -105,6 +216,30 @@ export class TaxiService {
   private static _retryCounters: Collection<string, number> =
     new Collection()
   private static _reJoinTo: Collection<string, string> = new Collection()
+  /** accountId → epoch ms when the reconnect cooldown ends. */
+  private static _cooldowns: Collection<string, number> = new Collection()
+
+  private static log(
+    accountId: string,
+    level: TaxiServiceServiceLogEntry['level'],
+    message: string,
+  ) {
+    const entry: TaxiServiceServiceLogEntry = {
+      accountId,
+      level,
+      message,
+      timestamp: Date.now(),
+    }
+
+    if (level === 'error') {
+      RuntimeLog.error('taxi-service', new Error(message))
+    }
+
+    MainWindow.instance.webContents.send(
+      ElectronAPIEventKeys.TaxiServiceServiceLog,
+      entry,
+    )
+  }
 
   static async load() {
     const { taxiService } = await DataDirectory.getTaxiServiceFile()
@@ -216,11 +351,18 @@ export class TaxiService {
     const data = {
       accountId,
       actions: {
-        high: true,
+        autoReady: true,
         denyFriendsRequests: true,
+        isPrivate: false,
+        leaveMinutes: 2,
+        level: 100,
+        powerLevel: 130,
+        skin: 'CID_028_Athena_Commando_F',
+        emote: 'EID_Floss',
         activeStatus: '',
         busyStatus: '',
       },
+      whitelist: [],
     }
 
     await DataDirectory.updateTaxiServiceFile({
@@ -260,17 +402,17 @@ export class TaxiService {
     accountId: string,
     config: TaxiServiceServiceActionConfig,
   ) {
-    TaxiService.updateAccountData(accountId, {
-      actions: {
-        [config.type]: config.value,
-      },
-    })
-
     const current = TaxiService._accounts.get(accountId)
 
     if (!current) {
       return
     }
+
+    TaxiService.updateAccountData(accountId, {
+      actions: {
+        [config.type]: config.value,
+      },
+    })
 
     const result = await DataDirectory.getTaxiServiceFile()
     const data = {
@@ -279,12 +421,106 @@ export class TaxiService {
         ...current.actions,
         [config.type]: config.value,
       },
+      whitelist: current.whitelist,
     }
 
     await DataDirectory.updateTaxiServiceFile({
       ...result.taxiService,
       [accountId]: data,
     })
+  }
+
+  static async addWhitelist(accountId: string, displayName: string) {
+    const account = AccountsManager.getAccountById(accountId)
+
+    if (!account) {
+      return
+    }
+
+    const result = await LookupManager.searchUserByDisplayName({
+      account,
+      displayName: displayName.trim(),
+    })
+
+    if (!result.success) {
+      TaxiService.log(
+        accountId,
+        'error',
+        `Could not find user "${displayName.trim()}"`,
+      )
+      return
+    }
+
+    const current = TaxiService._accounts.get(accountId)
+
+    if (!current) {
+      return
+    }
+
+    if (current.whitelist.some((entry) => entry.accountId === result.data.id)) {
+      return
+    }
+
+    const whitelist = [
+      ...current.whitelist,
+      {
+        accountId: result.data.id,
+        displayName: result.data.displayName ?? displayName.trim(),
+      },
+    ]
+
+    TaxiService.updateAccountData(accountId, { whitelist })
+
+    const stored = await DataDirectory.getTaxiServiceFile()
+
+    await DataDirectory.updateTaxiServiceFile({
+      ...stored.taxiService,
+      [accountId]: {
+        accountId,
+        actions: current.actions,
+        whitelist,
+      },
+    })
+
+    TaxiService.log(
+      accountId,
+      'success',
+      `Whitelisted ${result.data.displayName ?? displayName.trim()}`,
+    )
+  }
+
+  static async removeWhitelist(accountId: string, targetId: string) {
+    const current = TaxiService._accounts.get(accountId)
+
+    if (!current) {
+      return
+    }
+
+    const target = current.whitelist.find((entry) => entry.accountId === targetId)
+    const whitelist = current.whitelist.filter(
+      (entry) => entry.accountId !== targetId,
+    )
+
+    TaxiService.updateAccountData(accountId, { whitelist })
+
+    const stored = await DataDirectory.getTaxiServiceFile()
+
+    await DataDirectory.updateTaxiServiceFile({
+      ...stored.taxiService,
+      [accountId]: {
+        accountId,
+        actions: current.actions,
+        whitelist,
+      },
+    })
+
+    if (target) {
+      TaxiService.log(
+        accountId,
+        'info',
+        `Removed ${target.displayName || target.accountId} from the whitelist`,
+      )
+    }
   }
 
   static start(data: TaxiServiceAccountFileData) {
@@ -322,9 +558,17 @@ export class TaxiService {
           return 'Ocupado'
         }
 
+        const service = TaxiService._services.get(data.accountId)
+        const queueLength = service?.queue.length ?? 0
+
         return info.actions.busyStatus.trim().length > 0
-          ? info.actions.busyStatus.trim()
-          : 'Ocupado'
+          ? info.actions.busyStatus.trim().replace(
+              '{queue}',
+              String(queueLength),
+            )
+          : queueLength > 0
+            ? `Ocupado · Queue: ${queueLength}`
+            : 'Ocupado'
       },
     }
     const account = AccountsManager.getAccountById(data.accountId)!
@@ -333,6 +577,10 @@ export class TaxiService {
       accountId: account.accountId,
       status: AccountPresence.Unknown,
       currentTimeout: null as undefined | NodeJS.Timeout | null,
+      occupied: false,
+      queue: [],
+      transitioning: false,
+      disconnectLog: [],
       client: new Client({
         auth: {
           deviceAuth: {
@@ -410,7 +658,204 @@ export class TaxiService {
         (TaxiService._retryCounters.get(account.accountId) ?? 0) + 1,
       )
 
+      /**
+       * Flap detection — three disconnects inside 30 seconds means the
+       * login loop is thrashing Epic's auth. Park the account for 10s and
+       * restart fresh instead of burning retries.
+       */
+      const now = Date.now()
+      const recent = accountService.disconnectLog.filter(
+        (timestamp) => now - timestamp < 30_000,
+      )
+      recent.push(now)
+      accountService.disconnectLog = recent
+
+      if (recent.length >= 3) {
+        TaxiService.log(
+          account.accountId,
+          'error',
+          'Connection loop detected — pausing 10s before reconnecting',
+        )
+        accountService.disconnectLog = []
+        TaxiService._retryCounters.delete(account.accountId)
+
+        setTimeout(() => {
+          TaxiService.reload([account.accountId]).catch((error) => {
+            RuntimeLog.error('caught:startup/taxi-service.ts', error)
+          })
+        }, 10_000)
+
+        return
+      }
+
       reAuth({ code: 'disconnect' })
+    }
+
+    /**
+     * Ghost-equips the configured cosmetics on the bot's party member so
+     * passengers see the expected skin, banner and level while riding.
+     */
+    const applyCosmetics = async () => {
+      const info = TaxiService._accounts.get(account.accountId)
+
+      if (!info) {
+        return
+      }
+
+      const me = accountService.client.party?.me
+
+      if (!me) {
+        return
+      }
+
+      try {
+        await me.setOutfit(info.actions.skin)
+      } catch (error) {
+        RuntimeLog.error('caught:startup/taxi-service.ts', error)
+      }
+
+      try {
+        await me.setBanner('standardbanner15', 'defaultcolor2')
+      } catch {
+        // Banner is cosmetic-only — never worth surfacing.
+      }
+
+      try {
+        await me.setLevel(info.actions.level)
+      } catch (error) {
+        RuntimeLog.error('caught:startup/taxi-service.ts', error)
+      }
+
+      await TaxiService.updatePatch(accountService)
+
+      try {
+        if (info.actions.emote.trim().length > 0) {
+          await me.setEmote(info.actions.emote)
+        }
+      } catch {
+        // Emotes fail silently when the id is wrong.
+      }
+    }
+
+    const updateOccupiedStatus = () => {
+      accountService.client.setStatus(defaultStatuses.busy(), 'away')
+    }
+
+    const startLeaveTimer = () => {
+      clearCurrentTimeout()
+
+      const info = TaxiService._accounts.get(account.accountId)
+      const minutes = info?.actions.leaveMinutes ?? 2
+
+      TaxiService.log(
+        account.accountId,
+        'info',
+        `Leaving the party in ${minutes} min`,
+      )
+
+      accountService.currentTimeout = accountService.client.setTimeout(
+        () => {
+          try {
+            accountService.client.leaveParty().catch(() => {})
+
+            accountService.currentTimeout = null
+
+            void finishSession()
+          } catch (_error) {
+            RuntimeLog.error('caught:startup/taxi-service.ts', _error)
+          }
+        },
+        minutes * 60_000 + 1_000,
+      )
+    }
+
+    const processNextInQueue = async (): Promise<void> => {
+      const next = accountService.queue.shift()
+
+      if (!next) {
+        accountService.occupied = false
+        accountService.status = AccountPresence.Active
+        accountService.client.setStatus(defaultStatuses.active(), 'away')
+        return
+      }
+
+      updateOccupiedStatus()
+
+      TaxiService.log(
+        account.accountId,
+        'info',
+        `Processing queue: ${next.displayName}`,
+      )
+
+      try {
+        accountService.transitioning = true
+        await accountService.client.leaveParty().catch(() => {})
+        await new Promise((resolve) => {
+          setTimeout(resolve, 2_000)
+        })
+
+        let joined = false
+
+        if (next.partyId) {
+          try {
+            await accountService.client.joinParty(next.partyId)
+            joined = true
+          } catch {
+            // Party may be gone or full — fall through to the next passenger.
+          }
+        }
+
+        accountService.transitioning = false
+
+        if (joined) {
+          accountService.occupied = true
+          accountService.status = AccountPresence.DnD
+
+          await new Promise((resolve) => {
+            setTimeout(resolve, 1_500)
+          })
+          await applyCosmetics()
+
+          updateOccupiedStatus()
+          startLeaveTimer()
+
+          TaxiService.log(
+            account.accountId,
+            'success',
+            `Joined ${next.displayName}'s party from the queue`,
+          )
+        } else {
+          TaxiService.log(
+            account.accountId,
+            'warn',
+            `Could not rejoin ${next.displayName} — trying the next in queue`,
+          )
+          await processNextInQueue()
+        }
+      } catch (error) {
+        accountService.transitioning = false
+        RuntimeLog.error('caught:startup/taxi-service.ts', error)
+        await processNextInQueue()
+      }
+    }
+
+    const finishSession = async (): Promise<void> => {
+      clearCurrentTimeout()
+      accountService.occupied = false
+
+      if (accountService.queue.length > 0) {
+        await processNextInQueue()
+        return
+      }
+
+      accountService.status = AccountPresence.Active
+      accountService.client.setStatus(defaultStatuses.active(), 'away')
+
+      try {
+        await accountService.client.leaveParty()
+      } catch {
+        // Already out of the party.
+      }
     }
 
     const initTimeout = setTimeout(() => {
@@ -472,12 +917,14 @@ export class TaxiService {
     })
     accountService.client.on('party:member:expired', (member) => {
       if (member.id === accountService.accountId) {
-        disconnect()
+        TaxiService.log(account.accountId, 'warn', 'Kicked from the party')
+        void finishSession()
       }
     })
     accountService.client.on('party:member:kicked', (member) => {
       if (member.id === accountService.accountId) {
         clearCurrentTimeout()
+        accountService.occupied = false
         accountService.status = AccountPresence.Active
         accountService.client.setStatus(defaultStatuses.active(), 'away')
       }
@@ -488,16 +935,73 @@ export class TaxiService {
         (member.party.members.size === 1 &&
           member.party.members.first()?.id === accountService.accountId)
       ) {
-        clearCurrentTimeout()
-        accountService.status = AccountPresence.Active
-        accountService.client.setStatus(defaultStatuses.active(), 'away')
+        if (accountService.transitioning) {
+          return
+        }
+
+        void finishSession()
       }
     })
 
+    /**
+     * Readiness follows the passenger — as soon as someone else in the
+     * party readies up, the taxi readies too so the lobby countdown starts.
+     */
+    accountService.client.on(
+      'party:member:readiness:updated',
+      (member, ready) => {
+        const autoReady =
+          TaxiService._accounts.get(accountService.accountId)?.actions
+            .autoReady ?? true
+
+        if (
+          !autoReady ||
+          member.id === accountService.accountId ||
+          ready !== true
+        ) {
+          return
+        }
+
+        accountService.client.party?.me
+          ?.setReadiness(true)
+          .catch(() => {})
+      },
+    )
+
     accountService.client.on('friend:request', (incoming) => {
+      const info = TaxiService._accounts.get(accountService.accountId)
+
       const denyFriendsRequests =
-        TaxiService._accounts.get(accountService.accountId)?.actions
-          .denyFriendsRequests ?? true
+        info?.actions.denyFriendsRequests ?? true
+      const isPrivate = info?.actions.isPrivate ?? false
+
+      if (isPrivate && !info?.whitelist.some((entry) => entry.accountId === incoming.id)) {
+        TaxiService.log(
+          accountService.accountId,
+          'warn',
+          `Rejected friend request from ${incoming.displayName ?? incoming.id} — not whitelisted`,
+        )
+
+        Authentication.verifyAccessToken(account).then((accessToken) => {
+          if (!accessToken) {
+            return
+          }
+
+          removeFriend({
+            accessToken,
+            accountId: accountService.accountId,
+            friendId: incoming.id,
+          }).catch(() => {})
+        })
+
+        return
+      }
+
+      TaxiService.log(
+        accountService.accountId,
+        'info',
+        `Friend request from ${incoming.displayName ?? incoming.id}`,
+      )
 
       Authentication.verifyAccessToken(account).then((accessToken) => {
         if (!accessToken) {
@@ -638,6 +1142,9 @@ export class TaxiService {
     })
 
     accountService.client.on('party:invite', async (invitation) => {
+      const senderName =
+        invitation.sender.displayName ?? invitation.sender.id
+
       const data = {
         id: crypto.randomUUID(),
         createdAt: getExtendedDateFormat(),
@@ -647,7 +1154,7 @@ export class TaxiService {
         },
         friend: {
           accountId: invitation.sender.id,
-          displayName: invitation.sender.displayName,
+          displayName: senderName,
         },
         type: TaxiServiceNotificationType.PartyInvite,
       } as TaxiServiceNotificationEventPartyInvite
@@ -657,22 +1164,85 @@ export class TaxiService {
         data,
       )
 
+      TaxiService.log(
+        accountService.accountId,
+        'info',
+        `Party invite from ${senderName}`,
+      )
+
       /**
-       * Client can not join if presence is DnD
+       * Private mode only serves whitelisted passengers.
        */
-      const isDnD = accountService.status === AccountPresence.DnD
+      const info = TaxiService._accounts.get(accountService.accountId)
+      const isPrivate = info?.actions.isPrivate ?? false
+
+      if (
+        isPrivate &&
+        !info?.whitelist.some(
+          (entry) => entry.accountId === invitation.sender.id,
+        )
+      ) {
+        TaxiService.log(
+          accountService.accountId,
+          'warn',
+          `Declined invite from ${senderName} — not whitelisted`,
+        )
+        invitation.decline().catch(() => {})
+
+        return
+      }
+
       /**
        * Client can not join to a team when total maximum members is full
        */
       const maxMembers = invitation.party.members.size >= 4
+
+      if (maxMembers) {
+        invitation.decline().catch(() => {})
+
+        return
+      }
+
       /**
-       * If client is in a team, decline invitation
+       * Occupied — the sender joins the queue instead of stealing the seat.
+       * They are declined now and picked up from the queue when the
+       * current session ends.
        */
       const currentMembers =
         (invitation.client.party?.members.size ?? 1) > 1
 
-      if (isDnD || maxMembers || currentMembers) {
+      if (accountService.occupied || currentMembers) {
+        if (
+          !accountService.queue.some(
+            (entry) => entry.accountId === invitation.sender.id,
+          )
+        ) {
+          accountService.queue.push({
+            accountId: invitation.sender.id,
+            displayName: senderName,
+            partyId: invitation.party.id,
+          })
+
+          TaxiService.log(
+            accountService.accountId,
+            'info',
+            `${senderName} queued (position ${accountService.queue.length})`,
+          )
+        } else {
+          const position =
+            accountService.queue.findIndex(
+              (entry) => entry.accountId === invitation.sender.id,
+            ) + 1
+
+          TaxiService.log(
+            accountService.accountId,
+            'info',
+            `${senderName} is already queued (position ${position})`,
+          )
+        }
+
         invitation.decline().catch(() => {})
+        updateOccupiedStatus()
 
         return
       }
@@ -710,41 +1280,48 @@ export class TaxiService {
       }
 
       try {
+        accountService.occupied = true
         accountService.status = AccountPresence.DnD
 
         await invitation.accept()
 
+        TaxiService.log(
+          accountService.accountId,
+          'success',
+          `Joined ${senderName}'s party`,
+        )
+
         accountService.client.setStatus(defaultStatuses.busy(), 'away')
 
+        /**
+         * Give the party a moment to settle, then present the configured
+         * skin, banner, level and power stats — re-applying stats a few
+         * seconds later because the first patch is often overwritten by
+         * the join sequence.
+         */
         await new Promise((resolve) => {
-          setTimeout(resolve, 1000)
+          setTimeout(resolve, 1_000)
         })
 
-        await TaxiService.updatePatch(accountService)
+        await applyCosmetics()
 
-        accountService.currentTimeout = accountService.client.setTimeout(
-          () => {
-            try {
-              accountService.client.leaveParty().catch(() => {})
+        setTimeout(() => {
+          TaxiService.updatePatch(accountService).catch(() => {})
+        }, 3_000)
 
-              accountService.currentTimeout = null
-
-              accountService.status = AccountPresence.Active
-              accountService.client.setStatus(
-                defaultStatuses.active(),
-                'away',
-              )
-            } catch (_error) {
-              RuntimeLog.error('caught:startup/taxi-service.ts', _error)
-            }
-          },
-          1000 * 60 * 2,
-        ) // 2 minutes
+        startLeaveTimer()
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
+        accountService.occupied = false
         accountService.status = AccountPresence.Active
         accountService.client.setStatus(defaultStatuses.active(), 'away')
+
+        TaxiService.log(
+          account.accountId,
+          'error',
+          `Failed to accept the invite: ${error?.message ?? 'unknown error'}`,
+        )
 
         TaxiService._reJoinTo.set(account.accountId, invitation.sender.id)
         reAuth(error)
@@ -765,8 +1342,7 @@ export class TaxiService {
             member.client.leaveParty().catch(() => {})
             clearCurrentTimeout()
 
-            accountService.status = AccountPresence.Active
-            member.client.setStatus(defaultStatuses.active(), 'away')
+            void finishSession()
           }, 1000 * 10) // 10 seconds
 
           return
@@ -809,6 +1385,21 @@ export class TaxiService {
         return
       }
 
+      /**
+       * Reconnect cooldown — protects Epic's auth from restart loops
+       * after a flap detection pause.
+       */
+      const cooldownEnd = TaxiService._cooldowns.get(accountId) ?? 0
+
+      if (Date.now() < cooldownEnd) {
+        TaxiService.log(
+          accountId,
+          'warn',
+          `Reconnect suppressed — cooling down ${Math.ceil((cooldownEnd - Date.now()) / 1000)}s`,
+        )
+        return
+      }
+
       const setNewStatus = (status: AutomationStatusType) => {
         TaxiService.updateAccountData(current.accountId, {
           status,
@@ -846,11 +1437,9 @@ export class TaxiService {
       const data = {
         accountId,
         actions: {
-          high: account.actions.high,
-          denyFriendsRequests: account.actions.denyFriendsRequests,
-          activeStatus: account.actions.activeStatus,
-          busyStatus: account.actions.busyStatus,
+          ...account.actions,
         },
+        whitelist: account.whitelist,
       }
 
       await DataDirectory.updateTaxiServiceFile({
@@ -882,10 +1471,10 @@ export class TaxiService {
   }
 
   private static async updatePatch(accountService: AccountService) {
-    const isHigh =
-      TaxiService._accounts.get(accountService.accountId)?.actions.high ??
-      true
-    const currentStat = isHigh ? FORTStatsNumber.HIGH : FORTStatsNumber.LOW
+    const powerLevel = resolvePowerLevel(
+      TaxiService._accounts.get(accountService.accountId)?.actions,
+    )
+    const currentStat = findStatForPowerLevel(powerLevel)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mpLoadoutInfo: any =
@@ -931,18 +1520,18 @@ export class TaxiService {
           offense: currentStat,
           resistance: currentStat,
           tech: currentStat,
-          teamFortitude: 0,
-          teamOffense: 0,
-          teamResistance: 0,
-          teamTech: 0,
+          teamFortitude: currentStat,
+          teamOffense: currentStat,
+          teamResistance: currentStat,
+          teamTech: currentStat,
           fortitude_Phoenix: currentStat,
           offense_Phoenix: currentStat,
           resistance_Phoenix: currentStat,
           tech_Phoenix: currentStat,
-          teamFortitude_Phoenix: 0,
-          teamOffense_Phoenix: 0,
-          teamResistance_Phoenix: 0,
-          teamTech_Phoenix: 0,
+          teamFortitude_Phoenix: currentStat,
+          teamOffense_Phoenix: currentStat,
+          teamResistance_Phoenix: currentStat,
+          teamTech_Phoenix: currentStat,
         },
       }),
       'Default:PackedState_j': JSON.stringify({
@@ -961,12 +1550,13 @@ export class TaxiService {
           bShouldRecordPartyChannel: false,
         },
       }),
+      /**
+       * The commander/backpack ratings present the power level itself, so
+       * the lobby banner matches the FORT stats the curve produced.
+       */
+      'Default:CampaignCommanderLoadoutRating_d': powerLevel.toFixed(2),
+      'Default:CampaignBackpackRating_d': powerLevel.toFixed(6),
       ...newMetaInfo,
-    }
-
-    if (isHigh) {
-      metaInfo['Default:CampaignCommanderLoadoutRating_d'] = '999.00'
-      metaInfo['Default:CampaignBackpackRating_d'] = '999.000000'
     }
 
     try {
@@ -1009,6 +1599,7 @@ export class TaxiService {
     data: Partial<{
       actions: Partial<TaxiServiceAccountData['actions']>
       status: Partial<TaxiServiceAccountData['status']>
+      whitelist: TaxiServiceAccountData['whitelist']
     }>,
   ) {
     const automationAccount = TaxiService.getAccountById(accountId)
@@ -1018,57 +1609,95 @@ export class TaxiService {
         automationAccount.accountId,
       )
 
-      const actionsNewValueHigh =
-        data.actions?.high ?? automationAccount.actions.high
-      const actionsNewValueDenyFriendsRequests =
-        data.actions?.denyFriendsRequests ??
-        automationAccount.actions.denyFriendsRequests
-      const actionsNewValueActiveStatus =
-        data.actions?.activeStatus ??
-        automationAccount.actions.activeStatus
-      const actionsNewValueBusyStatus =
-        data.actions?.busyStatus ?? automationAccount.actions.busyStatus
+      const actionsNewValue = {
+        ...automationAccount.actions,
+        ...data.actions,
+      } as TaxiServiceAccountData['actions']
+
+      if (actionsNewValue.activeStatus !== undefined) {
+        actionsNewValue.activeStatus = `${actionsNewValue.activeStatus}`.trim()
+        actionsNewValue.busyStatus = `${actionsNewValue.busyStatus}`.trim()
+      }
 
       TaxiService._accounts.set(accountId, {
         accountId,
-        actions: {
-          high: actionsNewValueHigh,
-          denyFriendsRequests: actionsNewValueDenyFriendsRequests,
-          activeStatus: actionsNewValueActiveStatus.trim(),
-          busyStatus: actionsNewValueBusyStatus.trim(),
-        },
+        actions: actionsNewValue,
         status: data.status ?? automationAccount.status,
+        whitelist: data.whitelist ?? automationAccount.whitelist,
       })
 
       if (accountService) {
-        if (automationAccount.actions.high !== actionsNewValueHigh) {
-          TaxiService.updatePatch({
-            accountId: accountService.accountId,
-            client: accountService.client,
-            status: accountService.status,
-            currentTimeout: accountService.currentTimeout,
-          })
+        if (
+          data.actions?.powerLevel !== undefined &&
+          data.actions.powerLevel !== automationAccount.actions.powerLevel
+        ) {
+          void TaxiService.updatePatch(accountService)
+        }
+
+        /**
+         * Cosmetic changes are applied live so a running taxi picks up a
+         * new look without ending the session.
+         */
+        const cosmeticChanged =
+          (data.actions?.skin !== undefined &&
+            data.actions.skin !== automationAccount.actions.skin) ||
+          (data.actions?.emote !== undefined &&
+            data.actions.emote !== automationAccount.actions.emote) ||
+          (data.actions?.level !== undefined &&
+            data.actions.level !== automationAccount.actions.level)
+
+        if (
+          cosmeticChanged &&
+          (accountService.occupied || accountService.status !== AccountPresence.Unknown)
+        ) {
+          const me = accountService.client.party?.me
+
+          if (me) {
+            if (
+              data.actions?.skin !== undefined &&
+              data.actions.skin !== automationAccount.actions.skin
+            ) {
+              me.setOutfit(`${data.actions.skin}`).catch(() => {})
+            }
+
+            if (
+              data.actions?.level !== undefined &&
+              data.actions.level !== automationAccount.actions.level
+            ) {
+              me.setLevel(data.actions.level).catch(() => {})
+            }
+
+            if (
+              data.actions?.emote !== undefined &&
+              data.actions.emote !== automationAccount.actions.emote &&
+              accountService.occupied
+            ) {
+              me.setEmote(`${data.actions.emote}`).catch(() => {})
+            }
+          }
         }
 
         if (
+          data.actions?.activeStatus !== undefined &&
           automationAccount.actions.activeStatus !==
-            actionsNewValueActiveStatus &&
+            data.actions.activeStatus &&
           accountService.status === AccountPresence.Active
         ) {
           accountService.client.setStatus(
-            actionsNewValueActiveStatus.trim().length > 0
-              ? actionsNewValueActiveStatus.trim()
+            `${data.actions.activeStatus}`.trim().length > 0
+              ? `${data.actions.activeStatus}`.trim()
               : 'Libre',
             'away',
           )
         } else if (
+          data.actions?.busyStatus !== undefined &&
           automationAccount.actions.busyStatus !==
-            actionsNewValueBusyStatus &&
+            data.actions.busyStatus &&
           accountService.status === AccountPresence.DnD
         ) {
           accountService.client.setStatus(
-            actionsNewValueBusyStatus.trim().length > 0
-              ? actionsNewValueBusyStatus.trim()
+            `${data.actions.busyStatus}`.trim().length > 0
+              ? `${data.actions.busyStatus}`.trim()
               : 'Ocupado',
             'away',
           )
@@ -1076,7 +1705,7 @@ export class TaxiService {
 
         if (
           !automationAccount.actions.denyFriendsRequests &&
-          actionsNewValueDenyFriendsRequests
+          actionsNewValue.denyFriendsRequests
         ) {
           const account = AccountsManager.getAccountById(accountId)!
 
