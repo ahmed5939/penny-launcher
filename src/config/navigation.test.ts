@@ -28,13 +28,14 @@ describe('navigation', () => {
     expect(destinations).toContain('/plugins')
   })
 
-  it('only badges endurance as beta', () => {
+  it('badges experimental STW tools as beta', () => {
     const betaItems = navSections.flatMap((section) =>
       section.items.filter((item) => item.beta)
     )
 
     expect(betaItems.map((item) => item.to)).toEqual([
       '/stw-operations/endurance',
+      '/stw-operations/outpost',
     ])
   })
 })
