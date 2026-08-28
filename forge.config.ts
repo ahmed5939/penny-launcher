@@ -138,7 +138,16 @@ const config: ForgeConfig = {
     },
   },
   packagerConfig: {
-    asar: true,
+    /**
+     * AutoUnpackNativesPlugin adds the glob for native `.node` files, but
+     * sharp's Windows addon also loads libvips DLLs from the same directory.
+     * DLLs cannot be loaded from inside app.asar, so unpack them alongside
+     * sharp-win32-*.node. Without this, packaged Windows builds fail during
+     * startup with ERR_DLOPEN_FAILED even though the addon itself is present.
+     */
+    asar: {
+      unpack: '**/node_modules/@img/sharp-win32-*/lib/*.dll',
+    },
     icon: 'icon-transparent.ico',
     /**
      * Marketplace packages are plain, readable CommonJS folders. They must
