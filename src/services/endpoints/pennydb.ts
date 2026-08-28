@@ -203,4 +203,43 @@ export function missionHasPennyDBVBucks(mission: PennyDBMission) {
 
 export function missionHasPennyDBAlert(mission: PennyDBMission) {
   return (mission.alertRewards?.length ?? 0) > 0
+/**
+ * Metrics the public leaderboard actually ranks. Anything else 400s.
+ *
+ * Keep this list in lockstep with `isLeaderboardMetric` — the main
+ * process only asks for these.
+ */
+export const pennyDBLeaderboardMetrics = [
+  'power_level',
+  'stw_matches_played',
+  'account_stw_level',
+  'stw_collectionbook_level',
+  'llamas_opened',
+] as const
+
+export type PennyDBLeaderboardMetric =
+  (typeof pennyDBLeaderboardMetrics)[number]
+
+export type PennyDBLeaderboardRow = {
+  profile_id?: number
+  current_value?: number
+  yesterday_value?: number
+  delta_1d?: number
+  leaderboard_position?: number
+  display_name?: string
+  /**
+   * PennyDB's own row id, currently a stringified `profile_id`. It is
+   * **not** an Epic account id — do not look accounts up with it.
+   */
+  epic_account_id?: string
+}
+
+export type PennyDBLeaderboardResponse = {
+  rows?: Array<PennyDBLeaderboardRow>
+}
+
+export function getPennyDBLeaderboard(metric: PennyDBLeaderboardMetric) {
+  return pennydbService.get<PennyDBLeaderboardResponse>('/leaderboard', {
+    params: { metric },
+  })
 }

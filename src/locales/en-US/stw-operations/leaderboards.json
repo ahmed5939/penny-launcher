@@ -1,0 +1,25 @@
+{
+  "title": "Leaderboards",
+  "description": "Public Save the World rankings from PennyDB — power, matches, account level, collection book and llamas.",
+  "metric": {
+    "label": "Rank by",
+    "power_level": "Power level",
+    "stw_matches_played": "Matches played",
+    "account_stw_level": "Account level",
+    "stw_collectionbook_level": "Collection book",
+    "llamas_opened": "Llamas opened"
+  },
+  "open-on-pennydb": "Open on PennyDB",
+  "refresh": "Refresh",
+  "loading": "Loading rankings",
+  "loading-description": "Fetching the public PennyDB leaderboard.",
+  "empty": "No rankings yet",
+  "empty-description": "PennyDB did not return any rows for this metric.",
+  "error-title": "Could not load the leaderboard",
+  "you": "You",
+  "columns": {
+    "rank": "Rank",
+    "commander": "Commander",
+    "value": "Value"
+  }
+}

@@ -338,6 +338,13 @@ export enum ElectronAPIEventKeys {
   TimelineResponse = 'timeline:response',
 
   /**
+   * PennyDB leaderboards
+   */
+
+  LeaderboardRequest = 'leaderboard:request',
+  LeaderboardResponse = 'leaderboard:response',
+
+  /**
    * Quest log
    */
 

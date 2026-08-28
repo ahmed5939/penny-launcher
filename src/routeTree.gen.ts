@@ -25,6 +25,7 @@ import { Route as StwOperationsQuestsRouteImport } from './routes/stw-operations
 import { Route as StwOperationsPartyRouteImport } from './routes/stw-operations/party/route'
 import { Route as StwOperationsOutpostRouteImport } from './routes/stw-operations/outpost/route'
 import { Route as StwOperationsLoadoutsRouteImport } from './routes/stw-operations/loadouts/route'
+import { Route as StwOperationsLeaderboardsRouteImport } from './routes/stw-operations/leaderboards/route'
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
 import { Route as StwOperationsExpeditionsRouteImport } from './routes/stw-operations/expeditions/route'
 import { Route as StwOperationsEnduranceRouteImport } from './routes/stw-operations/endurance/route'
@@ -122,6 +123,12 @@ const StwOperationsLoadoutsRouteRoute = StwOperationsLoadoutsRouteImport.update(
     getParentRoute: () => rootRoute,
   } as any,
 )
+
+const StwOperationsLeaderboardsRouteRoute =
+  StwOperationsLeaderboardsRouteImport.update({
+    path: '/stw-operations/leaderboards',
+    getParentRoute: () => rootRoute,
+  } as any)
 
 const StwOperationsInventoryRouteRoute =
   StwOperationsInventoryRouteImport.update({
@@ -318,6 +325,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsInventoryRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/leaderboards': {
+      preLoaderRoute: typeof StwOperationsLeaderboardsRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/loadouts': {
       preLoaderRoute: typeof StwOperationsLoadoutsRouteImport
       parentRoute: typeof rootRoute
@@ -389,6 +400,7 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsEnduranceRouteRoute,
   StwOperationsExpeditionsRouteRoute,
   StwOperationsInventoryRouteRoute,
+  StwOperationsLeaderboardsRouteRoute,
   StwOperationsLoadoutsRouteRoute,
   StwOperationsOutpostRouteRoute,
   StwOperationsPartyRouteRoute,
