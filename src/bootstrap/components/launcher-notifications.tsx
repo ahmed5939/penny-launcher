@@ -21,7 +21,11 @@ export function LauncherNotifications() {
       async (data) => {
         toast(
           t(
-            `launch-game.notifications.${data.status ? 'success' : 'error'}`,
+            data.status
+              ? 'launch-game.notifications.success'
+              : data.reason === 'missing-install'
+                ? 'launch-game.notifications.missing'
+                : 'launch-game.notifications.error',
             {
               name: parseCustomDisplayName(data.account),
             }

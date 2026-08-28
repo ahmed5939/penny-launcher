@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import { SettingsManager } from '../startup/settings'
+import { eglManifestsDirectory } from '../../config/fortnite/install'
 
 export class Manifest {
   private static cached: Awaited<ReturnType<typeof Manifest.readData>> | undefined
@@ -10,8 +11,7 @@ export class Manifest {
 
   private static async readData() {
     try {
-      const manifestsDirectory =
-        'C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests'
+      const manifestsDirectory = eglManifestsDirectory
 
       const getFile = async (filename: string) => {
         const filePath = path.join(manifestsDirectory, filename)

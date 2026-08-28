@@ -16,6 +16,7 @@ import { LanguageNotification } from '../components/language-notification'
 import { AlertsOverview } from './-index/-alerts-overview/-index'
 import { AutomationChips } from './-index/-automation-chips'
 import { FetchAlertsButton } from './-index/-components/-fetch-alerts-button'
+import { HomeGameInstall } from './-index/-game-install'
 import { HomeHero } from './-index/-hero'
 import { HomeAlerts } from './-index/-home/-index'
 import { AlertsDone } from './-index/alerts-done'
@@ -97,6 +98,7 @@ const MainContent = memo(() => {
           {tab === IndexTabs.Play && (
             <>
               <HomeHero />
+              <HomeGameInstall />
               <AutomationChips />
               <div className="mt-5">
                 <HomeAlerts />

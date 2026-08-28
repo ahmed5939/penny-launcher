@@ -1,16 +1,17 @@
 import { RuntimeLog } from '../runtime-log'
 import type { AccountData } from '../../types/accounts'
 
+import { access } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 import { launcherAppClient2 } from '../../config/fortnite/clients'
+import { fortniteLauncherExecutable } from '../../config/fortnite/install'
 
 import { MainWindow } from '../startup/windows/main'
 import { DataDirectory } from '../startup/data-directory'
 import { Authentication } from './authentication'
-// import { Manifest } from './manifest'
 
 import {
   getAccessTokenUsingExchangeCode,
@@ -20,26 +21,30 @@ import { createLauncherArguments } from './launcher-arguments'
 
 export class FortniteLauncher {
   static async start(account: AccountData) {
-    const sendError = () => {
+    const sendError = (reason?: 'missing-install') => {
       MainWindow.instance.webContents.send(
         ElectronAPIEventKeys.LauncherNotification,
         {
           account,
           status: false,
+          reason,
         }
       )
     }
 
     try {
-      // const manifest = Manifest.get()
-
-      // if (!manifest) {
-      //   sendError()
-
-      //   return
-      // }
-
       const { settings } = await DataDirectory.getSettingsFile()
+      const executable = path.join(settings.path, fortniteLauncherExecutable)
+
+      // Launch is always the official FortniteLauncher.exe from the configured
+      // folder. Missing file is an empty-state problem, not an auth failure.
+      try {
+        await access(executable)
+      } catch {
+        sendError('missing-install')
+        return
+      }
+
       const accessToken = await Authentication.verifyAccessToken(account)
 
       if (!accessToken) {
@@ -87,7 +92,6 @@ export class FortniteLauncher {
         displayName: account.displayName,
         exchangeCode: launcherExchangeCode.data.code,
       })
-      const executable = path.join(settings.path, 'FortniteLauncher.exe')
       const process = spawn(executable, args, {
         cwd: settings.path,
         detached: true,

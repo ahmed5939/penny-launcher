@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { useShallow } from 'zustand/react/shallow'
 
+import { useGameInstall } from '../../hooks/game-install'
 import { useSettingsStore } from '../../state/settings/main'
 
 import { settingsSchema } from '../../lib/validations/schemas/settings'
@@ -31,6 +32,7 @@ export function useSetupForm() {
       userAgent: state.userAgent,
     })),
   )
+  const { refresh: refreshGameInstall } = useGameInstall()
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
     values: {
@@ -56,6 +58,31 @@ export function useSetupForm() {
       ...form.getValues(),
       path: result.path,
     })
+    await refreshGameInstall(true)
+  }
+
+  const onChooseFolder = async () => {
+    const result = await window.electronAPI.chooseGameFolder()
+
+    if (result.reason === 'canceled') {
+      return
+    }
+
+    if (!result.ok || !result.path) {
+      toast(t('app-settings.form.path.invalid'))
+      return
+    }
+
+    form.setValue('path', result.path, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    })
+    onSubmit({
+      ...form.getValues(),
+      path: result.path,
+    })
+    await refreshGameInstall(true)
   }
 
   const onSubmit = (values: z.infer<typeof settingsSchema>) => {
@@ -68,6 +95,7 @@ export function useSetupForm() {
 
   return {
     form,
+    onChooseFolder,
     onDetectPath,
     onSubmit,
   }

@@ -51,7 +51,9 @@ export type CommonNotificationCallbackResponseParam<
 } & Extra
 
 export type LauncherNotificationCallbackResponseParam =
-  CommonNotificationCallbackResponseParam
+  CommonNotificationCallbackResponseParam<{
+    reason?: 'missing-install'
+  }>
 
 export type EpicGamesSettingsNotificationCallbackResponseParam =
   CommonNotificationCallbackResponseParam & {
