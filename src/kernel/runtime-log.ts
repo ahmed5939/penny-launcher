@@ -2,14 +2,14 @@ import { appendFile, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
 
+import { redactSecrets } from './secret-redaction'
+
 function describe(error: unknown) {
   const value = error instanceof Error
     ? `${error.name}: ${error.message}\n${error.stack ?? ''}`
     : String(error)
 
-  return value
-    .replace(/(authorization|secret|token|password)(["'\s:=]+)[^\s,"']+/gi, '$1$2[redacted]')
-    .slice(0, 12_000)
+  return redactSecrets(value).slice(0, 12_000)
 }
 
 export class RuntimeLog {
