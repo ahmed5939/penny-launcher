@@ -203,6 +203,8 @@ export function missionHasPennyDBVBucks(mission: PennyDBMission) {
 
 export function missionHasPennyDBAlert(mission: PennyDBMission) {
   return (mission.alertRewards?.length ?? 0) > 0
+}
+
 /**
  * Metrics the public leaderboard actually ranks. Anything else 400s.
  *

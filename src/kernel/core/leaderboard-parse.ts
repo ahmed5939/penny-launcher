@@ -111,8 +111,9 @@ export function parseLeaderboardResponse(
   return {
     metric,
     rows: rows
-      .slice(0, maxRows)
+      .slice(0, 500)
       .map((row, index) => parseLeaderboardRow(row, index))
-      .filter((row): row is LeaderboardRow => row !== null),
+      .filter((row): row is LeaderboardRow => row !== null)
+      .slice(0, maxRows),
   }
 }
