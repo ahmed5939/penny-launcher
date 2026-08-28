@@ -57,6 +57,29 @@ export const rarityChipClasses: Record<Rarity, string> = {
   mythic: 'border-yellow-300/45 bg-yellow-300/10 text-yellow-200',
 }
 
+/**
+ * The word the item database prints, back to a rarity.
+ *
+ * Template ids are not the last word on rarity: a mythic hero ships as
+ * `hid_constructor_basebig_sr_t05` — the `sr` that everywhere else means
+ * Legendary — and only the game's own data knows it is Mythic. Wherever the
+ * database has an opinion, it outranks the id.
+ */
+export function rarityFromLabel(
+  label: string | null | undefined
+): Rarity | null {
+  if (!label) {
+    return null
+  }
+
+  const wanted = label.toLowerCase()
+
+  return (
+    rarityOrder.find((rarity) => rarityLabels[rarity].toLowerCase() === wanted) ??
+    null
+  )
+}
+
 /** `_vr_` is Epic and `_sr_` is Legendary — the ids predate the renaming. */
 const rarityByToken: Record<string, Rarity> = {
   c: 'common',

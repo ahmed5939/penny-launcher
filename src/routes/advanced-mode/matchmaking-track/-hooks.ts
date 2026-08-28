@@ -1,5 +1,6 @@
 import type { MatchmakingTrackStatus } from '../../../types/data/advanced-mode/matchmaking'
 import type { XPBoostsSearchUserResponse } from '../../../types/xpboosts'
+import type { FriendsSearchResult } from '../../../kernel/core/friends-manager'
 
 import { useShallow } from 'zustand/react/shallow'
 import { useEffect, useRef, useState } from 'react'
@@ -13,6 +14,82 @@ import { useMatchmakingPlayersPath } from '../../../hooks/advanced-mode/matchmak
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
 import { useFriendsManagerStore } from '../../../state/management/friends-manager'
+
+const playerSearchDebounceMs = 350
+
+/**
+ * Epic's prefix search makes the tracker useful before the user knows the
+ * exact spelling of a display name. Responses share the Friends IPC channel,
+ * so the query is checked before accepting them to avoid stale results.
+ */
+export function usePlayerSuggestions({
+  disabled,
+  query,
+}: {
+  disabled: boolean
+  query: string
+}) {
+  const [results, setResults] = useState<Array<FriendsSearchResult>>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const latestQuery = useRef('')
+  const lastRequest = useRef('')
+  const { selected } = useGetSelectedAccount()
+  const selectedRef = useRef(selected)
+
+  selectedRef.current = selected
+
+  useEffect(() => {
+    const listener = window.electronAPI.responseFriendsSearch(
+      async (response) => {
+        if (response.query !== latestQuery.current) {
+          return
+        }
+
+        setResults(response.results)
+        setIsSearching(false)
+      }
+    )
+
+    return () => listener.removeListener()
+  }, [])
+
+  useEffect(() => {
+    const trimmed = query.trim()
+    latestQuery.current = trimmed
+
+    if (!selected?.accountId || disabled || trimmed.length < 2) {
+      setResults([])
+      setIsSearching(false)
+
+      return
+    }
+
+    setIsSearching(true)
+    const timeout = window.setTimeout(() => {
+      const account = selectedRef.current
+      const requestKey = `${account?.accountId ?? ''}:${trimmed}`
+
+      if (!account || requestKey === lastRequest.current) {
+        setIsSearching(false)
+
+        return
+      }
+
+      lastRequest.current = requestKey
+      window.electronAPI.searchFriends(account, trimmed)
+    }, playerSearchDebounceMs)
+
+    return () => window.clearTimeout(timeout)
+  }, [disabled, query, selected?.accountId])
+
+  const clear = () => {
+    latestQuery.current = ''
+    setResults([])
+    setIsSearching(false)
+  }
+
+  return { clear, isSearching, results }
+}
 
 export function useCurrentActions({
   searchedUser,

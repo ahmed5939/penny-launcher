@@ -13,6 +13,8 @@ import type { AlertsDoneSearchPlayerConfig } from '../types/alerts'
 import type { FriendsActionPayload } from './core/friends-manager'
 import type { ItemActionRequest } from './core/item-actions'
 import type { LoadoutEditRequest } from './core/loadouts'
+import type { LockerCardFilters } from './core/locker'
+import type { LockerSlotKey } from '../config/fortnite/locker'
 import type { SquadAssignment } from './core/squads'
 import type { AuthenticationByDeviceProperties } from '../types/authentication'
 import type { AutomationServiceActionConfig } from '../types/automation'
@@ -54,11 +56,13 @@ import {
 } from './core/endurance/config'
 import { EULATracking } from './core/eula-tracking'
 import { Expeditions } from './core/expeditions'
+import { AutoExpeditions } from './startup/auto-expeditions'
 import { FortniteLauncher } from './core/launcher'
 import { FriendsManager } from './core/friends-manager'
 import {
   getGameSettings,
   getLaunchSettings,
+  restoreGameSettingsBackup,
   saveGameSettings,
   saveLaunchSettings as saveFnLaunchSettings,
 } from './core/fn-launch'
@@ -67,6 +71,7 @@ import { Inventory } from './core/inventory'
 import { ItemActions } from './core/item-actions'
 import { Leaderboard } from './core/leaderboard'
 import { Loadouts } from './core/loadouts'
+import { Locker } from './core/locker'
 import { MCPClientQuestLogin } from './core/mcp'
 import { MatchmakingTrack } from './core/matchmaking-track'
 import { Manifest } from './core/manifest'
@@ -856,6 +861,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
+    secureIpcHandle(
+      ElectronAPIEventKeys.FnLaunchGameSettingsRestore,
+      async () => {
+        return restoreGameSettingsBackup()
+      }
+    )
+
     secureIpcOn(
       ElectronAPIEventKeys.AccountHealthRequest,
       async (_, accounts: Array<AccountData>) => {
@@ -870,20 +882,18 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
-    secureIpcOn(
-      ElectronAPIEventKeys.ExpeditionsCollect,
-      async (_, accounts: Array<AccountData>) => {
-        await Expeditions.collect(accounts)
-      }
+    secureIpcHandle(ElectronAPIEventKeys.AutoExpeditionsStatus, async () =>
+      AutoExpeditions.getData()
     )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.ExpeditionsAction,
-      async (_, config: Parameters<typeof Expeditions.action>[0]) => {
-        await Expeditions.action(config)
-      }
+    secureIpcHandle(
+      ElectronAPIEventKeys.AutoExpeditionsUpdate,
+      async (
+        _,
+        accountId: string,
+        partial: Partial<import('./startup/auto-expeditions').AutoExpeditionConfig>
+      ) =>
+        AutoExpeditions.update(accountId, partial)
     )
-
     secureIpcOn(ElectronAPIEventKeys.ItemDatabaseRequest, async () => {
       const { ItemDatabase } = await loadItemDatabase()
       await ItemDatabase.request()
@@ -986,6 +996,54 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(ElectronAPIEventKeys.ShopCatalogRequest, async () => {
       await Shop.requestCatalog()
     })
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LockerRequest,
+      async (_, account: AccountData) => {
+        await Locker.request(account)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LockerOwnedRequest,
+      async (_, account: AccountData, refresh: boolean) => {
+        await Locker.requestOwned(account, refresh)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LockerEquip,
+      async (
+        _,
+        account: AccountData,
+        slotKey: LockerSlotKey,
+        templateId: string | null,
+        itemName: string
+      ) => {
+        await Locker.equip(account, slotKey, templateId, itemName)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LockerCardGenerate,
+      async (_, account: AccountData, filters: LockerCardFilters) => {
+        await Locker.generateCard(account, filters)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LockerCardOpen,
+      async (_, filePath: string) => {
+        await Locker.openCard(filePath)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LockerCardExport,
+      async (_, filePath: string, fileName: string) => {
+        await Locker.exportCard(filePath, fileName)
+      }
+    )
 
     secureIpcOn(
       ElectronAPIEventKeys.SquadsRequest,
@@ -1599,7 +1657,8 @@ process.on('uncaughtExceptionMonitor', (error) => {
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
-      MainWindow.setInstance(await createWindow())
+    MainWindow.setInstance(await createWindow())
+    AutoExpeditions.start()
     }
   })
 

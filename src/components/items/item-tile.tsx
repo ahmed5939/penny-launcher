@@ -31,6 +31,12 @@ import { cn } from '../../lib/utils'
  * of Nuts & Bolts therefore does not compete with the one Legendary schematic
  * standing in it. The name bar carries no rarity at all: it is a caption, and
  * a caption is not where a page spends its colour.
+ *
+ * There is deliberately no `content-visibility: auto` on the tile. It was how
+ * the vault survived rendering its whole contents at once; the two screens
+ * that did that — the vault and the compendium — virtualise now, and a
+ * skipped element measures as its `contain-intrinsic-size` rather than its
+ * real height, which is exactly what a virtualiser must not be told.
  */
 
 export type ItemTileSize = 'small' | 'default' | 'large'
@@ -44,6 +50,7 @@ export function ItemTile({
   menu,
   name,
   onClick,
+  portrait,
   power,
   quantity,
   records,
@@ -70,6 +77,8 @@ export function ItemTile({
   /** Overrides the database name. */
   name?: string
   onClick?: () => void
+  /** Survivors: the `WorkerPortrait:` id this copy rolled. */
+  portrait?: string | null
   quantity?: number
   records?: ItemRecordMap
   selected?: boolean
@@ -78,7 +87,7 @@ export function ItemTile({
   tier?: number
   title?: string
 }) {
-  const art = resolveItemArt(templateId, records)
+  const art = resolveItemArt(templateId, records, portrait)
   const label = name ?? art.name
 
   const box = {
@@ -100,7 +109,6 @@ export function ItemTile({
         onClick && !disabled && 'hover:-translate-y-0.5 hover:brightness-110',
         selected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
         disabled && 'opacity-60',
-        '[content-visibility:auto] [contain-intrinsic-size:6rem_8rem]',
         className
       )}
       disabled={onClick ? disabled : undefined}

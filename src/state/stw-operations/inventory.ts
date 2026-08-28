@@ -15,9 +15,9 @@ export type InventoryFilters = {
   search: string
 }
 
-/** The vault opens showing everything; the filters narrow it from there. */
+/** The vault opens on the schematics tab; the strip switches kinds. */
 export const defaultInventoryFilters: InventoryFilters = {
-  kinds: ['schematic', 'hero', 'defender', 'survivor'],
+  kinds: ['schematic'],
   maxRarity: 'mythic',
   maxTier: 0,
   search: '',

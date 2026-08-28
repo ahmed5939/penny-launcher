@@ -152,6 +152,11 @@ export class DataDirectory {
   )
   private static autoLlamasDefaultData: AutoLlamasRecord = {}
 
+  static autoExpeditionsFilePath = path.join(
+    DataDirectory.dataDirectoryPath,
+    'auto-expeditions.json'
+  )
+
   static miniBossesFilePath = path.join(
     DataDirectory.dataDirectoryPath,
     'mini-bosses.json'
@@ -610,6 +615,30 @@ export class DataDirectory {
    */
   static async updateAutoLlamasFile(data: AutoLlamasRecord) {
     await DataDirectory.updateJsonFile(DataDirectory.autoLlamasFilePath, data)
+  }
+
+  static async getAutoExpeditionsFile<T extends object>(defaults: T): Promise<T> {
+    const result = await DataDirectory.getOrCreateJsonFile(
+      DataDirectory.autoExpeditionsFilePath,
+      {
+        defaults: { rawString: JSON.stringify(defaults), value: defaults },
+      }
+    )
+
+    try {
+      const parsed = JSON.parse(result)
+      return parsed && typeof parsed === 'object' ? parsed : defaults
+    } catch (error) {
+      RuntimeLog.error('caught:startup/data-directory:auto-expeditions', error)
+      return defaults
+    }
+  }
+
+  static async updateAutoExpeditionsFile(data: object) {
+    await DataDirectory.updateJsonFile(
+      DataDirectory.autoExpeditionsFilePath,
+      data
+    )
   }
 
   /**

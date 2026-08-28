@@ -1,10 +1,7 @@
 import type { IpcRendererEvent } from 'electron'
-import type {
-  ExpeditionsCollectNotification,
-  ExpeditionActionNotification,
-  ExpeditionsPayload,
-} from '../core/expeditions'
+import type { ExpeditionsPayload } from '../core/expeditions'
 import type { AccountData } from '../../types/accounts'
+import type { AutoExpeditionConfig } from '../startup/auto-expeditions'
 
 import { ipcRenderer } from 'electron'
 
@@ -14,30 +11,13 @@ export function requestExpeditions(accounts: Array<AccountData>) {
   ipcRenderer.send(ElectronAPIEventKeys.ExpeditionsRequest, accounts)
 }
 
-export function collectExpeditions(accounts: Array<AccountData>) {
-  ipcRenderer.send(ElectronAPIEventKeys.ExpeditionsCollect, accounts)
-}
-
-export function expeditionAction(config: {
-  account: AccountData
-  action: ExpeditionActionNotification['action']
-  expeditionId: string
-  expeditionTemplate?: string
-  itemIds?: Array<string>
-  squadId?: string
-}) {
-  ipcRenderer.send(ElectronAPIEventKeys.ExpeditionsAction, config)
-}
-
 export function responseExpeditions(
   callback: (response: ExpeditionsPayload) => Promise<void>
 ) {
   const customCallback = (
     _: IpcRendererEvent,
     response: ExpeditionsPayload
-  ) => {
-    callback(response).catch(console.error)
-  }
+  ) => callback(response).catch(console.error)
   const rendererInstance = ipcRenderer.on(
     ElectronAPIEventKeys.ExpeditionsResponse,
     customCallback
@@ -52,46 +32,17 @@ export function responseExpeditions(
   }
 }
 
-export function notificationExpeditionsCollect(
-  callback: (response: ExpeditionsCollectNotification) => Promise<void>
-) {
-  const customCallback = (
-    _: IpcRendererEvent,
-    response: ExpeditionsCollectNotification
-  ) => {
-    callback(response).catch(console.error)
-  }
-  const rendererInstance = ipcRenderer.on(
-    ElectronAPIEventKeys.ExpeditionsCollectNotification,
-    customCallback
-  )
-
-  return {
-    removeListener: () =>
-      rendererInstance.removeListener(
-        ElectronAPIEventKeys.ExpeditionsCollectNotification,
-        customCallback
-      ),
-  }
+export function getAutoExpeditionsStatus() {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.AutoExpeditionsStatus)
 }
 
-export function notificationExpeditionAction(
-  callback: (response: ExpeditionActionNotification) => Promise<void>
+export function updateAutoExpeditions(
+  accountId: string,
+  partial: Partial<AutoExpeditionConfig>
 ) {
-  const customCallback = (
-    _: IpcRendererEvent,
-    response: ExpeditionActionNotification
-  ) => callback(response).catch(console.error)
-  const rendererInstance = ipcRenderer.on(
-    ElectronAPIEventKeys.ExpeditionsActionNotification,
-    customCallback
+  return ipcRenderer.invoke(
+    ElectronAPIEventKeys.AutoExpeditionsUpdate,
+    accountId,
+    partial
   )
-
-  return {
-    removeListener: () =>
-      rendererInstance.removeListener(
-        ElectronAPIEventKeys.ExpeditionsActionNotification,
-        customCallback
-      ),
-  }
 }

@@ -54,7 +54,8 @@
     "options": {
       "matchmaking-track": "Matchmaking",
       "server-status": "Servers",
-      "world-info": "World info"
+      "world-info": "World info",
+      "game-settings": "Game settings"
     }
   },
   "accounts": {

@@ -37,6 +37,43 @@ function categoryRank(category: string) {
   return category === 'DailyQuests' ? 0 : 1
 }
 
+/**
+ * Quests the game runs but never shows.
+ *
+ * Every profile permanently holds a handful of Active bookkeeping quests —
+ * the daily-quest pack and its trigger, the onboarding chain, the hero
+ * loadout tutorials, the outpost first-open flags. Epic marks them two ways
+ * and the database keeps both: a `DisplayName` wrapped in angle brackets,
+ * which is what an asset with no localised name exports as, or a name
+ * literally prefixed `(Hidden)`. They have no objectives, no rewards and no
+ * category, so they otherwise land in the log as untitled cards under a
+ * blank heading.
+ */
+function isHiddenQuest(name: string) {
+  return name.startsWith('<') || name.startsWith('(Hidden)')
+}
+
+/** The first line with anything on it. Quest copy is multi-line: the goal,
+ * then a paragraph of instructions the card has no room for. */
+function firstLine(value: string | null | undefined) {
+  return (
+    value
+      ?.split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) ?? null
+  )
+}
+
+/** `daily_destroygnomes` → "Daily Destroygnomes". Only for quests the
+ * database has never heard of, which is better than showing the raw id. */
+function prettifyTemplateId(templateId: string) {
+  return (templateId.split(':').pop() ?? templateId)
+    .split(/[_.]/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 export function useQuestsData() {
   useRequestItemDatabase()
 
@@ -102,8 +139,15 @@ export function useQuestsData() {
    * live in the game data, so the two are paired here by backend name.
    */
   const views = useMemo(() => {
-    const mapped: Array<QuestView> = quests.map((quest) => {
+    const mapped: Array<QuestView> = []
+
+    quests.forEach((quest) => {
       const record = getItemRecord(records, quest.templateId)
+
+      if (record && isHiddenQuest(record.name)) {
+        return
+      }
+
       const progressByName = new Map(
         quest.objectives.map((objective) => [
           objective.backendName.toLowerCase(),
@@ -111,11 +155,23 @@ export function useQuestsData() {
         ])
       )
 
+      /*
+       * Every Wargames simulation and prerequisite ships its objective with an
+       * empty description — the string is present, it is just blank, so `??`
+       * never fires and the card gets a progress bar with no line above it.
+       * The quest's own description says the same thing ("Complete the
+       * "Denied" Wargames Simulation."), so a quest with a single objective
+       * borrows it rather than showing nothing.
+       */
+      const summary =
+        record?.objectives.length === 1 ? firstLine(record.description) : null
+
       const objectives: Array<QuestObjectiveView> = (
         record?.objectives ?? []
       ).map((objective) => ({
         description:
-          objective.description ?? objective.backendName.replace(/_/g, ' '),
+          (objective.description?.trim() || summary) ??
+          objective.backendName.replace(/_/g, ' '),
         completed: progressByName.get(objective.backendName.toLowerCase()) ?? 0,
         count: objective.count,
       }))
@@ -143,17 +199,18 @@ export function useQuestsData() {
         0
       )
 
-      return {
+      mapped.push({
         itemId: quest.itemId,
         templateId: quest.templateId,
-        name: record?.name ?? quest.templateId.split(':').pop() ?? 'Quest',
+        name: record?.name ?? prettifyTemplateId(quest.templateId),
         description: record?.description ?? null,
-        category: record?.category ?? 'Other',
+        /** Empty, not absent, is how the database spells "uncategorised". */
+        category: record?.category || 'Other',
         pinned: quest.pinned,
         objectives: fallback,
         rewards: record?.rewards ?? [],
         progress: totalTarget > 0 ? totalDone / totalTarget : 0,
-      }
+      })
     })
 
     return mapped.sort((questA, questB) => {
@@ -181,7 +238,12 @@ export function useQuestsData() {
     return [...groups.entries()]
   }, [views])
 
-  const pinnedIds = views
+  /*
+   * From the raw list rather than `views`, because the log hides the profile's
+   * bookkeeping quests and pinning writes the whole set back — anything
+   * dropped from the display still has to survive the round trip.
+   */
+  const pinnedIds = quests
     .filter((quest) => quest.pinned)
     .map((quest) => quest.itemId)
 

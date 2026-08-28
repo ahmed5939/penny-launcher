@@ -32,7 +32,15 @@ export type MCPQueryProfileAthenaProfile = {
         items: Record<
           string,
           {
-            templateId: `Athena${string}:${string}`
+            /**
+             * `AthenaCharacter:cid_001…`, and increasingly not: the same
+             * profile now files instruments (`SparksGuitar:`), jam tracks
+             * (`SparksSong:`), shoes (`CosmeticShoes:`), car parts
+             * (`VehicleCosmetics_Body:`) and companions (`CosmeticMimosa:`).
+             * Narrowing this to `Athena${string}` would hide most of a
+             * modern locker from the type system.
+             */
+            templateId: `${string}:${string}`
             attributes: Partial<{
               /** Set when the cosmetic arrived as a gift — the sender's id. */
               giftFromAccountId: string

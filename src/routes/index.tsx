@@ -25,7 +25,11 @@ import { AlertsDone } from './-index/alerts-done'
 import { Route as RootRoute } from './__root'
 
 import { useGetAccounts } from '../hooks/accounts'
-import { useDropzoneConfig, useFetchPlayerDataSync } from './-index/-hooks'
+import {
+  useAlertsSummary,
+  useDropzoneConfig,
+  useFetchPlayerDataSync,
+} from './-index/-hooks'
 
 import { cn } from '../lib/utils'
 
@@ -101,7 +105,7 @@ const MainContent = memo(() => {
               <AutomationChips />
               <div className="mt-5">
                 <HomeAlerts />
-                <PennyDBMissionBoard />
+                <PennyDBMissionBoardFallback />
               </div>
             </>
           )}
@@ -119,6 +123,21 @@ const MainContent = memo(() => {
     </>
   )
 })
+
+/**
+ * Penny DB lists the same daily missions Epic world-info already shows, so it
+ * only earns screen space when world-info has nothing: no account signed in,
+ * or a fetch that never landed.
+ */
+function PennyDBMissionBoardFallback() {
+  const summary = useAlertsSummary()
+
+  if (!summary.isEmpty || summary.isLoading) {
+    return null
+  }
+
+  return <PennyDBMissionBoard />
+}
 
 function NavigationTab() {
   const { t } = useTranslation(['general'])

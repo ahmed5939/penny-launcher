@@ -16,6 +16,7 @@ import {
   Repeat,
   ScrollText,
   Shield,
+  Shirt,
   Store,
   Swords,
   Users,
@@ -162,6 +163,13 @@ const items: Array<HubItem> = [
     description: 'Track matchmaking for an account',
     icon: Radar,
     to: '/advanced-mode/matchmaking-track',
+  },
+  {
+    beta: true,
+    title: 'BR Locker',
+    description: 'Equip owned cosmetics and draw the locker as one image',
+    icon: Shirt,
+    to: '/account-management/locker',
   },
 ]
 

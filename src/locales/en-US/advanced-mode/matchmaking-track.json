@@ -1,8 +1,15 @@
 {
   "description": "See what a player is doing in Save the World right now — current mission, difficulty, squad and rewards.",
   "form": {
+    "title": "Find a player",
+    "description": "Search by Epic, PlayStation, Xbox display name, or account ID.",
+    "quick-pick": "Quick pick",
+    "suggestions": "Player matches",
+    "exact-match": "Exact match",
+    "player-result": "{{mutual}} mutual friends",
     "recently": {
-      "label": "Note: These players are stored temporarily"
+      "label": "Note: These players are stored temporarily",
+      "placeholder": "Recent players and friends"
     }
   },
   "live": {
@@ -21,9 +28,12 @@
     "refresh": "Refresh",
     "pennydb": "View on PennyDB",
     "status": {
+      "active": "In mission",
+      "offline": "No session",
       "launched": "Launched",
       "in-lobby": "In lobby",
-      "not-playing": "{{name}} is not currently in a mission"
+      "not-playing": "{{name}} is not currently in a mission",
+      "not-playing-hint": "Their session will appear here when Save the World matchmaking starts."
     }
   }
 }

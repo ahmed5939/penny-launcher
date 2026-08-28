@@ -48,6 +48,11 @@ export type InventoryItem = {
   personality: string | null
   setBonus: string | null
   /**
+   * Survivors only — the `WorkerPortrait:` template id of the face the game
+   * rolled for this copy. See `SquadSurvivor.portrait`.
+   */
+  portrait: string | null
+  /**
    * Schematics and heroes: the perks actually rolled on this copy, as
    * `Alteration:` template ids the item database can name.
    */
@@ -173,6 +178,7 @@ export class Inventory {
         favorite: boolean
         level: number
         personality: string
+        portrait: string
         set_bonus: string
         squad_id: string
         squad_slot_idx: number
@@ -208,6 +214,7 @@ export class Inventory {
               : null,
         personality: prettifyWorkerTrait(attributes.personality),
         setBonus: prettifyWorkerTrait(attributes.set_bonus),
+        portrait: attributes.portrait ?? null,
         alterations: (attributes.alterations ?? []).filter(
           (alteration) =>
             typeof alteration === 'string' && alteration.length > 0

@@ -36,10 +36,12 @@ import { Route as InformationCreditsRouteImport } from './routes/information/cre
 import { Route as AdvancedModeWorldInfoRouteImport } from './routes/advanced-mode/world-info/route'
 import { Route as AdvancedModeServerStatusRouteImport } from './routes/advanced-mode/server-status/route'
 import { Route as AdvancedModeMatchmakingTrackRouteImport } from './routes/advanced-mode/matchmaking-track/route'
+import { Route as AdvancedModeGameSettingsRouteImport } from './routes/advanced-mode/game-settings/route'
 import { Route as AccountsRemoveRouteImport } from './routes/accounts/remove/route'
 import { Route as AccountManagementVbucksInformationRouteImport } from './routes/account-management/vbucks-information/route'
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
+import { Route as AccountManagementLockerRouteImport } from './routes/account-management/locker/route'
 import { Route as AccountManagementGiftsInformationRouteImport } from './routes/account-management/gifts-information/route'
 import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
 import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
@@ -192,6 +194,12 @@ const AdvancedModeMatchmakingTrackRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AdvancedModeGameSettingsRouteRoute =
+  AdvancedModeGameSettingsRouteImport.update({
+    path: '/advanced-mode/game-settings',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountsRemoveRouteRoute = AccountsRemoveRouteImport.update({
   path: '/accounts/remove',
   getParentRoute: () => rootRoute,
@@ -212,6 +220,12 @@ const AccountManagementRedeemCodesRouteRoute =
 const AccountManagementProfileRouteRoute =
   AccountManagementProfileRouteImport.update({
     path: '/account-management/profile',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const AccountManagementLockerRouteRoute =
+  AccountManagementLockerRouteImport.update({
+    path: '/account-management/locker',
     getParentRoute: () => rootRoute,
   } as any)
 
@@ -291,6 +305,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountManagementGiftsInformationRouteImport
       parentRoute: typeof rootRoute
     }
+    '/account-management/locker': {
+      preLoaderRoute: typeof AccountManagementLockerRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/account-management/profile': {
       preLoaderRoute: typeof AccountManagementProfileRouteImport
       parentRoute: typeof rootRoute
@@ -305,6 +323,10 @@ declare module '@tanstack/react-router' {
     }
     '/accounts/remove': {
       preLoaderRoute: typeof AccountsRemoveRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/advanced-mode/game-settings': {
+      preLoaderRoute: typeof AdvancedModeGameSettingsRouteImport
       parentRoute: typeof rootRoute
     }
     '/advanced-mode/matchmaking-track': {
@@ -410,10 +432,12 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementEulaRouteRoute,
   AccountManagementFriendsRouteRoute,
   AccountManagementGiftsInformationRouteRoute,
+  AccountManagementLockerRouteRoute,
   AccountManagementProfileRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
   AccountManagementVbucksInformationRouteRoute,
   AccountsRemoveRouteRoute,
+  AdvancedModeGameSettingsRouteRoute,
   AdvancedModeMatchmakingTrackRouteRoute,
   AdvancedModeServerStatusRouteRoute,
   AdvancedModeWorldInfoRouteRoute,

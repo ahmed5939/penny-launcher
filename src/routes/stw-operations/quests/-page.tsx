@@ -39,6 +39,8 @@ function categoryLabel(category: string) {
       .replace(/^LTE_/i, '')
       .replace(/([a-z])([A-Z])/g, '$1 $2')
       .replace(/([A-Za-z])(\d)/g, '$1 $2')
+      /** Without this `LTE_Season9Wargames` reads "Season 9Wargames". */
+      .replace(/(\d)([A-Za-z])/g, '$1 $2')
       .replace(/_/g, ' ')
       .toLowerCase()
       .replace(/\b\w/g, (letter) => letter.toUpperCase())

@@ -2,29 +2,35 @@ import type { InventoryRow } from './-hooks'
 import type { ItemActionRequest } from '../../../kernel/core/item-actions'
 import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type { ItemKind, Rarity } from '../../../config/constants/fortnite/items'
-import type { SegmentedOption } from '../../../components/page'
+import type { ItemRecordMap } from '../../../kernel/core/item-database'
+import type { LucideIcon } from 'lucide-react'
 
 import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ArrowUp,
   Boxes,
   CheckCheck,
+  Hammer,
   Info,
-  Sparkles,
-  Star,
   Lock,
   Recycle,
   RefreshCw,
   Search,
   ShieldAlert,
+  ShieldHalf,
+  Sparkles,
+  Star,
+  Swords,
   Trash2,
+  Users,
   UserX,
 } from 'lucide-react'
-import { useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
+import { VirtualList } from '../../../components/virtual-list'
 import { Input } from '../../../components/ui/input'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
 import { ItemIcon } from '../../../components/items/item-icon'
@@ -44,17 +50,28 @@ import {
   DialogTitle,
 } from '../../../components/ui/dialog'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../../components/ui/select'
+import {
   Callout,
   EmptyState,
   PageHeader,
   Panel,
   PanelBody,
-  Segmented,
+  PanelHeader,
   StatRow,
   StatTile,
+  vaultRarityColors,
 } from '../../../components/page'
 
-import { useInventoryData } from './-hooks'
+import { itemKinds, useInventoryData } from './-hooks'
+
+import { useColumnCount } from '../../../hooks/ui/virtual'
+import { useStableCallback } from '../../../hooks/ui/stable-callback'
 
 import {
   itemKindLabels,
@@ -64,18 +81,60 @@ import {
 
 import { cn, parseCustomDisplayName } from '../../../lib/utils'
 
-const kinds: Array<ItemKind> = ['schematic', 'hero', 'defender', 'survivor']
+/**
+ * Kind is a tab, not a filter.
+ *
+ * It used to be four independent toggles sitting above two more rows of
+ * "up to rarity" and "up to tier" segmented controls — three quarters of a
+ * screen of chrome before the first item, and a set of switches you could
+ * turn all the way off until the vault looked broken. Kinds are mutually
+ * exclusive in every way that matters: nobody compares a survivor against a
+ * sniper rifle. So they are tabs, they carry their own counts, and the
+ * narrowing controls that remain are two dropdowns on one line.
+ */
+const kindIcons: Record<ItemKind, LucideIcon> = {
+  defender: ShieldHalf,
+  hero: Swords,
+  schematic: Hammer,
+  survivor: Users,
+}
 
-const rarityOptions: Array<SegmentedOption<Rarity>> = rarityOrder.map(
-  (rarity) => ({ label: rarityLabels[rarity], value: rarity })
-)
+/** `itemKindLabels` is plural — a shelf of one still has to read right. */
+const kindNouns: Record<ItemKind, [string, string]> = {
+  defender: ['defender', 'defenders'],
+  hero: ['hero', 'heroes'],
+  schematic: ['schematic', 'schematics'],
+  survivor: ['survivor', 'survivors'],
+}
 
-const tierOptions: Array<SegmentedOption<string>> = [
-  { label: 'Any', value: '0' },
-  { label: '≤ T1', value: '1' },
-  { label: '≤ T2', value: '2' },
-  { label: '≤ T3', value: '3' },
-  { label: '≤ T4', value: '4' },
+const tabs = itemKinds.map((kind) => ({
+  icon: kindIcons[kind],
+  label: itemKindLabels[kind],
+  value: kind,
+}))
+
+/** Strongest first — the order a vault is worth reading in. */
+const raritySections = [...rarityOrder].reverse()
+
+const rarityFilterOptions = raritySections.map((rarity) => ({
+  label: `Up to ${rarityLabels[rarity]}`,
+  value: rarity,
+}))
+
+const tierFilterOptions = [
+  { label: 'Any tier', value: '0' },
+  { label: 'Up to T1', value: '1' },
+  { label: 'Up to T2', value: '2' },
+  { label: 'Up to T3', value: '3' },
+  { label: 'Up to T4', value: '4' },
+]
+
+type SortMode = 'power' | 'level' | 'name'
+
+const sortOptions: Array<{ label: string; value: SortMode }> = [
+  { label: 'Power', value: 'power' },
+  { label: 'Level', value: 'level' },
+  { label: 'Name', value: 'name' },
 ]
 
 /** Lowercase roman numerals — what `UpgradeItemBulk` wants for a tier. */
@@ -184,27 +243,31 @@ export function RouteComponent() {
 
 function Content() {
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
+  const [sort, setSort] = useState<SortMode>('power')
 
   const {
     account,
+    activeKind,
+    alterationPools,
     clearSelection,
     confirmOpen,
+    countsByKind,
     errorMessage,
     filters,
+    handleItemAction,
     handleLoad,
     handleRecycle,
+    handleSelectKind,
     handleToggleAll,
     handleToggleItem,
-    handleToggleKind,
+    handleToggleMany,
+    handleUpgradeSelected,
     hasLoaded,
+    isActing,
     isDisabledRecycle,
     isLoading,
     isRecycling,
     lockedCount,
-    alterationPools,
-    handleItemAction,
-    handleUpgradeSelected,
-    isActing,
     queuedUpgrades,
     ratings,
     recyclableCount,
@@ -217,6 +280,56 @@ function Content() {
     totalSelected,
     updateFilters,
   } = useInventoryData()
+
+  /**
+   * One section per rarity, strongest first. A vault is read top-down for the
+   * things worth keeping and bottom-up for the things worth recycling, and a
+   * single flat wrap of two hundred tiles serves neither.
+   */
+  const sections = useMemo(() => {
+    const byRarity = new Map<Rarity, Array<InventoryRow>>()
+
+    rows.forEach((item) => {
+      const current = byRarity.get(item.rarity) ?? []
+
+      current.push(item)
+      byRarity.set(item.rarity, current)
+    })
+
+    const compare = (itemA: InventoryRow, itemB: InventoryRow) => {
+      if (sort === 'name') {
+        return itemA.displayName.localeCompare(itemB.displayName)
+      }
+
+      if (sort === 'level') {
+        return itemB.level - itemA.level
+      }
+
+      return (itemB.power ?? 0) - (itemA.power ?? 0)
+    }
+
+    return raritySections
+      .filter((rarity) => byRarity.has(rarity))
+      .map((rarity) => ({
+        rarity,
+        items: [...(byRarity.get(rarity) ?? [])].sort(compare),
+      }))
+  }, [rows, sort])
+
+  /*
+   * Every handler a tile is given has to keep its identity between renders,
+   * or `memo` on the tile buys nothing and one click re-renders the shelf.
+   */
+  const handleInspect = useStableCallback((item: InventoryRow) => {
+    setDetail(item)
+  })
+  const handleRecycleOne = useStableCallback((itemId: string) => {
+    handleToggleItem(itemId)
+    setConfirmOpen(true)
+  })
+  const handleToggleOne = useStableCallback(handleToggleItem)
+  const handleAction = useStableCallback(handleItemAction)
+  const handleToggleSection = useStableCallback(handleToggleMany)
 
   if (!account) {
     return (
@@ -233,17 +346,10 @@ function Content() {
 
   return (
     <>
-      <Panel id="filters-card">
-        <PanelBody className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-[0.8125rem] font-medium">
-              {parseCustomDisplayName(account)}
-            </span>
-            <span className="text-[0.65rem] text-muted-foreground">
-              Click to select · right-click for actions
-            </span>
+      <Panel id="vault-card">
+        <PanelHeader
+          actions={
             <Button
-              className="ml-auto"
               disabled={isLoading}
               onClick={handleLoad}
               size="sm"
@@ -258,75 +364,138 @@ function Content() {
                 </>
               )}
             </Button>
-          </div>
+          }
+          as="div"
+          compact
+          icon={Boxes}
+          title={parseCustomDisplayName(account)}
+        />
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            {kinds.map((kind) => {
-              const active = filters.kinds.includes(kind)
+        <PanelBody className="space-y-3 px-3 py-3">
+          {/*
+            A hand-rolled strip rather than the Radix `Tabs`, for the same
+            reason `Segmented` is: there are no tab *panels* here. The tab
+            picks what the page below is about, and Radix triggers would
+            point `aria-controls` at content that does not exist.
+          */}
+          <div
+            className="flex flex-wrap items-center gap-1 rounded-xl border border-border/60 bg-surface/60 p-1"
+            role="tablist"
+          >
+            {tabs.map((tab) => {
+              const active = activeKind === tab.value
+              const count = countsByKind[tab.value]
 
               return (
                 <button
+                  aria-selected={active}
                   className={cn(
-                    'rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors',
+                    'flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition-colors',
                     active
-                      ? 'border-primary/40 bg-primary/15 text-primary'
-                      : 'border-border/70 text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/25'
+                      : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground'
                   )}
-                  key={kind}
-                  onClick={() => handleToggleKind(kind)}
+                  key={tab.value}
+                  onClick={() => handleSelectKind(tab.value)}
+                  role="tab"
                   type="button"
                 >
-                  {itemKindLabels[kind]}
+                  <tab.icon className="size-3.5" />
+                  {tab.label}
+                  <span
+                    className={cn(
+                      'figure rounded-md px-1.5 py-px text-[0.625rem]',
+                      active
+                        ? 'bg-primary/20 text-primary'
+                        : 'bg-background/50 text-muted-foreground'
+                    )}
+                  >
+                    {count}
+                  </span>
                 </button>
               )
             })}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <label className="space-y-1.5">
-              <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Up to rarity
-              </span>
-              <Segmented
-                onChange={(maxRarity) => {
-                  updateFilters({ maxRarity })
-                  clearSelection()
-                }}
-                options={rarityOptions}
-                value={filters.maxRarity}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="relative min-w-52 flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="h-8 pl-8"
+                onChange={(event) =>
+                  updateFilters({ search: event.target.value })
+                }
+                placeholder="Name, type or template id"
+                value={filters.search}
               />
-            </label>
+            </span>
 
-            <label className="space-y-1.5">
-              <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Up to tier
-              </span>
-              <Segmented
-                onChange={(value) => {
-                  updateFilters({ maxTier: Number(value) })
-                  clearSelection()
-                }}
-                options={tierOptions}
-                value={String(filters.maxTier)}
-              />
-            </label>
+            <Select
+              onValueChange={(maxRarity: Rarity) => {
+                updateFilters({ maxRarity })
+                clearSelection()
+              }}
+              value={filters.maxRarity}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {rarityFilterOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                  >
+                    <span className="flex items-center gap-2">
+                      <RarityDot rarity={option.value} />
+                      {option.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <label className="min-w-48 flex-1 space-y-1.5">
-              <span className="block text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                Search
-              </span>
-              <span className="relative block">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="pl-8"
-                  onChange={(event) =>
-                    updateFilters({ search: event.target.value })
-                  }
-                  placeholder="Name, type or template id"
-                  value={filters.search}
-                />
-              </span>
-            </label>
+            <Select
+              onValueChange={(value) => {
+                updateFilters({ maxTier: Number(value) })
+                clearSelection()
+              }}
+              value={String(filters.maxTier)}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {tierFilterOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              onValueChange={(value: SortMode) => setSort(value)}
+              value={sort}
+            >
+              <SelectTrigger className="w-32 gap-2">
+                <span className="micro-label shrink-0">Sort</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((option) => (
+                  <SelectItem
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </PanelBody>
       </Panel>
@@ -405,67 +574,44 @@ function Content() {
           )}
 
           <Panel>
-            <header className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3">
-              <p className="text-[0.8125rem] font-medium">
-                {rows.length} item{rows.length === 1 ? '' : 's'}
-              </p>
-              {recyclableCount > 0 && (
-                <Button
-                  className="ml-auto"
-                  onClick={handleToggleAll}
-                  size="sm"
-                  variant="ghost"
-                >
-                  {allSelected
-                    ? 'Deselect all'
-                    : `Select all ${recyclableCount} selectable`}
-                </Button>
-              )}
-            </header>
+            <PanelHeader
+              actions={
+                recyclableCount > 0 ? (
+                  <Button
+                    onClick={handleToggleAll}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    {allSelected
+                      ? 'Deselect all'
+                      : `Select all ${recyclableCount} selectable`}
+                  </Button>
+                ) : undefined
+              }
+              as="div"
+              compact
+              title={
+                <span className="flex items-baseline gap-2">
+                  <span className="figure">{rows.length}</span>
+                  <span className="text-muted-foreground">
+                    {kindNouns[activeKind][rows.length === 1 ? 0 : 1]}
+                  </span>
+                </span>
+              }
+            />
 
-            {rows.length > 0 ? (
-              <div className="flex flex-wrap gap-2 p-3">
-                {rows.map((item) => {
-                  const locked = item.lockedReason !== null
-
-                  return (
-                    <ItemTile
-                      footer={item.displaySubtitle}
-                      key={item.itemId}
-                      level={item.level}
-                      locked={locked}
-                      menu={
-                        <ItemMenu
-                          isActing={isActing}
-                          item={item}
-                          onAction={handleItemAction}
-                          onInspect={() => setDetail(item)}
-                          onRecycle={() => {
-                            handleToggleItem(item.itemId)
-                            setConfirmOpen(true)
-                          }}
-                        />
-                      }
-                      name={item.displayName}
-                      onClick={() =>
-                        locked
-                          ? setDetail(item)
-                          : handleToggleItem(item.itemId)
-                      }
-                      power={item.power}
-                      records={records}
-                      selected={selectedSet.has(item.itemId)}
-                      templateId={item.templateId}
-                      tier={item.tier}
-                      title={
-                        locked
-                          ? 'Protected — click to inspect, right-click for actions'
-                          : 'Click to select · right-click for actions'
-                      }
-                    />
-                  )
-                })}
-              </div>
+            {sections.length > 0 ? (
+              <VaultShelves
+                isActing={isActing}
+                onAction={handleAction}
+                onInspect={handleInspect}
+                onRecycleOne={handleRecycleOne}
+                onToggleItem={handleToggleOne}
+                onToggleSection={handleToggleSection}
+                records={records}
+                sections={sections}
+                selectedSet={selectedSet}
+              />
             ) : (
               <PanelBody>
                 <EmptyState
@@ -473,7 +619,7 @@ function Content() {
                   description={
                     isLoading
                       ? 'Reading the account profile…'
-                      : 'Nothing matches the current filters.'
+                      : 'Nothing on this tab matches the current search.'
                   }
                   icon={Boxes}
                   title={isLoading ? 'Loading' : 'No matches'}
@@ -619,7 +765,260 @@ function Content() {
         </DialogContent>
       </Dialog>
 
-      <GoToTop containerId="filters-card" />
+      <GoToTop containerId="vault-card" />
     </>
   )
 }
+
+function RarityDot({ rarity }: { rarity: Rarity }) {
+  return (
+    <span
+      className="size-2 shrink-0 rounded-full"
+      style={{ backgroundColor: vaultRarityColors[rarity] }}
+    />
+  )
+}
+
+/** The tile grid's own metrics, shared by the CSS and the virtualiser. */
+const tileMinWidth = 104
+const tileGap = 8
+const headerHeight = 37
+/** Name bar plus footer — the part of a tile that is not the square plate. */
+const estimatedNameBar = 46
+
+type VaultSection = { items: Array<InventoryRow>; rarity: Rarity }
+
+type VaultLine =
+  | { kind: 'header'; rarity: Rarity; section: VaultSection }
+  | { key: string; kind: 'row'; items: Array<InventoryRow> }
+
+type ShelfProps = {
+  isActing: boolean
+  onAction: (request: ItemActionRequest) => void
+  onInspect: (item: InventoryRow) => void
+  onRecycleOne: (itemId: string) => void
+  onToggleItem: (itemId: string) => void
+  onToggleSection: (itemIds: Array<string>) => void
+  records: ItemRecordMap
+  selectedSet: Set<string>
+}
+
+/**
+ * The shelves, virtualised.
+ *
+ * A vault runs to several hundred items, each of them a bordered plate with
+ * two images on it, and the page kept every one of them in the document —
+ * `content-visibility` spared the paint but not the eight thousand nodes, and
+ * every click walked the lot. So the sections are flattened into one list of
+ * lines — a rarity heading, then a row of tiles per grid row — and only the
+ * lines near the viewport exist.
+ *
+ * It virtualises against the app's single scroll pane rather than growing a
+ * scrollbar of its own: the vault is the page, and a box that scrolls inside
+ * a page that also scrolls is a worse thing to use than a long page.
+ */
+function VaultShelves({
+  sections,
+  ...props
+}: ShelfProps & { sections: Array<VaultSection> }) {
+  const $grid = useRef<HTMLDivElement>(null)
+
+  const columns = useColumnCount($grid, {
+    gap: tileGap,
+    minWidth: tileMinWidth,
+  })
+
+  const lines = useMemo(() => {
+    const result: Array<VaultLine> = []
+
+    sections.forEach((section) => {
+      result.push({ kind: 'header', rarity: section.rarity, section })
+
+      for (let index = 0; index < section.items.length; index += columns) {
+        result.push({
+          items: section.items.slice(index, index + columns),
+          key: `${section.rarity}:${index}`,
+          kind: 'row',
+        })
+      }
+    })
+
+    return result
+  }, [columns, sections])
+
+  return (
+    <VirtualList
+      className="px-3 pb-3"
+      count={lines.length}
+      estimateSize={(index) =>
+        lines[index].kind === 'header'
+          ? headerHeight
+          : tileMinWidth + estimatedNameBar + tileGap
+      }
+      getKey={(index) => {
+        const line = lines[index]
+
+        return line.kind === 'header' ? `header:${line.rarity}` : line.key
+      }}
+      renderLine={(index) => {
+        const line = lines[index]
+
+        if (line.kind === 'header') {
+          return (
+            <ShelfHeader
+              onToggleSection={props.onToggleSection}
+              section={line.section}
+              selectedSet={props.selectedSet}
+            />
+          )
+        }
+
+        return (
+          <div
+            className="grid"
+            style={{
+              gap: tileGap,
+              gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+              paddingBottom: tileGap,
+            }}
+          >
+            {line.items.map((item) => (
+              <VaultTile
+                isActing={props.isActing}
+                item={item}
+                key={item.itemId}
+                onAction={props.onAction}
+                onInspect={props.onInspect}
+                onRecycleOne={props.onRecycleOne}
+                onToggleItem={props.onToggleItem}
+                records={props.records}
+                selected={props.selectedSet.has(item.itemId)}
+              />
+            ))}
+          </div>
+        )
+      }}
+      sizerRef={$grid}
+    />
+  )
+}
+
+/**
+ * A rarity heading, with the section's own select-all — "recycle every
+ * common" is the single most common thing anyone does here.
+ *
+ * It no longer sticks to the top of the pane: a sticky element inside a
+ * transformed, absolutely-positioned window has nothing stable to stick to.
+ * The tab strip above says which kind you are in; the heading says which tier.
+ */
+function ShelfHeader({
+  onToggleSection,
+  section,
+  selectedSet,
+}: {
+  onToggleSection: (itemIds: Array<string>) => void
+  section: VaultSection
+  selectedSet: Set<string>
+}) {
+  const color = vaultRarityColors[section.rarity]
+  const selectable = section.items.filter(
+    (item) => item.lockedReason === null
+  )
+  const allSelected =
+    selectable.length > 0 &&
+    selectable.every((item) => selectedSet.has(item.itemId))
+
+  return (
+    <header
+      className="flex flex-wrap items-center gap-2 rounded-lg bg-surface/50 px-3 py-2"
+      style={{
+        boxShadow: `inset 3px 0 0 color-mix(in srgb, ${color} 70%, transparent)`,
+        marginBottom: tileGap,
+      }}
+    >
+      <RarityDot rarity={section.rarity} />
+      <h3
+        className="text-xs font-semibold"
+        style={{ color }}
+      >
+        {rarityLabels[section.rarity]}
+      </h3>
+      <span className="micro-label">
+        {section.items.length} item{section.items.length === 1 ? '' : 's'}
+      </span>
+      {selectable.length > 0 && (
+        <Button
+          className="ml-auto h-6 px-2 text-[0.6875rem]"
+          onClick={() =>
+            onToggleSection(section.items.map((item) => item.itemId))
+          }
+          size="sm"
+          variant="ghost"
+        >
+          {allSelected ? 'Deselect' : `Select ${selectable.length}`}
+        </Button>
+      )}
+    </header>
+  )
+}
+
+/**
+ * One tile, memoised.
+ *
+ * Selection state reaches it as a boolean rather than the selected-id set, so
+ * ticking one item re-renders that item and nothing else. The context menu is
+ * built in here rather than passed in for the same reason — a menu element
+ * handed down as a prop is a new object on every render of the parent.
+ */
+const VaultTile = memo(function VaultTile({
+  isActing,
+  item,
+  onAction,
+  onInspect,
+  onRecycleOne,
+  onToggleItem,
+  records,
+  selected,
+}: {
+  isActing: boolean
+  item: InventoryRow
+  onAction: (request: ItemActionRequest) => void
+  onInspect: (item: InventoryRow) => void
+  onRecycleOne: (itemId: string) => void
+  onToggleItem: (itemId: string) => void
+  records: ItemRecordMap
+  selected: boolean
+}) {
+  const locked = item.lockedReason !== null
+
+  return (
+    <ItemTile
+      className="w-full"
+      footer={item.displaySubtitle}
+      level={item.level}
+      locked={locked}
+      menu={
+        <ItemMenu
+          isActing={isActing}
+          item={item}
+          onAction={onAction}
+          onInspect={() => onInspect(item)}
+          onRecycle={() => onRecycleOne(item.itemId)}
+        />
+      }
+      name={item.displayName}
+      onClick={() => (locked ? onInspect(item) : onToggleItem(item.itemId))}
+      portrait={item.portrait}
+      power={item.power}
+      records={records}
+      selected={selected}
+      templateId={item.templateId}
+      tier={item.tier}
+      title={
+        locked
+          ? 'Protected — click to inspect, right-click for actions'
+          : 'Click to select · right-click for actions'
+      }
+    />
+  )
+})

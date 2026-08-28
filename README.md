@@ -23,8 +23,6 @@ The first install shows a Windows confirmation dialog because the app is not cod
 
 Settings are saved to `C:\Users\YOUR_USER\AppData\Roaming\penny-launcher-data`. Device-auth credentials in `accounts.json` (or `dev-accounts.json` while developing) are encrypted at rest with Electron `safeStorage` (Windows DPAPI / the OS keychain) and stored with an `enc:v1:` prefix. Plaintext files, including copies imported from Aerial Launcher, are encrypted the next time the launcher starts.
 
-If you cloned this repository while `undefined/penny-launcher-data/dev-accounts.json` was still tracked, revoke that device auth in [Epic Games password & security settings](https://www.epicgames.com/account/password). The leaked entry used display name **LITileSTWHero**.
-
 #### Migrating data from Aerial Launcher
 
 Penny Launcher uses its own data folder (`penny-launcher-data`) so it won't collide with an existing Aerial Launcher install. To bring your data across:
@@ -49,6 +47,7 @@ When a new version is available, you will see a notification on the home screen.
 - Custom game path and custom display names per account.
 - Launch the official Fortnite binary with the selected account (home button or tray).
 - Generate Exchange Codes.
+- Edit the local Fortnite `GameUserSettings.ini` (resolution, display mode, VSync, frame rate limit, 3D resolution) from Settings. Penny copies the file before every write, and the copy can be restored from the same panel.
 - Access the [Penny DB](https://pennydb.net) profile of the selected account.
 - Automation: daily quests, mission scheduling, auto-llamas, and more.
 - Discord Rich Presence from the launcher process only (in launcher / in Save the World / in Battle Royale). Nothing is injected into Fortnite.

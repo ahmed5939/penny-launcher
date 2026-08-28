@@ -38,3 +38,9 @@ export function fnLaunchGameSettingsUpdate(
     partial
   ) as Promise<GameSettingsSaveResult>
 }
+
+export function fnLaunchGameSettingsRestore(): Promise<GameSettingsSaveResult> {
+  return ipcRenderer.invoke(
+    ElectronAPIEventKeys.FnLaunchGameSettingsRestore
+  ) as Promise<GameSettingsSaveResult>
+}

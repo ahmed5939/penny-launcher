@@ -11,6 +11,7 @@ import {
   MapPinOff,
   RefreshCw,
   Shield,
+  UserRound,
   Users,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -220,11 +221,13 @@ function useSessionClock(lastUpdated: string | null) {
 }
 
 export function LiveMissionCard({
+  accountId,
   displayName,
   isTracking,
   status,
   onRefresh,
 }: {
+  accountId: string
   displayName: string
   isTracking: boolean
   status: MatchmakingTrackStatus
@@ -308,16 +311,59 @@ export function LiveMissionCard({
           className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/60 via-primary/20 to-transparent pointer-events-none"
         />
 
+        <div className="flex items-center gap-3 border-b border-border/60 pb-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface/80 text-muted-foreground">
+            <UserRound className="size-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <button
+              className="flex max-w-full items-center gap-1.5 font-semibold hover:text-primary"
+              onClick={handleOpenPennyDB(displayName)}
+              title={t('matchmaking-track.live.pennydb')}
+            >
+              <span className="truncate">{displayName}</span>
+              <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+            </button>
+            <div className="truncate font-mono text-[0.6875rem] text-muted-foreground">
+              {accountId}
+            </div>
+          </div>
+          <div
+            className={cn(
+              'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+              status.playing
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                : 'border-border/70 bg-surface/60 text-muted-foreground'
+            )}
+          >
+            <span
+              className={cn(
+                'size-1.5 rounded-full',
+                status.playing ? 'bg-emerald-400' : 'bg-muted-foreground/50'
+              )}
+            />
+            {status.playing
+              ? t('matchmaking-track.live.status.active')
+              : t('matchmaking-track.live.status.offline')}
+          </div>
+        </div>
+
         {!status.playing ? (
-          <div className="flex flex-col gap-2 items-center py-10 text-center">
-            <MapPinOff className="size-8 text-muted-foreground/60" />
-            <div className="text-muted-foreground">
+          <div className="flex items-center gap-4 py-5">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface/70 text-muted-foreground">
+              <MapPinOff className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium">
               {t('matchmaking-track.live.status.not-playing', {
                 name: displayName,
               })}
+              </div>
+              <div className="mt-0.5 text-sm text-muted-foreground">
+                {t('matchmaking-track.live.status.not-playing-hint')}
+              </div>
             </div>
             <Button
-              className="mt-2"
               size="sm"
               variant="outline"
               onClick={onRefresh}
@@ -334,7 +380,7 @@ export function LiveMissionCard({
             </Button>
           </div>
         ) : (
-          <div className="divide-y divide-border/60 [&>*]:py-5 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+          <div className="divide-y divide-border/60 [&>*]:py-5 [&>*:last-child]:pb-0">
             {/* header */}
             <div className="flex gap-4 items-center">
               <div className="relative flex-shrink-0">

@@ -34,6 +34,12 @@ export type SquadSurvivor = {
   /** Lead survivors only — the squad type they belong in. */
   managerSynergy: string | null
   isLead: boolean
+  /**
+   * `WorkerPortrait:` template id — the face the game rolled for this copy.
+   * Resolvable against the item database, and the only thing that tells one
+   * unnamed survivor apart from another.
+   */
+  portrait: string | null
 }
 
 export type SquadsPayload = {
@@ -113,6 +119,7 @@ export class Squads {
         level: number
         managerSynergy: string
         personality: string
+        portrait: string
         set_bonus: string
         squad_id: string
         squad_slot_idx: number
@@ -139,6 +146,7 @@ export class Squads {
         setBonus: prettifyWorkerTrait(attributes.set_bonus),
         managerSynergy: prettifyWorkerTrait(attributes.managerSynergy),
         isLead: item.templateId.toLowerCase().includes('manager'),
+        portrait: attributes.portrait ?? null,
       })
     })
 

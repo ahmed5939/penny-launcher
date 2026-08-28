@@ -27,31 +27,26 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Callout } from '../page'
-import { accentByRarity, rarityStyle } from '../page/rarity'
+import {
+  accentByRarity,
+  rarityStyle,
+  rarityTypeFromName,
+} from '../page/rarity'
 
 import { getItemRecord } from '../../state/items/database'
 
 import { computeItemPower } from '../../config/constants/fortnite/power'
-import { peglegImageURL } from '../../config/constants/pegleg'
-import { RarityType, rarities } from '../../config/constants/resources'
 
 import { cn } from '../../lib/utils'
 
 /**
- * The item database spells a rarity as the word a player reads
- * ("Legendary"), while the app's ladder is keyed by `RarityType`. One reverse
- * lookup, built from `rarities` itself so the two cannot drift, and the
- * ladder does the rest: nothing below Rare has an entry, so a Common perk
- * gets a grey pip rather than a colour that says nothing.
+ * The database spells a rarity as the word a player reads ("Legendary"); the
+ * app's ladder is keyed by `RarityType`. `rarityTypeFromName` bridges the two
+ * and the ladder does the rest: nothing below Rare has an entry, so a Common
+ * perk gets a grey pip rather than a colour that says nothing.
  */
-const rarityTypeByName = new Map<string, RarityType>(
-  (Object.entries(rarities) as Array<[RarityType, string]>).map(
-    ([type, name]): [string, RarityType] => [name, type]
-  )
-)
-
 function accentForRarityName(name: string | null | undefined) {
-  const type = name ? rarityTypeByName.get(name) : undefined
+  const type = rarityTypeFromName(name)
 
   return type ? accentByRarity[type] ?? null : null
 }
@@ -103,6 +98,8 @@ export type ItemDetailSubject = {
   lockedReason?: 'favorite' | 'in-use' | null
   personality?: string | null
   setBonus?: string | null
+  /** Survivors: the `WorkerPortrait:` id this copy rolled. */
+  portrait?: string | null
   /** `Alteration:` ids rolled on this copy. */
   alterations?: Array<string>
 }
@@ -138,7 +135,7 @@ export function ItemDetailDialog({
 }) {
   const record = subject ? getItemRecord(records, subject.templateId) : null
   const art = subject
-    ? resolveItemArt(subject.templateId, records)
+    ? resolveItemArt(subject.templateId, records, subject.portrait)
     : null
   const power =
     subject && typeof subject.level === 'number'
@@ -179,11 +176,7 @@ export function ItemDetailDialog({
                   <img decoding="async" loading="lazy"
                     alt=""
                     className="relative size-full object-contain"
-                    src={
-                      record?.largeImage
-                        ? peglegImageURL(record.largeImage)
-                        : art.imgUrl
-                    }
+                    src={art.largeImgUrl ?? art.imgUrl}
                   />
                 </span>
 

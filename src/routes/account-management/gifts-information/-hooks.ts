@@ -3,8 +3,6 @@ import { useEffect } from 'react'
 
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
-import { GiftsInformationData } from '../../../state/management/gifts-information'
-
 import {
   useGetGiftsInformationActions,
   useGetGiftsInformationData,
@@ -89,19 +87,5 @@ export function useGiftsInformationData() {
     data: parsedData,
 
     handleGetInfo,
-  }
-}
-
-export function useParseAccountInfo({
-  data,
-}: {
-  data: GiftsInformationData
-}) {
-  const { accountList } = useGetAccounts()
-
-  const account = accountList[data.accountId]
-
-  return {
-    account,
   }
 }

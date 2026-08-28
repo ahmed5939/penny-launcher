@@ -130,7 +130,7 @@ import venturesRageMeter from '../assets/images/modifiers/ventures-rage-meter.pn
 import venturesSuperTreasure from '../assets/images/modifiers/ventures-super-treasure.png'
 import pensiveCowboy from '../assets/images/random/pensive-cowboy.png'
 import c from '../assets/images/rarities/c.png'
-import er from '../assets/images/rarities/er.png'
+import ur from '../assets/images/rarities/ur.png'
 import r from '../assets/images/rarities/r.png'
 import sr from '../assets/images/rarities/sr.png'
 import uc from '../assets/images/rarities/uc.png'
@@ -465,7 +465,7 @@ export const images: Record<string, string> = {
   'ventures-super-treasure': venturesSuperTreasure,
   'pensive-cowboy': pensiveCowboy,
   c: c,
-  er: er,
+  ur: ur,
   r: r,
   sr: sr,
   uc: uc,

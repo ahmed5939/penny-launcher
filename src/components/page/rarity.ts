@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { ParseResourceData } from '../../types/data/resources'
+import type { Rarity as VaultRarity } from '../../config/constants/fortnite/items'
 
 import {
   rarities,
@@ -105,6 +106,23 @@ function slugToName(itemId: string) {
   )
 }
 
+/**
+ * The word the item database prints ("Legendary"), back to a `RarityType`.
+ *
+ * Built from `rarities` itself so the two cannot drift. This is how anything
+ * holding a database record escapes the template id's opinion of its rarity —
+ * a mythic hero's id says `sr`, and only the database knows better.
+ */
+const rarityTypeByName = new Map<string, RarityType>(
+  (Object.entries(rarities) as Array<[RarityType, string]>).map(
+    ([type, name]): [string, RarityType] => [name.toLowerCase(), type]
+  )
+)
+
+export function rarityTypeFromName(name: string | null | undefined) {
+  return (name ? rarityTypeByName.get(name.toLowerCase()) : undefined) ?? null
+}
+
 export function rewardGrade(reward: RewardLike) {
   const meta = reward.itemId
     ? rewardMeta(reward.itemId, reward.quantity)
@@ -134,6 +152,28 @@ export function rewardGrade(reward: RewardLike) {
     rarity,
     word: accent ? rarities[rarity] ?? null : null,
   }
+}
+
+/**
+ * The vault's rarity words on the app's one palette.
+ *
+ * `accentByRarity` above deliberately holds nothing below Rare — a shelf of
+ * junk should not be coloured. A vault section *heading* is different: it
+ * names the tier it collects, so every tier gets its colour, including the
+ * two the reward ladder leaves grey.
+ *
+ * Keyed by the vault's rarity words rather than `RarityType`'s id tokens, and
+ * kept here rather than in `config/constants/fortnite/items` because that
+ * module is imported by the main process, which has no business pulling the
+ * renderer's data blobs in behind a palette.
+ */
+export const vaultRarityColors: Record<VaultRarity, string> = {
+  common: raritiesColor[RarityType.Common],
+  uncommon: raritiesColor[RarityType.Uncommon],
+  rare: raritiesColor[RarityType.Rare],
+  epic: raritiesColor[RarityType.Epic],
+  legendary: raritiesColor[RarityType.Legendary],
+  mythic: raritiesColor[RarityType.Mythic],
 }
 
 export function rarityStyle(accent: string | null): CSSProperties {

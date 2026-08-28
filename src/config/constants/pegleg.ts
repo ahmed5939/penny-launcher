@@ -25,6 +25,11 @@ export const peglegResourcesBaseURL = `https://raw.githubusercontent.com/${pegle
  * table for crafted weapons, and nothing here shows crafted weapons — the
  * profile holds schematics. Everything listed comes to ~13MB over the wire
  * and ~1.2MB once narrowed.
+ *
+ * `WorkerPortrait` is the odd one out: it names no item the profile can hold.
+ * It is the 95 faces the game picks from when it rolls a survivor, and a
+ * survivor's profile item points at one through its `portrait` attribute —
+ * without it every unnamed survivor in the account is the same silhouette.
  */
 export const peglegNamedItemFiles = [
   'Ability',
@@ -40,6 +45,7 @@ export const peglegNamedItemFiles = [
   'TeamPerk',
   'Trap',
   'Worker',
+  'WorkerPortrait',
 ] as const
 
 /**

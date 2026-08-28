@@ -3,19 +3,44 @@
   "form": {
     "submit-button": "Show Gifts"
   },
+  "filters": {
+    "search": "Search items, senders, rarities…",
+    "group-day": "By day",
+    "group-sender": "By sender"
+  },
   "results": {
-    "title": "Gifts Across {{total}} Account/s",
+    "title": "Accounts",
     "received": "Received",
     "senders": "Senders",
-    "cosmetics": "Cosmetics"
+    "cosmetics": "Cosmetics",
+    "filtered": "of {{total}} total"
+  },
+  "table": {
+    "by-day": "Gifts by day",
+    "by-sender": "Gifts by sender",
+    "groups": "{{total}} group/s",
+    "items": "{{total}} item/s",
+    "item": "Item",
+    "type": "Type",
+    "rarity": "Rarity",
+    "from": "From",
+    "account": "Account",
+    "received": "Received",
+    "no-matches": "No gifts match that search",
+    "no-matches-description": "Clear the search to see the full gift history again.",
+    "unknown-date": "Date unknown",
+    "last-gift": "Last gift {{date}}"
+  },
+  "detail": {
+    "subtitle": "Gifted by {{sender}}",
+    "sender-id": "Sender ID",
+    "template-id": "Template ID",
+    "cosmetic-id": "Cosmetic ID",
+    "no-date": "Epic did not record a date for this gift"
   },
   "account": {
-    "count": "{{received}} gift/s from {{senders}} sender/s",
     "error": "Could not load gift history for this account.",
     "empty": "No gift history",
     "empty-description": "Nothing has been gifted to this account yet."
-  },
-  "sender": {
-    "last-gift": "Last gift {{date}}"
   }
 }

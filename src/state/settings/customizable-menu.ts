@@ -60,7 +60,7 @@ export const customizableMenuSettingsRelations: Record<
     'epicGamesSettings',
     'eula',
   ],
-  advancedMode: ['matchmakingTrack', 'serverStatus', 'worldInfo'],
+  advancedMode: ['matchmakingTrack', 'serverStatus', 'worldInfo', 'fnLaunch'],
   myAccounts: [
     'authorizationCode',
     'exchangeCode',

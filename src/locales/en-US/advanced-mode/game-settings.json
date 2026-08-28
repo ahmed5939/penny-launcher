@@ -1,0 +1,69 @@
+{
+  "description": "Edits Fortnite's own GameUserSettings.ini on this PC — the same file the in-game video settings screen writes. Useful when the game will not start at a resolution your monitor can show.",
+  "sections": {
+    "display": "Display",
+    "performance": "Performance",
+    "file": "File"
+  },
+  "running": {
+    "title": "Fortnite is running",
+    "note": "Fortnite rewrites this file when it closes, so it will undo anything saved now. Close the game first."
+  },
+  "missing": {
+    "title": "No settings file yet",
+    "note": "Launch Fortnite once so it writes its settings, then reload this page."
+  },
+  "form": {
+    "resolution": {
+      "label": "Resolution",
+      "note": "ResolutionSizeX/Y, between {{min}} and {{max}}. The matching LastUserConfirmed values are written too.",
+      "width": "Resolution width",
+      "height": "Resolution height",
+      "display-preset": "Your display"
+    },
+    "fullscreen-mode": {
+      "label": "Display mode",
+      "note": "Written to FullscreenMode, PreferredFullscreenMode and LastConfirmedFullscreenMode together.",
+      "options": {
+        "0": "Fullscreen",
+        "1": "Borderless",
+        "2": "Windowed"
+      }
+    },
+    "vsync": {
+      "label": "VSync",
+      "note": "bUseVSync. Caps the frame rate to your display refresh rate."
+    },
+    "frame-rate-limit": {
+      "label": "Frame rate limit",
+      "note": "FrameRateLimit, up to {{max}}. Use 0 for unlimited.",
+      "unlimited": "Unlimited"
+    },
+    "resolution-quality": {
+      "label": "3D resolution",
+      "note": "sg.ResolutionQuality. Renders the world at {{value}}% and upscales it to the resolution above; the interface stays sharp."
+    }
+  },
+  "file": {
+    "path": "Settings file",
+    "backup": {
+      "label": "Backup",
+      "exists": "Saved {{date}}",
+      "empty": "None yet",
+      "note": "A copy of the file is saved next to it before every write, as GameUserSettings.ini.penny.bak."
+    }
+  },
+  "actions": {
+    "save": "Save changes",
+    "discard": "Discard",
+    "restore": "Restore backup",
+    "reload": "Reload"
+  },
+  "dirty": "Unsaved changes",
+  "status": {
+    "saved": "GameUserSettings.ini updated",
+    "save-error": "Could not save GameUserSettings.ini",
+    "restored": "Backup restored",
+    "restore-error": "Could not restore the backup"
+  }
+}

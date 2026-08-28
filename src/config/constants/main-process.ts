@@ -307,6 +307,7 @@ export enum ElectronAPIEventKeys {
   FnLaunchSettingsUpdate = 'fn-launch:settings:update',
   FnLaunchGameSettingsRequest = 'fn-launch:game-settings:request',
   FnLaunchGameSettingsUpdate = 'fn-launch:game-settings:update',
+  FnLaunchGameSettingsRestore = 'fn-launch:game-settings:restore',
 
   /**
    * Friends Manager
@@ -337,6 +338,8 @@ export enum ElectronAPIEventKeys {
   ExpeditionsCollectNotification = 'expeditions:collect:notification',
   ExpeditionsAction = 'expeditions:action',
   ExpeditionsActionNotification = 'expeditions:action:notification',
+  AutoExpeditionsStatus = 'auto-expeditions:status',
+  AutoExpeditionsUpdate = 'auto-expeditions:update',
 
   /**
    * Item database
@@ -416,6 +419,23 @@ export enum ElectronAPIEventKeys {
   /** Public PennyDB catalog — read-only, not a purchase path. */
   ShopCatalogRequest = 'shop:catalog:request',
   ShopCatalogResponse = 'shop:catalog:response',
+
+  /**
+   * BR Locker
+   */
+
+  LockerRequest = 'locker:request',
+  LockerResponse = 'locker:response',
+  /** Everything the account owns, so the slot pickers can filter locally. */
+  LockerOwnedRequest = 'locker:owned:request',
+  LockerOwnedResponse = 'locker:owned:response',
+  LockerEquip = 'locker:equip',
+  LockerEquipNotification = 'locker:equip:notification',
+  LockerCardGenerate = 'locker:card:generate',
+  LockerCardProgress = 'locker:card:progress',
+  LockerCardNotification = 'locker:card:notification',
+  LockerCardOpen = 'locker:card:open',
+  LockerCardExport = 'locker:card:export',
 
   /**
    * Schedules

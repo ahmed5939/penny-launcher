@@ -183,7 +183,7 @@ export class Expeditions {
     })
   }
 
-  private static async getExpeditions(account: AccountData) {
+  static async getExpeditions(account: AccountData) {
     const entry: ExpeditionsEntry = {
       accountId: account.accountId,
       slots: [],

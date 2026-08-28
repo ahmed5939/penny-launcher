@@ -187,6 +187,7 @@ function Content() {
                   key={survivor.itemId}
                   name={survivor.name}
                   onClick={() => handleAssign(survivor.itemId)}
+                  portrait={survivor.portrait}
                   power={survivor.power}
                   records={records}
                   size="small"
@@ -258,6 +259,7 @@ function SquadCard({
                   footer={slot.survivor.personality}
                   name={slot.survivor.name}
                   onClick={() => onPick(slot.slotIndex)}
+                  portrait={slot.survivor.portrait}
                   power={slot.survivor.power}
                   records={records}
                   size="small"

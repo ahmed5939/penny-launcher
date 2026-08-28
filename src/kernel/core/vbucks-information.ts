@@ -83,14 +83,21 @@ export class VBucksInformation {
           const currency: Record<string, VBucksInformationCurrency> = {};
 
           /**
-           * The three V-Bucks currencies the profile tracks:
+           * The V-Bucks currencies the profile tracks:
            *   MtxPurchased     — bought with real money, per platform
+           *   MtxPurchaseBonus — bonus granted alongside a purchase
            *   MtxGiveaway      — battle pass and challenge rewards
            *   MtxComplimentary — gifts and Epic compensation
+           *
+           * Epic adds templates over time, so `total` is the sum of every
+           * `Currency:` item rather than of the buckets below — the balance a
+           * card shows can never disagree with the rows it lists, and an
+           * unmapped currency still lands in `sources` under its own name.
            */
           let purchased = 0;
           let earned = 0;
           let complimentary = 0;
+          let total = 0;
           const sources: Record<string, VBucksInformationSource> = {};
 
           const stats = (data.profileChanges[0]?.profile.stats ?? {
@@ -113,11 +120,20 @@ export class VBucksInformation {
             const quantity = item.quantity ?? 0;
             const platform = item.attributes?.platform ?? "Unknown";
 
-            if (item.templateId === "Currency:MtxPurchased") {
+            total += quantity;
+
+            if (
+              item.templateId === "Currency:MtxPurchased" ||
+              item.templateId === "Currency:MtxPurchaseBonus"
+            ) {
               purchased += quantity;
 
               if (quantity > 0) {
-                const platformName = `${getPlatformName(platform)} — purchased`;
+                const suffix =
+                  item.templateId === "Currency:MtxPurchaseBonus"
+                    ? "purchase bonus"
+                    : "purchased";
+                const platformName = `${getPlatformName(platform)} — ${suffix}`;
                 const groupKey = `${quantity}-${platformName}`;
 
                 sources[groupKey] ??= {
@@ -154,6 +170,26 @@ export class VBucksInformation {
                 sources["complimentary"].amount += quantity;
                 sources["complimentary"].count++;
               }
+            } else if (quantity > 0) {
+              /*
+               * A currency template this build does not know about. It is not
+               * claimed by any of the three tiles, but it is part of the
+               * balance, so it has to be visible in the list under whatever
+               * Epic calls it.
+               */
+              const platformName = `${getPlatformName(
+                platform,
+              )} ${item.templateId.replace("Currency:Mtx", "")}`.trim();
+              const groupKey = `other-${platformName}`;
+
+              sources[groupKey] ??= {
+                amount: 0,
+                count: 0,
+                platform: platformName,
+                type: "earned",
+              };
+              sources[groupKey].amount += quantity;
+              sources[groupKey].count++;
             }
           });
 
@@ -204,7 +240,7 @@ export class VBucksInformation {
             purchaseCount: purchaseHistory.length,
             purchaseHistory,
             sources: Object.values(sources).sort((a, b) => b.amount - a.amount),
-            total: purchased + earned + complimentary,
+            total,
           };
 
           const accountCurrency: VBucksInformationState["data"] = {

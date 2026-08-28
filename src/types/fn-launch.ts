@@ -29,7 +29,7 @@ export type GameSettings = {
   resolutionX: number
   resolutionY: number
   /** 0 = fullscreen, 1 = windowed fullscreen, 2 = windowed. */
-  windowMode: number
+  fullscreenMode: number
   vsync: boolean
   frameRateLimit: number
   /** `dx11`, `dx12` or `performance`. */
@@ -68,20 +68,40 @@ export type GameSettings = {
   showGrass: boolean
 }
 
+/**
+ * The copy Penny takes of `GameUserSettings.ini` immediately before it writes
+ * to it. One rolling file, so "undo my last change" always works.
+ */
+export type GameSettingsBackup = {
+  exists: boolean
+  path: string
+  /** Epoch ms of the backup's last write, or `null` when there is none yet. */
+  savedAt: number | null
+}
+
 export type GameSettingsResult =
   | {
       success: true
       settings: GameSettings
       iniPath: string
+      backup: GameSettingsBackup
+      /**
+       * Fortnite rewrites this file when it exits, so edits made mid-session
+       * are lost. The UI warns instead of silently wasting the write.
+       */
+      gameRunning: boolean
     }
   | {
       success: false
       settings?: undefined
       iniPath?: undefined
+      backup?: undefined
+      gameRunning?: undefined
       error: string
     }
 
 export type GameSettingsSaveResult = {
   success: boolean
+  backup?: GameSettingsBackup
   error?: string
 }

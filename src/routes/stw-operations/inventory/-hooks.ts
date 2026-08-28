@@ -15,9 +15,20 @@ import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
 import { computeItemPower } from '../../../config/constants/fortnite/power'
-import { rarityOrder } from '../../../config/constants/fortnite/items'
+import {
+  rarityFromLabel,
+  rarityOrder,
+} from '../../../config/constants/fortnite/items'
 
 import { toast } from '../../../lib/notifications'
+
+/** The kind tabs, in the order the strip shows them. */
+export const itemKinds: Array<ItemKind> = [
+  'schematic',
+  'hero',
+  'defender',
+  'survivor',
+]
 
 /** An item with whatever the game's own data knows about it folded in. */
 export type InventoryRow = InventoryItem & {
@@ -94,8 +105,12 @@ export function useInventoryData() {
    * Everything the account owns is listed, favourited and equipped items
    * included — this is the vault, not a recycling queue. What protection
    * costs those items is the ability to be selected, nothing more.
+   *
+   * The kind gate is applied last and separately from the rest, because the
+   * tab strip has to say how many schematics you have *under the current
+   * rarity, tier and search* while you are standing on the heroes tab.
    */
-  const { lockedCount, rows } = useMemo(() => {
+  const { countsByKind, lockedCount, rows } = useMemo(() => {
     const items = entry?.items ?? []
 
     const mapped: Array<InventoryRow> = items.map((item) => {
@@ -103,6 +118,12 @@ export function useInventoryData() {
 
       return {
         ...item,
+        /*
+         * The database outranks the template id here: mythic heroes carry an
+         * `sr` token, so decoding alone files them under Legendary and paints
+         * them orange.
+         */
+        rarity: rarityFromLabel(record?.rarity) ?? item.rarity,
         displayName: record?.name ?? item.name,
         displaySubtitle: record?.subType ?? item.subtitle,
         description: record?.description ?? null,
@@ -115,42 +136,58 @@ export function useInventoryData() {
       }
     })
 
+    const visible = mapped.filter((item) => {
+      // Craft-only ammo, building and utility recipes also use the
+      // Schematic prefix. They are not manageable weapon/trap schematics.
+      if (
+        item.kind === 'schematic' &&
+        !['Melee', 'Ranged', 'Trap'].includes(
+          getItemRecord(records, item.templateId)?.category ?? ''
+        )
+      ) {
+        return false
+      }
+
+      if (rarityOrder.indexOf(item.rarity) > maxRarityIndex) {
+        return false
+      }
+
+      if (filters.maxTier > 0 && item.tier > filters.maxTier) {
+        return false
+      }
+
+      if (deferredSearch.length > 0) {
+        return (
+          item.displayName.toLowerCase().includes(deferredSearch) ||
+          (item.displaySubtitle ?? '').toLowerCase().includes(deferredSearch) ||
+          item.templateId.toLowerCase().includes(deferredSearch)
+        )
+      }
+
+      return true
+    })
+
+    const counts: Record<ItemKind, number> = {
+      defender: 0,
+      hero: 0,
+      schematic: 0,
+      survivor: 0,
+    }
+
+    visible.forEach((item) => {
+      counts[item.kind] += 1
+    })
+
+    const kindRows = visible.filter((item) =>
+      filters.kinds.includes(item.kind)
+    )
+
     return {
-      lockedCount: items.filter((item) => item.lockedReason !== null).length,
-      rows: mapped.filter((item) => {
-        // Craft-only ammo, building and utility recipes also use the
-        // Schematic prefix. They are not manageable weapon/trap schematics.
-        if (
-          item.kind === 'schematic' &&
-          !['Melee', 'Ranged', 'Trap'].includes(
-            getItemRecord(records, item.templateId)?.category ?? ''
-          )
-        ) {
-          return false
-        }
-
-        if (!filters.kinds.includes(item.kind)) {
-          return false
-        }
-
-        if (rarityOrder.indexOf(item.rarity) > maxRarityIndex) {
-          return false
-        }
-
-        if (filters.maxTier > 0 && item.tier > filters.maxTier) {
-          return false
-        }
-
-        if (deferredSearch.length > 0) {
-          return (
-            item.displayName.toLowerCase().includes(deferredSearch) ||
-            (item.displaySubtitle ?? '').toLowerCase().includes(deferredSearch) ||
-            item.templateId.toLowerCase().includes(deferredSearch)
-          )
-        }
-
-        return true
-      }),
+      countsByKind: counts,
+      /** Of what is on screen — the stat sits in a row about the shown set. */
+      lockedCount: kindRows.filter((item) => item.lockedReason !== null)
+        .length,
+      rows: kindRows,
     }
   }, [deferredSearch, entry, filters, maxRarityIndex, ratings, records])
 
@@ -177,6 +214,9 @@ export function useInventoryData() {
       .sort(([, a], [, b]) => b - a)
       .map(([templateId, amount]) => ({ amount, templateId }))
   }, [rows, selectedSet])
+
+  /** Exactly one kind is ever shown; the strip is the only way to change it. */
+  const activeKind: ItemKind = filters.kinds[0] ?? itemKinds[0]
 
   const totalSelected = selected_.length
   const isDisabledRecycle = isRecycling || totalSelected <= 0 || !accountId
@@ -251,12 +291,14 @@ export function useInventoryData() {
     }
   }, [accountId])
 
-  const handleToggleKind = (kind: ItemKind) => {
-    updateFilters({
-      kinds: filters.kinds.includes(kind)
-        ? filters.kinds.filter((value) => value !== kind)
-        : [...filters.kinds, kind],
-    })
+  /**
+   * One tab at a time. The old control was four independent toggles, which
+   * could be turned off one by one until the vault was empty and looked
+   * broken — and an "all" tab that mixed survivors in with sniper rifles was
+   * no more use than that.
+   */
+  const handleSelectKind = (kind: ItemKind) => {
+    updateFilters({ kinds: [kind] })
     clearSelection()
   }
 
@@ -294,6 +336,36 @@ export function useInventoryData() {
     updateSelection(
       accountId,
       allSelected ? [] : recyclable.map((item) => item.itemId)
+    )
+  }
+
+  /**
+   * Ticks or unticks one rarity section in a single click.
+   *
+   * Recycling is almost always "everything common", and the only way to say
+   * that used to be select-all-then-untick or forty clicks.
+   */
+  const handleToggleMany = (itemIds: Array<string>) => {
+    if (!accountId) {
+      return
+    }
+
+    const selectable = itemIds.filter(
+      (itemId) => rowsById.get(itemId)?.lockedReason === null
+    )
+
+    if (selectable.length === 0) {
+      return
+    }
+
+    const selectableSet = new Set(selectable)
+    const allSelected = selectable.every((itemId) => selectedSet.has(itemId))
+
+    updateSelection(
+      accountId,
+      allSelected
+        ? selected_.filter((itemId) => !selectableSet.has(itemId))
+        : [...selected_, ...selectable]
     )
   }
 
@@ -390,6 +462,8 @@ export function useInventoryData() {
 
   return {
     account: selected ?? null,
+    activeKind,
+    countsByKind,
     confirmOpen,
     errorMessage: entry?.errorMessage ?? null,
     filters,
@@ -417,8 +491,9 @@ export function useInventoryData() {
     handleRecycle,
     handleToggleAll,
     handleToggleItem,
+    handleToggleMany,
     handleItemAction,
-    handleToggleKind,
+    handleSelectKind,
     handleUpgradeSelected,
     setConfirmOpen,
     updateFilters,

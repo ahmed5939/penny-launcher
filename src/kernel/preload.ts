@@ -26,6 +26,7 @@ import * as itemActionsActions from './preload-actions/item-actions'
 import * as itemDatabaseActions from './preload-actions/item-database'
 import * as launcherActions from './preload-actions/launcher'
 import * as leaderboardActions from './preload-actions/leaderboard'
+import * as lockerActions from './preload-actions/locker'
 import * as loadoutsActions from './preload-actions/loadouts'
 import * as matchmakingActions from './preload-actions/matchmaking'
 import * as mcpActions from './preload-actions/mcp'
@@ -72,6 +73,7 @@ export const availableElectronAPIs = {
   ...launcherActions,
   ...leaderboardActions,
   ...loadoutsActions,
+  ...lockerActions,
   ...partyActions,
   ...pennydbMissionsActions,
   ...outpostActions,

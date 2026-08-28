@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow'
 import {
   Contact,
   History,
+  Rocket,
   Search,
   Settings,
   UserCog,
@@ -20,6 +21,9 @@ import { Kbd } from '../../components/page'
 import { PennyAvatar } from '../../components/branding/penny-portrait'
 
 import { useUISidebarHistory } from '../../hooks/ui/sidebars'
+import { useGetSelectedAccount } from '../../hooks/accounts'
+import { useGameInstall } from '../../hooks/game-install'
+import { useCustomProcessStatus } from '../../hooks/settings'
 
 import { useFriendsManagerStore } from '../../state/management/friends-manager'
 
@@ -82,6 +86,8 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
       <div className="not-draggable-region ml-auto flex items-center gap-1 pr-1">
         <AccountList />
 
+        <LaunchGameButton />
+
         <FriendsToggle />
 
         <TitlebarButton
@@ -101,6 +107,40 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
         <HistorySheet />
       </div>
     </header>
+  )
+}
+
+/** Launch Fortnite for the account currently selected in the titlebar. */
+function LaunchGameButton() {
+  const { t } = useTranslation(['general'])
+  const { selected } = useGetSelectedAccount()
+  const { customProcessIsRunning } = useCustomProcessStatus()
+  const { status: gameInstall } = useGameInstall()
+
+  const installMissing = gameInstall?.install.found === false
+  const disabled =
+    selected === null || customProcessIsRunning || installMissing
+  const label = customProcessIsRunning
+    ? t('is-running')
+    : t('launch-game.button')
+
+  return (
+    <Button
+      type="button"
+      className="text-primary hover:bg-primary/15 hover:text-primary"
+      size="icon"
+      variant="ghost"
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => {
+        if (selected) {
+          window.electronAPI.launcherStart(selected)
+        }
+      }}
+    >
+      <Rocket className="size-4" />
+    </Button>
   )
 }
 

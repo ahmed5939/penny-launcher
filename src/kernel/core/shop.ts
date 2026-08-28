@@ -59,6 +59,12 @@ export type ShopGrant = {
   name: string
   rarity: Rarity | null
   tier: number
+  /**
+   * Survivors in a pre-rolled llama: the `WorkerPortrait:` template id of the
+   * face that copy will come with, so the preview shows the survivor you are
+   * actually buying rather than a silhouette.
+   */
+  portrait: string | null
 }
 
 export type ShopOffer = {
@@ -148,12 +154,17 @@ function labelForCurrency(currencySubType: string, currency: string) {
     .join(' ')
 }
 
-function toGrant(templateId: string, quantity: number): ShopGrant {
+function toGrant(
+  templateId: string,
+  quantity: number,
+  portrait?: string | null
+): ShopGrant {
   const decoded = decodeItemTemplate(templateId)
 
   return {
     templateId,
     quantity,
+    portrait: portrait ?? null,
     name:
       decoded?.name ??
       (templateId.split(':').pop() ?? templateId)
@@ -304,7 +315,11 @@ export class Shop {
 
       const attributes = (item.attributes ?? {}) as Partial<{
         offerId: string
-        items: Array<{ itemType?: string; quantity?: number }>
+        items: Array<{
+          itemType?: string
+          quantity?: number
+          attributes?: { portrait?: string }
+        }>
       }>
 
       if (!attributes.offerId) {
@@ -315,7 +330,13 @@ export class Shop {
         attributes.offerId,
         (attributes.items ?? [])
           .filter((grant) => typeof grant.itemType === 'string')
-          .map((grant) => toGrant(grant.itemType as string, grant.quantity ?? 1))
+          .map((grant) =>
+            toGrant(
+              grant.itemType as string,
+              grant.quantity ?? 1,
+              grant.attributes?.portrait
+            )
+          )
       )
     })
 

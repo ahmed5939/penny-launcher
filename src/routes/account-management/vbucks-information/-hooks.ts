@@ -13,6 +13,22 @@ import { useGetAccounts } from '../../../hooks/accounts'
 
 import { toast } from '../../../lib/notifications'
 
+/**
+ * One definition of "how many V-Bucks does this account have", so the banner
+ * across the top and the card for a single account cannot disagree. The
+ * breakdown already totals every currency the profile carries; the sum over
+ * `currency` is only the fallback for payloads stored before it existed.
+ */
+function accountTotal(data: VBucksInformationData): number {
+  return (
+    data.breakdown?.total ??
+    Object.values(data.currency).reduce(
+      (accumulator, current) => accumulator + (current.quantity ?? 0),
+      0
+    )
+  )
+}
+
 export function useVBucksInformationData() {
   const { t } = useTranslation(['general'])
 
@@ -33,20 +49,10 @@ export function useVBucksInformationData() {
   const parsedData = accountsArray
     .filter((account) => data[account.accountId] !== undefined)
     .map((account) => data[account.accountId])
-  const vbucksSummary = parsedData.reduce((accumulator, current) => {
-    const total = Object.values(current.currency).reduce(
-      (currencyAccumulator, currencyCurrent) => {
-        currencyAccumulator += currencyCurrent.quantity ?? 0
-
-        return currencyAccumulator
-      },
-      0
-    )
-
-    accumulator += total ?? 0
-
-    return accumulator
-  }, 0)
+  const vbucksSummary = parsedData.reduce(
+    (accumulator, current) => accumulator + accountTotal(current),
+    0
+  )
 
   const isDisabledForm = isSelectedEmpty || isLoading || !areThereAccounts
 
@@ -116,16 +122,7 @@ export function useParseAccountInfo({
   const { accountList } = useGetAccounts()
 
   const account = accountList[data.accountId]
-  const total =
-    data.breakdown?.total ??
-    Object.values(data.currency).reduce(
-      (currencyAccumulator, currencyCurrent) => {
-        currencyAccumulator += currencyCurrent.quantity ?? 0
-
-        return currencyAccumulator
-      },
-      0
-    )
+  const total = accountTotal(data)
 
   const details = Object.entries(data.currency)
 

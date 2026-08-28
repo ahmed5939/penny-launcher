@@ -27,7 +27,7 @@ export enum RarityColor {
   Rare = '#51a1db',
   Epic = '#d076f6',
   Legendary = '#ed7e39',
-  Mythic = '#cdab47',
+  Mythic = '#ffd93d',
 }
 
 export const rarities: Record<RarityType, string> = {

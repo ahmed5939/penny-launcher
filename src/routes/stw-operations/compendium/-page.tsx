@@ -3,13 +3,14 @@ import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type { SegmentedOption } from '../../../components/page'
 
 import { BookOpen, Search } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { GoToTop } from '../../../components/go-to-top'
 import { Input } from '../../../components/ui/input'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
 import { ItemTile } from '../../../components/items/item-tile'
+import { VirtualList } from '../../../components/virtual-list'
 import {
   EmptyState,
   PageHeader,
@@ -19,6 +20,8 @@ import {
 } from '../../../components/page'
 
 import { compendiumFamilyLabels, useCompendiumData } from './-hooks'
+
+import { useColumnCount } from '../../../hooks/ui/virtual'
 
 const familyOptions: Array<SegmentedOption<CompendiumFamily>> = (
   ['hero', 'melee', 'ranged', 'trap', 'defender', 'survivor'] as const
@@ -98,21 +101,11 @@ function Content() {
         />
       ) : entries.length > 0 ? (
         <Panel>
-          <div className="flex flex-wrap gap-2 p-3">
-            {entries.map((entry) => (
-              <ItemTile
-                footer={
-                  entry.tiers > 1 ? `${entry.tiers} tiers` : entry.subType
-                }
-                key={entry.templateId}
-                name={entry.name}
-                onClick={() => setDetail({ templateId: entry.templateId })}
-                records={records}
-                templateId={entry.templateId}
-                tier={entry.tier}
-              />
-            ))}
-          </div>
+          <CompendiumGrid
+            entries={entries}
+            onInspect={setDetail}
+            records={records}
+          />
         </Panel>
       ) : (
         <EmptyState
@@ -136,5 +129,78 @@ function Content() {
 
       <GoToTop containerId="compendium-card" />
     </>
+  )
+}
+
+/** The tile grid's own metrics, shared by the CSS and the virtualiser. */
+const tileMinWidth = 96
+const tileGap = 8
+/** Name bar plus footer — the part of a tile that is not the square plate. */
+const estimatedNameBar = 46
+
+/**
+ * The whole game's item list, of which a few rows exist at a time.
+ *
+ * A family can run past a thousand entries, and each tile is a bordered plate
+ * with two images on it. Rendering them all is what made this page take a
+ * second to answer a keystroke in the search box.
+ */
+function CompendiumGrid({
+  entries,
+  onInspect,
+  records,
+}: {
+  entries: ReturnType<typeof useCompendiumData>['entries']
+  onInspect: (subject: ItemDetailSubject) => void
+  records: ReturnType<typeof useCompendiumData>['records']
+}) {
+  const $grid = useRef<HTMLDivElement>(null)
+
+  const columns = useColumnCount($grid, {
+    gap: tileGap,
+    minWidth: tileMinWidth,
+  })
+
+  const rows = useMemo(() => {
+    const result: Array<typeof entries> = []
+
+    for (let index = 0; index < entries.length; index += columns) {
+      result.push(entries.slice(index, index + columns))
+    }
+
+    return result
+  }, [columns, entries])
+
+  return (
+    <VirtualList
+      className="p-3"
+      count={rows.length}
+      estimateSize={() => tileMinWidth + estimatedNameBar + tileGap}
+      getKey={(index) => rows[index][0]?.templateId ?? String(index)}
+      renderLine={(index) => (
+        <div
+          className="grid"
+          style={{
+            gap: tileGap,
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+            paddingBottom: tileGap,
+          }}
+        >
+          {rows[index].map((entry) => (
+            <ItemTile
+              className="w-full"
+              footer={entry.tiers > 1 ? `${entry.tiers} tiers` : entry.subType}
+              key={entry.templateId}
+              name={entry.name}
+              onClick={() => onInspect({ templateId: entry.templateId })}
+              records={records}
+              templateId={entry.templateId}
+              tier={entry.tier}
+            />
+          ))}
+        </div>
+      )}
+      sizerRef={$grid}
+    />
   )
 }

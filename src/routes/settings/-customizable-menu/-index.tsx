@@ -491,6 +491,19 @@ function AdvancedModeSection() {
             onCheckedChange={updateMenuOption('worldInfo')}
           />
         </div>
+        <div className="item">
+          <Label
+            className="title"
+            htmlFor="game-settings"
+          >
+            {t('advanced-mode.options.game-settings')}
+          </Label>
+          <Switch
+            id="game-settings"
+            checked={getMenuOptionVisibility('fnLaunch')}
+            onCheckedChange={updateMenuOption('fnLaunch')}
+          />
+        </div>
       </div>
     </div>
   )

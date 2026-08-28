@@ -9,6 +9,12 @@ import {
   defaultClaimingRewardsDelay,
 } from '../../../config/constants/mcp'
 
+import {
+  frameRateLimitRange,
+  resolutionQualityRange,
+  resolutionRange,
+} from '../../../config/fortnite/game-settings'
+
 import { Language } from '../../../locales/resources'
 
 export const appLanguageSchema = z.object({
@@ -112,6 +118,51 @@ export const fnLaunchFileSchema = z.object({
     })
     .default({ enabled: false, processes: [] }),
 })
+
+/**
+ * Fortnite's own `GameUserSettings.ini`, edited in place.
+ *
+ * Numbers arrive from `<input>` as strings; the main process re-checks every
+ * one of these bounds before it touches the file.
+ */
+export const gameUserSettingsSchema = z.object({
+  resolutionX: createWholeNumberValidation({
+    label: 'Width',
+    range: resolutionRange,
+  }),
+  resolutionY: createWholeNumberValidation({
+    label: 'Height',
+    range: resolutionRange,
+  }),
+  fullscreenMode: z.enum(['0', '1', '2']),
+  vsync: z.boolean(),
+  frameRateLimit: createWholeNumberValidation({
+    label: 'Frame rate limit',
+    range: frameRateLimitRange,
+  }),
+  resolutionQuality: createWholeNumberValidation({
+    label: '3D resolution',
+    range: resolutionQualityRange,
+  }),
+})
+
+function createWholeNumberValidation(config: {
+  label: string
+  range: { max: number; min: number }
+}) {
+  return z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        /^\d+$/.test(value) &&
+        Number(value) >= config.range.min &&
+        Number(value) <= config.range.max,
+      {
+        message: `${config.label} must be a whole number between ${config.range.min} and ${config.range.max}.`,
+      },
+    )
+}
 
 function createRangeValidation(config: {
   defaultValue: number

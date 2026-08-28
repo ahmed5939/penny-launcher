@@ -20,7 +20,7 @@ import { MainWindow } from '../startup/windows/main'
  * Bump when the narrowed shape changes — an older cache is then discarded
  * rather than being read back into a record the renderer cannot use.
  */
-const cacheVersion = 6
+const cacheVersion = 7
 
 /** Re-download roughly weekly; the source only moves when Fortnite patches. */
 const cacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000

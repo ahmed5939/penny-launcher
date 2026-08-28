@@ -2,15 +2,23 @@ import type {
   FnLaunchFileData,
   FnLaunchSettings,
   GameSettings,
+  GameSettingsBackup,
   GameSettingsResult,
+  GameSettingsSaveResult,
   ProcessKillEntry,
 } from '../../types/fn-launch'
 
 import { execFile } from 'node:child_process'
-import { access, readFile, writeFile } from 'node:fs/promises'
+import { access, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { app } from 'electron'
 
+import {
+  applyGameSettings,
+  gameUserSettingsRelativePath,
+  readGameSettings,
+  sanitizeGameSettings,
+} from './game-user-settings'
 import { DataDirectory } from '../startup/data-directory'
 import { RuntimeLog } from '../runtime-log'
 
@@ -19,149 +27,19 @@ import { RuntimeLog } from '../runtime-log'
  *
  * Handles:
  *  - Auto-detecting & caching the GameUserSettings.ini path
- *  - Parsing/writing INI key=value pairs (section-aware)
- *  - Reading/writing Fortnite graphics + display settings
+ *  - Reading/writing Fortnite graphics + display settings, always taking a
+ *    backup of the file first (INI text handling lives in
+ *    `./game-user-settings`)
  *  - Launch arguments appended to the game's command line
  *  - The process killer (terminates chosen processes while the game runs)
  */
 
-// ── INI parsing ───────────────────────────────────────────────
-
-/** Parse an INI file into `section → key → value`. First occurrence wins. */
-function parseIni(content: string): Map<string, Map<string, string>> {
-  const sections = new Map<string, Map<string, string>>()
-  let currentSection = ''
-  sections.set(currentSection, new Map())
-
-  for (const line of content.split('\n')) {
-    const trimmed = line.trim()
-
-    if (!trimmed || trimmed.startsWith(';')) continue
-
-    const sectionMatch = trimmed.match(/^\[(.+)\]$/)
-
-    if (sectionMatch) {
-      currentSection = sectionMatch[1]
-
-      if (!sections.has(currentSection)) {
-        sections.set(currentSection, new Map())
-      }
-
-      continue
-    }
-
-    const eqIndex = trimmed.indexOf('=')
-
-    if (eqIndex > 0) {
-      const key = trimmed.substring(0, eqIndex)
-      const value = trimmed.substring(eqIndex + 1)
-      const sectionMap = sections.get(currentSection)
-
-      if (sectionMap && !sectionMap.has(key)) {
-        sectionMap.set(key, value)
-      }
-    }
-  }
-
-  return sections
-}
-
-/**
- * Set a value in an INI file string. If the key exists under the section it
- * is replaced in place; otherwise it is appended to the section — or the
- * section is created at the end of the file.
- */
-function setIniValue(
-  content: string,
-  section: string,
-  key: string,
-  value: string
-): string {
-  const lines = content.split('\n')
-  let inSection = false
-  let lastKeyLineInSection = -1
-  let sectionStartLine = -1
-
-  for (let index = 0; index < lines.length; index++) {
-    const trimmed = lines[index].trim()
-    const sectionMatch = trimmed.match(/^\[(.+)\]$/)
-
-    if (sectionMatch) {
-      if (inSection) {
-        // Left the target section without meeting the key: insert here.
-        break
-      }
-
-      if (sectionMatch[1] === section) {
-        inSection = true
-        sectionStartLine = index
-      }
-
-      continue
-    }
-
-    if (inSection && trimmed.startsWith(`${key}=`)) {
-      lines[index] = `${key}=${value}`
-
-      return lines.join('\n')
-    }
-
-    if (inSection && trimmed && !trimmed.startsWith(';')) {
-      lastKeyLineInSection = index
-    }
-  }
-
-  if (sectionStartLine >= 0 && lastKeyLineInSection >= 0) {
-    lines.splice(lastKeyLineInSection + 1, 0, `${key}=${value}`)
-  } else if (sectionStartLine >= 0) {
-    lines.splice(sectionStartLine + 1, 0, `${key}=${value}`)
-  } else {
-    lines.push('', `[${section}]`, `${key}=${value}`)
-  }
-
-  return lines.join('\n')
-}
-
-function readValue(
-  sections: Map<string, Map<string, string>>,
-  section: string,
-  key: string,
-  fallback = ''
-): string {
-  return sections.get(section)?.get(key) ?? fallback
-}
-
-function readNumber(
-  sections: Map<string, Map<string, string>>,
-  section: string,
-  key: string,
-  fallback: number
-): number {
-  const parsed = Number.parseFloat(readValue(sections, section, key))
-
-  return Number.isFinite(parsed) ? parsed : fallback
-}
-
-function readBool(
-  sections: Map<string, Map<string, string>>,
-  section: string,
-  key: string,
-  fallback = false
-): boolean {
-  const value = readValue(sections, section, key)
-
-  return value === '' ? fallback : value.toLowerCase() === 'true'
-}
-
 // ── INI path discovery ────────────────────────────────────────
 
-const iniRelativePath = path.join(
-  'FortniteGame',
-  'Saved',
-  'Config',
-  'WindowsClient',
-  'GameUserSettings.ini'
-)
+const iniRelativePath = path.join(...gameUserSettingsRelativePath)
+
+/** One rolling copy of the file as it was before Penny's last write. */
+const backupSuffix = '.penny.bak'
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -173,11 +51,24 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-async function localAppDataPath(): Promise<string | null> {
+/**
+ * `%LOCALAPPDATA%`. Electron has no `getPath` key for it — `appData` is
+ * Roaming — so read the environment first and derive Local from Roaming's
+ * sibling only if the variable is missing.
+ */
+function localAppDataPath(): string | null {
+  if (process.env.LOCALAPPDATA) {
+    return process.env.LOCALAPPDATA
+  }
+
   try {
-    return app.getPath('localAppData')
+    const roaming = app.getPath('appData')
+
+    return roaming.toLowerCase().endsWith(`${path.sep}roaming`)
+      ? path.join(path.dirname(roaming), 'Local')
+      : null
   } catch {
-    return process.env.LOCALAPPDATA ?? null
+    return null
   }
 }
 
@@ -188,7 +79,7 @@ async function findIniPath(): Promise<string | null> {
     return stored.iniPath
   }
 
-  const localAppData = await localAppDataPath()
+  const localAppData = localAppDataPath()
 
   if (!localAppData) {
     return null
@@ -210,12 +101,42 @@ async function findIniPath(): Promise<string | null> {
   return null
 }
 
+// ── Backups ───────────────────────────────────────────────────
+
+function backupPathFor(iniPath: string): string {
+  return `${iniPath}${backupSuffix}`
+}
+
+async function describeBackup(iniPath: string): Promise<GameSettingsBackup> {
+  const backupPath = backupPathFor(iniPath)
+
+  try {
+    const { mtimeMs } = await stat(backupPath)
+
+    return { exists: true, path: backupPath, savedAt: Math.round(mtimeMs) }
+  } catch {
+    return { exists: false, path: backupPath, savedAt: null }
+  }
+}
+
+/**
+ * Copy the file as it is right now, before anything is written over it.
+ * A failed backup aborts the save — the point of the backup is that the
+ * previous file is never the only copy.
+ */
+async function writeBackup(iniPath: string, content: string): Promise<void> {
+  await writeFile(backupPathFor(iniPath), content, 'utf-8')
+}
+
 // ── Game settings ─────────────────────────────────────────────
 
-const fortSection = '/Script/FortniteGame.FortGameUserSettings'
-const scalabilitySection = 'ScalabilityGroups'
-const rhiSection = 'D3DRHIPreference'
-const performanceSection = 'PerformanceMode'
+/**
+ * UE writes this file with CRLF. Editing happens on LF-normalised text, so
+ * put the original line endings back rather than rewriting every line.
+ */
+function restoreLineEndings(content: string, usedCrlf: boolean): string {
+  return usedCrlf ? content.replace(/\n/g, '\r\n') : content
+}
 
 export async function getGameSettings(): Promise<GameSettingsResult> {
   try {
@@ -230,113 +151,14 @@ export async function getGameSettings(): Promise<GameSettingsResult> {
     }
 
     const content = await readFile(iniPath, 'utf-8')
-    const sections = parseIni(content.replace(/\r\n/g, '\n'))
 
-    // Performance mode is DX11 with `[PerformanceMode] MeshQuality` present.
-    const meshQuality = readValue(sections, performanceSection, 'MeshQuality')
-    const preferredRhi =
-      readValue(sections, rhiSection, 'PreferredRHI', 'dx12') || 'dx12'
-    const renderingMode = meshQuality !== '' ? 'performance' : preferredRhi
-
-    const settings: GameSettings = {
-      // Display
-      resolutionX: Math.round(
-        readNumber(sections, fortSection, 'ResolutionSizeX', 1920)
-      ),
-      resolutionY: Math.round(
-        readNumber(sections, fortSection, 'ResolutionSizeY', 1080)
-      ),
-      windowMode: Math.round(
-        readNumber(sections, fortSection, 'PreferredFullscreenMode', 1)
-      ),
-      vsync: readBool(sections, fortSection, 'bUseVSync'),
-      frameRateLimit: readNumber(sections, fortSection, 'FrameRateLimit', 240),
-      renderingMode,
-
-      // Graphics
-      displayGamma: readNumber(sections, fortSection, 'DisplayGamma', 2.2),
-      userInterfaceContrast: readNumber(
-        sections,
-        fortSection,
-        'UserInterfaceContrast',
-        1.0
-      ),
-      motionBlur: readBool(sections, fortSection, 'bMotionBlur'),
-      uiParallax: readBool(sections, fortSection, 'bAllowUIParallax'),
-      showFps: readBool(sections, fortSection, 'bShowFPS'),
-
-      // Graphics quality
-      viewDistance: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.ViewDistanceQuality', 3)
-      ),
-      shadows: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.ShadowQuality', 3)
-      ),
-      antiAliasingQuality: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.AntiAliasingQuality', 3)
-      ),
-      textures: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.TextureQuality', 3)
-      ),
-      effects: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.EffectsQuality', 3)
-      ),
-      postProcess: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.PostProcessQuality', 3)
-      ),
-      globalIllumination: Math.round(
-        readNumber(
-          sections,
-          scalabilitySection,
-          'sg.GlobalIlluminationQuality',
-          1
-        )
-      ),
-      reflections: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.ReflectionQuality', 1)
-      ),
-      foliage: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.FoliageQuality', 3)
-      ),
-      resolutionQuality: Math.round(
-        readNumber(sections, scalabilitySection, 'sg.ResolutionQuality', 100)
-      ),
-
-      // Advanced graphics quality
-      antiAliasingMethod: readValue(
-        sections,
-        fortSection,
-        'FortAntiAliasingMethod',
-        'TSRMedium'
-      ),
-      tsrQuality: readValue(
-        sections,
-        fortSection,
-        'TemporalSuperResolutionQuality',
-        'Quality'
-      ),
-      dynamicResolution: readBool(
-        sections,
-        fortSection,
-        'bUseDynamicResolution'
-      ),
-      nanite: readBool(sections, fortSection, 'bUseNanite'),
-      desiredGIQuality: Math.round(
-        readNumber(
-          sections,
-          fortSection,
-          'DesiredGlobalIlluminationQuality',
-          1
-        )
-      ),
-      desiredReflectionQuality: Math.round(
-        readNumber(sections, fortSection, 'DesiredReflectionQuality', 1)
-      ),
-      rayTracing: readBool(sections, fortSection, 'bRayTracing'),
-      showGrass: readBool(sections, fortSection, 'bShowGrass', true),
+    return {
+      success: true,
+      settings: readGameSettings(content),
+      iniPath,
+      backup: await describeBackup(iniPath),
+      gameRunning: await isGameRunning(),
     }
-
-    return { success: true, settings, iniPath }
   } catch (error) {
     RuntimeLog.error('caught:core/fn-launch.ts', error)
 
@@ -346,7 +168,7 @@ export async function getGameSettings(): Promise<GameSettingsResult> {
 
 export async function saveGameSettings(
   partial: Partial<GameSettings>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<GameSettingsSaveResult> {
   try {
     const iniPath = await findIniPath()
 
@@ -354,304 +176,25 @@ export async function saveGameSettings(
       return { success: false, error: 'GameUserSettings.ini not found.' }
     }
 
-    let content = (await readFile(iniPath, 'utf-8')).replace(/\r\n/g, '\n')
+    const changes = sanitizeGameSettings(partial)
 
-    // Display
-    if (partial.resolutionX !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'ResolutionSizeX',
-        `${partial.resolutionX}`
-      )
-      content = setIniValue(
-        content,
-        fortSection,
-        'LastUserConfirmedResolutionSizeX',
-        `${partial.resolutionX}`
-      )
+    if (Object.keys(changes).length === 0) {
+      return { success: false, error: 'No valid settings to save.' }
     }
 
-    if (partial.resolutionY !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'ResolutionSizeY',
-        `${partial.resolutionY}`
-      )
-      content = setIniValue(
-        content,
-        fortSection,
-        'LastUserConfirmedResolutionSizeY',
-        `${partial.resolutionY}`
-      )
-    }
+    const original = await readFile(iniPath, 'utf-8')
 
-    if (partial.windowMode !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'PreferredFullscreenMode',
-        `${partial.windowMode}`
-      )
-      content = setIniValue(
-        content,
-        fortSection,
-        'LastConfirmedFullscreenMode',
-        `${partial.windowMode}`
-      )
-    }
+    await writeBackup(iniPath, original)
 
-    if (partial.vsync !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bUseVSync',
-        partial.vsync ? 'True' : 'False'
-      )
-    }
+    const usedCrlf = original.includes('\r\n')
+    const content = applyGameSettings(
+      original.replace(/\r\n/g, '\n'),
+      changes
+    )
 
-    if (partial.frameRateLimit !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'FrameRateLimit',
-        partial.frameRateLimit.toFixed(6)
-      )
-    }
+    await writeFile(iniPath, restoreLineEndings(content, usedCrlf), 'utf-8')
 
-    if (partial.renderingMode !== undefined) {
-      if (partial.renderingMode === 'performance') {
-        content = setIniValue(content, rhiSection, 'PreferredRHI', 'dx11')
-        content = setIniValue(content, performanceSection, 'MeshQuality', '0')
-      } else {
-        content = setIniValue(
-          content,
-          rhiSection,
-          'PreferredRHI',
-          partial.renderingMode
-        )
-        // Leave no stale MeshQuality behind: it is what marks performance mode.
-        content = content.replace(
-          /\[PerformanceMode\]\s*\nMeshQuality=\d+\s*\n?/,
-          '[PerformanceMode]\n'
-        )
-      }
-    }
-
-    // Graphics
-    if (partial.displayGamma !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'DisplayGamma',
-        partial.displayGamma.toFixed(6)
-      )
-    }
-
-    if (partial.userInterfaceContrast !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'UserInterfaceContrast',
-        partial.userInterfaceContrast.toFixed(6)
-      )
-    }
-
-    if (partial.motionBlur !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bMotionBlur',
-        partial.motionBlur ? 'True' : 'False'
-      )
-    }
-
-    if (partial.uiParallax !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bAllowUIParallax',
-        partial.uiParallax ? 'True' : 'False'
-      )
-    }
-
-    if (partial.showFps !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bShowFPS',
-        partial.showFps ? 'True' : 'False'
-      )
-    }
-
-    // Graphics quality
-    if (partial.viewDistance !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.ViewDistanceQuality',
-        `${partial.viewDistance}`
-      )
-    }
-
-    if (partial.shadows !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.ShadowQuality',
-        `${partial.shadows}`
-      )
-    }
-
-    if (partial.antiAliasingQuality !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.AntiAliasingQuality',
-        `${partial.antiAliasingQuality}`
-      )
-    }
-
-    if (partial.textures !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.TextureQuality',
-        `${partial.textures}`
-      )
-    }
-
-    if (partial.effects !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.EffectsQuality',
-        `${partial.effects}`
-      )
-    }
-
-    if (partial.postProcess !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.PostProcessQuality',
-        `${partial.postProcess}`
-      )
-    }
-
-    if (partial.globalIllumination !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.GlobalIlluminationQuality',
-        `${partial.globalIllumination}`
-      )
-    }
-
-    if (partial.reflections !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.ReflectionQuality',
-        `${partial.reflections}`
-      )
-    }
-
-    if (partial.foliage !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.FoliageQuality',
-        `${partial.foliage}`
-      )
-    }
-
-    if (partial.resolutionQuality !== undefined) {
-      content = setIniValue(
-        content,
-        scalabilitySection,
-        'sg.ResolutionQuality',
-        `${partial.resolutionQuality}`
-      )
-    }
-
-    // Advanced graphics quality
-    if (partial.antiAliasingMethod !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'FortAntiAliasingMethod',
-        partial.antiAliasingMethod
-      )
-    }
-
-    if (partial.tsrQuality !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'TemporalSuperResolutionQuality',
-        partial.tsrQuality
-      )
-    }
-
-    if (partial.dynamicResolution !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bUseDynamicResolution',
-        partial.dynamicResolution ? 'True' : 'False'
-      )
-    }
-
-    if (partial.nanite !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bUseNanite',
-        partial.nanite ? 'True' : 'False'
-      )
-    }
-
-    if (partial.desiredGIQuality !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'DesiredGlobalIlluminationQuality',
-        `${partial.desiredGIQuality}`
-      )
-    }
-
-    if (partial.desiredReflectionQuality !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'DesiredReflectionQuality',
-        `${partial.desiredReflectionQuality}`
-      )
-    }
-
-    if (partial.rayTracing !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bRayTracing',
-        partial.rayTracing ? 'True' : 'False'
-      )
-    }
-
-    if (partial.showGrass !== undefined) {
-      content = setIniValue(
-        content,
-        fortSection,
-        'bShowGrass',
-        partial.showGrass ? 'True' : 'False'
-      )
-    }
-
-    await writeFile(iniPath, content, 'utf-8')
-
-    return { success: true }
+    return { success: true, backup: await describeBackup(iniPath) }
   } catch (error) {
     RuntimeLog.error('caught:core/fn-launch.ts', error)
 
@@ -659,12 +202,32 @@ export async function saveGameSettings(
   }
 }
 
-// ── Launch settings (args + process killer) ───────────────────
+/** Put back the copy taken before Penny's last write. */
+export async function restoreGameSettingsBackup(): Promise<GameSettingsSaveResult> {
+  try {
+    const iniPath = await findIniPath()
 
-const defaultLaunchSettings: FnLaunchSettings = {
-  launchArgs: '',
-  processKiller: { enabled: false, processes: [] },
+    if (!iniPath) {
+      return { success: false, error: 'GameUserSettings.ini not found.' }
+    }
+
+    const backupPath = backupPathFor(iniPath)
+
+    if (!(await fileExists(backupPath))) {
+      return { success: false, error: 'There is no backup to restore.' }
+    }
+
+    await writeFile(iniPath, await readFile(backupPath, 'utf-8'), 'utf-8')
+
+    return { success: true, backup: await describeBackup(iniPath) }
+  } catch (error) {
+    RuntimeLog.error('caught:core/fn-launch.ts', error)
+
+    return { success: false, error: 'Failed to restore the backup.' }
+  }
 }
+
+// ── Launch settings (args + process killer) ───────────────────
 
 export async function getLaunchSettings(): Promise<FnLaunchSettings> {
   const data = await DataDirectory.getFnLaunchFile()

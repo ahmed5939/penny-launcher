@@ -281,17 +281,23 @@ function OfferCard({
 }) {
   /** X-Ray llamas advertise a generic grant; the roll is the real content. */
   const contents = offer.preroll ?? offer.itemGrants
-  const primary = contents[0]
-  const primaryArt = primary
-    ? resolveItemArt(primary.templateId, records)
+  /*
+   * What the header draws is what you are buying — the llama — and not
+   * `contents[0]`, which for a pre-rolled llama is whichever survivor happened
+   * to land in slot one. Everything without a preroll grants what it advertises,
+   * so the two agree there anyway.
+   */
+  const subject = offer.itemGrants[0] ?? contents[0]
+  const subjectArt = subject
+    ? resolveItemArt(subject.templateId, records, subject.portrait)
     : null
   const hasInternalTitle =
     offer.title.includes('[VIRTUAL]') ||
     offer.title.includes('GameItem:') ||
     offer.title.includes('AccountResource:')
   const offerLabel =
-    hasInternalTitle && primaryArt?.preferName
-      ? primaryArt.name
+    hasInternalTitle && subjectArt?.preferName
+      ? subjectArt.name
       : offer.title
   const isDiscounted = offer.finalPrice < offer.regularPrice
   const purchaseLimit =
@@ -301,11 +307,12 @@ function OfferCard({
   return (
     <Panel>
       <header className="flex items-start gap-3 border-b border-border/60 px-4 py-3">
-        {primary && (
+        {subject && (
           <ItemIcon
+            portrait={subject.portrait}
             records={records}
             size="large"
-            templateId={primary.templateId}
+            templateId={subject.templateId}
             title={offerLabel}
           />
         )}
@@ -403,12 +410,13 @@ function GrantTile({
   grant: ShopGrant
   records: ItemRecordMap
 }) {
-  const art = resolveItemArt(grant.templateId, records)
+  const art = resolveItemArt(grant.templateId, records, grant.portrait)
   const label = art.preferName && art.name ? art.name : grant.name
 
   return (
     <li className="flex w-[4.5rem] flex-col items-center gap-1 text-center">
       <ItemIcon
+        portrait={grant.portrait}
         quantity={grant.quantity}
         records={records}
         size="xl"
