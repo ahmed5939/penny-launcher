@@ -5,6 +5,7 @@ import {
   Coins,
   Cog,
   FileText,
+  Gift,
   KeyRound,
   Smartphone,
   Ticket,
@@ -45,6 +46,12 @@ const items: Array<HubItem> = [
     description: 'Balance across all your accounts',
     icon: Coins,
     to: '/account-management/vbucks-information',
+  },
+  {
+    title: 'Gifts',
+    description: 'Who gifted cosmetics to your accounts',
+    icon: Gift,
+    to: '/account-management/gifts-information',
   },
   {
     title: 'Redeem',

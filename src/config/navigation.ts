@@ -20,8 +20,8 @@ import {
   Puzzle,
   Radar,
   Repeat,
-  Shield,
   ScrollText,
+  Shield,
   Smartphone,
   Store,
   Swords,
@@ -272,6 +272,12 @@ export const navSections: Array<NavSection> = [
         icon: Coins,
         label: 'sidebar:account-management.options.vbucks-information',
         to: '/account-management/vbucks-information',
+      },
+      {
+        can: 'giftsInformation',
+        icon: Gift,
+        label: 'sidebar:account-management.options.gifts-information',
+        to: '/account-management/gifts-information',
       },
       {
         can: 'redeemCodes',

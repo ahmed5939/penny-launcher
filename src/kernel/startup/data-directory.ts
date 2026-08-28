@@ -2,6 +2,7 @@ import type { AccountList } from '../../types/accounts'
 import type { AutoLlamasRecord } from '../../types/auto-llamas'
 import type { AutomationAccountFileDataList } from '../../types/automation'
 import type { FriendRecord } from '../../types/friends'
+import type { FnLaunchFileData } from '../../types/fn-launch'
 import type {
   AppLanguageSettings,
   CustomizableMenuSettings,
@@ -35,6 +36,7 @@ import {
   appLanguageSchema,
   customizableMenuSettingsSchema,
   devSettingsSchema,
+  fnLaunchFileSchema,
   settingsSchema,
 } from '../../lib/validations/schemas/settings'
 import { taxiServiceFileSchema } from '../../lib/validations/schemas/taxi-service'
@@ -156,6 +158,15 @@ export class DataDirectory {
   )
   private static miniBossesDefaultData: AutoPinUrnDataList = {}
 
+  static fnLaunchFilePath = path.join(
+    DataDirectory.dataDirectoryPath,
+    'fn-launch.json'
+  )
+  private static fnLaunchDefaultData: FnLaunchFileData = {
+    launchArgs: '',
+    processKiller: { enabled: false, processes: [] },
+  }
+
   /**
    * Get default values
    */
@@ -210,6 +221,7 @@ export class DataDirectory {
       DataDirectory.getOrCreateUrnsJsonFile(),
       DataDirectory.getOrCreateAutoLlamasJsonFile(),
       DataDirectory.getOrCreateMiniBossesJsonFile(),
+      DataDirectory.getOrCreateFnLaunchJsonFile(),
     ])
   }
 
@@ -458,6 +470,34 @@ export class DataDirectory {
   }
 
   /**
+   * Get data from fn-launch.json
+   */
+  static async getFnLaunchFile(): Promise<FnLaunchFileData> {
+    const result = await DataDirectory.getOrCreateFnLaunchJsonFile()
+
+    try {
+      const list = fnLaunchFileSchema.safeParse(JSON.parse(result))
+
+      if (list.success) {
+        return {
+          ...DataDirectory.fnLaunchDefaultData,
+          ...list.data,
+          processKiller: {
+            ...DataDirectory.fnLaunchDefaultData.processKiller,
+            ...list.data.processKiller,
+          },
+        }
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
+    }
+
+    return DataDirectory.fnLaunchDefaultData
+  }
+
+  /**
    * Get data from auto-llamas.json
    */
   static async getAutoLlamasFile(): Promise<{
@@ -577,6 +617,13 @@ export class DataDirectory {
    */
   static async updateMiniBossesFile(data: AutoPinUrnDataList) {
     await DataDirectory.updateJsonFile(DataDirectory.miniBossesFilePath, data)
+  }
+
+  /**
+   * Update fn-launch.json
+   */
+  static async updateFnLaunchFile(data: FnLaunchFileData) {
+    await DataDirectory.updateJsonFile(DataDirectory.fnLaunchFilePath, data)
   }
 
   /**
@@ -754,6 +801,23 @@ export class DataDirectory {
 
     return await DataDirectory.getOrCreateJsonFile(
       DataDirectory.miniBossesFilePath,
+      {
+        defaults: {
+          rawString: JSON.stringify(initialData),
+          value: initialData,
+        },
+      }
+    )
+  }
+
+  /**
+   * Creating fn-launch.json
+   */
+  private static async getOrCreateFnLaunchJsonFile() {
+    const initialData = DataDirectory.fnLaunchDefaultData
+
+    return await DataDirectory.getOrCreateJsonFile(
+      DataDirectory.fnLaunchFilePath,
       {
         defaults: {
           rawString: JSON.stringify(initialData),

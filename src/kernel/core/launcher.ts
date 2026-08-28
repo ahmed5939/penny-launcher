@@ -17,6 +17,7 @@ import {
   getAccessTokenUsingExchangeCode,
   getExchangeCodeUsingAccessToken,
 } from '../../services/endpoints/oauth'
+import { getLaunchSettings, startProcessKiller } from './fn-launch'
 import { createLauncherArguments } from './launcher-arguments'
 
 export class FortniteLauncher {
@@ -87,10 +88,12 @@ export class FortniteLauncher {
         return
       }
 
+      const launchSettings = await getLaunchSettings()
       const args = createLauncherArguments({
         accountId: account.accountId,
         displayName: account.displayName,
         exchangeCode: launcherExchangeCode.data.code,
+        launchArgs: launchSettings.launchArgs,
       })
       const process = spawn(executable, args, {
         cwd: settings.path,
@@ -105,6 +108,11 @@ export class FortniteLauncher {
         process.once('error', reject)
       })
       process.unref()
+
+      // The game is up: begin the configured process-kill schedule, if any.
+      startProcessKiller().catch((error) => {
+        RuntimeLog.error('caught:core/launcher.ts', error)
+      })
 
       MainWindow.instance.webContents.send(
         ElectronAPIEventKeys.LauncherNotification,

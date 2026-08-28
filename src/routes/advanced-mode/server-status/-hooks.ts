@@ -3,17 +3,40 @@ import { useEffect } from 'react'
 
 import { useServerStatusStore } from '../../../state/advanced-mode/server-status'
 
+/**
+ * The status page re-checks itself without anyone pressing a button —
+ * outages land on the dashboard mid-session, not just when it was opened.
+ */
+const autoRefreshInterval = 3 * 60 * 1000
+
 export function useServerStatusData() {
-  const { diagnostics, entries, errorMessage, isLoading, lastCheckedAt } =
-    useServerStatusStore(
-      useShallow((state) => ({
-        diagnostics: state.diagnostics,
-        entries: state.entries,
-        errorMessage: state.errorMessage,
-        isLoading: state.isLoading,
-        lastCheckedAt: state.lastCheckedAt,
-      }))
-    )
+  const {
+    diagnostics,
+    entries,
+    errorMessage,
+    groups,
+    incidents,
+    page,
+    pageError,
+    standalone,
+    summary,
+    isLoading,
+    lastCheckedAt,
+  } = useServerStatusStore(
+    useShallow((state) => ({
+      diagnostics: state.diagnostics,
+      entries: state.entries,
+      errorMessage: state.errorMessage,
+      groups: state.groups,
+      incidents: state.incidents,
+      page: state.page,
+      pageError: state.pageError,
+      standalone: state.standalone,
+      summary: state.summary,
+      isLoading: state.isLoading,
+      lastCheckedAt: state.lastCheckedAt,
+    }))
+  )
   const { setLoading, setResponse } = useServerStatusStore(
     useShallow((state) => ({
       setLoading: state.setLoading,
@@ -29,6 +52,12 @@ export function useServerStatusData() {
           diagnostics: response.diagnostics,
           entries: response.entries,
           errorMessage: response.errorMessage,
+          groups: response.groups,
+          incidents: response.incidents,
+          page: response.page,
+          standalone: response.standalone,
+          summary: response.summary,
+          pageError: response.pageError,
           checkedAt: Date.now(),
         })
         const rules = JSON.parse(
@@ -58,6 +87,19 @@ export function useServerStatusData() {
     handleCheck()
   }, [])
 
+  /**
+   * Auto-refresh every 3 minutes while the page is mounted.
+   */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      window.electronAPI.requestServerStatus()
+    }, autoRefreshInterval)
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [])
+
   const handleCheck = () => {
     setLoading(true)
     window.electronAPI.requestServerStatus()
@@ -71,10 +113,16 @@ export function useServerStatusData() {
     diagnostics,
     entries,
     errorMessage,
+    groups,
+    incidents,
     isDown,
     isLoading,
     isUnknown,
     lastCheckedAt,
+    page,
+    pageError,
+    standalone,
+    summary,
 
     handleCheck,
   }

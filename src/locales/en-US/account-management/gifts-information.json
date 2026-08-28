@@ -1,0 +1,21 @@
+{
+  "description": "Gift history on each selected account — who sent which cosmetic, and when.",
+  "form": {
+    "submit-button": "Show Gifts"
+  },
+  "results": {
+    "title": "Gifts Across {{total}} Account/s",
+    "received": "Received",
+    "senders": "Senders",
+    "cosmetics": "Cosmetics"
+  },
+  "account": {
+    "count": "{{received}} gift/s from {{senders}} sender/s",
+    "error": "Could not load gift history for this account.",
+    "empty": "No gift history",
+    "empty-description": "Nothing has been gifted to this account yet."
+  },
+  "sender": {
+    "last-gift": "Last gift {{date}}"
+  }
+}

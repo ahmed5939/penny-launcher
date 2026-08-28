@@ -15,6 +15,7 @@ import type {
   MCPClientQuestLoginResponse,
   MCPPurchaseCatalogEntryResponse,
   MCPQueryProfile,
+  MCPQueryProfileAthenaProfile,
   MCPQueryProfileMainProfile,
   MCPQueryProfileStorageProfile,
   MCPStorageTransferItem,
@@ -85,6 +86,28 @@ export function getQueryProfileMainProfile({
       },
       params: {
         profileId: 'common_core',
+        rvn: -1,
+      },
+    }
+  )
+}
+
+export function getQueryProfileAthena({
+  accessToken,
+  accountId,
+}: {
+  accessToken: string
+  accountId: string
+}) {
+  return baseGameService.post<MCPQueryProfileAthenaProfile>(
+    `/profile/${accountId}/client/QueryProfile`,
+    {},
+    {
+      headers: {
+        Authorization: `bearer ${accessToken}`,
+      },
+      params: {
+        profileId: 'athena',
         rvn: -1,
       },
     }

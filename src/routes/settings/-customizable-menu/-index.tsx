@@ -349,6 +349,19 @@ function AccountManagementSection() {
         <div className="item">
           <Label
             className="title"
+            htmlFor="gifts-information"
+          >
+            {t('account-management.options.gifts-information')}
+          </Label>
+          <Switch
+            id="gifts-information"
+            checked={getMenuOptionVisibility('giftsInformation')}
+            onCheckedChange={updateMenuOption('giftsInformation')}
+          />
+        </div>
+        <div className="item">
+          <Label
+            className="title"
             htmlFor="profile"
           >
             {t('account-management.options.profile')}

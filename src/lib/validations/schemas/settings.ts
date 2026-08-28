@@ -83,6 +83,7 @@ export const customizableMenuSettingsSchema = z
     advancedMode: z.boolean().default(true),
     matchmakingTrack: z.boolean().default(true),
     serverStatus: z.boolean().default(true),
+    fnLaunch: z.boolean().default(true),
     worldInfo: z.boolean().default(true),
 
     myAccounts: z.boolean().default(true),
@@ -93,6 +94,24 @@ export const customizableMenuSettingsSchema = z
     removeAccount: z.boolean().default(true),
   })
   .partial()
+
+export const fnLaunchFileSchema = z.object({
+  launchArgs: z.string().default(''),
+  iniPath: z.string().optional(),
+  processKiller: z
+    .object({
+      enabled: z.boolean().default(false),
+      processes: z
+        .array(
+          z.object({
+            name: z.string().trim().min(1),
+            mode: z.enum(['always', 'startup']).default('startup'),
+          })
+        )
+        .default([]),
+    })
+    .default({ enabled: false, processes: [] }),
+})
 
 function createRangeValidation(config: {
   defaultValue: number

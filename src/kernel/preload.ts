@@ -15,9 +15,11 @@ import * as devicesAuthActions from './preload-actions/devices-auth'
 import * as enduranceActions from './preload-actions/endurance'
 import * as eventActions from './preload-actions/events'
 import * as expeditionsActions from './preload-actions/expeditions'
+import * as fnLaunchActions from './preload-actions/fn-launch'
 import * as friendsManagerActions from './preload-actions/friends-manager'
 import * as gameInstallActions from './preload-actions/game-install'
 import * as generalActions from './preload-actions/general'
+import * as giftsInformationActions from './preload-actions/gifts-information'
 import * as shellActions from './preload-actions/shell'
 import * as inventoryActions from './preload-actions/inventory'
 import * as itemActionsActions from './preload-actions/item-actions'
@@ -58,9 +60,11 @@ export const availableElectronAPIs = {
   ...enduranceActions,
   ...eventActions,
   ...expeditionsActions,
+  ...fnLaunchActions,
   ...friendsManagerActions,
   ...gameInstallActions,
   ...generalActions,
+  ...giftsInformationActions,
   ...shellActions,
   ...inventoryActions,
   ...itemActionsActions,

@@ -69,6 +69,18 @@ export function useOutpostData() {
   )
 
   /**
+   * Sequential on purpose — each scan downloads a multi-megabyte .sav, and
+   * `loadingZone` is a single slot, so the cards animate one at a time.
+   */
+  const handleScanAll = useCallback(async () => {
+    for (const zone of useOutpostStore.getState().zones) {
+      if (zone.saveFile) {
+        await handleScanBase(zone.zoneId, zone.saveFile)
+      }
+    }
+  }, [handleScanBase])
+
+  /**
    * Load once per visit. Re-scanning is the refresh button's job.
    */
   useEffect(() => {
@@ -81,6 +93,7 @@ export function useOutpostData() {
     baseData,
     errorMessage,
     handleRefresh,
+    handleScanAll,
     handleScanBase,
     infoLoading,
     loadingZone,

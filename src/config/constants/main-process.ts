@@ -270,6 +270,13 @@ export enum ElectronAPIEventKeys {
   VBucksInformationResponseData = 'vbucks-information:response:data',
 
   /**
+   * Gifts Information
+   */
+
+  GiftsInformationRequest = 'gifts-information:request:data',
+  GiftsInformationResponseData = 'gifts-information:response:data',
+
+  /**
    * Redeem Codes
    */
 
@@ -291,6 +298,15 @@ export enum ElectronAPIEventKeys {
 
   ServerStatusRequest = 'server-status:request',
   ServerStatusResponse = 'server-status:response',
+
+  /**
+   * FN Launch
+   */
+
+  FnLaunchSettingsRequest = 'fn-launch:settings:request',
+  FnLaunchSettingsUpdate = 'fn-launch:settings:update',
+  FnLaunchGameSettingsRequest = 'fn-launch:game-settings:request',
+  FnLaunchGameSettingsUpdate = 'fn-launch:game-settings:update',
 
   /**
    * Friends Manager
@@ -417,6 +433,7 @@ export enum ElectronAPIEventKeys {
   PluginsList = 'plugins:list',
   PluginsMarketplaceList = 'plugins:marketplace:list',
   PluginInstall = 'plugins:install',
+  PluginRemove = 'plugins:remove',
   PluginReadme = 'plugins:readme',
   PluginsDirectoryOpen = 'plugins:directory:open',
   PluginOpen = 'plugins:open',

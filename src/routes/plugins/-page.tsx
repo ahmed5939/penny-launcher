@@ -1,5 +1,5 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { BookOpen, Boxes, Code2, Download, FolderOpen, Puzzle } from 'lucide-react'
+import { BookOpen, Boxes, Code2, Download, FolderOpen, Puzzle, Trash2 } from 'lucide-react'
 
 import { Button } from '../../components/ui/button'
 import {
@@ -28,12 +28,15 @@ export function RouteComponent() {
     handleInstall,
     handleOpen,
     handleReadme,
+    handleRemove,
     installed,
     isLoading,
     marketplace,
     pendingId,
     readme,
+    removeTarget,
     setReadme,
+    setRemoveTarget,
   } = usePluginsData()
 
   return (
@@ -182,6 +185,14 @@ export function RouteComponent() {
                         Source
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      disabled={pendingId !== null}
+                      onClick={() => setRemoveTarget(plugin)}
+                    >
+                      <Trash2 className="mr-2 size-4" />
+                      Remove
+                    </Button>
                   </PanelFooter>
                 </Panel>
               ))}
@@ -199,6 +210,35 @@ export function RouteComponent() {
           <pre className="overflow-auto whitespace-pre-wrap rounded-md bg-muted/60 p-4 font-mono text-xs leading-relaxed">
             {readme?.content}
           </pre>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => !open && pendingId === null && setRemoveTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {removeTarget?.name}?</DialogTitle>
+            <DialogDescription>
+              The add-on will stop running and its installed files will be removed. Its saved data will be kept in case you install it again.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              disabled={pendingId !== null}
+              onClick={() => setRemoveTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button disabled={pendingId !== null} onClick={handleRemove}>
+              {pendingId === removeTarget?.id && (
+                <UpdateIcon className="mr-2 animate-spin" />
+              )}
+              Remove
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

@@ -16,6 +16,10 @@ import type { LoadoutEditRequest } from './core/loadouts'
 import type { SquadAssignment } from './core/squads'
 import type { AuthenticationByDeviceProperties } from '../types/authentication'
 import type { AutomationServiceActionConfig } from '../types/automation'
+import type {
+  FnLaunchSettings,
+  GameSettings,
+} from '../types/fn-launch'
 import type { CustomizableMenuSettings, Settings } from '../types/settings'
 import type { GameInstallOpenTarget } from '../types/game-install'
 import type { EnduranceConfig } from '../types/endurance'
@@ -52,6 +56,13 @@ import { EULATracking } from './core/eula-tracking'
 import { Expeditions } from './core/expeditions'
 import { FortniteLauncher } from './core/launcher'
 import { FriendsManager } from './core/friends-manager'
+import {
+  getGameSettings,
+  getLaunchSettings,
+  saveGameSettings,
+  saveLaunchSettings as saveFnLaunchSettings,
+} from './core/fn-launch'
+import { GiftsInformation } from './core/gifts-information'
 import { Inventory } from './core/inventory'
 import { ItemActions } from './core/item-actions'
 import { Leaderboard } from './core/leaderboard'
@@ -426,6 +437,10 @@ process.on('uncaughtExceptionMonitor', (error) => {
 
     secureIpcHandle(ElectronAPIEventKeys.PluginInstall, (_, pluginId: string) =>
       import('./startup/plugins').then(({ PluginManager }) => PluginManager.install(pluginId))
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.PluginRemove, (_, pluginId: string) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.remove(pluginId))
     )
 
     secureIpcHandle(ElectronAPIEventKeys.PluginReadme, (_, pluginId: string) =>
@@ -809,6 +824,37 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(ElectronAPIEventKeys.ServerStatusRequest, async () => {
       await ServerStatus.request()
     })
+
+    /**
+     * FN Launch
+     */
+
+    secureIpcHandle(ElectronAPIEventKeys.FnLaunchSettingsRequest, async () => {
+      return getLaunchSettings()
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FnLaunchSettingsUpdate,
+      async (_, settings: FnLaunchSettings) => {
+        await saveFnLaunchSettings(settings)
+
+        return { success: true }
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FnLaunchGameSettingsRequest,
+      async () => {
+        return getGameSettings()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FnLaunchGameSettingsUpdate,
+      async (_, partial: Partial<GameSettings>) => {
+        return saveGameSettings(partial)
+      }
+    )
 
     secureIpcOn(
       ElectronAPIEventKeys.AccountHealthRequest,
@@ -1384,6 +1430,17 @@ process.on('uncaughtExceptionMonitor', (error) => {
       ElectronAPIEventKeys.VBucksInformationRequest,
       async (_, accounts: Array<AccountData>) => {
         await VBucksInformation.requestBulkInfo(accounts)
+      }
+    )
+
+    /**
+     * Gifts Information
+     */
+
+    secureIpcOn(
+      ElectronAPIEventKeys.GiftsInformationRequest,
+      async (_, accounts: Array<AccountData>) => {
+        await GiftsInformation.requestBulkInfo(accounts)
       }
     )
 

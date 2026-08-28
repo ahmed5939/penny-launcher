@@ -247,6 +247,43 @@ export class PluginManager {
     }
   }
 
+  static async remove(pluginId: string): Promise<PluginActionResult> {
+    if (!PluginManager.isValidId(pluginId)) {
+      return { ok: false, error: 'Invalid add-on identifier.' }
+    }
+
+    await PluginManager.load().catch(() => {})
+
+    const index = PluginManager.plugins.findIndex(
+      (plugin) => plugin.manifest.id === pluginId
+    )
+    const plugin = PluginManager.plugins[index]
+
+    if (!plugin) {
+      return { ok: false, error: 'That add-on is not installed.' }
+    }
+
+    try {
+      await rm(plugin.directory, { recursive: true })
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : `${error}`,
+      }
+    }
+
+    try {
+      await plugin.controller?.deactivate?.()
+    } catch (error) {
+      RuntimeLog.error(`plugin:${pluginId}:deactivate`, error)
+    }
+
+    PluginBridge.clearPlugin(pluginId)
+    PluginManager.plugins.splice(index, 1)
+
+    return { ok: true }
+  }
+
   static async readme(pluginId: string): Promise<PluginReadmeResult> {
     if (!PluginManager.isValidId(pluginId)) {
       return { ok: false, error: 'Invalid add-on identifier.' }

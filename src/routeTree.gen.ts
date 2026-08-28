@@ -40,6 +40,7 @@ import { Route as AccountsRemoveRouteImport } from './routes/accounts/remove/rou
 import { Route as AccountManagementVbucksInformationRouteImport } from './routes/account-management/vbucks-information/route'
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
+import { Route as AccountManagementGiftsInformationRouteImport } from './routes/account-management/gifts-information/route'
 import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
 import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
 import { Route as AccountManagementEpicGamesSettingsRouteImport } from './routes/account-management/epic-games-settings/route'
@@ -214,6 +215,12 @@ const AccountManagementProfileRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AccountManagementGiftsInformationRouteRoute =
+  AccountManagementGiftsInformationRouteImport.update({
+    path: '/account-management/gifts-information',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountManagementFriendsRouteRoute =
   AccountManagementFriendsRouteImport.update({
     path: '/account-management/friends',
@@ -278,6 +285,10 @@ declare module '@tanstack/react-router' {
     }
     '/account-management/friends': {
       preLoaderRoute: typeof AccountManagementFriendsRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/account-management/gifts-information': {
+      preLoaderRoute: typeof AccountManagementGiftsInformationRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/profile': {
@@ -398,6 +409,7 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementEpicGamesSettingsRouteRoute,
   AccountManagementEulaRouteRoute,
   AccountManagementFriendsRouteRoute,
+  AccountManagementGiftsInformationRouteRoute,
   AccountManagementProfileRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
   AccountManagementVbucksInformationRouteRoute,

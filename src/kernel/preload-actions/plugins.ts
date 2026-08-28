@@ -23,6 +23,10 @@ export function installPlugin(pluginId: string): Promise<PluginActionResult> {
   return ipcRenderer.invoke(ElectronAPIEventKeys.PluginInstall, pluginId)
 }
 
+export function removePlugin(pluginId: string): Promise<PluginActionResult> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.PluginRemove, pluginId)
+}
+
 export function readPluginReadme(
   pluginId: string,
 ): Promise<PluginReadmeResult> {

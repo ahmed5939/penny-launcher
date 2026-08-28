@@ -1,0 +1,43 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "src/kernel/main.ts",
+    "src/kernel/core/outpost.ts",
+    "src/kernel/core/outpost-types.ts",
+    "src/kernel/core/vbucks-information.ts",
+    "src/kernel/startup/taxi-service.ts",
+    "src/kernel/preload-actions/outpost.ts",
+    "src/kernel/preload-actions/taxi-service.ts",
+    "src/kernel/preload-actions/plugins.ts",
+    "src/kernel/preload.ts",
+    "src/config/constants/main-process.ts",
+    "src/config/navigation.ts",
+    "src/services/endpoints/mcp.ts",
+    "src/lib/validations/schemas/taxi-service.ts",
+    "src/lib/validations/schemas/settings.ts",
+    "src/types/taxi-service.d.ts",
+    "src/state/stw-operations/outpost.ts",
+    "src/state/stw-operations/taxi-service.ts",
+    "src/state/settings/customizable-menu.ts",
+    "src/state/management/vbucks-information.ts",
+    "src/routes/stw-operations/outpost/-hooks.ts",
+    "src/routes/stw-operations/outpost/-page.tsx",
+    "src/routes/stw-operations/taxi-service/-hooks.ts",
+    "src/routes/stw-operations/taxi-service/-page.tsx",
+    "src/routes/account-management/vbucks-information/-hooks.ts",
+    "src/routes/account-management/vbucks-information/-page.tsx",
+    "src/routes/settings/-customizable-menu/-index.tsx",
+    "src/routes/-index/-operations-hub.tsx",
+    "src/bootstrap/components/load-automation.tsx",
+    "src/hooks/accounts/scope.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}
