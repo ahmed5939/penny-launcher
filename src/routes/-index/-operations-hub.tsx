@@ -18,7 +18,6 @@ import {
   Swords,
   Users,
   UserX,
-  Wrench,
   Zap,
 } from 'lucide-react'
 
@@ -157,13 +156,6 @@ const items: Array<HubItem> = [
     description: 'Track matchmaking for an account',
     icon: Radar,
     to: '/advanced-mode/matchmaking-track',
-  },
-  {
-    beta: true,
-    title: 'File Tweaks',
-    description: 'Dev builds, dev stairs, airstrike and trap heights',
-    icon: Wrench,
-    to: '/advanced-mode/file-tweaks',
   },
 ]
 

@@ -34,7 +34,6 @@ import { Route as InformationCreditsRouteImport } from './routes/information/cre
 import { Route as AdvancedModeWorldInfoRouteImport } from './routes/advanced-mode/world-info/route'
 import { Route as AdvancedModeServerStatusRouteImport } from './routes/advanced-mode/server-status/route'
 import { Route as AdvancedModeMatchmakingTrackRouteImport } from './routes/advanced-mode/matchmaking-track/route'
-import { Route as AdvancedModeFileTweaksRouteImport } from './routes/advanced-mode/file-tweaks/route'
 import { Route as AccountsRemoveRouteImport } from './routes/accounts/remove/route'
 import { Route as AccountManagementVbucksInformationRouteImport } from './routes/account-management/vbucks-information/route'
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
@@ -178,12 +177,6 @@ const AdvancedModeMatchmakingTrackRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
-const AdvancedModeFileTweaksRouteRoute =
-  AdvancedModeFileTweaksRouteImport.update({
-    path: '/advanced-mode/file-tweaks',
-    getParentRoute: () => rootRoute,
-  } as any)
-
 const AccountsRemoveRouteRoute = AccountsRemoveRouteImport.update({
   path: '/accounts/remove',
   getParentRoute: () => rootRoute,
@@ -283,10 +276,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdvancedModeMatchmakingTrackRouteImport
       parentRoute: typeof rootRoute
     }
-    '/advanced-mode/file-tweaks': {
-      preLoaderRoute: typeof AdvancedModeFileTweaksRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/advanced-mode/server-status': {
       preLoaderRoute: typeof AdvancedModeServerStatusRouteImport
       parentRoute: typeof rootRoute
@@ -381,7 +370,6 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementVbucksInformationRouteRoute,
   AccountsRemoveRouteRoute,
   AdvancedModeMatchmakingTrackRouteRoute,
-  AdvancedModeFileTweaksRouteRoute,
   AdvancedModeServerStatusRouteRoute,
   AdvancedModeWorldInfoRouteRoute,
   InformationCreditsRouteRoute,

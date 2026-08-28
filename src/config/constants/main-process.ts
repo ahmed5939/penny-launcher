@@ -186,29 +186,6 @@ export enum ElectronAPIEventKeys {
   MatchmakingTrackStatusNotification = 'advanced-mode:matchmaking-track:status:notification',
 
   /**
-   * File Tweaks
-   */
-
-  FileTweaksDevBuildsStatus = 'file-tweaks:devbuilds:status',
-  FileTweaksDevBuildsToggle = 'file-tweaks:devbuilds:toggle',
-  FileTweaksDevStairsStatus = 'file-tweaks:devstairs:status',
-  FileTweaksDevStairsToggle = 'file-tweaks:devstairs:toggle',
-  FileTweaksAirStrikeStatus = 'file-tweaks:airstrike:status',
-  FileTweaksAirStrikeToggle = 'file-tweaks:airstrike:toggle',
-
-  FileTweaksTrapsData = 'file-tweaks:traps:data',
-  FileTweaksTrapStatus = 'file-tweaks:trap:status',
-  FileTweaksTrapApply = 'file-tweaks:trap:apply',
-  FileTweaksTrapRevert = 'file-tweaks:trap:revert',
-  FileTweaksTrapsRevertAll = 'file-tweaks:traps:revert-all',
-
-  FileTweaksBaseStatus = 'file-tweaks:base:status',
-  FileTweaksBaseApply = 'file-tweaks:base:apply',
-  FileTweaksBaseRevert = 'file-tweaks:base:revert',
-
-  FileTweaksWorkerPower = 'file-tweaks:worker-power',
-
-  /**
    * Automation
    */
 

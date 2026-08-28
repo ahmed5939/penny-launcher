@@ -27,7 +27,6 @@ import {
   UserPlus,
   Users,
   UserX,
-  Wrench,
   Zap,
 } from 'lucide-react'
 
@@ -269,13 +268,6 @@ export const navSections: Array<NavSection> = [
         icon: Globe,
         label: 'sidebar:advanced-mode.options.world-info',
         to: '/advanced-mode/world-info',
-      },
-      {
-        beta: true,
-        can: 'fileTweaks',
-        icon: Wrench,
-        label: 'File Tweaks',
-        to: '/advanced-mode/file-tweaks',
       },
     ],
   },
