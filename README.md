@@ -36,7 +36,9 @@ Download the latest installer from the [Releases page](https://github.com/ahmed5
 
 Since this application is not code signed, when you try to install it you will see a confirmation dialog from Windows. This only happens the first time you install.
 
-Settings are saved to `C:\Users\YOUR_USER\AppData\Roaming\penny-launcher-data`. Inside this folder you can find an `accounts.json` file with all your added accounts.
+Settings are saved to `C:\Users\YOUR_USER\AppData\Roaming\penny-launcher-data`. Device-auth credentials in `accounts.json` (or `dev-accounts.json` while developing) are encrypted at rest with Electron `safeStorage` (Windows DPAPI / the OS keychain) and stored with an `enc:v1:` prefix. Plaintext files, including copies imported from Aerial Launcher, are encrypted the next time the launcher starts.
+
+If you cloned this repository while `undefined/penny-launcher-data/dev-accounts.json` was still tracked, revoke that device auth in [Epic Games password & security settings](https://www.epicgames.com/account/password). The leaked entry used display name **LITileSTWHero**.
 
 #### Migrating data from Aerial Launcher
 

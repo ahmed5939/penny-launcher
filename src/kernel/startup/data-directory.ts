@@ -39,45 +39,38 @@ import {
 } from '../../lib/validations/schemas/settings'
 import { taxiServiceFileSchema } from '../../lib/validations/schemas/taxi-service'
 
+import {
+  accountNeedsSecretMigration,
+  decryptAccountSecrets,
+  encryptAccountSecrets,
+  type SecretVault,
+} from '../account-secrets'
+import { resolveLauncherDataDirectory } from '../launcher-paths'
 import { RuntimeLog } from '../runtime-log'
+
+function readElectronAppDataPath() {
+  try {
+    return app.getPath('appData')
+  } catch {
+    return undefined
+  }
+}
 
 export class DataDirectory {
   private static devPrefix = 'dev-'
-  private static encryptedPrefix = 'enc:v1:'
   private static writeQueues = new Map<string, Promise<void>>()
-
-  private static encryptCredential(value: string) {
-    if (
-      value.startsWith(DataDirectory.encryptedPrefix) ||
-      !safeStorage.isEncryptionAvailable()
-    ) {
-      return value
-    }
-
-    return `${DataDirectory.encryptedPrefix}${safeStorage.encryptString(value).toString('base64')}`
-  }
-
-  private static decryptCredential(value: string) {
-    if (!value.startsWith(DataDirectory.encryptedPrefix)) {
-      return value
-    }
-
-    if (!safeStorage.isEncryptionAvailable()) {
-      throw new Error('Secure account storage is unavailable.')
-    }
-
-    return safeStorage.decryptString(
-      Buffer.from(value.slice(DataDirectory.encryptedPrefix.length), 'base64')
-    )
+  private static secretVault: SecretVault = {
+    isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
+    encryptString: (plainText) => safeStorage.encryptString(plainText),
+    decryptString: (cipherText) => safeStorage.decryptString(cipherText),
   }
 
   /**
    * Folders
    */
 
-  private static dataDirectoryPath = path.join(
-    app.getPath('appData'),
-    'penny-launcher-data'
+  private static dataDirectoryPath = resolveLauncherDataDirectory(
+    readElectronAppDataPath()
   )
 
   private static worldInfoDirectoryPath = path.join(
@@ -232,13 +225,7 @@ export class DataDirectory {
       let hadDecryptFailure = false
       const accounts = storedAccounts.flatMap((account) => {
         try {
-          return [
-            {
-              ...account,
-              deviceId: DataDirectory.decryptCredential(account.deviceId),
-              secret: DataDirectory.decryptCredential(account.secret),
-            },
-          ]
+          return [decryptAccountSecrets(account, DataDirectory.secretVault)]
         } catch (error) {
           hadDecryptFailure = true
           RuntimeLog.error(`accounts:decrypt:${account.accountId}`, error)
@@ -260,13 +247,10 @@ export class DataDirectory {
 
       if (
         !hadDecryptFailure &&
-        safeStorage.isEncryptionAvailable() &&
-        storedAccounts.some(
-          (account) =>
-            !account.secret.startsWith(DataDirectory.encryptedPrefix) ||
-            !account.deviceId.startsWith(DataDirectory.encryptedPrefix)
-        )
+        DataDirectory.secretVault.isEncryptionAvailable() &&
+        storedAccounts.some(accountNeedsSecretMigration)
       ) {
+        // Re-write so Aerial imports and older plaintext files pick up enc:v1:.
         await DataDirectory.updateAccountsFile(accounts)
       }
 
@@ -526,11 +510,9 @@ export class DataDirectory {
   static async updateAccountsFile(data: AccountList) {
     await DataDirectory.updateJsonFile(
       DataDirectory.accountsFilePath,
-      data.map((account) => ({
-        ...account,
-        deviceId: DataDirectory.encryptCredential(account.deviceId),
-        secret: DataDirectory.encryptCredential(account.secret),
-      })),
+      data.map((account) =>
+        encryptAccountSecrets(account, DataDirectory.secretVault)
+      ),
       true
     )
   }
