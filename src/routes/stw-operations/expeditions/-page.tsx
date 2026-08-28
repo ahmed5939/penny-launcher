@@ -163,9 +163,12 @@ function ReadOnlyExpeditionStatus() {
       return
     }
 
-    const load = () => window.electronAPI.requestExpeditions(getAccounts())
+    const accounts = getAccounts()
+    const load = () => window.electronAPI.requestExpeditions(accounts)
     setData({})
-    load()
+    window.electronAPI
+      .ensureAutoExpeditionsStarted(accounts.map((account) => account.accountId))
+      .finally(load)
     const interval = window.setInterval(load, 60_000)
     return () => window.clearInterval(interval)
   }, [scopeKey])

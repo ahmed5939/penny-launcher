@@ -34,11 +34,12 @@ export type AutoExpeditionResult = {
 
 const defaults: AutoExpeditionsData = {}
 const cycleInterval = 60 * 60 * 1000
-const initialDelay = 30 * 1000
+const initialDelay = 2 * 1000
 
 export class AutoExpeditions {
   private static timer: ReturnType<typeof setTimeout> | undefined
   private static running = false
+  private static runningAccounts = new Set<string>()
 
   static async getData() {
     return DataDirectory.getAutoExpeditionsFile(defaults)
@@ -53,6 +54,11 @@ export class AutoExpeditions {
       ...partial,
     }
     await DataDirectory.updateAutoExpeditionsFile(data)
+
+    if (data[accountId].enabled && data[accountId].rewardTypes.length > 0) {
+      void AutoExpeditions.ensureStarted([accountId])
+    }
+
     return data
   }
 
@@ -71,7 +77,11 @@ export class AutoExpeditions {
     if (!config?.enabled) {
       return { ...result, errors: ['Auto-expeditions are not enabled for this account'] }
     }
+    if (AutoExpeditions.runningAccounts.has(accountId)) {
+      return { ...result, errors: ['An automatic expedition cycle is already running'] }
+    }
 
+    AutoExpeditions.runningAccounts.add(accountId)
     try {
       const accessToken = await Authentication.verifyAccessToken(account)
       if (!accessToken) throw new Error('Could not authenticate this account')
@@ -103,8 +113,8 @@ export class AutoExpeditions {
           .filter(
             (item) =>
               Boolean(item.squadId) &&
-              item.criteria.length > 0 &&
-              item.suggestedHeroIds.length === item.criteria.length
+              item.suggestedHeroIds.length > 0 &&
+              item.suggestedHeroIds.length >= item.criteria.length
           )
           .sort((left, right) => right.tier - left.tier)[0]
 
@@ -137,9 +147,30 @@ export class AutoExpeditions {
         typed.response?.data?.errorMessage ?? typed.message ?? 'Auto-expedition cycle failed'
       )
       RuntimeLog.error('caught:auto-expeditions:run', error)
+    } finally {
+      AutoExpeditions.runningAccounts.delete(accountId)
     }
 
     return result
+  }
+
+  static async ensureStarted(accountIds: Array<string>) {
+    const data = await AutoExpeditions.getData()
+
+    await Promise.allSettled(
+      accountIds.map(async (accountId) => {
+        const config = data[accountId]
+        const account = AccountsManager.getAccounts().get(accountId)
+        if (!config?.enabled || config.rewardTypes.length === 0 || !account) return
+
+        const board = await Expeditions.getExpeditions(account)
+        const hasSentExpedition = board.slots.some(
+          (slot) => slot.state === 'in-flight'
+        )
+
+        if (!hasSentExpedition) await AutoExpeditions.run(accountId)
+      })
+    )
   }
 
   private static async runAll() {

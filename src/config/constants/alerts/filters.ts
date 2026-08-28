@@ -197,11 +197,6 @@ export const rewardOptions: Array<FilterOption> = [
     value: 'Trap',
   },
   {
-    icon: assets('voucher_cardpack_bronze'),
-    label: 'Upgrade Llama',
-    value: 'voucher_cardpack_bronze',
-  },
-  {
     icon: assets('voucher_basicpack'),
     label: 'Mini Llama',
     value: 'voucher_basicpack',

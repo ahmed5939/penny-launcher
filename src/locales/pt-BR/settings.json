@@ -2,6 +2,18 @@
   "app-settings": {
     "title": "Configurações do Aplicativo",
     "form": {
+      "appearance": {
+        "label": "Aparência",
+        "mode": {
+          "light": "Claro",
+          "dark": "Escuro",
+          "system": "Sistema"
+        },
+        "theme": {
+          "label": "Tema de cor",
+          "note": "Seis paletas inspiradas nas zonas de Salve o Mundo. Penny é o rosa clássico."
+        }
+      },
       "language": {
         "label": "Idioma",
         "input": {

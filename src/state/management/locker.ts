@@ -11,7 +11,12 @@ import { create } from 'zustand'
 
 export type LockerCard = NonNullable<LockerCardNotification['card']>
 
+/** The page's three jobs: what is worn, what is owned, and the picture. */
+export type LockerView = 'loadout' | 'collection' | 'card'
+
 export type LockerState = {
+  view: LockerView
+
   /** Which account the board and the owned list belong to. */
   loadedFor: string | null
   slots: Record<string, LockerSlotState>
@@ -35,6 +40,7 @@ export type LockerState = {
   cardError: string | null
 
   closePicker: () => void
+  setView: (view: LockerView) => void
   openPicker: (slotKey: LockerSlotKey) => void
   reset: () => void
   setCard: (notification: LockerCardNotification) => void
@@ -56,6 +62,7 @@ const defaultFilters: LockerCardFilters = {
 }
 
 export const useLockerStore = create<LockerState>()((set) => ({
+  view: 'loadout',
   loadedFor: null,
   slots: {},
   errorMessage: null,
@@ -76,6 +83,7 @@ export const useLockerStore = create<LockerState>()((set) => ({
   cardError: null,
 
   closePicker: () => set({ pickerSlot: null }),
+  setView: (view) => set({ view }),
   openPicker: (slotKey) => set({ pickerSlot: slotKey }),
   reset: () =>
     set({

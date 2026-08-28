@@ -14,7 +14,7 @@
       "timeline": "活动时间线",
       "shop": "STW 商店",
       "xp-boosts": "经验加成",
-      "auto-pin-urns": "瓮任务追踪器",
+      "auto-pin-urns": "自动固定任务",
       "auto-llamas": "自动羊驼",
       "endurance": "耐力"
     },
@@ -30,7 +30,6 @@
       "vbucks-information": "V币信息",
       "profile": "档案",
       "redeem-codes": "兑换码",
-      "devices-auth": "设备授权",
       "epic-settings": "Epic 游戏设置"
     }
   },

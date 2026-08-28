@@ -15,7 +15,7 @@ const on = (c: string) => (cb: (p: any) => Promise<void>) => {
 const emit = (c: string, p: any) => (listeners[c] ?? []).forEach((cb) => cb(p))
 ;(window as any).__emit = emit
 
-;(window as any).electronAPI = {
+const explicitApi: Record<string, any> = {
   responseItemDatabase: on('db'),
   requestItemDatabase: () => {},
   responseInventory: on('inv'),
@@ -27,7 +27,29 @@ const emit = (c: string, p: any) => (listeners[c] ?? []).forEach((cb) => cb(p))
   notificationItemAction: on('act'),
 }
 
+/*
+ * Any other channel: no-op that satisfies both listener and promise callers.
+ * Stubs are cached per property — a fresh function identity on every access
+ * re-triggers any effect that lists the API call in its deps.
+ */
+;(window as any).electronAPI = new Proxy(explicitApi, {
+  get: (target, prop: string) => {
+    if (!(prop in target)) {
+      target[prop] = () => ({
+        removeListener: () => {},
+        then: () => {},
+        catch: () => {},
+      })
+    }
+
+    return target[prop]
+  },
+})
+
 import './src/globals.css'
+import { ThemeProvider } from './src/components/theme-provider'
+import { AppearanceSettings } from './src/routes/settings/-app-settings/-appearance'
+import { HomeHero } from './src/routes/-index/-hero'
 import { localeReady } from './src/locale'
 import { useAccountListStore } from './src/state/accounts/list'
 import { useAccountScopeStore } from './src/state/accounts/scope'
@@ -137,9 +159,15 @@ load()
   .then(() =>
     localeReady.finally(() =>
       root.render(
-        <div className="mx-auto max-w-6xl p-8">
-          <VaultPage />
-        </div>
+        <ThemeProvider>
+          <div className="mx-auto max-w-6xl space-y-8 p-8">
+            <div className="panel max-w-xl p-6">
+              <AppearanceSettings />
+            </div>
+            <HomeHero />
+            <VaultPage />
+          </div>
+        </ThemeProvider>
       )
     )
   )

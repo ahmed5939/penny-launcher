@@ -20,11 +20,9 @@ import {
   Pin,
   Puzzle,
   Radar,
-  Repeat,
   ScrollText,
   Shield,
   Shirt,
-  Smartphone,
   Store,
   Swords,
   Ticket,
@@ -32,7 +30,6 @@ import {
   Trophy,
   UserPlus,
   Users,
-  UserX,
   Zap,
 } from 'lucide-react'
 
@@ -44,8 +41,7 @@ import {
  *
  * Grouping is by job, not by the old Aerial menu names: launch/home first,
  * then background automations, then the STW tools you open by hand, then
- * account admin and diagnostics. Every previous destination is still here
- * (including taxi, endurance, auto-llamas, auto-kick).
+ * account admin and diagnostics.
  */
 
 export type MenuKey = keyof CustomizableMenuSettings
@@ -122,13 +118,10 @@ export const navSections: Array<NavSection> = [
     icon: Zap,
     can: 'stwOperations',
     items: [
-      {
-        can: 'autoKick',
-        icon: UserX,
-        label: 'sidebar:stw-operations.options.auto-kick',
-        status: 'auto-kick',
-        to: '/stw-operations/automation',
-      },
+      // Auto-kick is temporarily disabled: the party endpoints it relies on
+      // no longer work while a match is running. Restore the entry
+      // (icon: UserX, status: 'auto-kick', to: '/stw-operations/automation')
+      // once kicking works in-game again.
       {
         can: 'taxiService',
         icon: Car,
@@ -153,15 +146,6 @@ export const navSections: Array<NavSection> = [
         icon: Pin,
         label: 'sidebar:stw-operations.options.auto-pin-urns',
         to: '/stw-operations/urns',
-      },
-      {
-        // Vision-driven menu walker — usable, but still the most experimental
-        // tool in the rail, so it keeps a small badge.
-        beta: true,
-        can: 'endurance',
-        icon: Repeat,
-        label: 'sidebar:stw-operations.options.endurance',
-        to: '/stw-operations/endurance',
       },
     ],
   },
@@ -293,13 +277,6 @@ export const navSections: Array<NavSection> = [
         icon: Ticket,
         label: 'sidebar:account-management.options.redeem-codes',
         to: '/account-management/redeem-codes',
-      },
-      {
-        can: 'devicesAuth',
-        icon: Smartphone,
-        label: 'sidebar:account-management.options.devices-auth',
-        needsAccount: true,
-        to: '/account-management/devices-auth',
       },
       {
         can: 'epicGamesSettings',

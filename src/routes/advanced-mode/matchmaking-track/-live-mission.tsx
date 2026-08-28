@@ -245,6 +245,7 @@ export function LiveMissionCard({
     ? worldInfo.get(zone.theaterId as World)?.get(zone.theaterMissionId) ??
       null
     : null
+  const isHestiaLobby = session !== null && mission === null
 
   const theaterName = zone
     ? i18n.exists(zone.theaterId, {
@@ -262,7 +263,7 @@ export function LiveMissionCard({
   const missionName = missionTypeId
     ? missionNames[missionTypeId] ??
       t('matchmaking-track.live.unknown-mission')
-    : t('matchmaking-track.live.unknown-mission')
+    : t('matchmaking-track.live.hestia-lobby')
   /**
    * PennyDB titles storm shields as "<zone> Homebase Storm Shield" — the
    * zone is part of the mission's identity there, unlike normal missions.
@@ -343,7 +344,11 @@ export function LiveMissionCard({
               )}
             />
             {status.playing
-              ? t('matchmaking-track.live.status.active')
+              ? t(
+                  isHestiaLobby
+                    ? 'matchmaking-track.live.status.in-lobby'
+                    : 'matchmaking-track.live.status.active'
+                )
               : t('matchmaking-track.live.status.offline')}
           </div>
         </div>
@@ -388,7 +393,7 @@ export function LiveMissionCard({
                   {mission ? (
                     <img decoding="async" loading="lazy"
                       src={mission.ui.mission.zone.type.imageUrl}
-                      className="size-10"
+                      className="ink-glyph size-10"
                       alt=""
                     />
                   ) : (
@@ -400,7 +405,7 @@ export function LiveMissionCard({
                 <span
                   className={cn(
                     'absolute -right-1 -top-1 rounded-full ring-2 ring-background size-2.5',
-                    session?.started
+                    session?.started && !isHestiaLobby
                       ? 'animate-pulse bg-green-400'
                       : 'bg-amber-400'
                   )}
@@ -417,12 +422,12 @@ export function LiveMissionCard({
                 <span
                   className={cn(
                     'rounded-full border px-3 py-1 text-xs font-medium',
-                    session?.started
+                    session?.started && !isHestiaLobby
                       ? 'border-primary/40 bg-primary/10 text-primary'
                       : 'border-amber-500/40 bg-amber-500/10 text-amber-400'
                   )}
                 >
-                  {session?.started
+                  {session?.started && !isHestiaLobby
                     ? t('matchmaking-track.live.status.launched')
                     : t('matchmaking-track.live.status.in-lobby')}
                 </span>

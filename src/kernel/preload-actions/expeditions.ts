@@ -46,3 +46,10 @@ export function updateAutoExpeditions(
     partial
   )
 }
+
+export function ensureAutoExpeditionsStarted(accountIds: Array<string>) {
+  return ipcRenderer.invoke(
+    ElectronAPIEventKeys.AutoExpeditionsEnsureStarted,
+    accountIds
+  )
+}

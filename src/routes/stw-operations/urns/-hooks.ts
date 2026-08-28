@@ -2,24 +2,32 @@ import type {
   ComboboxOption,
   ComboboxProps,
 } from '../../../components/ui/extended/combobox/hooks'
+import type { QuestEntry } from '../../../kernel/core/quests'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   useGetAutoPinUrnActions,
   useGetAutoPinUrnData,
 } from '../../../hooks/stw-operations/urns'
 import { useGetAccounts } from '../../../hooks/accounts'
+import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
+import { getItemRecord, useItemDatabaseStore } from '../../../state/items/database'
 
 import { checkIfCustomDisplayNameIsValid } from '../../../lib/validations/properties'
 import { parseCustomDisplayName } from '../../../lib/utils'
 
 export function useData() {
+  useRequestItemDatabase()
+
   const { accountsArray, accountList } = useGetAccounts()
-  const { selectedAccounts, selectedAccountsMiniBosses } =
-    useGetAutoPinUrnData()
+  const { selectedAccounts } = useGetAutoPinUrnData()
   const { addAccount, removeAccount, updateAccount } =
     useGetAutoPinUrnActions()
+  const records = useItemDatabaseStore((state) => state.records)
+  const [availableQuests, setAvailableQuests] = useState<
+    Record<string, Array<QuestEntry>>
+  >({})
 
   const options = accountsArray
     .filter((account) => selectedAccounts[account.accountId] === undefined)
@@ -44,17 +52,16 @@ export function useData() {
   useEffect(() => {
     const listener = window.electronAPI.notificationAutoPinUrnsData(
       async (data) => {
-        Object.entries(data.urns).forEach(([accountId, value]) => {
-          addAccount(accountId, {
-            type: 'urns',
-            value,
+        Object.entries(data.quests).forEach(([accountId, templateIds]) => {
+          addAccount(accountId)
+          templateIds.forEach((templateId) => {
+            addAccount(accountId, {
+              templateId,
+              value: true,
+            })
           })
-        })
-        Object.entries(data.miniBosses).forEach(([accountId, value]) => {
-          addAccount(accountId, {
-            type: 'mini-bosses',
-            value,
-          })
+          const account = accountList[accountId]
+          if (account) window.electronAPI.requestQuests(account)
         })
       }
     )
@@ -64,6 +71,17 @@ export function useData() {
     return () => {
       listener.removeListener()
     }
+  }, [accountList])
+
+  useEffect(() => {
+    const listener = window.electronAPI.responseQuests(async (response) => {
+      setAvailableQuests((current) => ({
+        ...current,
+        [response.accountId]: response.quests,
+      }))
+    })
+
+    return () => listener.removeListener()
   }, [])
 
   const customFilter: ComboboxProps['customFilter'] = (
@@ -84,6 +102,8 @@ export function useData() {
   const onSelectItem = (accountId: string) => {
     addAccount(accountId)
     window.electronAPI.autoPinUrnsAdd(accountId)
+    const account = accountList[accountId]
+    if (account) window.electronAPI.requestQuests(account)
   }
 
   const handleRemoveAccount = (accountId: string) => () => {
@@ -92,21 +112,61 @@ export function useData() {
   }
 
   const handleUpdateAccount =
-    (accountId: string, type: 'mini-bosses' | 'urns') =>
+    (accountId: string, templateId: string) =>
     (value: boolean) => {
       updateAccount(accountId, {
-        type,
+        templateId,
         value,
       })
-      window.electronAPI.autoPinUrnsUpdate(accountId, type, value)
+      window.electronAPI.autoPinUrnsUpdate(accountId, templateId, value)
     }
+
+  const questOptions = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(availableQuests).map(([accountId, quests]) => [
+        accountId,
+        [
+          ...quests.map((quest) => ({
+            name:
+              getItemRecord(records, quest.templateId)?.name ??
+              (quest.templateId.split(':').pop() ?? quest.templateId)
+                .split(/[_.]/)
+                .filter(Boolean)
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' '),
+            templateId: quest.templateId,
+          })),
+          ...(selectedAccounts[accountId] ?? [])
+            .filter(
+              (templateId) =>
+                !quests.some((quest) => quest.templateId === templateId)
+            )
+            .map((templateId) => ({
+              name: `${
+                getItemRecord(records, templateId)?.name ??
+                (templateId.split(':').pop() ?? templateId)
+                  .split(/[_.]/)
+                  .filter(Boolean)
+                  .map(
+                    (word) =>
+                      word.charAt(0).toUpperCase() + word.slice(1)
+                  )
+                  .join(' ')
+              } (not currently active)`,
+              templateId,
+            })),
+        ]
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      ])
+    )
+  }, [availableQuests, records, selectedAccounts])
 
   return {
     accounts,
     accountSelectorIsDisabled,
     options,
     selectedAccounts,
-    selectedAccountsMiniBosses,
+    questOptions,
 
     customFilter,
     handleRemoveAccount,

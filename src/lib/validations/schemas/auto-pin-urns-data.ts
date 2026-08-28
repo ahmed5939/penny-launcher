@@ -5,3 +5,8 @@ export const autoPinUrnsDataSchema = z.record(
   z.string(),
   autoPinUrnsServerDataSchema
 )
+
+export const autoPinQuestsDataSchema = z.record(
+  z.string(),
+  z.array(z.string())
+)

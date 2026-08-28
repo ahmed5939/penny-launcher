@@ -6,7 +6,6 @@ import { AutomationStatusType } from '../../config/constants/automation'
 import { StatusDot } from '../page'
 
 import { useAccountScope, usePrimaryAccount } from '../../hooks/accounts/scope'
-import { useGetAutomationDataStatus } from '../../hooks/stw-operations/automation'
 import { useGetTaxiServiceDataStatus } from '../../hooks/stw-operations/taxi-service'
 
 import { cn, parseCustomDisplayName } from '../../lib/utils'
@@ -29,7 +28,6 @@ export function StatusBar() {
   const [isOnline, setOnline] = useState(() => navigator.onLine)
   const { members } = useAccountScope()
   const primary = usePrimaryAccount()
-  const { status: autoKick } = useGetAutomationDataStatus()
   const { status: taxi } = useGetTaxiServiceDataStatus()
 
   useEffect(() => {
@@ -66,11 +64,7 @@ export function StatusBar() {
         </span>
       </span>
 
-      <Divider />
-      <Service
-        label="Auto-kick"
-        status={autoKick}
-      />
+      {/* Auto-kick is temporarily disabled, so its service dot is hidden. */}
       <Divider />
       <Service
         label="Taxi"

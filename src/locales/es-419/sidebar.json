@@ -14,7 +14,7 @@
       "timeline": "Cronología de Eventos",
       "shop": "Tienda STW",
       "xp-boosts": "Potenciadores",
-      "auto-pin-urns": "Rastreador de misión de urnas",
+      "auto-pin-urns": "Fijar misiones automáticamente",
       "auto-llamas": "Auto-llamas",
       "endurance": "Endurance"
     },
@@ -30,7 +30,6 @@
       "vbucks-information": "Información de V-Bucks",
       "profile": "Perfil",
       "redeem-codes": "Reclamar Códigos",
-      "devices-auth": "Autenticación de Dispositivos",
       "epic-settings": "Configuración de Epic Games"
     }
   },

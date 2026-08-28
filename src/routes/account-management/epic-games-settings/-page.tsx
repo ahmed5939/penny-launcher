@@ -129,13 +129,8 @@ function Content() {
             title={settingsUrl}
             onClick={handleOpenURL}
           >
-            <Trans
-              ns="account-management"
-              i18nKey="epic-settings.form.open-button"
-            >
-              <span>Open Account Settings</span>
-              <ExternalLinkIcon size={16} />
-            </Trans>
+            {t('epic-settings.form.open-button')}
+            <ExternalLinkIcon size={16} />
           </a>
         </Button>
       </PanelFooter>

@@ -123,8 +123,14 @@ export type OutpostLayout = {
    * Yaw: rotation about Z in 90° steps, 0–3.
    */
   structures: Array<[number, number, number, number, number]>
-  /** `[x, y, categoryCode]` — 0 floor, 1 wall, 2 ceiling, 3 other. */
-  traps: Array<[number, number, number]>
+  /**
+   * `[x, y, categoryCode, nameIndex]` — category 0 floor, 1 wall, 2 ceiling,
+   * 3 other; `nameIndex` points into `trapNames` so the map can say which
+   * trap each dot is.
+   */
+  traps: Array<[number, number, number, number]>
+  /** Trap display names referenced by the dots' `nameIndex`. */
+  trapNames: Array<string>
 }
 
 export type OutpostBaseData = {

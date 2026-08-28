@@ -232,6 +232,270 @@
 }
 
 /**
+ * Colour themes.
+ *
+ * Penny's pink is the default and keeps the `:root`/`.dark` blocks above to
+ * itself. Every other theme is a hue swap of the same recipe, named for and
+ * sampled from a Save the World zone, and selected by `data-theme` on <html>
+ * (written by the ThemeProvider; the catalogue lives in
+ * `config/constants/color-themes.ts`).
+ *
+ * Two rules keep the cascade honest:
+ *
+ * 1. These blocks are deliberately un-layered, like the brand `:root` block
+ *    above, so they can override `--brand-*` as well as the layered tokens.
+ * 2. Because `:root[data-theme]` (0,1,1) outranks the layered `.dark` (0,1,0)
+ *    even in dark mode, every token the light block sets MUST also be set by
+ *    the theme's `.dark[data-theme]` block (0,2,0), or dark mode inherits a
+ *    light value. (`--brand-*` is the one exception: set once per theme in
+ *    the `:root[data-theme]` block, it applies to both modes — the gradient
+ *    does not change with the mode, matching Penny's own.)
+ *
+ * Destructive, success and warning stay global: a delete button should be the
+ * same red in every outfit.
+ */
+
+/* Stonewood — the starting forest: moss, leaf and deep pine. */
+:root[data-theme='stonewood'] {
+  --foreground: 150 25% 9%;
+  --surface: 150 35% 98%;
+  --card-foreground: 150 25% 9%;
+  --elevated: 150 30% 96%;
+  --popover-foreground: 150 25% 9%;
+  --primary: 152 65% 30%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 150 30% 94%;
+  --secondary-foreground: 150 25% 15%;
+  --muted: 150 25% 94%;
+  --muted-foreground: 150 10% 42%;
+  --accent: 150 55% 92%;
+  --accent-foreground: 152 60% 24%;
+  --border: 150 18% 86%;
+  --input: 150 18% 86%;
+  --ring: 152 65% 30%;
+  --control-stroke: 150 18% 76%;
+
+  --brand-from: 95 65% 62%;
+  --brand-via: 150 62% 45%;
+  --brand-to: 172 70% 32%;
+}
+
+.dark[data-theme='stonewood'] {
+  --background: 150 20% 4%;
+  --foreground: 150 15% 97%;
+  --surface: 150 18% 6%;
+  --card: 150 16% 8%;
+  --card-foreground: 150 15% 97%;
+  --elevated: 150 14% 13%;
+  --popover: 150 16% 8%;
+  --popover-foreground: 150 15% 97%;
+  --primary: 150 60% 55%;
+  --primary-foreground: 152 50% 8%;
+  --secondary: 150 12% 15%;
+  --secondary-foreground: 150 15% 97%;
+  --muted: 150 12% 15%;
+  --muted-foreground: 150 8% 63%;
+  --accent: 150 25% 18%;
+  --accent-foreground: 150 70% 85%;
+  --border: 150 12% 17%;
+  --input: 150 12% 19%;
+  --ring: 150 60% 55%;
+  --control-stroke: 150 12% 26%;
+}
+
+/* Plankerton — the coast: surf, harbour blue and deep water. */
+:root[data-theme='plankerton'] {
+  --foreground: 207 25% 9%;
+  --surface: 207 40% 98%;
+  --card-foreground: 207 25% 9%;
+  --elevated: 207 35% 96%;
+  --popover-foreground: 207 25% 9%;
+  --primary: 207 80% 42%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 207 35% 94%;
+  --secondary-foreground: 207 25% 15%;
+  --muted: 207 30% 94%;
+  --muted-foreground: 207 10% 43%;
+  --accent: 207 70% 93%;
+  --accent-foreground: 207 70% 28%;
+  --border: 207 20% 87%;
+  --input: 207 20% 87%;
+  --ring: 207 80% 42%;
+  --control-stroke: 207 20% 77%;
+
+  --brand-from: 190 80% 66%;
+  --brand-via: 207 80% 52%;
+  --brand-to: 228 65% 45%;
+}
+
+.dark[data-theme='plankerton'] {
+  --background: 210 24% 4%;
+  --foreground: 207 18% 97%;
+  --surface: 210 22% 6%;
+  --card: 210 20% 8%;
+  --card-foreground: 207 18% 97%;
+  --elevated: 210 18% 13%;
+  --popover: 210 20% 8%;
+  --popover-foreground: 207 18% 97%;
+  --primary: 205 88% 62%;
+  --primary-foreground: 210 50% 8%;
+  --secondary: 210 16% 15%;
+  --secondary-foreground: 207 18% 97%;
+  --muted: 210 16% 15%;
+  --muted-foreground: 207 10% 63%;
+  --accent: 207 35% 19%;
+  --accent-foreground: 205 90% 86%;
+  --border: 210 16% 17%;
+  --input: 210 16% 19%;
+  --ring: 205 88% 62%;
+  --control-stroke: 210 16% 26%;
+}
+
+/* Canny Valley — the desert at dusk: gold, adobe and canyon red. */
+:root[data-theme='canny'] {
+  --foreground: 28 30% 10%;
+  --surface: 34 45% 98%;
+  --card-foreground: 28 30% 10%;
+  --elevated: 34 40% 96%;
+  --popover-foreground: 28 30% 10%;
+  --primary: 24 80% 39%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 32 40% 94%;
+  --secondary-foreground: 28 30% 16%;
+  --muted: 32 35% 94%;
+  --muted-foreground: 28 12% 42%;
+  --accent: 30 75% 92%;
+  --accent-foreground: 26 70% 28%;
+  --border: 30 25% 86%;
+  --input: 30 25% 86%;
+  --ring: 24 80% 39%;
+  --control-stroke: 30 25% 76%;
+
+  --brand-from: 45 95% 62%;
+  --brand-via: 30 88% 54%;
+  --brand-to: 12 75% 46%;
+}
+
+.dark[data-theme='canny'] {
+  --background: 26 24% 4%;
+  --foreground: 32 20% 97%;
+  --surface: 26 22% 6%;
+  --card: 26 20% 8%;
+  --card-foreground: 32 20% 97%;
+  --elevated: 26 18% 13%;
+  --popover: 26 20% 8%;
+  --popover-foreground: 32 20% 97%;
+  --primary: 32 92% 58%;
+  --primary-foreground: 28 60% 8%;
+  --secondary: 26 16% 15%;
+  --secondary-foreground: 32 20% 97%;
+  --muted: 26 16% 15%;
+  --muted-foreground: 30 10% 63%;
+  --accent: 28 40% 18%;
+  --accent-foreground: 35 90% 85%;
+  --border: 26 16% 17%;
+  --input: 26 16% 19%;
+  --ring: 32 92% 58%;
+  --control-stroke: 26 16% 26%;
+}
+
+/* Twine Peaks — the endgame storm: lightning violet over night purple. */
+:root[data-theme='twine'] {
+  --foreground: 265 22% 10%;
+  --surface: 265 40% 98%;
+  --card-foreground: 265 22% 10%;
+  --elevated: 265 35% 96%;
+  --popover-foreground: 265 22% 10%;
+  --primary: 265 65% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 265 35% 95%;
+  --secondary-foreground: 265 22% 16%;
+  --muted: 265 30% 95%;
+  --muted-foreground: 265 10% 45%;
+  --accent: 265 60% 94%;
+  --accent-foreground: 265 55% 32%;
+  --border: 265 20% 88%;
+  --input: 265 20% 88%;
+  --ring: 265 65% 48%;
+  --control-stroke: 265 20% 78%;
+
+  --brand-from: 288 75% 72%;
+  --brand-via: 265 78% 62%;
+  --brand-to: 244 70% 52%;
+}
+
+.dark[data-theme='twine'] {
+  --background: 265 24% 4%;
+  --foreground: 265 18% 97%;
+  --surface: 265 22% 6%;
+  --card: 265 20% 8%;
+  --card-foreground: 265 18% 97%;
+  --elevated: 265 18% 13%;
+  --popover: 265 20% 8%;
+  --popover-foreground: 265 18% 97%;
+  --primary: 263 85% 70%;
+  --primary-foreground: 265 45% 10%;
+  --secondary: 265 16% 15%;
+  --secondary-foreground: 265 18% 97%;
+  --muted: 265 16% 15%;
+  --muted-foreground: 265 10% 64%;
+  --accent: 265 30% 20%;
+  --accent-foreground: 265 85% 89%;
+  --border: 265 16% 17%;
+  --input: 265 16% 19%;
+  --ring: 263 85% 70%;
+  --control-stroke: 265 16% 26%;
+}
+
+/* Ventures — the seasonal biome: neon reef cyan on abyssal blue. */
+:root[data-theme='ventures'] {
+  --foreground: 190 30% 8%;
+  --surface: 187 40% 98%;
+  --card-foreground: 190 30% 8%;
+  --elevated: 187 35% 96%;
+  --popover-foreground: 190 30% 8%;
+  --primary: 187 90% 30%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 187 35% 94%;
+  --secondary-foreground: 190 30% 14%;
+  --muted: 187 30% 94%;
+  --muted-foreground: 190 12% 42%;
+  --accent: 187 70% 92%;
+  --accent-foreground: 187 80% 22%;
+  --border: 187 22% 86%;
+  --input: 187 22% 86%;
+  --ring: 187 90% 30%;
+  --control-stroke: 187 22% 76%;
+
+  --brand-from: 165 80% 60%;
+  --brand-via: 187 88% 44%;
+  --brand-to: 212 80% 46%;
+}
+
+.dark[data-theme='ventures'] {
+  --background: 195 26% 4%;
+  --foreground: 187 18% 97%;
+  --surface: 195 24% 6%;
+  --card: 195 22% 8%;
+  --card-foreground: 187 18% 97%;
+  --elevated: 195 20% 13%;
+  --popover: 195 22% 8%;
+  --popover-foreground: 187 18% 97%;
+  --primary: 187 85% 52%;
+  --primary-foreground: 190 60% 7%;
+  --secondary: 195 18% 15%;
+  --secondary-foreground: 187 18% 97%;
+  --muted: 195 18% 15%;
+  --muted-foreground: 190 10% 63%;
+  --accent: 187 35% 17%;
+  --accent-foreground: 185 85% 85%;
+  --border: 195 18% 17%;
+  --input: 195 18% 19%;
+  --ring: 187 85% 52%;
+  --control-stroke: 195 18% 26%;
+}
+
+/**
  * Scrollbars.
  *
  * The hand-drawn `::-webkit-scrollbar` recipe this replaces was a web
@@ -375,6 +639,17 @@
       system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
+  }
+
+  /*
+   * Fortnite's mission-type glyphs (`assets/images/world/*`) are white
+   * line-art drawn for the game's dark HUD. Dark mode renders them as-is;
+   * on a light page white-on-white vanishes, so light mode inverts the
+   * glyph to ink. Never put this on colour art — rarities, vouchers,
+   * elements, the Ventures emblem — inversion would corrupt it.
+   */
+  :root:not(.dark) .ink-glyph {
+    filter: invert(1);
   }
 }
 

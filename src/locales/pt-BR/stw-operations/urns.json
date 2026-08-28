@@ -1,6 +1,7 @@
 {
-  "note": "Nota: Funciona apenas durante as temporadas de masmorras.",
-  "description": "Este recurso fixará automaticamente a missão \"Urnas do Tesouro\" toda vez que ela for reivindicada (com o launcher). Assim, vocês sempre podem acompanhar as urnas que estão faltando e não precisam fixá-la antes de cada partida.",
+  "note": "Escolha qualquer missão ativa para cada conta. Missões repetíveis serão fixadas novamente depois que o launcher resgatar as recompensas.",
+  "description": "Mantenha automaticamente as missões escolhidas fixadas após resgatar suas recompensas.",
+  "loading": "Carregando missões ativas…",
   "options": {
     "urns": "Urnas",
     "mini-bosses": "Mini-Chefes"

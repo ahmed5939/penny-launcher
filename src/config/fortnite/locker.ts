@@ -462,6 +462,21 @@ export function isCardCosmeticGroup(
 }
 
 /**
+ * Backend type → the shelf it belongs on.
+ *
+ * The inverse of `cardCosmeticGroups`, which is the direction both the card
+ * generator and the collection grid actually read it in: they hold an item
+ * and need its shelf, not a shelf and need its items.
+ */
+export const cardGroupByBackendType = new Map<string, CardCosmeticGroup>(
+  cardCosmeticGroupOrder.flatMap((group) =>
+    cardCosmeticGroups[group].map(
+      (backendType) => [backendType, group] as [string, CardCosmeticGroup]
+    )
+  )
+)
+
+/**
  * The two gradient stops a cosmetic tile is drawn with, per rarity.
  *
  * fortnite-api collapses the licensed and collaboration series into the same

@@ -368,11 +368,26 @@ function parseSav(raw: Buffer): {
 } {
   const magic = raw.subarray(0, 4).toString('ascii')
 
-  if (magic !== 'ECFD') {
+  /**
+   * Two container generations: current records are ECFD-wrapped zlib;
+   * pre-ECFD records (up to ~Fortnite 15.x) are the same GVAS property
+   * stream stored uncompressed, and old zones keep such records in cloud
+   * storage forever. The markers identify the latter — the actor stream is
+   * plain text in the raw bytes.
+   */
+  let buffer: Buffer
+
+  if (magic === 'ECFD') {
+    buffer = zlib.inflateSync(new Uint8Array(raw.subarray(16)))
+  } else if (
+    raw.includes('SavedActors') ||
+    raw.includes('++Fortnite+Release')
+  ) {
+    buffer = raw
+  } else {
     throw new Error(`Unknown .sav format: ${magic}`)
   }
 
-  const buffer = zlib.inflateSync(new Uint8Array(raw.subarray(16)))
   const text = buffer.toString('latin1')
 
   const structures: OutpostStructures = {
@@ -387,7 +402,10 @@ function parseSav(raw: Buffer): {
   }
 
   const structureLayout: Array<[number, number, number, number, number]> = []
-  const trapLayout: Array<[number, number, number]> = []
+  const trapLayout: Array<[number, number, number, number]> = []
+  /** Dot identity for the minimap — display names, deduped by index. */
+  const layoutTrapNames: Array<string> = []
+  const layoutTrapNameIndex = new Map<string, number>()
   const bounds = {
     maxX: -Infinity,
     maxY: -Infinity,
@@ -481,7 +499,8 @@ function parseSav(raw: Buffer): {
   /** Unique (trap item, level) → placed count, for power-level stats. */
   const instanceTallies = new Map<string, OutpostTrapInstanceTally>()
 
-  const trapPattern = /\/SaveTheWorld\/Items\/Traps\/Blueprints\/Trap_([A-Za-z0-9_]+)\.Trap_[A-Za-z0-9_]+_C/g
+  /** Old saves keep traps under `/Game/Items/`, new ones `/SaveTheWorld/Items/`. */
+  const trapPattern = /\/(?:SaveTheWorld|Game)\/Items\/Traps\/Blueprints\/Trap_([A-Za-z0-9_]+)\.Trap_[A-Za-z0-9_]+_C/g
   const trapMatches = [...text.matchAll(trapPattern)]
 
   for (let trapIndex = 0; trapIndex < trapMatches.length; trapIndex += 1) {
@@ -498,8 +517,8 @@ function parseSav(raw: Buffer): {
     const displayName =
       TRAP_NAMES_LOWER.get(lower) ?? blueprintName.replace(/_/g, ' ')
 
-    const blueprintStart = text.lastIndexOf('/SaveTheWorld', match.index)
-    const blueprint = readGvasString(buffer, blueprintStart - 4)
+    /* The regex match starts exactly at the blueprint path string. */
+    const blueprint = readGvasString(buffer, match.index - 4)
     const transform = readActorTransform(buffer, blueprint.next)
 
     const category = trapCategory(blueprintName)
@@ -568,8 +587,16 @@ function parseSav(raw: Buffer): {
       const cellX = cellUnits(transform.x)
       const cellY = cellUnits(transform.y)
 
+      let nameIndex = layoutTrapNameIndex.get(displayName)
+
+      if (nameIndex === undefined) {
+        nameIndex = layoutTrapNames.length
+        layoutTrapNames.push(displayName)
+        layoutTrapNameIndex.set(displayName, nameIndex)
+      }
+
       track(cellX, cellY)
-      trapLayout.push([cellX, cellY, TRAP_LAYOUT_CODE[category]])
+      trapLayout.push([cellX, cellY, TRAP_LAYOUT_CODE[category], nameIndex])
     }
   }
 
@@ -606,6 +633,7 @@ function parseSav(raw: Buffer): {
           },
           cell: GRID_CELL,
           structures: structureLayout,
+          trapNames: layoutTrapNames,
           traps: trapLayout,
         }
       : null
@@ -712,16 +740,31 @@ export class Outpost {
           })
           .filter(Boolean)
 
+        /**
+         * Epic keeps several rolling cloud records per zone and does not
+         * promise an order. Take the newest by timestamp — the first entry
+         * can be a years-old backup, and scanning that shows a historical
+         * base full of pieces the player has long since replaced.
+         */
+        const newestRecord = records.reduce<
+          { lastModified?: string; recordFilename?: string } | null
+        >(
+          (best, record) =>
+            !best ||
+            (record.lastModified ?? '') > (best.lastModified ?? '')
+              ? record
+              : best,
+          null
+        )
+
         zoneData.set(zoneKey, {
           amplifiers: placedBuildings.length,
           amplifierSlots,
-          lastSavedAt:
-            records.length > 0 ? (records[0].lastModified ?? null) : null,
+          lastSavedAt: newestRecord?.lastModified ?? null,
           level: attributes.level ?? 0,
           permissions,
           saveCount: cloudInfo.saveCount ?? 0,
-          saveFile:
-            records.length > 0 ? (records[0].recordFilename ?? '') : '',
+          saveFile: newestRecord?.recordFilename ?? '',
           wave: coreInfo.highestEnduranceWaveReached ?? 0,
         })
       }

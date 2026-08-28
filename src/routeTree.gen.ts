@@ -46,7 +46,6 @@ import { Route as AccountManagementGiftsInformationRouteImport } from './routes/
 import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
 import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
 import { Route as AccountManagementEpicGamesSettingsRouteImport } from './routes/account-management/epic-games-settings/route'
-import { Route as AccountManagementDevicesAuthRouteImport } from './routes/account-management/devices-auth/route'
 import { Route as AccountsAddTypeImport } from './routes/accounts/add/$type'
 
 // Create/Update Routes
@@ -254,12 +253,6 @@ const AccountManagementEpicGamesSettingsRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
-const AccountManagementDevicesAuthRouteRoute =
-  AccountManagementDevicesAuthRouteImport.update({
-    path: '/account-management/devices-auth',
-    getParentRoute: () => rootRoute,
-  } as any)
-
 const AccountsAddTypeRoute = AccountsAddTypeImport.update({
   path: '/accounts/add/$type',
   getParentRoute: () => rootRoute,
@@ -283,10 +276,6 @@ declare module '@tanstack/react-router' {
     }
     '/settings': {
       preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/account-management/devices-auth': {
-      preLoaderRoute: typeof AccountManagementDevicesAuthRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/epic-games-settings': {
@@ -427,7 +416,6 @@ export const routeTree = rootRoute.addChildren([
   AccountRouteRoute,
   PluginsRouteRoute,
   SettingsRouteRoute,
-  AccountManagementDevicesAuthRouteRoute,
   AccountManagementEpicGamesSettingsRouteRoute,
   AccountManagementEulaRouteRoute,
   AccountManagementFriendsRouteRoute,

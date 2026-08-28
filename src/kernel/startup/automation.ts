@@ -48,7 +48,25 @@ export class Automation {
   private static _activePolls: Record<string, boolean> = {}
   private static _missionActive: Record<string, boolean> = {}
 
+  /**
+   * Auto-kick is temporarily disabled: the party endpoints it relies on no
+   * longer work while a match is running. Saved accounts are left untouched
+   * on disk, but no service is started and the renderer is told the list is
+   * empty. Flip this back to false to re-enable the feature.
+   */
+  private static readonly _disabled = true
+
   static async load() {
+    if (Automation._disabled) {
+      MainWindow.instance.webContents.send(
+        ElectronAPIEventKeys.AutomationServiceResponseData,
+        {},
+        false,
+      )
+
+      return
+    }
+
     const { automation } = await DataDirectory.getAutomationFile()
     const accounts = AccountsManager.getAccounts()
 
@@ -70,6 +88,10 @@ export class Automation {
   }
 
   static async addAccount(accountId: string) {
+    if (Automation._disabled) {
+      return
+    }
+
     const result = await DataDirectory.getAutomationFile()
     const data = {
       accountId,

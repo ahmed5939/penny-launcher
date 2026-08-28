@@ -82,7 +82,6 @@ export const customizableMenuSettingsSchema = z
     giftsInformation: z.boolean().default(true),
     profile: z.boolean().default(true),
     redeemCodes: z.boolean().default(true),
-    devicesAuth: z.boolean().default(true),
     epicGamesSettings: z.boolean().default(true),
     eula: z.boolean().default(true),
 

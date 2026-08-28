@@ -49,7 +49,6 @@ import { AlertsDone } from './core/alerts'
 // import { AntiCheatProvider } from './core/anti-cheat-provider'
 import { Authentication } from './core/authentication'
 import { ClaimRewards } from './core/claim-rewards'
-import { DevicesAuthManager } from './core/devices-auth'
 import {
   endurancePointDefinitions,
   enduranceZones,
@@ -894,6 +893,11 @@ process.on('uncaughtExceptionMonitor', (error) => {
       ) =>
         AutoExpeditions.update(accountId, partial)
     )
+    secureIpcHandle(
+      ElectronAPIEventKeys.AutoExpeditionsEnsureStarted,
+      async (_, accountIds: Array<string>) =>
+        AutoExpeditions.ensureStarted(accountIds)
+    )
     secureIpcOn(ElectronAPIEventKeys.ItemDatabaseRequest, async () => {
       const { ItemDatabase } = await loadItemDatabase()
       await ItemDatabase.request()
@@ -1416,10 +1420,10 @@ process.on('uncaughtExceptionMonitor', (error) => {
       async (
         _,
         accountId: string,
-        type: 'mini-bosses' | 'urns',
+        templateId: string,
         value: boolean
       ) => {
-        await AutoPinUrns.updateAccount(accountId, type, value)
+        await AutoPinUrns.updateAccount(accountId, templateId, value)
       }
     )
 
@@ -1524,20 +1528,6 @@ process.on('uncaughtExceptionMonitor', (error) => {
         MainWindow.instance.webContents.send(
           ElectronAPIEventKeys.ResponseUpdateAccountBasicInfo
         )
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.DevicesAuthRequestData,
-      async (_, account: AccountData) => {
-        await DevicesAuthManager.load(account)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.DevicesAuthRemove,
-      async (_, account: AccountData, deviceId: string) => {
-        await DevicesAuthManager.remove(account, deviceId)
       }
     )
 

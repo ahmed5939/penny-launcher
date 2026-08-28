@@ -54,18 +54,23 @@ export function HomeHero() {
       : t('home.ready')
 
   return (
-    <section className="relative mb-4 select-none overflow-hidden rounded-xl border border-border/70">
-      {/* Backdrop: brand gradient plus two soft light sources. */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(336_45%_10%)] via-[hsl(335_38%_7%)] to-[hsl(322_42%_9%)]" />
+    <section className="relative mb-4 select-none overflow-hidden rounded-xl border border-border/70 bg-card">
+      {/*
+        Backdrop: a brand-gradient wash over the card plus two soft light
+        sources. Everything is tokens — the wash follows the active colour
+        theme, and the card underneath follows the mode, so the hero reads as
+        a poster in dark and a sunlit panel in light instead of a dark island.
+      */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--brand-via)/0.10)] via-transparent to-[hsl(var(--brand-to)/0.08)] dark:from-[hsl(var(--brand-via)/0.16)] dark:to-[hsl(var(--brand-to)/0.14)]" />
       <div className="absolute -right-24 -top-32 size-80 rounded-full bg-primary/20 blur-3xl" />
-      {/* The jacket teal, as the second light source — the render's own contrast. */}
-      <div className="absolute -bottom-36 -left-24 size-80 rounded-full bg-brand-teal/10 blur-3xl" />
+      {/* The gradient's far stop, as the second light source. */}
+      <div className="absolute -bottom-36 -left-24 size-80 rounded-full bg-[hsl(var(--brand-to)/0.10)] blur-3xl" />
       {/*
         Penny herself as the watermark. Faded into the corner and masked out
         toward the text so the headline never sits on top of her face.
       */}
       <PennyRender className="absolute -bottom-16 -right-16 hidden h-[128%] w-auto opacity-[0.10] [mask-image:linear-gradient(to_left,black_30%,transparent_80%)] sm:block" />
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
 
       <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
         <div className="min-w-0">
@@ -79,23 +84,23 @@ export function HomeHero() {
             {t('home.eyebrow')}
           </div>
 
-          <h1 className="mt-2 text-[1.75rem] font-black leading-none tracking-tight text-white sm:text-[2rem]">
+          <h1 className="mt-2 text-[1.75rem] font-black leading-none tracking-tight text-foreground sm:text-[2rem]">
             {headline}
           </h1>
 
-          <div className="mt-3 flex min-h-6 items-center gap-2 text-sm text-white/55">
+          <div className="mt-3 flex min-h-6 items-center gap-2 text-sm text-muted-foreground">
             {!hasAccounts ? (
               <span>{t('home.no-account-description')}</span>
             ) : displayName ? (
               <>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/25 text-[0.65rem] font-bold uppercase text-primary-foreground ring-1 ring-inset ring-primary/40">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[0.65rem] font-bold uppercase text-primary ring-1 ring-inset ring-primary/40">
                   {displayName.charAt(0)}
                 </span>
-                <span className="truncate font-medium text-white/80">
+                <span className="truncate font-medium text-foreground/80">
                   {displayName}
                 </span>
                 {elapsed !== null && (
-                  <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-[0.7rem] tabular-nums text-white/70">
+                  <span className="ml-1 rounded-full bg-foreground/10 px-2 py-0.5 text-[0.7rem] tabular-nums text-foreground/70">
                     {formatElapsed(elapsed)}
                   </span>
                 )}
@@ -108,7 +113,7 @@ export function HomeHero() {
           <div className="mt-5 flex flex-wrap items-center gap-2.5">
             {!hasAccounts ? (
               <Button
-                className="h-11 rounded-lg bg-gradient-to-r from-brand-from to-brand-to px-7 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-black/40 hover:brightness-110"
+                className="h-11 rounded-lg bg-gradient-to-r from-brand-from to-brand-to px-7 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-black/15 hover:brightness-110 dark:shadow-black/40"
                 asChild
               >
                 <Link
@@ -124,7 +129,7 @@ export function HomeHero() {
                 className={cn(
                   'h-11 rounded-lg px-9 text-sm font-bold uppercase tracking-wider text-white',
                   'bg-gradient-to-r from-brand-from to-brand-to',
-                  'shadow-lg shadow-black/40 transition-all hover:brightness-110',
+                  'shadow-lg shadow-black/15 transition-all hover:brightness-110 dark:shadow-black/40',
                   'disabled:opacity-40 disabled:shadow-none'
                 )}
                 disabled={
@@ -154,7 +159,7 @@ export function HomeHero() {
           </div>
         </div>
 
-        <dl className="flex shrink-0 gap-6 sm:flex-col sm:gap-3 sm:border-l sm:border-white/10 sm:pl-8">
+        <dl className="flex shrink-0 gap-6 sm:flex-col sm:gap-3 sm:border-l sm:border-foreground/10 sm:pl-8">
           <Stat
             label={t('home.stats.accounts')}
             value={numberWithCommaSeparator(accountsArray.length)}
@@ -180,10 +185,10 @@ export function HomeHero() {
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="sm:text-right">
-      <dd className="text-lg font-bold leading-none tabular-nums text-white">
+      <dd className="text-lg font-bold leading-none tabular-nums text-foreground">
         {value}
       </dd>
-      <dt className="mt-1 text-[0.7rem] uppercase tracking-wide text-white/40">
+      <dt className="mt-1 text-[0.7rem] uppercase tracking-wide text-muted-foreground/70">
         {label}
       </dt>
     </div>

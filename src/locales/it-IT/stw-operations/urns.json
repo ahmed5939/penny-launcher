@@ -1,6 +1,7 @@
 {
-  "note": "Nota: Funziona soltanto durante l'evento Dungeons.",
-  "description": "Questa funzione fisserà automaticamente la sfida \"Urn Your Keep\" ogni volta che la reclama (con il launcher). Così voi ragazzi avrete sempre traccia delle rovine che vi mancano e non dovrete fissarle ogni volta prima di avviarle.",
+  "note": "Scegli qualsiasi missione attiva per ogni account. Le missioni ripetibili vengono fissate di nuovo dopo che il launcher riscatta le ricompense.",
+  "description": "Mantieni automaticamente fissate le missioni scelte dopo aver riscosso le ricompense.",
+  "loading": "Caricamento delle missioni attive…",
   "options": {
     "urns": "Rovine",
     "mini-bosses": "Mini-Boss"

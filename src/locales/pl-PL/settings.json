@@ -2,6 +2,18 @@
   "app-settings": {
     "title": "Ustawienia Aplikacji",
     "form": {
+      "appearance": {
+        "label": "Wygląd",
+        "mode": {
+          "light": "Jasny",
+          "dark": "Ciemny",
+          "system": "Systemowy"
+        },
+        "theme": {
+          "label": "Motyw kolorystyczny",
+          "note": "Sześć palet inspirowanych strefami Ratowania Świata. Penny to klasyczny róż."
+        }
+      },
       "language": {
         "label": "Język",
         "input": {

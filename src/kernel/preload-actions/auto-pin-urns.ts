@@ -1,5 +1,5 @@
 import type { IpcRendererEvent } from 'electron'
-import type { AutoPinUrnDataList } from '../../types/urns'
+import type { AutoPinQuestDataList } from '../../types/urns'
 
 import { ipcRenderer } from 'electron'
 
@@ -15,13 +15,13 @@ export function autoPinUrnsAdd(accountId: string) {
 
 export function autoPinUrnsUpdate(
   accountId: string,
-  type: 'mini-bosses' | 'urns',
+  templateId: string,
   value: boolean
 ) {
   ipcRenderer.send(
     ElectronAPIEventKeys.UrnsServiceUpdate,
     accountId,
-    type,
+    templateId,
     value
   )
 }
@@ -32,15 +32,13 @@ export function autoPinUrnsRemove(accountId: string) {
 
 export function notificationAutoPinUrnsData(
   callback: (value: {
-    urns: AutoPinUrnDataList
-    miniBosses: AutoPinUrnDataList
+    quests: AutoPinQuestDataList
   }) => Promise<void>
 ) {
   const customCallback = (
     _: IpcRendererEvent,
     value: {
-      urns: AutoPinUrnDataList
-      miniBosses: AutoPinUrnDataList
+      quests: AutoPinQuestDataList
     }
   ) => {
     callback(value).catch(console.error)

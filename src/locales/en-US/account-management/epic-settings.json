@@ -1,7 +1,7 @@
 {
   "form": {
     "generate-button": "Generate Link",
-    "open-button": "<0>Open Account Settings</0> <1 />"
+    "open-button": "Open Account Settings"
   },
   "notifications": {
     "clipboard": "Link has been copied into clipboard",

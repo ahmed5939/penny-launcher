@@ -19,13 +19,11 @@ export function useHomeData() {
     survivors,
     twinePeaks,
     uncommonPerks,
-    upgradeLlamas,
     vbucks,
     ventures,
   } = useMemo(() => {
     const vbucks = new Collection<string, WorldInfoMission>()
     const survivors = new Collection<string, WorldInfoMission>()
-    const upgradeLlamas = new Collection<string, WorldInfoMission>()
     const uncommonPerks = new Collection<string, WorldInfoMission>()
 
     data.entries().forEach(([, missions]) => {
@@ -44,14 +42,6 @@ export function useHomeData() {
           )
         ) {
           survivors.set(mission.raw.mission.missionGuid, mission)
-        }
-
-        if (
-          mission.ui.alert.rewards.some((reward) =>
-            reward.itemId.includes('voucher_cardpack_bronze')
-          )
-        ) {
-          upgradeLlamas.set(mission.raw.mission.missionGuid, mission)
         }
 
         if (
@@ -97,7 +87,6 @@ export function useHomeData() {
       survivors,
       twinePeaks,
       uncommonPerks,
-      upgradeLlamas,
       vbucks,
       ventures,
     }
@@ -106,7 +95,6 @@ export function useHomeData() {
   return {
     survivors,
     uncommonPerks,
-    upgradeLlamas,
     vbucks,
     endgame: {
       twinePeaks,

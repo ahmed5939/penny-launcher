@@ -1,4 +1,4 @@
-import { Pin, Trash2, UserPlus } from 'lucide-react'
+import { Pin, ScrollText, Trash2, UserPlus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Combobox } from '../../../components/ui/extended/combobox'
@@ -42,7 +42,7 @@ export function Content() {
     accountSelectorIsDisabled,
     options,
     selectedAccounts,
-    selectedAccountsMiniBosses,
+    questOptions,
 
     customFilter,
     handleRemoveAccount,
@@ -54,7 +54,7 @@ export function Content() {
 
   return (
     <div className="max-w-3xl space-y-4">
-      <Callout tone="warning">{t('urns.note')}</Callout>
+      <Callout>{t('urns.note')}</Callout>
 
       <Panel>
         <PanelBody className="flex flex-wrap items-center gap-3">
@@ -100,68 +100,55 @@ export function Content() {
         <Panel>
           <ul className="divide-y divide-border/50">
             {accounts.map((account) => {
-              const value = selectedAccounts[account.accountId]
-              const valueMiniBosses =
-                selectedAccountsMiniBosses[account.accountId]
-              /**
-               * Every row rendered the same two switch ids, so clicking any
-               * label toggled the first account's switch. Scope them to the
-               * account instead.
-               */
-              const urnsId = `urns-${account.accountId}`
-              const miniBossesId = `mini-bosses-${account.accountId}`
+              const selected = selectedAccounts[account.accountId] ?? []
+              const quests = questOptions[account.accountId] ?? []
 
               return (
                 <li
-                  className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3"
+                  className="px-4 py-3"
                   key={account.accountId}
                 >
-                  <span className="min-w-0 max-w-40 flex-1 truncate text-[0.8125rem] font-medium">
-                    {parseCustomDisplayName(account)}
-                  </span>
-
-                  <div className="ml-auto flex items-center gap-2">
-                    <Label
-                      className="text-xs text-muted-foreground"
-                      htmlFor={urnsId}
+                  <div className="flex items-center gap-3">
+                    <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
+                      {parseCustomDisplayName(account)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {selected.length} selected
+                    </span>
+                    <Button
+                      className="size-8 text-destructive/60 [&:not(:disabled)]:hover:text-destructive"
+                      size="icon"
+                      variant="ghost"
+                      onClick={handleRemoveAccount(account.accountId)}
                     >
-                      {t('urns.options.urns')}
-                    </Label>
-                    <Switch
-                      id={urnsId}
-                      checked={value}
-                      onCheckedChange={handleUpdateAccount(
-                        account.accountId,
-                        'urns'
-                      )}
-                    />
+                      <Trash2 className="size-4" />
+                    </Button>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Label
-                      className="text-xs text-muted-foreground"
-                      htmlFor={miniBossesId}
-                    >
-                      {t('urns.options.mini-bosses')}
-                    </Label>
-                    <Switch
-                      id={miniBossesId}
-                      checked={valueMiniBosses}
-                      onCheckedChange={handleUpdateAccount(
-                        account.accountId,
-                        'mini-bosses'
-                      )}
-                    />
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {quests.map((quest) => {
+                      const id = `quest-${account.accountId}-${quest.templateId}`
+                      return (
+                        <div className="flex items-center gap-2 rounded-md border border-border/50 px-3 py-2" key={quest.templateId}>
+                          <Label className="min-w-0 flex-1 truncate text-xs" htmlFor={id} title={quest.name}>
+                            {quest.name}
+                          </Label>
+                          <Switch
+                            id={id}
+                            checked={selected.includes(quest.templateId)}
+                            onCheckedChange={handleUpdateAccount(account.accountId, quest.templateId)}
+                          />
+                        </div>
+                      )
+                    })}
                   </div>
 
-                  <Button
-                    className="size-8 text-destructive/60 [&:not(:disabled)]:hover:text-destructive"
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleRemoveAccount(account.accountId)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+                  {quests.length <= 0 && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                      <ScrollText className="size-4" />
+                      {t('urns.loading')}
+                    </div>
+                  )}
                 </li>
               )
             })}

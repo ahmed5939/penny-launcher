@@ -13,6 +13,7 @@ describe('PennyDB leaderboard parsing', () => {
   it('accepts only the metrics the public API ranks', () => {
     expect(isLeaderboardMetric('power_level')).toBe(true)
     expect(isLeaderboardMetric('llamas_opened')).toBe(true)
+    expect(isLeaderboardMetric('gold')).toBe(true)
     expect(isLeaderboardMetric('vbucks')).toBe(false)
     expect(isLeaderboardMetric(1)).toBe(false)
   })

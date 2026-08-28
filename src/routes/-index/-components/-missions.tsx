@@ -202,7 +202,7 @@ export function MissionItem({
                 <img
                   src={mission.zone.type.imageUrl}
                   alt=""
-                  className="size-6 object-contain"
+                  className="ink-glyph size-6 object-contain"
                   loading="lazy"
                 />
               </span>
@@ -253,12 +253,18 @@ export function MissionItem({
                     />
                   )}
 
-                  {/* A modifier is a caveat, not a headline: greyscale until hover. */}
+                  {/*
+                    A modifier is a caveat, not a headline: greyscale until
+                    hover. The glyphs inside these badges are white, so on a
+                    light page greyscale-plus-fade alone erases them — light
+                    mode also darkens the whole icon into a silhouette, while
+                    dark mode keeps the original half-fade untouched.
+                  */}
                   {mission.modifiers.slice(0, 5).map((modifier) => (
                     <img
                       src={modifier.imageUrl}
                       alt=""
-                      className="size-4 shrink-0 object-contain opacity-50 grayscale transition-opacity group-hover/brief:opacity-80 group-hover/brief:grayscale-0"
+                      className="size-4 shrink-0 object-contain grayscale opacity-60 brightness-[0.55] transition-[opacity,filter] group-hover/brief:grayscale-0 group-hover/brief:opacity-80 group-hover/brief:brightness-100 dark:opacity-50 dark:brightness-100 dark:group-hover/brief:opacity-80"
                       key={modifier.id}
                       loading="lazy"
                     />

@@ -22,6 +22,15 @@ export function RouteComponent() {
         title={t('stw-operations.options.party')}
       />
 
+      <Callout
+        tone="warning"
+        title="Heads up"
+      >
+        Party commands do not work while an account is in a game. Kick,
+        leave and claim only take effect from the lobby — finish or leave
+        the match first, then run the command.
+      </Callout>
+
       {/*
         Three independent commands, so three equal panels rather than the
         stacked column this page used to be — you can see all of them without

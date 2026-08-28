@@ -20,7 +20,6 @@ import {
   Store,
   Swords,
   Users,
-  UserX,
   Zap,
 } from 'lucide-react'
 
@@ -40,12 +39,8 @@ type HubItem = {
 }
 
 const items: Array<HubItem> = [
-  {
-    title: 'Auto-kick',
-    description: 'Kick, claim and save automatically on mission end',
-    icon: UserX,
-    to: '/stw-operations/automation',
-  },
+  // Auto-kick is temporarily disabled — party kicks no longer work while a
+  // match is running, so its card is out of the hub for now.
   {
     title: 'Taxi',
     description: 'Run accounts as mission taxis',
@@ -121,8 +116,8 @@ const items: Array<HubItem> = [
     to: '/stw-operations/xpboosts',
   },
   {
-    title: 'Urns',
-    description: 'Keep urn and mini-boss quests pinned automatically',
+    title: 'Auto-Pin Quests',
+    description: 'Keep any selected quest pinned automatically',
     icon: Pin,
     to: '/stw-operations/urns',
   },

@@ -1,7 +1,7 @@
 {
   "form": {
     "generate-button": "Gerar Link",
-    "open-button": "<0>Abrir Configurações da Conta</0> <1 />"
+    "open-button": "Abrir Configurações da Conta"
   },
   "notifications": {
     "clipboard": "O link foi copiado para a área de transferência",

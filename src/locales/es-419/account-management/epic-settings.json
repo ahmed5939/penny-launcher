@@ -1,7 +1,7 @@
 {
   "form": {
     "generate-button": "Generar Enlace",
-    "open-button": "<0>Abrir Configuración De La Cuenta</0> <1 />"
+    "open-button": "Abrir Configuración De La Cuenta"
   },
   "notifications": {
     "clipboard": "El enlace se ha copiado en el portapapeles",

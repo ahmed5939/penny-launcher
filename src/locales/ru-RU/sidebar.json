@@ -14,7 +14,7 @@
       "timeline": "Хронология событий",
       "shop": "Магазин STW",
       "xp-boosts": "Усилители Опыта",
-      "auto-pin-urns": "Отслеживание задания с урнами",
+      "auto-pin-urns": "Автозакрепление заданий",
       "auto-llamas": "Автолама",
       "endurance": "Эндьюранс"
     },
@@ -30,7 +30,6 @@
       "vbucks-information": "Информацию о В-баксах",
       "profile": "Профиль",
       "redeem-codes": "Активация Кодов",
-      "devices-auth": "Аутентификация Устройств",
       "epic-settings": "Настройки Epic Games"
     }
   },

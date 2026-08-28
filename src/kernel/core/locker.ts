@@ -235,7 +235,9 @@ export class Locker {
       }
 
       const [items, catalog] = await Promise.all([
-        getLockerItems({ accessToken: token, accountId: account.accountId }),
+        step('Locker read', () =>
+          getLockerItems({ accessToken: token, accountId: account.accountId })
+        ),
         getCosmeticsCatalog(),
       ])
       const equipped = parseEquippedSlots(items.data)

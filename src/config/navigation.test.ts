@@ -10,10 +10,11 @@ describe('navigation', () => {
   const destinations = navDestinations()
 
   it('keeps every automation reachable from the rail', () => {
-    expect(destinations).toContain('/stw-operations/automation')
+    // Auto-kick (/stw-operations/automation) is temporarily out of the rail:
+    // the party endpoints it relies on no longer work while a match runs.
+    expect(destinations).not.toContain('/stw-operations/automation')
     expect(destinations).toContain('/stw-operations/taxi-service')
     expect(destinations).toContain('/stw-operations/auto-llamas')
-    expect(destinations).toContain('/stw-operations/endurance')
     expect(destinations).toContain('/stw-operations/urns')
     expect(destinations).toContain('/stw-operations/party')
   })
@@ -35,7 +36,6 @@ describe('navigation', () => {
     )
 
     expect(betaItems.map((item) => item.to)).toEqual([
-      '/stw-operations/endurance',
       '/stw-operations/leaderboards',
       '/stw-operations/outpost',
       '/account-management/locker',
@@ -62,7 +62,6 @@ describe('navigation', () => {
 describe('isMenuOptionVisible', () => {
   it('defaults to visible when the key has never been saved', () => {
     expect(isMenuOptionVisible({}, 'autoKick')).toBe(true)
-    expect(isMenuOptionVisible({}, 'endurance')).toBe(true)
   })
 
   it('hides a tool when its own flag is false', () => {
@@ -80,16 +79,5 @@ describe('isMenuOptionVisible', () => {
     )
 
     expect(isMenuOptionVisible(allOff, 'stwOperations', true)).toBe(false)
-  })
-
-  it('keeps the STW section when endurance is the only visible child', () => {
-    const onlyEndurance = Object.fromEntries(
-      customizableMenuSettingsRelations.stwOperations.map((key) => [
-        key,
-        key === 'endurance',
-      ])
-    )
-
-    expect(isMenuOptionVisible(onlyEndurance, 'stwOperations', true)).toBe(true)
   })
 })

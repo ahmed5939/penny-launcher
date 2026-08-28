@@ -8,7 +8,6 @@ import { EndgameTwinePeaksSection } from './endgame-twine-peaks'
 import { EndgameVenturesSection } from './endgame-ventures'
 import { SurvivorsSection } from './survivors'
 import { UncommonPerkUpSection } from './uncommon-perk-up'
-import { UpgradeLlamaTokensSection } from './upgrade-llama-tokens'
 import { VBucksSection } from './vbucks'
 
 import {
@@ -32,7 +31,6 @@ export function HomeAlerts() {
     loading,
     survivors,
     uncommonPerks,
-    upgradeLlamas,
     vbucks,
   } = useHomeData()
   const summary = useAlertsSummary()
@@ -43,10 +41,6 @@ export function HomeAlerts() {
   const survivorsTotal = useAlertItemCounter({
     data: survivors,
     validationFn: isLegendaryOrMythicSurvivor,
-  })
-  const upgradeLlamasTotal = useAlertItemCounter({
-    data: upgradeLlamas,
-    key: 'voucher_cardpack_bronze',
   })
   const uncommonPerksTotal = useAlertItemCounter({
     data: uncommonPerks,
@@ -64,7 +58,7 @@ export function HomeAlerts() {
       <h2 className="micro-label mb-2 px-0.5">
         {t('home.alerts.title')}
       </h2>
-      <ul className="gap-3 grid grid-cols-2 sm:grid-cols-4">
+      <ul className="gap-3 grid grid-cols-2 sm:grid-cols-3">
         <PreviewItem
           imageUrl={assets('currency_mtxswap')}
           isLoading={summary.isLoading}
@@ -76,12 +70,6 @@ export function HomeAlerts() {
           isLoading={summary.isLoading}
           quantity={survivorsTotal}
           title={t('home.alerts.survivors')}
-        />
-        <PreviewItem
-          imageUrl={assets('voucher_cardpack_bronze')}
-          isLoading={summary.isLoading}
-          quantity={upgradeLlamasTotal}
-          title={t('home.alerts.llamas')}
         />
         <PreviewItem
           imageUrl={assets('reagent_alteration_upgrade_uc')}
@@ -111,7 +99,6 @@ export function HomeAlerts() {
             <SurvivorsSection data={survivors} />
             <EndgameTwinePeaksSection data={endgame.twinePeaks} />
             <EndgameVenturesSection data={endgame.ventures} />
-            <UpgradeLlamaTokensSection data={upgradeLlamas} />
             <UncommonPerkUpSection data={uncommonPerks} />
           </>
         )}

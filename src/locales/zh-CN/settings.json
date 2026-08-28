@@ -2,6 +2,18 @@
   "app-settings": {
     "title": "应用设置",
     "form": {
+      "appearance": {
+        "label": "外观",
+        "mode": {
+          "light": "浅色",
+          "dark": "深色",
+          "system": "跟随系统"
+        },
+        "theme": {
+          "label": "配色主题",
+          "note": "六套配色，灵感来自《拯救世界》的各个区域。Penny 是经典粉色。"
+        }
+      },
       "language": {
         "label": "语言",
         "input": {

@@ -9,7 +9,6 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { AutomationStatusType } from '../../config/constants/automation'
 
-import { useAutomationStore } from '../../state/stw-operations/automation'
 import { useAutoLlamaStore } from '../../state/stw-operations/auto/llamas'
 import { useTaxiServiceStore } from '../../state/stw-operations/taxi-service'
 
@@ -24,7 +23,6 @@ import {
 } from '../../hooks/alerts/alerts-done'
 import { useAlertsOverviewPaginationInit } from '../../hooks/alerts/overview'
 import { usePrimaryAccount } from '../../hooks/accounts/scope'
-import { useGetAutomationDataStatus } from '../../hooks/stw-operations/automation'
 import { useGetTaxiServiceDataStatus } from '../../hooks/stw-operations/taxi-service'
 
 import { worlInfoParser } from '../../lib/parsers/world-info'
@@ -226,26 +224,19 @@ function resolveServiceStatus(
  * so it never claims to be "running".
  */
 export function useAutomationServices() {
-  const { status: autoKickStatus } = useGetAutomationDataStatus()
   const { status: taxiStatus } = useGetTaxiServiceDataStatus()
 
-  const autoKickAccounts = useAutomationStore((state) => state.accounts)
   const taxiAccounts = useTaxiServiceStore((state) => state.accounts)
   const llamaAccounts = useAutoLlamaStore((state) => state.accounts)
 
-  const autoKickTotal = Object.keys(autoKickAccounts).length
   const taxiTotal = Object.keys(taxiAccounts).length
   const llamasTotal = Object.values(llamaAccounts).filter(
     (account) => account.actions['free-llamas']
   ).length
 
+  // No auto-kick chip while the feature is disabled — party kicks no longer
+  // work while a match is running.
   const services: Array<PlayService> = [
-    {
-      accounts: autoKickTotal,
-      key: 'auto-kick',
-      status: resolveServiceStatus(autoKickStatus, autoKickTotal),
-      to: '/stw-operations/automation',
-    },
     {
       accounts: taxiTotal,
       key: 'taxi-service',

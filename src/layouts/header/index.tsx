@@ -19,6 +19,7 @@ import { AccountList } from '../../components/account-list'
 import { HistoryMenu } from '../../components/menu/history'
 import { Kbd } from '../../components/page'
 import { PennyAvatar } from '../../components/branding/penny-portrait'
+import { ThemeSwitcher } from '../../components/shell/theme-switcher'
 
 import { useUISidebarHistory } from '../../hooks/ui/sidebars'
 import { useGetSelectedAccount } from '../../hooks/accounts'
@@ -89,6 +90,8 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
         <LaunchGameButton />
 
         <FriendsToggle />
+
+        <ThemeSwitcher />
 
         <TitlebarButton
           label="Epic account"

@@ -8,7 +8,6 @@ import type {
 import type { AccountDataList } from '../../types/accounts'
 import type { RewardsNotification } from '../../types/notifications'
 
-import { QuestEventRepeatable } from '../../config/constants/fortnite/quests'
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
 import { MainWindow } from '../startup/windows/main'
@@ -145,31 +144,18 @@ export class ClaimRewards {
           claimsResponse.forEach((claimResponse) => {
             if (claimResponse.status === 'fulfilled') {
               claimResponse.value.forEach((item) => {
-                const hasAutoPinMiniBosses = AutoPinUrns.findById(
+                const autoPinTemplateIds = AutoPinUrns.findById(
                   account.accountId,
-                  'mini-bosses',
-                )
-                const hasAutoPinUrns = AutoPinUrns.findById(
-                  account.accountId,
-                  'urns',
                 )
 
-                if (
-                  hasAutoPinMiniBosses === true ||
-                  hasAutoPinUrns === true
-                ) {
-                  const pinMiniBosses = item.notifications?.find(
+                if (autoPinTemplateIds.length > 0) {
+                  const completedSelectedQuest = item.notifications?.some(
                     (notification) =>
-                      notification.questId ===
-                      QuestEventRepeatable.ExorcismByElimination,
-                  )
-                  const pinUrns = item.notifications?.find(
-                    (notification) =>
-                      notification.questId ===
-                      QuestEventRepeatable.UrnYourKeep,
+                      notification.questId !== undefined &&
+                      autoPinTemplateIds.includes(notification.questId),
                   )
 
-                  if (pinMiniBosses || pinUrns) {
+                  if (completedSelectedQuest) {
                     Authentication.verifyAccessToken(account)
                       .then((accessToken) => {
                         if (accessToken) {
@@ -190,13 +176,8 @@ export class ClaimRewards {
                                 newProfileChanges.profile.items ?? [],
                               )
                                 .filter(([, itemValue]) => {
-                                  return (
-                                    (hasAutoPinMiniBosses === true &&
-                                      itemValue.templateId ===
-                                        QuestEventRepeatable.ExorcismByElimination) ||
-                                    (hasAutoPinUrns === true &&
-                                      itemValue.templateId ===
-                                        QuestEventRepeatable.UrnYourKeep)
+                                  return autoPinTemplateIds.includes(
+                                    itemValue.templateId,
                                   )
                                 })
                                 .map(([itemId]) => itemId)
@@ -205,8 +186,7 @@ export class ClaimRewards {
                                 accessToken,
                                 accountId: account.accountId,
                                 pinnedQuestIds: [
-                                  ...currentPinned,
-                                  ...newItems,
+                                  ...new Set([...currentPinned, ...newItems]),
                                 ],
                               }
 

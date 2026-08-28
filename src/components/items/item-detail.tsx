@@ -85,6 +85,19 @@ function displayAlteration(records: ItemRecordMap, templateId: string) {
   return getItemRecord(records, templateId)?.name ?? alterationName(templateId)
 }
 
+/**
+ * Alteration loadouts list their scalable perks at Common (`_t01`). A respec
+ * keeps the rarity of the perk already in the slot, so use that same tier for
+ * both the label shown to the player and the alteration sent to the backend.
+ */
+function alterationAtCurrentTier(option: string, current: string) {
+  const currentTier = current.match(/_t\d+$/i)?.[0]
+
+  return currentTier && /_t\d+$/i.test(option)
+    ? option.replace(/_t\d+$/i, currentTier)
+    : option
+}
+
 export type ItemDetailSubject = {
   templateId: string
   /**
@@ -523,9 +536,9 @@ function PerkRow({
   const perkRecord = getItemRecord(records, alteration)
   const accent = accentForRarityName(perkRecord?.rarity)
   const upgrade = perkRecord?.upgradeCost ?? {}
-  const options = (pool?.options ?? []).filter(
-    (option) => option !== alteration
-  )
+  const options = (pool?.options ?? [])
+    .map((option) => alterationAtCurrentTier(option, alteration))
+    .filter((option) => option.toLowerCase() !== alteration.toLowerCase())
 
   return (
     <li className="panel px-3 py-2">

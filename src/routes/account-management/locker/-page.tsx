@@ -1,5 +1,7 @@
 import type { LockerSlotKey } from '../../../config/fortnite/locker'
 import type { LockerSlotState } from '../../../kernel/core/locker'
+import type { LockerView } from '../../../state/management/locker'
+import type { SegmentedOption } from '../../../components/page'
 
 import { Plus, RotateCw, Shirt, Sparkles, UserX } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
@@ -19,12 +21,14 @@ import {
   Panel,
   PanelBody,
   PanelHeader,
+  Segmented,
   StatRow,
   StatTile,
 } from '../../../components/page'
 import { BetaBadge } from '../../../components/navigation/beta-badge'
 
 import { CardPanel } from './-card-panel'
+import { Collection } from './-collection'
 import { CosmeticTile } from './-cosmetic-tile'
 import { SlotPicker } from './-slot-picker'
 
@@ -32,13 +36,19 @@ import { useLockerStore } from '../../../state/management/locker'
 
 import { useLockerPage, useOwnedForSlot } from './-hooks'
 
+const viewOptions: Array<SegmentedOption<LockerView>> = [
+  { label: 'Loadout', value: 'loadout' },
+  { label: 'Collection', value: 'collection' },
+  { label: 'Card', value: 'card' },
+]
+
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
 
   return (
     <>
       <PageHeader
-        description="What this account is wearing, and everything it owns. Pick a slot to change it, or draw the whole locker as one image."
+        description="What this account is wearing, everything it owns, and the whole locker as one shareable image. Pick a slot to change what is equipped."
         icon={Shirt}
         section={t('account-management.title')}
         title={
@@ -73,14 +83,17 @@ function Content() {
     slots,
   } = useLockerPage()
 
-  const { closePicker, openPicker, pickerSlot, setFilters } = useLockerStore(
-    useShallow((state) => ({
-      closePicker: state.closePicker,
-      openPicker: state.openPicker,
-      pickerSlot: state.pickerSlot,
-      setFilters: state.setFilters,
-    }))
-  )
+  const { closePicker, openPicker, pickerSlot, setFilters, setView, view } =
+    useLockerStore(
+      useShallow((state) => ({
+        closePicker: state.closePicker,
+        openPicker: state.openPicker,
+        pickerSlot: state.pickerSlot,
+        setFilters: state.setFilters,
+        setView: state.setView,
+        view: state.view,
+      }))
+    )
   const pickerItems = useOwnedForSlot(owned, pickerSlot)
 
   if (!account) {
@@ -161,38 +174,54 @@ function Content() {
         />
       </StatRow>
 
-      {lockerSlotCategories.map((category) => (
-        <Panel key={category.label}>
-          <PanelHeader
-            compact
-            title={category.label}
-          />
-          <PanelBody>
-            <div className="flex flex-wrap gap-2">
-              {category.slots.map((slotKey) => (
-                <SlotBoardTile
-                  key={slotKey}
-                  isBusy={equipping === slotKey}
-                  onPick={() => openPicker(slotKey)}
-                  slot={slots[slotKey] ?? null}
-                  slotKey={slotKey}
-                />
-              ))}
-            </div>
-          </PanelBody>
-        </Panel>
-      ))}
-
-      <CardPanel
-        card={card}
-        errorMessage={cardError}
-        filters={filters}
-        isGenerating={isGenerating}
-        onGenerate={handleGenerate}
-        onUpdateFilters={setFilters}
-        owned={owned}
-        progress={progress}
+      <Segmented
+        onChange={setView}
+        options={viewOptions}
+        value={view}
       />
+
+      {view === 'loadout' &&
+        lockerSlotCategories.map((category) => (
+          <Panel key={category.label}>
+            <PanelHeader
+              compact
+              title={category.label}
+            />
+            <PanelBody>
+              <div className="flex flex-wrap gap-2">
+                {category.slots.map((slotKey) => (
+                  <SlotBoardTile
+                    key={slotKey}
+                    isBusy={equipping === slotKey}
+                    onPick={() => openPicker(slotKey)}
+                    slot={slots[slotKey] ?? null}
+                    slotKey={slotKey}
+                  />
+                ))}
+              </div>
+            </PanelBody>
+          </Panel>
+        ))}
+
+      {view === 'collection' && (
+        <Collection
+          isLoading={isLoadingOwned}
+          owned={owned}
+        />
+      )}
+
+      {view === 'card' && (
+        <CardPanel
+          card={card}
+          errorMessage={cardError}
+          filters={filters}
+          isGenerating={isGenerating}
+          onGenerate={handleGenerate}
+          onUpdateFilters={setFilters}
+          owned={owned}
+          progress={progress}
+        />
+      )}
 
       <SlotPicker
         equippedTemplateId={

@@ -11,7 +11,6 @@ import * as autoLlamasActions from './preload-actions/auto-llamas'
 import * as autoPinUrnsActions from './preload-actions/auto-pin-urns'
 import * as automationsActions from './preload-actions/automation'
 import * as customizableMenuActions from './preload-actions/customizable-menu'
-import * as devicesAuthActions from './preload-actions/devices-auth'
 import * as enduranceActions from './preload-actions/endurance'
 import * as eventActions from './preload-actions/events'
 import * as expeditionsActions from './preload-actions/expeditions'
@@ -57,7 +56,6 @@ export const availableElectronAPIs = {
   ...automationsActions,
   ...customizableMenuActions,
   ...autoPinUrnsActions,
-  ...devicesAuthActions,
   ...enduranceActions,
   ...eventActions,
   ...expeditionsActions,

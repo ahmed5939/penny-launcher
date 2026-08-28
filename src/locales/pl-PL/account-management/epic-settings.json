@@ -1,7 +1,7 @@
 {
   "form": {
     "generate-button": "Wygeneruj Link",
-    "open-button": "<0>Otwórz ustawienia konta</0> <1 />"
+    "open-button": "Otwórz ustawienia konta"
   },
   "notifications": {
     "clipboard": "Link został skopiowany do schowka",

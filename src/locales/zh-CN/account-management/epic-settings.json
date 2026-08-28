@@ -1,7 +1,7 @@
 {
   "form": {
     "generate-button": "生成链接",
-    "open-button": "<0>打开账户设置</0> <1 />"
+    "open-button": "打开账户设置"
   },
   "notifications": {
     "clipboard": "链接已复制到剪贴板",

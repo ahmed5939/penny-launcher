@@ -28,7 +28,7 @@
       "timeline": "Timeline",
       "shop": "Shop",
       "xp-boosts": "XP Boosts",
-      "auto-pin-urns": "Urns",
+      "auto-pin-urns": "Auto-Pin Quests",
       "auto-llamas": "Auto-llamas",
       "endurance": "Endurance"
     },
@@ -45,7 +45,6 @@
       "gifts-information": "Gifts",
       "profile": "Profile",
       "redeem-codes": "Redeem",
-      "devices-auth": "Devices",
       "epic-settings": "Epic settings"
     }
   },

@@ -97,19 +97,8 @@ function STWOperationsSection() {
         />
       </div>
       <div className="list">
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="auto-kick"
-          >
-            {t('stw-operations.options.auto-kick')}
-          </Label>
-          <Switch
-            id="auto-kick"
-            checked={getMenuOptionVisibility('autoKick')}
-            onCheckedChange={updateMenuOption('autoKick')}
-          />
-        </div>
+        {/* The auto-kick toggle is hidden while the feature is disabled —
+            party kicks no longer work while a match is running. */}
         <div className="item">
           <Label
             className="title"
@@ -292,19 +281,6 @@ function STWOperationsSection() {
             onCheckedChange={updateMenuOption('outpost')}
           />
         </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="endurance"
-          >
-            {t('stw-operations.options.endurance')}
-          </Label>
-          <Switch
-            id="endurance"
-            checked={getMenuOptionVisibility('endurance')}
-            onCheckedChange={updateMenuOption('endurance')}
-          />
-        </div>
       </div>
     </div>
   )
@@ -383,19 +359,6 @@ function AccountManagementSection() {
             id="redeem-codes"
             checked={getMenuOptionVisibility('redeemCodes')}
             onCheckedChange={updateMenuOption('redeemCodes')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="devices-auth"
-          >
-            {t('account-management.options.devices-auth')}
-          </Label>
-          <Switch
-            id="devices-auth"
-            checked={getMenuOptionVisibility('devicesAuth')}
-            onCheckedChange={updateMenuOption('devicesAuth')}
           />
         </div>
         <div className="item">

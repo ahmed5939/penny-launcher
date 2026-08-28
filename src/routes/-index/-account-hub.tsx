@@ -7,7 +7,6 @@ import {
   FileText,
   Gift,
   KeyRound,
-  Smartphone,
   Ticket,
   Trash2,
   UserPlus,
@@ -34,12 +33,6 @@ const items: Array<HubItem> = [
     icon: UserPlus,
     to: '/accounts/add/$type',
     params: { type: 'authorization-code' },
-  },
-  {
-    title: 'Devices',
-    description: 'Manage devices linked to the account',
-    icon: Smartphone,
-    to: '/account-management/devices-auth',
   },
   {
     title: 'V-Bucks',

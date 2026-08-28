@@ -123,9 +123,10 @@ export function AlertFilters() {
                 value={option.value}
                 key={option.value}
               >
+                {/* The one grid whose icons are all white world glyphs. */}
                 <img decoding="async" loading="lazy"
                   src={option.icon}
-                  className="toggle-icon"
+                  className="toggle-icon ink-glyph"
                 />
               </ToggleGroupItem>
             ))}

@@ -212,11 +212,49 @@ export function missionHasPennyDBAlert(mission: PennyDBMission) {
  * process only asks for these.
  */
 export const pennyDBLeaderboardMetrics = [
-  'power_level',
-  'stw_matches_played',
+  'gold',
+  're_perk',
+  'core_re_perk',
+  'pure_drops',
+  'lightning',
+  'eyes',
+  'storm_shard',
+  'hero_sc',
+  'weapon_sc',
+  'trap_sc',
+  'survivor_sc',
+  'rare_flux',
+  'epic_flux',
+  'legendary_flux',
+  'common_pu',
+  'rare_pu',
+  'epic_pu',
+  'legendary_pu',
+  'fire_up',
+  'amp_up',
+  'frost_up',
+  'schematic_xp',
+  'survivor_xp',
+  'hero_xp',
+  'ventures_xp',
+  'weapon_designs',
+  'trap_designs',
+  'training_manuals',
+  'llama_tokens',
+  'tickets',
+  'xray_tickets',
+  'mini_llamas',
+  'unopened_llamas',
+  'upgrade_llamas',
+  'llamas_opened',
   'account_stw_level',
   'stw_collectionbook_level',
-  'llamas_opened',
+  'stw_matches_played',
+  'power_level',
+  'weapon_vouchers',
+  'hero_voucher',
+  'frostnite_2025',
+  'frostnite_2024',
 ] as const
 
 export type PennyDBLeaderboardMetric =
@@ -242,7 +280,7 @@ export type PennyDBLeaderboardResponse = {
 
 export function getPennyDBLeaderboard(metric: PennyDBLeaderboardMetric) {
   return pennydbService.get<PennyDBLeaderboardResponse>('/leaderboard', {
-    params: { metric },
+    params: { limit: 100, metric },
   })
 }
 

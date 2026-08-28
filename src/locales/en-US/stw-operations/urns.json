@@ -1,6 +1,7 @@
 {
-  "note": "Note: Only works during dungeon seasons.",
-  "description": "This feature will automatically pin \"Urn Your Keep\" quest every time it claims it (with the launcher). So you guys can always have track of the urns you are missing and don't bother pinning it before every run.",
+  "note": "Choose any active quest for each account. Repeatable quests are pinned again automatically after the launcher claims them.",
+  "description": "Automatically keep the quests you choose pinned after their rewards are claimed.",
+  "loading": "Loading active quests…",
   "options": {
     "urns": "Urns",
     "mini-bosses": "Mini-Bosses"

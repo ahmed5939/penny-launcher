@@ -2,6 +2,18 @@
   "app-settings": {
     "title": "Impostazioni App",
     "form": {
+      "appearance": {
+        "label": "Aspetto",
+        "mode": {
+          "light": "Chiaro",
+          "dark": "Scuro",
+          "system": "Sistema"
+        },
+        "theme": {
+          "label": "Tema colore",
+          "note": "Sei palette ispirate alle zone di Salva il Mondo. Penny è il rosa classico."
+        }
+      },
       "language": {
         "label": "Lingua",
         "input": {

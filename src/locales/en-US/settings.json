@@ -2,6 +2,18 @@
   "app-settings": {
     "title": "App Settings",
     "form": {
+      "appearance": {
+        "label": "Appearance",
+        "mode": {
+          "light": "Light",
+          "dark": "Dark",
+          "system": "System"
+        },
+        "theme": {
+          "label": "Color theme",
+          "note": "Six palettes inspired by the zones of Save the World. Penny is the classic pink."
+        }
+      },
       "language": {
         "label": "Language",
         "input": {

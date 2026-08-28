@@ -1,6 +1,6 @@
 {
   "title": "Leaderboards",
-  "description": "Public Save the World rankings from PennyDB — power, matches, account level, collection book and llamas.",
+  "description": "Public Save the World rankings from PennyDB — resources, progression, materials, llamas and more.",
   "metric": {
     "label": "Rank by",
     "power_level": "Power level",
@@ -10,6 +10,14 @@
     "llamas_opened": "Llamas opened"
   },
   "open-on-pennydb": "Open on PennyDB",
+  "search": "Search leaderboards...",
+  "search-players": "Find a commander...",
+  "no-metrics": "No leaderboards match your search.",
+  "no-players": "No commanders match \"{{query}}\".",
+  "top-commanders": "Top commanders",
+  "ranked-count_one": "{{count}} commander ranked",
+  "ranked-count_other": "{{count}} commanders ranked",
+  "your-rank": "You're ranked #{{rank}} — jump to your row",
   "refresh": "Refresh",
   "loading": "Loading rankings",
   "loading-description": "Fetching the public PennyDB leaderboard.",

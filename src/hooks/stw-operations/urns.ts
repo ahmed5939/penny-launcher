@@ -1,4 +1,4 @@
-import type { AutoPinUrnDataList } from '../../types/urns'
+import type { AutoPinQuestDataList } from '../../types/urns'
 
 import { useShallow } from 'zustand/react/shallow'
 
@@ -8,10 +8,9 @@ import { useGetAccounts } from '../accounts'
 
 export function useGetAutoPinUrnData() {
   const { idsList } = useGetAccounts()
-  const { data, miniBosses } = useAutoPinUrnDataStore(
+  const { data } = useAutoPinUrnDataStore(
     useShallow((state) => ({
       data: state.data,
-      miniBosses: state.miniBosses,
     }))
   )
   const selectedAccounts = idsList.reduce((accumulator, accountId) => {
@@ -20,11 +19,10 @@ export function useGetAutoPinUrnData() {
     }
 
     return accumulator
-  }, {} as AutoPinUrnDataList)
+  }, {} as AutoPinQuestDataList)
 
   return {
     selectedAccounts,
-    selectedAccountsMiniBosses: miniBosses,
   }
 }
 

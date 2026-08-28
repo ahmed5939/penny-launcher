@@ -284,15 +284,6 @@ export enum ElectronAPIEventKeys {
   RedeemCodesRedeenNotification = 'redeem-codes:redeem:notification',
 
   /**
-   * Devices Auth Management
-   */
-
-  DevicesAuthRequestData = 'devices-auth:request:data',
-  DevicesAuthResponseData = 'devices-auth:response:data',
-  DevicesAuthRemove = 'devices-auth:remove',
-  DevicesAuthRemoveNotification = 'devices-auth:remove:notification',
-
-  /**
    * Server Status
    */
 
@@ -340,6 +331,7 @@ export enum ElectronAPIEventKeys {
   ExpeditionsActionNotification = 'expeditions:action:notification',
   AutoExpeditionsStatus = 'auto-expeditions:status',
   AutoExpeditionsUpdate = 'auto-expeditions:update',
+  AutoExpeditionsEnsureStarted = 'auto-expeditions:ensure-started',
 
   /**
    * Item database

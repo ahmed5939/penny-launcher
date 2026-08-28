@@ -10,7 +10,7 @@ import type {
   Settings,
 } from '../../types/settings'
 import type { TaxiServiceAccountFileDataList } from '../../types/taxi-service'
-import type { AutoPinUrnDataList } from '../../types/urns'
+import type { AutoPinQuestDataList, AutoPinUrnDataList } from '../../types/urns'
 
 import {
   copyFile,
@@ -29,7 +29,7 @@ import { defaultClaimingRewardsDelay } from '../../config/constants/mcp'
 
 import { accountListSchema } from '../../lib/validations/schemas/accounts'
 import { autoLlamasDataRecordSchema } from '../../lib/validations/schemas/auto-llamas'
-import { autoPinUrnsDataSchema } from '../../lib/validations/schemas/auto-pin-urns-data'
+import { autoPinQuestsDataSchema, autoPinUrnsDataSchema } from '../../lib/validations/schemas/auto-pin-urns-data'
 import { automationFileSchema } from '../../lib/validations/schemas/automation'
 import { friendsSchema } from '../../lib/validations/schemas/friends'
 import {
@@ -145,6 +145,12 @@ export class DataDirectory {
 
   static urnsFilePath = path.join(DataDirectory.dataDirectoryPath, 'urns.json')
   private static urnsDefaultData: AutoPinUrnDataList = {}
+
+  static autoPinQuestsFilePath = path.join(
+    DataDirectory.dataDirectoryPath,
+    'auto-pin-quests.json'
+  )
+  private static autoPinQuestsDefaultData: AutoPinQuestDataList = {}
 
   static autoLlamasFilePath = path.join(
     DataDirectory.dataDirectoryPath,
@@ -474,6 +480,30 @@ export class DataDirectory {
     return { urns: DataDirectory.urnsDefaultData }
   }
 
+  static async getAutoPinQuestsFile(): Promise<{
+    quests: AutoPinQuestDataList
+  }> {
+    const result = await DataDirectory.getOrCreateJsonFile(
+      DataDirectory.autoPinQuestsFilePath,
+      {
+        defaults: {
+          rawString: JSON.stringify(DataDirectory.autoPinQuestsDefaultData),
+          value: DataDirectory.autoPinQuestsDefaultData,
+        },
+      }
+    )
+
+    try {
+      const list = autoPinQuestsDataSchema.safeParse(JSON.parse(result))
+      return {
+        quests: list.success ? list.data : DataDirectory.autoPinQuestsDefaultData,
+      }
+    } catch (error) {
+      RuntimeLog.error('caught:startup/data-directory.ts', error)
+      return { quests: DataDirectory.autoPinQuestsDefaultData }
+    }
+  }
+
   /**
    * Get data from fn-launch.json
    */
@@ -608,6 +638,13 @@ export class DataDirectory {
    */
   static async updateUrnsFile(data: AutoPinUrnDataList) {
     await DataDirectory.updateJsonFile(DataDirectory.urnsFilePath, data)
+  }
+
+  static async updateAutoPinQuestsFile(data: AutoPinQuestDataList) {
+    await DataDirectory.updateJsonFile(
+      DataDirectory.autoPinQuestsFilePath,
+      data
+    )
   }
 
   /**

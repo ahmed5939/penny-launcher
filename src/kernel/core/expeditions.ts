@@ -72,7 +72,12 @@ function parseExpeditionTemplate(templateId: string) {
  * how many hero slots the expedition needs; the rarity gates which heroes
  * are eligible.
  */
-function parseCriteria(criteria: Array<string>) {
+function parseCriteria(rawCriteria: unknown) {
+  const criteria = Array.isArray(rawCriteria)
+    ? rawCriteria
+    : rawCriteria && typeof rawCriteria === 'object'
+      ? ((rawCriteria as { RequiredTags?: Array<string> }).RequiredTags ?? [])
+      : []
   const rarities = ['Legendary', 'Epic', 'Rare', 'Uncommon', 'Common']
 
   return criteria.map((requirement) => {
@@ -86,6 +91,15 @@ function parseCriteria(criteria: Array<string>) {
         .trim(),
     }
   })
+}
+
+function heroClass(templateId: string) {
+  const id = templateId.toLowerCase()
+  if (id.includes('ninja')) return 'Ninja'
+  if (id.includes('outlander')) return 'Outlander'
+  if (id.includes('constructor')) return 'Constructor'
+  if (id.includes('soldier') || id.includes('commando')) return 'Soldier'
+  return 'Any'
 }
 
 export type ExpeditionState = 'available' | 'in-flight' | 'ready'
@@ -231,6 +245,7 @@ export class Expeditions {
           itemId,
           level: attributes.level ?? 1,
           rarity,
+          type: heroClass(item.templateId),
           squadId: attributes.squad_id ?? '',
           usedInLoadout: (attributes.building_slot_used ?? 0) > 0,
         }
@@ -268,14 +283,23 @@ export class Expeditions {
 
       const criteria = parseCriteria(attributes.expedition_criteria ?? [])
       const remainingHeroes = [...heroes]
-      const suggestedHeroes = criteria.flatMap((requirement) => {
+      const requiredHeroes = criteria.flatMap((requirement) => {
         const minimum = rarityPower[requirement.rarity] ?? 0
         const index = remainingHeroes.findIndex(
-          (hero) => rarityPower[hero.rarity] >= minimum
+          (hero) =>
+            rarityPower[hero.rarity] >= minimum &&
+            (requirement.type.length === 0 ||
+              requirement.type === 'Hero' ||
+              requirement.type.toLowerCase().includes(hero.type.toLowerCase()) ||
+              hero.type.toLowerCase().includes(requirement.type.toLowerCase()))
         )
 
         return index < 0 ? [] : remainingHeroes.splice(index, 1)
       })
+      const suggestedHeroes = [
+        ...requiredHeroes,
+        ...remainingHeroes.slice(0, Math.max(0, 5 - requiredHeroes.length)),
+      ]
 
       const rawSuccessChance = Number(attributes.expedition_success_chance ?? 0)
 

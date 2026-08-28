@@ -1,7 +1,9 @@
 import { useNavigate } from '@tanstack/react-router'
+import { Monitor, Moon, Sun } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 
+import { colorThemes } from '../../config/constants/color-themes'
 import { navSections, resolveNavLabel, visibilityKeys } from '../../config/navigation'
 
 import { BetaBadge } from './beta-badge'
@@ -13,6 +15,9 @@ import {
   CommandItem,
   CommandList,
 } from '../ui/command'
+
+import { ThemeSwatch } from '../theme-picker'
+import { useTheme } from '../theme-provider'
 
 import { useCustomizableMenuSettingsVisibility } from '../../hooks/settings'
 
@@ -128,7 +133,79 @@ export function CommandPalette({
             </CommandGroup>
           )
         })}
+
+        <AppearanceCommands onDone={() => onOpenChange(false)} />
       </CommandList>
     </CommandDialog>
+  )
+}
+
+/**
+ * Appearance, from the palette.
+ *
+ * The third way to reach the themes, after the titlebar swatch and the
+ * Settings panel — this is the one that answers someone typing “dark”, which
+ * is what a person does before they think to go looking for a control.
+ */
+function AppearanceCommands({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation(['settings'])
+  const { theme, setTheme, colorTheme, setColorTheme } = useTheme()
+
+  const modes = [
+    { icon: Sun, id: 'light' },
+    { icon: Moon, id: 'dark' },
+    { icon: Monitor, id: 'system' },
+  ] as const
+
+  return (
+    <CommandGroup heading={t('app-settings.form.appearance.label')}>
+      {modes.map((mode) => {
+        const Icon = mode.icon
+        const label = t(`app-settings.form.appearance.mode.${mode.id}`)
+
+        return (
+          <CommandItem
+            className="gap-2"
+            key={mode.id}
+            value={`${t('app-settings.form.appearance.label')} ${label}`}
+            onSelect={() => {
+              setTheme(mode.id)
+              onDone()
+            }}
+          >
+            <Icon className="size-4 shrink-0 text-muted-foreground" />
+            <span className="flex-1">{label}</span>
+            {theme === mode.id && (
+              <span className="text-[0.625rem] text-muted-foreground">
+                Active
+              </span>
+            )}
+          </CommandItem>
+        )
+      })}
+
+      {colorThemes.map((current) => (
+        <CommandItem
+          className="gap-2"
+          key={current.id}
+          value={`${t('app-settings.form.appearance.theme.label')} ${current.name}`}
+          onSelect={() => {
+            setColorTheme(current.id)
+            onDone()
+          }}
+        >
+          <ThemeSwatch
+            className="size-4"
+            gradient={current.gradient}
+          />
+          <span className="flex-1">{current.name}</span>
+          {colorTheme === current.id && (
+            <span className="text-[0.625rem] text-muted-foreground">
+              Active
+            </span>
+          )}
+        </CommandItem>
+      ))}
+    </CommandGroup>
   )
 }

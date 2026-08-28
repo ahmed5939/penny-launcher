@@ -1,4 +1,5 @@
 import type {
+  AutoPinQuestDataList,
   AutoPinUrnDataList,
   AutoPinUrnDataValue,
 } from '../../types/urns'
@@ -12,6 +13,7 @@ import { AccountsManager } from './accounts'
 import { DataDirectory } from './data-directory'
 
 export class AutoPinUrns {
+  private static _quests: Collection<string, Array<string>> = new Collection()
   private static _accounts: Collection<string, AutoPinUrnDataValue> =
     new Collection()
   private static _accountsMiniBosses: Collection<
@@ -20,9 +22,20 @@ export class AutoPinUrns {
   > = new Collection()
 
   static async load() {
+    AutoPinUrns._quests.clear()
+    AutoPinUrns._accounts.clear()
+    AutoPinUrns._accountsMiniBosses.clear()
+
+    const { quests } = await DataDirectory.getAutoPinQuestsFile()
     const { urns } = await DataDirectory.getUrnsFile()
     const { miniBosses } = await DataDirectory.getMiniBossesFile()
     const accounts = AccountsManager.getAccounts()
+
+    Object.entries(quests).forEach(([accountId, templateIds]) => {
+      if (accounts.has(accountId)) {
+        AutoPinUrns._quests.set(accountId, templateIds)
+      }
+    })
 
     Object.entries(urns).forEach(([accountId, value]) => {
       if (accounts.has(accountId)) {
@@ -36,33 +49,40 @@ export class AutoPinUrns {
       }
     })
 
+    // One-time compatibility migration from the original two switches.
+    for (const accountId of accounts.keys()) {
+      if (AutoPinUrns._quests.has(accountId)) continue
+
+      const templateIds = [
+        urns[accountId] ? 'Quest:starlightquest_destroy_urns' : null,
+        miniBosses[accountId]
+          ? 'Quest:starlightquest_kill_minibosses'
+          : null,
+      ].filter((value): value is string => value !== null)
+
+      if (urns[accountId] !== undefined || miniBosses[accountId] !== undefined) {
+        AutoPinUrns._quests.set(accountId, templateIds)
+      }
+    }
+
+    await AutoPinUrns.persist()
+
     MainWindow.instance.webContents.send(
       ElectronAPIEventKeys.UrnsServiceResponseData,
       {
-        urns,
-        miniBosses,
+        quests: Object.fromEntries(AutoPinUrns._quests),
       }
     )
   }
 
   static async addAccount(accountId: string) {
-    const resultUrns = await DataDirectory.getUrnsFile()
-    const resultMiniBosses = await DataDirectory.getMiniBossesFile()
-
-    await DataDirectory.updateUrnsFile({
-      ...resultUrns.urns,
-      [accountId]: false,
-    })
-    await DataDirectory.updateMiniBossesFile({
-      ...resultMiniBosses.miniBosses,
-      [accountId]: false,
-    })
-
-    AutoPinUrns._accounts.set(accountId, false)
-    AutoPinUrns._accountsMiniBosses.set(accountId, false)
+    AutoPinUrns._quests.set(accountId, [])
+    await AutoPinUrns.persist()
   }
 
   static async removeAccount(accountId: string) {
+    AutoPinUrns._quests.delete(accountId)
+    await AutoPinUrns.persist()
     const urns = [...AutoPinUrns._accounts.entries()]
       .filter(([currentAccountId]) => currentAccountId !== accountId)
       .reduce((accumulator, [accountId, value]) => {
@@ -87,38 +107,24 @@ export class AutoPinUrns {
 
   static async updateAccount(
     accountId: string,
-    type: 'mini-bosses' | 'urns',
+    templateId: string,
     value: AutoPinUrnDataValue
   ) {
-    const isUrns = type === 'urns'
-    const inUse = isUrns
-      ? AutoPinUrns._accounts
-      : AutoPinUrns._accountsMiniBosses
-    const data = [...inUse.entries()].reduce(
-      (accumulator, [currentAccountId, currentValue]) => {
-        accumulator[currentAccountId] =
-          currentAccountId === accountId ? value : currentValue
-
-        return accumulator
-      },
-      {} as AutoPinUrnDataList
-    )
-
-    inUse.set(accountId, value)
-
-    if (isUrns) {
-      await DataDirectory.updateUrnsFile(data)
-    } else {
-      await DataDirectory.updateMiniBossesFile(data)
-    }
+    const current = AutoPinUrns._quests.get(accountId) ?? []
+    const next = value
+      ? [...new Set([...current, templateId])]
+      : current.filter((id) => id !== templateId)
+    AutoPinUrns._quests.set(accountId, next)
+    await AutoPinUrns.persist()
   }
 
-  static findById(accountId: string, type: 'mini-bosses' | 'urns') {
-    const selector =
-      type === 'mini-bosses'
-        ? AutoPinUrns._accountsMiniBosses
-        : AutoPinUrns._accounts
+  static findById(accountId: string) {
+    return AutoPinUrns._quests.get(accountId) ?? []
+  }
 
-    return selector.get(accountId)
+  private static async persist() {
+    await DataDirectory.updateAutoPinQuestsFile(
+      Object.fromEntries(AutoPinUrns._quests) as AutoPinQuestDataList
+    )
   }
 }

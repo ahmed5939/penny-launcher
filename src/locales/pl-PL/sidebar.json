@@ -14,7 +14,7 @@
       "timeline": "Oś Czasu Wydarzeń",
       "shop": "Sklep STW",
       "xp-boosts": "Wzmocnienia PD",
-      "auto-pin-urns": "Śledzenie zadania z urnami",
+      "auto-pin-urns": "Automatyczne przypinanie zadań",
       "auto-llamas": "Auto-llamy",
       "endurance": "Endurance"
     },
@@ -30,7 +30,6 @@
       "vbucks-information": "Informacje o V-Dolcach",
       "profile": "Profil",
       "redeem-codes": "Zrealizuj kody",
-      "devices-auth": "Urządzenia autoryzowane",
       "epic-settings": "Ustawienia Epic Games"
     }
   },

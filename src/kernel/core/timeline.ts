@@ -5,11 +5,12 @@ import axios from 'axios'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 import { peglegResourcesBaseURL } from '../../config/constants/pegleg'
+import { bugListTimelineCardsURL } from '../../config/constants/trello'
 
 import { DataDirectory } from '../startup/data-directory'
 import { MainWindow } from '../startup/windows/main'
 
-const cacheVersion = 2
+const cacheVersion = 3
 
 /** The schedule shifts when Epic re-orders a season; check weekly. */
 const cacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000
@@ -28,6 +29,38 @@ export type TimelineEvent = TimelineQuestline & {
   style: string | null
 }
 
+/**
+ * Community knowledge about a season, parsed out of its card on The Bug
+ * List's "Yearly Content Timeline" — facts the PegLeg feed never carries.
+ * The whole block is best-effort: any field a card doesn't state stays
+ * null/empty, and a season without a card carries `null` for all of it.
+ */
+export type TimelineSeasonExtras = {
+  /** "Miniboss" or "Mutant" — which alert roster the season runs. */
+  kind: string | null
+  /** Elements whose mission alerts appear: "Fire", "Water", "Nature". */
+  alertElements: Array<string>
+  /** True when the card says rewards are "better overall". */
+  improvedRewards: boolean | null
+  /** The season-wide Ventures modifier, by name — e.g. "Escalation". */
+  modifier: string | null
+  /** The seasonal llama's plain name, e.g. "Lunar Llama". */
+  llamaName: string | null
+  /** The seasonal event mode, e.g. "Frostnite", "Dungeons". */
+  eventMode: string | null
+  /** Other events that occur during the season, e.g. "Cram Session". */
+  concurrentEvents: Array<string>
+  /** The card's "Available this season" entries: name plus item class. */
+  availableItems: Array<{ name: string; type: string | null }>
+  /**
+   * The card's cover screenshot. A stable trello.com URL that redirects to
+   * a freshly-signed files.trello.com one, so it must not be resolved and
+   * stored — the signature dies within hours.
+   */
+  imageUrl: string | null
+  imageCredit: string | null
+}
+
 export type TimelineSeason = {
   name: string
   /** Length in weeks. */
@@ -43,6 +76,7 @@ export type TimelineSeason = {
   questlines: Array<TimelineQuestline>
   events: Array<TimelineEvent>
   venturesModifiers: Array<string>
+  extras: TimelineSeasonExtras | null
 }
 
 export type TimelinePayload = {
@@ -82,6 +116,12 @@ type RawTimeline = {
     style?: string
     venturesModifiers?: Array<string>
   }>
+}
+
+type RawTrelloCard = {
+  name?: string
+  desc?: string
+  attachments?: Array<{ name?: string; url?: string }>
 }
 
 const weekMs = 7 * 24 * 60 * 60 * 1000
@@ -213,10 +253,13 @@ export class Timeline {
    * per-week event shop rotation lines up with `duration`.
    */
   private static async download() {
-    const response = await axios.get<RawTimeline>(
-      `${peglegResourcesBaseURL}/timeline.json`,
-      { responseType: 'json', timeout: 60_000 }
-    )
+    const [response, extrasByName] = await Promise.all([
+      axios.get<RawTimeline>(`${peglegResourcesBaseURL}/timeline.json`, {
+        responseType: 'json',
+        timeout: 60_000,
+      }),
+      Timeline.downloadExtras(),
+    ])
 
     const anchor = response.data.anchor
       ? new Date(response.data.anchor).getTime()
@@ -263,9 +306,120 @@ export class Timeline {
           style: event.style ?? null,
         })),
         venturesModifiers: season.venturesModifiers ?? [],
+        extras:
+          extrasByName.get(
+            (season.displayName ?? '').trim().toLowerCase()
+          ) ?? null,
       } as TimelineSeason
     })
 
     return { currentIndex: -1, seasons } as TimelinePayload
+  }
+
+  /**
+   * Cards keyed by name, lowercased — the join key against `displayName`.
+   * The list also holds a pinned index card; it simply never matches a
+   * season, so nothing filters it explicitly. This source is enrichment
+   * only, so a dead Trello never takes the timeline down with it.
+   */
+  private static async downloadExtras() {
+    const byName = new Map<string, TimelineSeasonExtras>()
+
+    try {
+      const response = await axios.get<Array<RawTrelloCard>>(
+        bugListTimelineCardsURL,
+        { responseType: 'json', timeout: 60_000 }
+      )
+
+      if (Array.isArray(response.data)) {
+        for (const card of response.data) {
+          const name = card.name?.trim().toLowerCase()
+
+          if (!name) {
+            continue
+          }
+
+          byName.set(
+            name,
+            Timeline.parseExtras(card.desc ?? '', card.attachments ?? [])
+          )
+        }
+      }
+    } catch (error) {
+      RuntimeLog.error('caught:core/timeline.ts', error)
+    }
+
+    return byName
+  }
+
+  /**
+   * The cards are prose written to a strong house pattern — "X Ventures
+   * season is a Miniboss season, meaning Fire, Water, and Nature mission
+   * alerts are available and rewards are better overall." — so each fact is
+   * lifted by its surrounding phrase. Matches are deliberately loose (one
+   * card spells it "Mininboss") and a miss just leaves the field null.
+   */
+  private static parseExtras(
+    desc: string,
+    attachments: Array<{ name?: string; url?: string }>
+  ): TimelineSeasonExtras {
+    const kindMatch = desc.match(/is a (mini\w*boss|mutant) season/i)
+    const kind = kindMatch
+      ? /mutant/i.test(kindMatch[1])
+        ? 'Mutant'
+        : 'Miniboss'
+      : null
+
+    const alertsSentence =
+      desc.match(/meaning[^.]*mission alerts[^.]*\./i)?.[0] ?? ''
+    const alertElements = ['Fire', 'Water', 'Nature'].filter((element) =>
+      alertsSentence.includes(element)
+    )
+
+    const improvedRewards = /rewards are better/i.test(alertsSentence)
+      ? true
+      : /rewards are standard/i.test(alertsSentence)
+        ? false
+        : null
+
+    // `[ \t]`, not `\s` — `\s*` would cross the blank line above a heading
+    // and let `.+?` swallow the `###` marks into the captured name.
+    const concurrentEvents = Array.from(
+      desc.matchAll(/^#*[ \t]*(.+?)(?: event)? occurs during this season/gim)
+    ).map((match) => match[1].trim())
+
+    const availableItems: Array<{ name: string; type: string | null }> = []
+    const listStart = desc.search(/available this season/i)
+
+    if (listStart >= 0) {
+      for (const match of desc
+        .slice(listStart)
+        .matchAll(/^-\s+(.+?)(?:\s*\(([^)]+)\))?\s*$/gm)) {
+        availableItems.push({
+          name: match[1].trim(),
+          type: match[2]?.trim() ?? null,
+        })
+      }
+    }
+
+    const image = attachments.find((attachment) =>
+      /\.(png|jpe?g|webp)$/i.test(attachment.url ?? '')
+    )
+
+    return {
+      kind,
+      alertElements,
+      improvedRewards,
+      modifier: desc.match(/has the (.+?) modifier/i)?.[1] ?? null,
+      llamaName:
+        desc.match(/seasonal llama is the (.+?)[.\n]/i)?.[1] ?? null,
+      eventMode:
+        desc.match(/has the (.+?) seasonal event mode/i)?.[1] ?? null,
+      concurrentEvents,
+      availableItems,
+      imageUrl: image?.url ?? null,
+      imageCredit:
+        desc.match(/credit for the image goes to (.+?)[.\n]/i)?.[1] ?? null,
+    }
   }
 }

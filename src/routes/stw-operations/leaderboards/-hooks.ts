@@ -40,6 +40,10 @@ export function useLeaderboardData() {
       }
     )
 
+    // Clear the previous metric's rows so a metric switch shows the
+    // loading skeleton instead of stale numbers under the new header.
+    setRows([])
+    setErrorMessage(null)
     setIsLoading(true)
     window.electronAPI.requestLeaderboard(metric)
 

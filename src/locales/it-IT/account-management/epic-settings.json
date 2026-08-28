@@ -1,7 +1,7 @@
 {
   "form": {
     "generate-button": "Genera Link",
-    "open-button": "<0>Apri Impostazioni Account</0> <1 />"
+    "open-button": "Apri Impostazioni Account"
   },
   "notifications": {
     "clipboard": "Il link è stato copiato negli appunti",
