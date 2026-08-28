@@ -10,6 +10,7 @@ import {
   Coins,
   Cog,
   Compass,
+  Contact,
   FileText,
   Gift,
   Globe,
@@ -253,6 +254,12 @@ export const navSections: Array<NavSection> = [
         label: 'Add account',
         params: { type: 'authorization-code' },
         to: '/accounts/add/$type',
+      },
+      {
+        icon: Contact,
+        label: 'sidebar:account-management.options.friends',
+        needsAccount: true,
+        to: '/account-management/friends',
       },
       {
         can: 'profile',

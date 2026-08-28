@@ -26,6 +26,7 @@
   "account-management": {
     "title": "账户管理",
     "options": {
+      "friends": "好友",
       "vbucks-information": "V币信息",
       "profile": "档案",
       "redeem-codes": "兑换码",

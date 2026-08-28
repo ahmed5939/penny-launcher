@@ -26,6 +26,7 @@
   "account-management": {
     "title": "Управление Аккаунтом",
     "options": {
+      "friends": "Друзья",
       "vbucks-information": "Информацию о В-баксах",
       "profile": "Профиль",
       "redeem-codes": "Активация Кодов",
