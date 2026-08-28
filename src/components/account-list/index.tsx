@@ -19,14 +19,11 @@ import { useAccountList } from './hooks'
 import { cn, parseCustomDisplayName } from '../../lib/utils'
 
 /**
- * The account control. Singular on purpose.
+ * Searchable account picker, for a large roster.
  *
- * Everything about "who is this app pointed at" happens in this one dropdown:
- * clicking a name makes it the account, the box beside each name adds it to
- * the bulk scope, and the strip under the list covers the two moves people
- * actually make.
- * No page carries its own picker and the rail carries no account list —
- * having the same choice in two places meant neither could be trusted.
+ * The rail lists every account in order; this combobox is the same scope
+ * with a search field. Both write `state/accounts/scope`, so they cannot
+ * disagree.
  */
 export function AccountList() {
   const { t } = useTranslation(['general'])

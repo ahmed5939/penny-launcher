@@ -1,5 +1,12 @@
 {
   "home": "Home",
+  "customize": {
+    "title": "Customize sidebar",
+    "description": "Hidden items stay reachable from search (Ctrl+K).",
+    "hide": "Hide from sidebar",
+    "open-settings": "More in Settings",
+    "accounts": "Accounts"
+  },
   "groups": {
     "automate": "Automate",
     "stw": "Save the World",

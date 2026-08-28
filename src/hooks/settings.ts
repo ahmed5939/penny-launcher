@@ -3,7 +3,7 @@ import type { CustomizableMenuSettings } from '../types/settings'
 import { useCallback } from 'react'
 
 import {
-  customizableMenuSettingsRelations,
+  isMenuOptionVisible,
   useCustomizableMenuSettingsStore,
 } from '../state/settings/customizable-menu'
 import {
@@ -21,26 +21,8 @@ export function useCustomizableMenuSettingsVisibility() {
   const data = useCustomizableMenuSettingsStore((state) => state.data)
 
   const getMenuOptionVisibility = useCallback(
-    (key: keyof CustomizableMenuSettings, validateItems?: boolean) => {
-      const keyValidation = data[key] ?? true
-
-      if (validateItems) {
-        const childItems =
-          customizableMenuSettingsRelations[
-            key as keyof typeof customizableMenuSettingsRelations
-          ]
-
-        if (childItems !== undefined) {
-          const childValidations = childItems.map(
-            (item) => data[item] ?? true,
-          )
-
-          return childValidations.includes(true) && keyValidation
-        }
-      }
-
-      return keyValidation
-    },
+    (key: keyof CustomizableMenuSettings, validateItems?: boolean) =>
+      isMenuOptionVisible(data, key, validateItems),
     [data],
   )
 

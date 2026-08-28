@@ -15,7 +15,8 @@
       "shop": "Negozio STW",
       "xp-boosts": "Incrementi PE",
       "auto-pin-urns": "Monitor missione delle urne",
-      "auto-llamas": "Auto-lama"
+      "auto-llamas": "Auto-lama",
+      "endurance": "Endurance"
     },
     "auto-kick-status": {
       "issue": "Errore",

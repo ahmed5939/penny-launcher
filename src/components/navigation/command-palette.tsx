@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 
-import { navSections } from '../../config/navigation'
+import { navSections, resolveNavLabel, visibilityKeys } from '../../config/navigation'
 
 import { BetaBadge } from './beta-badge'
 import {
@@ -21,9 +21,9 @@ import { useAccountListStore } from '../../state/accounts/list'
 /**
  * ⌘K / Ctrl+K jump-to-anything.
  *
- * With the tool list out of permanent view, this is the fast path: type
- * three letters instead of hunting a menu. Reads the same nav description
- * the section menus do, and honours the same visibility settings.
+ * Reads the same nav description the rail does. Sidebar visibility is
+ * ignored here on purpose: hiding a tool from the rail must not make it
+ * unreachable — type three letters instead.
  */
 export function CommandPalette({
   open,
@@ -66,49 +66,40 @@ export function CommandPalette({
         <CommandEmpty>{t('general:no-item-found')}</CommandEmpty>
 
         {navSections.map((section) => {
-          const validateChildren = section.items.length > 0
-
-          if (
-            section.can &&
-            !getMenuOptionVisibility(section.can, validateChildren)
-          ) {
-            return null
-          }
-
           const items = section.items.filter(
-            (item) =>
-              (!item.can || getMenuOptionVisibility(item.can)) &&
-              (!item.canAny ||
-                item.canAny.some((key) => getMenuOptionVisibility(key))) &&
-              !(item.needsAccount && !areThereAccounts)
+            (item) => !(item.needsAccount && !areThereAccounts)
           )
 
-          const sectionDestination =
+          const destinations =
             items.length === 0 && section.to
               ? [
                   {
-                    beta: undefined,
+                    beta: false,
+                    can: section.can,
                     icon: section.icon,
                     label: section.label,
-                    params: undefined,
+                    params: undefined as Record<string, string> | undefined,
                     to: section.to,
                   },
                 ]
               : items
 
-          if (sectionDestination.length === 0) {
+          if (destinations.length === 0) {
             return null
           }
 
           return (
             <CommandGroup
               key={section.key}
-              heading={t(section.label)}
+              heading={resolveNavLabel(t, section.label)}
             >
-              {sectionDestination.map((item) => {
+              {destinations.map((item) => {
                 const Icon = item.icon
-                const label =
-                  item.label === 'EULA' ? 'EULA' : t(item.label)
+                const label = resolveNavLabel(t, item.label)
+                const keys = visibilityKeys(item)
+                const hidden =
+                  keys.length > 0 &&
+                  !keys.some((key) => getMenuOptionVisibility(key))
 
                 return (
                   <CommandItem
@@ -125,7 +116,12 @@ export function CommandPalette({
                   >
                     <Icon className="size-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{label}</span>
-                    {'beta' in item && item.beta && <BetaBadge />}
+                    {hidden && (
+                      <span className="text-[0.625rem] text-muted-foreground">
+                        Hidden
+                      </span>
+                    )}
+                    {item.beta && <BetaBadge />}
                   </CommandItem>
                 )
               })}

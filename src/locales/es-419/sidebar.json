@@ -15,7 +15,8 @@
       "shop": "Tienda STW",
       "xp-boosts": "Potenciadores",
       "auto-pin-urns": "Rastreador de misión de urnas",
-      "auto-llamas": "Auto-llamas"
+      "auto-llamas": "Auto-llamas",
+      "endurance": "Endurance"
     },
     "auto-kick-status": {
       "issue": "Revisar",

@@ -74,6 +74,35 @@ export type NavSection = {
   to?: string
 }
 
+/** Literal product names are not i18n keys. */
+export function resolveNavLabel(
+  t: (key: string) => string,
+  label: string,
+): string {
+  return label.includes(':') ? t(label) : label
+}
+
+export function navDestinations(): Array<string> {
+  return navSections.flatMap((section) => [
+    ...(section.to ? [section.to] : []),
+    ...section.items.map((item) => item.to),
+  ])
+}
+
+export function visibilityKeys(
+  item: Pick<NavItem, 'can' | 'canAny'>,
+): Array<MenuKey> {
+  if (item.canAny && item.canAny.length > 0) {
+    return item.canAny
+  }
+
+  if (item.can) {
+    return [item.can]
+  }
+
+  return []
+}
+
 export const navSections: Array<NavSection> = [
   {
     key: 'home',

@@ -15,7 +15,8 @@
       "shop": "STW 商店",
       "xp-boosts": "经验加成",
       "auto-pin-urns": "瓮任务追踪器",
-      "auto-llamas": "自动羊驼"
+      "auto-llamas": "自动羊驼",
+      "endurance": "耐力"
     },
     "auto-kick-status": {
       "issue": "未生效",

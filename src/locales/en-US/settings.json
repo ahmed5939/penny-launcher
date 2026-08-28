@@ -55,7 +55,7 @@
   },
   "custom-menu": {
     "title": "Customizable Menu",
-    "description": "You can customize menu sections/options visibility."
+    "description": "Show or hide sidebar items. Hidden tools stay reachable from search (Ctrl+K). The same toggles are available from Customize at the bottom of the rail."
   },
   "account-customization": {
     "title": "Account Customization",

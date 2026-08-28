@@ -15,7 +15,8 @@
       "shop": "Магазин STW",
       "xp-boosts": "Усилители Опыта",
       "auto-pin-urns": "Отслеживание задания с урнами",
-      "auto-llamas": "Автолама"
+      "auto-llamas": "Автолама",
+      "endurance": "Эндьюранс"
     },
     "auto-kick-status": {
       "issue": "Ошибка",
