@@ -196,13 +196,18 @@ export function MissionItem({
               )}
             </span>
 
-            {/* `min-w-0` or the grid refuses to shrink this column. */}
-            <span className="flex min-w-0 items-center gap-3 py-2.5 pl-3 pr-2">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/40 ring-1 ring-inset ring-border/60 transition-colors group-hover/brief:ring-primary/25">
+            {/*
+              `min-w-0` or the grid refuses to shrink this column, and
+              `overflow-hidden` so that whatever refuses to shrink inside it —
+              the type glyph, the meta strip — is clipped at the column edge
+              instead of painting over the power figure and the payload bay.
+            */}
+            <span className="flex min-w-0 items-center gap-3 overflow-hidden py-2.5 pl-3 pr-2 compact:gap-2 compact:pl-2">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/40 ring-1 ring-inset ring-border/60 transition-colors group-hover/brief:ring-primary/25 compact:size-8">
                 <img
                   src={mission.zone.type.imageUrl}
                   alt=""
-                  className="ink-glyph size-6 object-contain"
+                  className="ink-glyph size-6 object-contain compact:size-5"
                   loading="lazy"
                 />
               </span>
@@ -213,11 +218,14 @@ export function MissionItem({
                   mapped category has; a row with no words at all is the thing
                   this redesign exists to remove.
                 */}
-                <span className="truncate text-sm font-semibold leading-tight text-foreground">
+                <span
+                  className="truncate text-sm font-semibold leading-tight text-foreground"
+                  title={typeLabel ?? undefined}
+                >
                   {typeLabel ?? `#${data.raw.mission.tileIndex}`}
                 </span>
 
-                <span className="flex min-w-0 items-center gap-2 text-[0.6875rem] leading-none text-muted-foreground/70">
+                <span className="mission-meta flex min-w-0 items-center gap-2 text-[0.6875rem] leading-none text-muted-foreground/70">
                   {brief.meta.map((reward) => (
                     <span
                       className="flex shrink-0 items-center gap-0.5"
@@ -286,12 +294,12 @@ export function MissionItem({
 
               Ventures zones with no published power report -1, hence the dash.
             */}
-            <span className="flex items-center justify-end gap-1 border-l border-border/40 px-3">
+            <span className="flex items-center justify-end gap-1 border-l border-border/40 px-3 compact:px-1.5">
               <Zap
                 aria-hidden
                 className="size-3 shrink-0 fill-current text-primary/50"
               />
-              <span className="figure text-xl font-bold leading-none text-foreground/90">
+              <span className="figure text-xl font-bold leading-none text-foreground/90 compact:text-lg compact:leading-none">
                 {powerLevel > 0 ? powerLevel : '—'}
               </span>
             </span>
@@ -303,7 +311,7 @@ export function MissionItem({
             */}
             <span
               className={cn(
-                'flex items-center border-l px-2.5',
+                'flex items-center border-l px-2.5 compact:px-2',
                 brief.payloadIsAlert && !isBanked
                   ? 'border-primary/25 bg-primary/[0.07]'
                   : 'border-border/40 bg-muted/20',

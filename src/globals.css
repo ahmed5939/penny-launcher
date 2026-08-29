@@ -611,6 +611,49 @@
   }
 
   /*
+   * The compact tier — mirrors the `compact` screen in the Tailwind config,
+   * which is what the row's own elements key their padding off. Below this
+   * width the five fixed columns take more than half the card, and by 750px
+   * the job column is down to ~120px: a title cut after two words, and a meta
+   * strip wider than the space it is standing in.
+   *
+   * The 88px this hands back comes almost entirely from the payload bay,
+   * which drops its name and rarity caption: at that width the caption was
+   * three letters and an ellipsis, and the well's rarity ring says the same
+   * thing in no letters at all. The row still expands to the full detail.
+   */
+  @media (max-width: 900px) {
+    .mission-brief {
+      grid-template-columns: 3px 2.5rem minmax(0, 1fr) 3.75rem 7rem 1.5rem;
+    }
+  }
+
+  /*
+   * The meta strip's glyphs are a fixed 16px and deliberately never shrink,
+   * so on a narrow shell the strip is wider than the column holding it.
+   * Clipped rather than left to overflow: the strip's cell has neighbours,
+   * and an overflowing strip painted its icons straight over the power figure
+   * and through the payload bay's text.
+   *
+   * The fade is on the strip's right edge, so it only bites once the content
+   * actually reaches that edge — a strip with room to spare is untouched, and
+   * one that doesn't fit ends in a fade rather than a severed icon.
+   */
+  .mission-meta {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 1.25rem),
+      transparent
+    );
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 1.25rem),
+      transparent
+    );
+  }
+
+  /*
    * Every heading below h2 in the missions UI, matching the label already
    * above the alert preview tiles. Six files writing six near-identical
    * heading recipes is how a system stops being one.

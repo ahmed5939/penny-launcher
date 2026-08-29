@@ -129,6 +129,8 @@ export type ExpeditionSlot = {
   /** 0–1. Only meaningful once running. */
   successChance: number
   suggestedHeroIds: Array<string>
+  suggestedPower: number
+  targetPower: number
 }
 
 export type ExpeditionsEntry = {
@@ -223,6 +225,36 @@ export class Expeditions {
     })
     const items = response.data.profileChanges[0]?.profile.items ?? {}
     const now = Date.now()
+    const occupiedHeroIds = new Set<string>()
+
+    Object.values(items).forEach((item) => {
+      if (item.templateId.includes('CampaignHeroLoadout')) {
+        const crewMembers = (item.attributes as {
+          crew_members?: Record<string, string>
+        }).crew_members
+
+        Object.values(crewMembers ?? {}).forEach((heroId) => {
+          if (heroId) occupiedHeroIds.add(heroId)
+        })
+      }
+    })
+
+    Object.entries(items).forEach(([itemId, item]) => {
+      if (!item.templateId.startsWith('Hero:')) return
+      const attributes = item.attributes as {
+        squad_id?: string
+        squad_slot_idx?: number
+      }
+
+      if (
+        attributes.squad_id &&
+        typeof attributes.squad_slot_idx === 'number' &&
+        attributes.squad_slot_idx >= 0
+      ) {
+        occupiedHeroIds.add(itemId)
+      }
+    })
+
     const occupiedExpeditionSquads = new Set(
       Object.values(items)
         .filter((item) => item.templateId.startsWith('Expedition:'))
@@ -248,11 +280,16 @@ export class Expeditions {
           type: heroClass(item.templateId),
           squadId: attributes.squad_id ?? '',
           usedInLoadout: (attributes.building_slot_used ?? 0) > 0,
+          power:
+            (attributes.level ?? 1) * 10 +
+            (rarityPower[rarity] ?? 0) * 20,
         }
       })
       .filter(
         (hero) =>
-          !hero.usedInLoadout && !occupiedExpeditionSquads.has(hero.squadId)
+          !hero.usedInLoadout &&
+          !occupiedHeroIds.has(hero.itemId) &&
+          !occupiedExpeditionSquads.has(hero.squadId)
       )
       .sort(
         (heroA, heroB) =>
@@ -300,13 +337,39 @@ export class Expeditions {
         ...requiredHeroes,
         ...remainingHeroes.slice(0, Math.max(0, 5 - requiredHeroes.length)),
       ]
+      const targetPower = Number(
+        attributes.expedition_target_power ??
+          attributes.expedition_max_target_power ??
+          0
+      )
+      const requiredPower = Math.ceil(targetPower * 0.8)
+      const requiredIds = new Set(requiredHeroes.map((hero) => hero.itemId))
+      const compactTeam = suggestedHeroes.reduce<typeof suggestedHeroes>(
+        (team, hero) => {
+          const power = team.reduce((total, item) => total + item.power, 0)
+          if (requiredIds.has(hero.itemId) || power < requiredPower) team.push(hero)
+          return team
+        },
+        []
+      )
+      const finalTeam = compactTeam.length > 0 ? compactTeam : suggestedHeroes.slice(0, 1)
 
       const rawSuccessChance = Number(attributes.expedition_success_chance ?? 0)
+      const durationMinutes = Number(
+        attributes.expedition_duration_minutes ??
+          (attributes.expedition_duration_seconds
+            ? attributes.expedition_duration_seconds / 60
+            : 0)
+      )
 
       entry.slots.push({
         itemId,
         templateId: item.templateId,
         ...parseExpeditionTemplate(item.templateId),
+        durationMinutes:
+          durationMinutes > 0
+            ? durationMinutes
+            : parseExpeditionTemplate(item.templateId).durationMinutes,
         criteria,
         state,
         endTime,
@@ -316,7 +379,9 @@ export class Expeditions {
         squadId: attributes.expedition_squad_id ?? null,
         successChance:
           rawSuccessChance > 1 ? rawSuccessChance / 100 : rawSuccessChance,
-        suggestedHeroIds: suggestedHeroes.map((hero) => hero.itemId),
+        suggestedHeroIds: finalTeam.map((hero) => hero.itemId),
+        suggestedPower: finalTeam.reduce((total, hero) => total + hero.power, 0),
+        targetPower,
       })
     })
 

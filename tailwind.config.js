@@ -12,6 +12,18 @@ module.exports = {
       },
     },
     extend: {
+      /*
+       * The width below which the shell stops being able to hold a full
+       * mission brief: a 208px rail plus the row's five fixed columns squeeze
+       * the flexible one until the mission's own name is two words and an
+       * ellipsis. Mirrored by a plain media query in `globals.css`, where the
+       * brief's grid tracks live — keep the two numbers in step.
+       */
+      screens: {
+        compact: {
+          max: '900px',
+        },
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

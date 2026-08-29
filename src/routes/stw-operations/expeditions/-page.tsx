@@ -18,12 +18,19 @@ import { PageHeader, Panel } from '../../../components/page'
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
 const rewardTypes = [
-  'Supply Run',
-  'Survivor Scouting',
-  'Trap Run',
-  'Crafting Run',
-  'Wood Gathering',
-  'Ore Mining',
+  'Survivors',
+  'Heroes',
+  'Traps',
+  'Weapons',
+  'Materials',
+]
+
+const recycleOptions: Array<NonNullable<AutoExpeditionConfig['recycleBelow']>> = [
+  'off',
+  'Common',
+  'Uncommon',
+  'Rare',
+  'Epic',
 ]
 
 export function RouteComponent() {
@@ -35,7 +42,7 @@ export function RouteComponent() {
         icon={Compass}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.expeditions')}
-        description="Automatically collect completed expeditions and dispatch new ones every hour."
+        description="Automatically select, launch, confirm, and collect expeditions."
       />
       <AutoExpeditionSettings />
       <ReadOnlyExpeditionStatus />
@@ -69,8 +76,8 @@ function AutoExpeditionSettings() {
           <WandSparkles className="size-4" /> Auto-expeditions
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Enabled accounts are checked every hour. Completed expeditions are
-          collected before the highest-tier matching offers are dispatched.
+          Runs when rewards return, otherwise hourly. Teams preserve occupied
+          heroes and must meet vehicle, criteria, and power requirements.
         </p>
       </div>
 
@@ -110,6 +117,15 @@ function AutoExpeditionSettings() {
                       </p>
                     ) : null}
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Notify</span>
+                    <Switch
+                      checked={config.notificationsEnabled !== false}
+                      onCheckedChange={(notificationsEnabled) =>
+                        update(account.value, { notificationsEnabled })
+                      }
+                    />
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -136,6 +152,37 @@ function AutoExpeditionSettings() {
                     )
                   })}
                 </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Recycle new rewards at or below:
+                  </span>
+                  {recycleOptions.map((rarity) => (
+                    <Button
+                      key={rarity}
+                      size="sm"
+                      variant={(config.recycleBelow ?? 'off') === rarity ? 'default' : 'outline'}
+                      onClick={() => update(account.value, { recycleBelow: rarity })}
+                    >
+                      {rarity === 'off' ? 'Off' : rarity}
+                    </Button>
+                  ))}
+                </div>
+                {config.nextRunAt ? (
+                  <p className="text-xs text-muted-foreground">
+                    Next check {dayjs(config.nextRunAt).fromNow()}
+                    {config.lastError ? ` · Last error: ${config.lastError}` : ''}
+                  </p>
+                ) : null}
+                {config.history?.length ? (
+                  <div className="max-h-32 overflow-auto rounded-md border border-border/60">
+                    {config.history.slice(-8).reverse().map((entry, index) => (
+                      <p className="border-b border-border/40 px-3 py-2 text-xs text-muted-foreground last:border-0" key={`${entry.timestamp}-${index}`}>
+                        {dayjs(entry.timestamp).fromNow()} · {entry.action} · {entry.expedition.replace('Expedition:expedition_', '').replaceAll('_', ' ')}
+                        {entry.rewards?.length ? ` · ${entry.rewards.join(', ')}` : ''}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
               </li>
             )
           })}

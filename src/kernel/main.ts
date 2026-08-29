@@ -536,6 +536,9 @@ process.on('uncaughtExceptionMonitor', (error) => {
 
     secureIpcOn(ElectronAPIEventKeys.RequestAccounts, async () => {
       await AccountsManager.load()
+      await AutoExpeditions.ensureStarted([
+        ...AccountsManager.getAccounts().keys(),
+      ])
       await runAutoDailyQuests()
     })
 

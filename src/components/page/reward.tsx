@@ -91,15 +91,21 @@ export function RewardPayload({
         size="lg"
       />
 
+      {/*
+        Compact: the bay keeps its well and its number and drops the words.
+        A name and a rarity caption both cut to three letters say less than
+        the well's own rarity ring already does, and the width they cost is
+        the width the mission's title needs to survive at all.
+      */}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {reward.quantity > 1 && (
-          <span className="figure text-xl font-bold leading-none text-foreground">
+          <span className="figure truncate text-xl font-bold leading-none text-foreground compact:text-lg compact:leading-none">
             {numberWithCommaSeparator(reward.quantity)}
           </span>
         )}
         {grade.name && (
           <span
-            className="truncate text-[0.75rem] font-medium leading-tight text-foreground/85"
+            className="truncate text-[0.75rem] font-medium leading-tight text-foreground/85 compact:hidden"
             title={grade.name}
           >
             {grade.name}
@@ -107,7 +113,7 @@ export function RewardPayload({
         )}
         {grade.word && (
           <span
-            className="truncate text-[0.625rem] font-semibold uppercase leading-none tracking-[0.1em] text-[color:var(--rarity)]"
+            className="truncate text-[0.625rem] font-semibold uppercase leading-none tracking-[0.1em] text-[color:var(--rarity)] compact:hidden"
             style={rarityStyle(grade.accent)}
           >
             {grade.word}

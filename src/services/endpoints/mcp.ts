@@ -404,6 +404,25 @@ export function setRefreshExpeditions({
   )
 }
 
+export function setClaimCollectedResources({
+  accessToken,
+  accountId,
+  collectorIds,
+}: {
+  accessToken: string
+  accountId: string
+  collectorIds: Array<string>
+}) {
+  return baseGameService.post<MCPQueryProfile>(
+    `/profile/${accountId}/client/ClaimCollectedResources`,
+    { collectorsToClaim: collectorIds },
+    {
+      headers: { Authorization: `bearer ${accessToken}` },
+      params: { profileId: 'campaign', rvn: -1 },
+    }
+  )
+}
+
 export function setCollectExpedition({
   accessToken,
   accountId,

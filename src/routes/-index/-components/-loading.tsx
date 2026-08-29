@@ -72,24 +72,27 @@ function MissionSkeleton({ total = defaultTotal }: { total?: number }) {
           <div className="flex items-center justify-center border-r border-border/50">
             <Skeleton className="size-5 rounded" />
           </div>
-          <div className="flex min-w-0 items-center gap-3 py-2.5 pl-3 pr-2">
-            <Skeleton className="size-9 shrink-0 rounded-lg" />
+          <div className="flex min-w-0 items-center gap-3 overflow-hidden py-2.5 pl-3 pr-2 compact:gap-2 compact:pl-2">
+            <Skeleton className="size-9 shrink-0 rounded-lg compact:size-8" />
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <Skeleton className="h-3.5 w-40 max-w-full rounded" />
               <Skeleton className="h-2.5 w-28 max-w-full rounded" />
             </div>
           </div>
-          <div className="flex flex-col items-end justify-center gap-1.5 border-l border-border/40 px-3">
+          <div className="flex flex-col items-end justify-center gap-1.5 border-l border-border/40 px-3 compact:px-1.5">
             <Skeleton className="h-5 w-8 rounded" />
             <Skeleton className="h-[2px] w-9 rounded-full" />
           </div>
           {/*
             Never tinted: the bay's alert colour and a reward's rarity are both
             facts about data that has not arrived yet.
+
+            The text bars go where the real bay's name and rarity caption go,
+            so they leave with them on a compact shell.
           */}
-          <div className="flex items-center gap-2.5 border-l border-border/40 bg-muted/20 px-2.5">
+          <div className="flex items-center gap-2.5 border-l border-border/40 bg-muted/20 px-2.5 compact:px-2">
             <Skeleton className="size-11 shrink-0 rounded-lg" />
-            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5 compact:hidden">
               <Skeleton className="h-4 w-10 rounded" />
               <Skeleton className="h-2.5 w-full rounded" />
             </div>
