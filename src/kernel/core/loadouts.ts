@@ -26,6 +26,12 @@ export type LoadoutMember = {
 export type LoadoutEntry = {
   itemId: string
   name: string | null
+  /**
+   * Which loadout this is in the game's own list, 1-based. The equipped one
+   * is sorted to the front for the page, so its place in the array is not
+   * the number the game calls it by.
+   */
+  position: number
   /** The one the account is currently playing. */
   active: boolean
   commander: LoadoutMember | null
@@ -177,6 +183,7 @@ export class Loadouts {
       payload.loadouts.push({
         itemId,
         name: attributes.loadout_name ?? null,
+        position: payload.loadouts.length + 1,
         active: itemId === selected,
         commander: toMember('commanderslot', crew.commanderslot),
         team: followerSlots.map((slot) => toMember(slot, crew[slot])),

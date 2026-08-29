@@ -1,20 +1,32 @@
+import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import type { ItemDetailSubject } from '../../../components/items/item-detail'
-import type { LoadoutEntry } from '../../../kernel/core/loadouts'
-import type { ItemRecordMap } from '../../../kernel/core/item-database'
+import type {
+  LoadoutEntry,
+  LoadoutMember,
+} from '../../../kernel/core/loadouts'
+import type {
+  ItemRecordMap,
+  ItemRecordPerk,
+} from '../../../kernel/core/item-database'
 import type { InventoryItem } from '../../../kernel/core/inventory'
 import type { RatingTables } from '../../../config/constants/fortnite/power'
 
 import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   CheckCheck,
+  Crown,
   Eraser,
   Info,
+  Plus,
   Repeat,
   RefreshCw,
+  Rocket,
   Shield,
-  Swords,
+  Star,
   UserX,
   Users,
+  Zap,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -24,7 +36,12 @@ import { GoToTop } from '../../../components/go-to-top'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
 import { ItemIcon } from '../../../components/items/item-icon'
 import { ItemTile } from '../../../components/items/item-tile'
-import { ContextMenuItem } from '../../../components/ui/context-menu'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '../../../components/ui/context-menu'
 import {
   Dialog,
   DialogContent,
@@ -71,6 +88,23 @@ function slotLabel(slot: string) {
     : `support slot ${slot.replace('followerslot', '')}`
 }
 
+/**
+ * What to call a loadout.
+ *
+ * `loadout_name` is not a name. The game generates a token per loadout —
+ * `DtufXHAHun` — and never shows it; its own picker numbers the slots. So a
+ * value that could have come out of that generator (one run of letters and
+ * digits, no spaces, no punctuation) is treated as the machine string it is
+ * and the loadout takes its number instead. Anything a person could have
+ * typed is still printed, in case Epic ever hands the naming over.
+ */
+function loadoutTitle(loadout: LoadoutEntry) {
+  const name = loadout.name?.trim() ?? ''
+  const generated = name.length < 1 || /^[A-Za-z0-9]{6,}$/.test(name)
+
+  return generated ? `Loadout ${loadout.position}` : name
+}
+
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
 
@@ -80,7 +114,7 @@ export function RouteComponent() {
         icon={Users}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.loadouts')}
-        description="Build and switch hero loadouts — commander, support team, team perk and gadgets."
+        description="Every loadout the account has saved, in the game's own order. Click a seat to change who is in it, right-click one to inspect them."
       />
       <Content />
     </>
@@ -254,10 +288,9 @@ function Content() {
       )}
 
       {hasLoaded && !errorMessage && loadouts.length > 0 && (
-        <div className="space-y-3">
-          {loadouts.map((loadout, index) => (
+        <div className="grid gap-3 xl:grid-cols-2">
+          {loadouts.map((loadout) => (
             <LoadoutCard
-              index={index}
               isEditing={isEditing}
               key={loadout.itemId}
               loadout={loadout}
@@ -356,8 +389,27 @@ function Content() {
   )
 }
 
+/**
+ * One loadout, in the shape the game lays it out.
+ *
+ * In game a loadout slot is a vertical stack of labelled bands — commander,
+ * team perk, support, gadgets — read top to bottom, and that order is the one
+ * people already know, so the card keeps it rather than inventing a
+ * two-column arrangement of tiles nobody has seen before. Each band names
+ * itself at the section rank and holds rows, so five support heroes read as a
+ * list of five decisions rather than a shelf of anonymous portraits.
+ *
+ * What it does not keep is the game's chrome. The game fills the commander
+ * band with its rarity colour and paints every support row a different
+ * gradient; here rarity stays a hairline on the art the way `ItemIcon` draws
+ * it everywhere else, which leaves the perk names as the loudest text in the
+ * card — and a perk is what a hero is actually picked for.
+ *
+ * Defenders are the one band the game has and this does not: the profile's
+ * loadout item carries a commander, five crew members, a team perk and
+ * gadgets, and nothing about defenders at all.
+ */
 function LoadoutCard({
-  index,
   isEditing,
   loadout,
   onActivate,
@@ -367,7 +419,6 @@ function LoadoutCard({
   ratings,
   records,
 }: {
-  index: number
   isEditing: boolean
   loadout: LoadoutEntry
   onActivate: () => void
@@ -377,9 +428,14 @@ function LoadoutCard({
   ratings: RatingTables
   records: ItemRecordMap
 }) {
+  const commander = loadout.commander
+  const commanderRecord = commander?.templateId
+    ? getItemRecord(records, commander.templateId)
+    : null
   const teamPerk = loadout.teamPerk
     ? getItemRecord(records, loadout.teamPerk)
     : null
+  const filled = loadout.team.filter((member) => member.templateId).length
 
   const memberPower = (member: {
     level: number
@@ -393,11 +449,19 @@ function LoadoutCard({
         })
       : null
 
+  const inspect = (member: LoadoutMember) => () =>
+    onInspect({
+      templateId: member.templateId as string,
+      itemId: member.itemId ?? undefined,
+      level: member.level,
+      tier: member.tier,
+    })
+
   return (
     <Panel className={cn(loadout.active && 'border-primary/50')}>
       <header className="flex flex-wrap items-center gap-2 border-b border-border/60 px-4 py-3">
         <p className="text-[0.8125rem] font-semibold">
-          {loadout.name ?? `Loadout ${index + 1}`}
+          {loadoutTitle(loadout)}
         </p>
         {loadout.active && <StatusPill tone="active">Equipped</StatusPill>}
 
@@ -425,196 +489,285 @@ function LoadoutCard({
         </div>
       </header>
 
-      <PanelBody className="space-y-4">
-        <div className="flex flex-wrap gap-6">
-          <div className="space-y-2">
-            <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              <Swords className="size-3" />
-              Commander
-            </p>
-            {loadout.commander?.templateId ? (
-              <ItemTile
-                level={loadout.commander.level}
-                menu={
-                  <SlotMenu
-                    onInspect={() =>
-                      onInspect({
-                        templateId: loadout.commander
-                          ?.templateId as string,
-                        itemId: loadout.commander?.itemId ?? undefined,
-                        level: loadout.commander?.level ?? 0,
-                        tier: loadout.commander?.tier ?? 0,
-                      })
-                    }
-                    onPick={() => onPickSlot('commanderslot')}
-                  />
-                }
-                onClick={() => onPickSlot('commanderslot')}
-                power={memberPower(loadout.commander)}
-                records={records}
-                size="large"
-                templateId={loadout.commander.templateId}
-                title="Click to change · right-click for more"
-              />
-            ) : (
-              <EmptySlot onClick={() => onPickSlot('commanderslot')} />
-            )}
-          </div>
+      <Band
+        icon={Crown}
+        title="Commander"
+      >
+        {/*
+          The commander's perk is its *commander* perk — the upgraded one it
+          only grants from this seat — which is the whole reason a particular
+          hero leads a loadout. A hero with no commander perk in the database
+          still has its standard one, and showing that beats showing nothing.
+        */}
+        <HeroSlot
+          isLead
+          member={commander}
+          onInspect={commander?.templateId ? inspect(commander) : undefined}
+          onPick={() => onPickSlot('commanderslot')}
+          perk={
+            commanderRecord?.commanderPerk ?? commanderRecord?.perk ?? null
+          }
+          power={commander ? memberPower(commander) : null}
+          records={records}
+        />
+      </Band>
 
-          <div className="min-w-0 flex-1 space-y-2">
-            <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              <Users className="size-3" />
-              Support team
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {loadout.team.map((member) =>
-                member.templateId ? (
-                  <ItemTile
-                    key={member.slot}
-                    level={member.level}
-                    menu={
-                      <SlotMenu
-                        onInspect={() =>
-                          onInspect({
-                            templateId: member.templateId as string,
-                            itemId: member.itemId ?? undefined,
-                            level: member.level,
-                            tier: member.tier,
-                          })
-                        }
-                        onPick={() => onPickSlot(member.slot)}
-                      />
-                    }
-                    onClick={() => onPickSlot(member.slot)}
-                    power={memberPower(member)}
-                    records={records}
-                    size="small"
-                    templateId={member.templateId}
-                    title="Click to change · right-click for more"
-                  />
-                ) : (
-                  <EmptySlot
-                    key={member.slot}
-                    onClick={() => onPickSlot(member.slot)}
-                    small
-                  />
-                )
+      {teamPerk && (
+        <Band
+          icon={Shield}
+          title="Team perk"
+        >
+          <div className="flex items-start gap-3 px-2.5 py-2">
+            <ItemIcon
+              records={records}
+              size="large"
+              templateId={loadout.teamPerk as string}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-[0.8125rem] font-semibold leading-tight">
+                {teamPerk.name}
+              </p>
+              {teamPerk.description && (
+                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {teamPerk.description}
+                </p>
               )}
             </div>
           </div>
-        </div>
+        </Band>
+      )}
 
-        {(teamPerk || loadout.gadgets.length > 0) && (
-          <div className="flex flex-wrap gap-6">
-            {teamPerk && (
-              <div className="min-w-0 flex-1 space-y-1.5">
-                <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  <Shield className="size-3" />
-                  Team perk
-                </p>
-                <div className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2">
-                  <p className="text-xs font-semibold">{teamPerk.name}</p>
-                  {teamPerk.description && (
-                    <p className="mt-0.5 text-[0.65rem] leading-relaxed text-muted-foreground">
-                      {teamPerk.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {loadout.gadgets.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  Gadgets
-                </p>
-                <div className="flex gap-2">
-                  {loadout.gadgets.map((gadget) => (
-                    <span
-                      className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-surface/50 py-1 pl-1 pr-2.5 text-xs"
-                      key={gadget}
-                    >
-                      <ItemIcon
-                        records={records}
-                        size="small"
-                        templateId={gadget}
-                      />
-                      {getItemRecord(records, gadget)?.name ??
-                        gadget.split(':').pop()}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {loadout.commander?.templateId && (
-          <p className="text-[0.65rem] text-muted-foreground">
-            Click a slot to change who is in it, or{' '}
-            <button
-              className="text-primary underline-offset-4 hover:underline"
-              onClick={() =>
-                onInspect({
-                  templateId: loadout.commander?.templateId as string,
-                  itemId: loadout.commander?.itemId ?? undefined,
-                  level: loadout.commander?.level ?? 0,
-                  tier: loadout.commander?.tier ?? 0,
-                })
+      <Band
+        count={`${filled}/${loadout.team.length}`}
+        icon={Users}
+        title="Support team"
+      >
+        <div className="space-y-0.5">
+          {loadout.team.map((member) => (
+            <HeroSlot
+              key={member.slot}
+              member={member}
+              onInspect={member.templateId ? inspect(member) : undefined}
+              onPick={() => onPickSlot(member.slot)}
+              perk={
+                member.templateId
+                  ? getItemRecord(records, member.templateId)?.perk ?? null
+                  : null
               }
-              type="button"
-            >
-              inspect the commander
-            </button>{' '}
-            to see its perks.
-          </p>
-        )}
-      </PanelBody>
+              power={memberPower(member)}
+              records={records}
+            />
+          ))}
+        </div>
+      </Band>
+
+      {loadout.gadgets.length > 0 && (
+        <Band
+          icon={Rocket}
+          title="Gadgets"
+        >
+          <div className="flex flex-wrap gap-2 px-2.5 py-1">
+            {loadout.gadgets.map((gadget) => (
+              <span
+                className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface/50 py-1 pl-1 pr-2.5 text-xs"
+                key={gadget}
+              >
+                <ItemIcon
+                  records={records}
+                  size="small"
+                  templateId={gadget}
+                />
+                {getItemRecord(records, gadget)?.name ??
+                  gadget.split(':').pop()}
+              </span>
+            ))}
+          </div>
+        </Band>
+      )}
     </Panel>
   )
 }
 
-/** Right-click on a filled slot: swap who is in it, or read them. */
-function SlotMenu({
-  onInspect,
-  onPick,
+/**
+ * One labelled band of the card.
+ *
+ * The game separates its bands with a full-width rule and a heading in the
+ * corner, and that is what makes a loadout scannable — you find the support
+ * team by looking for the word, not by counting portraits. Same rule here,
+ * at the panel's own gutter, with the count on the right for the one band
+ * where "how many are filled" is a question worth answering at a glance.
+ */
+function Band({
+  children,
+  count,
+  icon: Icon,
+  title,
 }: {
-  onInspect: () => void
-  onPick: () => void
+  children: ReactNode
+  /** Filled-of-total, when the band is a set of seats. */
+  count?: string
+  icon: LucideIcon
+  title: string
 }) {
   return (
-    <>
-      <ContextMenuItem onSelect={onPick}>
-        <Repeat className="mr-2 size-3.5" />
-        Change hero
-      </ContextMenuItem>
-      <ContextMenuItem onSelect={onInspect}>
-        <Info className="mr-2 size-3.5" />
-        Inspect
-      </ContextMenuItem>
-    </>
+    <section className="border-b border-border/60 px-2.5 py-2.5 last:border-b-0">
+      <div className="flex items-center gap-1.5 px-1.5 pb-1.5">
+        <Icon className="size-3 shrink-0 text-muted-foreground/70" />
+        <h3 className="section-label">{title}</h3>
+        {count && (
+          <span className="figure micro-label ml-auto">{count}</span>
+        )}
+      </div>
+      {children}
+    </section>
   )
 }
 
-function EmptySlot({
-  onClick,
-  small,
+/**
+ * A hero in a seat: portrait, who they are, what they grant, what they are
+ * worth.
+ *
+ * The perk is the second line rather than a hover-only detail because it is
+ * the reason the seat is filled the way it is — swapping a support hero is a
+ * choice between two perks, and a grid of portraits hides exactly that. The
+ * lead seat takes the bigger portrait and gets its perk's description as
+ * well; a support row keeps the perk to its name, or five descriptions would
+ * bury the commander the card is built around.
+ *
+ * Everything inside is phrasing content — spans, never divs — because the row
+ * itself is the button that opens the hero picker.
+ */
+function HeroSlot({
+  isLead = false,
+  member,
+  onInspect,
+  onPick,
+  perk,
+  power,
+  records,
 }: {
-  onClick?: () => void
-  small?: boolean
+  /** The commander seat: bigger art, and the perk's description with it. */
+  isLead?: boolean
+  member: LoadoutMember | null
+  /** Absent while the seat is empty — there is nothing to inspect. */
+  onInspect?: () => void
+  onPick: () => void
+  perk: ItemRecordPerk | null
+  power: number | null
+  records: ItemRecordMap
 }) {
-  return (
+  if (!member?.templateId) {
+    return (
+      <button
+        className={cn(
+          'flex w-full items-center gap-3 rounded-lg border-2 border-dashed border-border/60',
+          'px-2.5 py-2 text-left text-muted-foreground transition-colors',
+          'hover:border-primary/50 hover:text-primary'
+        )}
+        onClick={onPick}
+        type="button"
+      >
+        <span
+          className={cn(
+            'grid shrink-0 place-items-center rounded-lg bg-muted/30',
+            isLead ? 'size-16' : 'size-12'
+          )}
+        >
+          <Plus className="size-4" />
+        </span>
+        <span className="text-[0.8125rem]">
+          {isLead ? 'No commander — pick one' : 'Empty support slot'}
+        </span>
+      </button>
+    )
+  }
+
+  const record = getItemRecord(records, member.templateId)
+  const caption = [
+    record?.rarity,
+    record?.subType,
+    member.level > 0 && `Level ${member.level}`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
+  const row = (
     <button
       className={cn(
-        'grid shrink-0 place-items-center gap-0.5 rounded-lg border-2 border-dashed',
-        'border-border/60 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary',
-        small ? 'size-16' : 'size-32'
+        'flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left',
+        'transition-colors hover:bg-accent/40'
       )}
-      onClick={onClick}
+      onClick={onPick}
+      title="Click to change · right-click for more"
       type="button"
     >
-      <span className="text-lg leading-none">+</span>
-      <span className="text-[0.6rem]">Empty</span>
+      <ItemIcon
+        records={records}
+        size={isLead ? 'xl' : 'large'}
+        templateId={member.templateId}
+      />
+
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            'block truncate font-semibold leading-tight',
+            isLead ? 'text-sm' : 'text-[0.8125rem]'
+          )}
+        >
+          {record?.name ?? member.templateId.split(':').pop()}
+        </span>
+        {caption && (
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+            {caption}
+          </span>
+        )}
+
+        {perk && (
+          <span
+            className="mt-1 flex items-start gap-1.5"
+            title={perk.description ?? undefined}
+          >
+            <Star className="mt-0.5 size-3 shrink-0 text-muted-foreground/70" />
+            <span className="min-w-0">
+              <span className="block truncate text-xs font-medium text-foreground/90">
+                {perk.name}
+              </span>
+              {isLead && perk.description && (
+                <span className="mt-0.5 block line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {perk.description}
+                </span>
+              )}
+            </span>
+          </span>
+        )}
+      </span>
+
+      {power !== null && power > 0 && (
+        <span className="flex shrink-0 items-center gap-1">
+          <Zap className="size-3 text-muted-foreground" />
+          <span className="figure text-sm font-bold">{power}</span>
+        </span>
+      )}
     </button>
+  )
+
+  if (!onInspect) {
+    return row
+  }
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
+      <ContextMenuContent className="w-52">
+        <ContextMenuItem onSelect={onPick}>
+          <Repeat className="mr-2 size-3.5" />
+          Change hero
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={onInspect}>
+          <Info className="mr-2 size-3.5" />
+          Inspect
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

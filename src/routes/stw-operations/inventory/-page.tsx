@@ -116,17 +116,23 @@ const tabs = itemKinds.map((kind) => ({
 /** Strongest first — the order a vault is worth reading in. */
 const raritySections = [...rarityOrder].reverse()
 
+/**
+ * Both narrowing dropdowns are ceilings — a rarity or a tier and everything
+ * under it — and they used to say so, in a "Up to Legendary" that read as
+ * noise repeated six times down an open menu. The label is the rarity now,
+ * and the tier is the game's own T1–T4.
+ */
 const rarityFilterOptions = raritySections.map((rarity) => ({
-  label: `Up to ${rarityLabels[rarity]}`,
+  label: rarityLabels[rarity],
   value: rarity,
 }))
 
 const tierFilterOptions = [
   { label: 'Any tier', value: '0' },
-  { label: 'Up to T1', value: '1' },
-  { label: 'Up to T2', value: '2' },
-  { label: 'Up to T3', value: '3' },
-  { label: 'Up to T4', value: '4' },
+  { label: 'T1', value: '1' },
+  { label: 'T2', value: '2' },
+  { label: 'T3', value: '3' },
+  { label: 'T4', value: '4' },
 ]
 
 type SortMode = 'power' | 'level' | 'name'
@@ -437,7 +443,10 @@ function Content() {
               }}
               value={filters.maxRarity}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger
+                className="w-40"
+                title="Shows this rarity and everything below it"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -462,7 +471,10 @@ function Content() {
               }}
               value={String(filters.maxTier)}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger
+                className="w-32"
+                title="Shows this tier and everything below it"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
