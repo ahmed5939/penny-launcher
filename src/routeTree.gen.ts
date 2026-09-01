@@ -12,6 +12,7 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings/route'
+import { Route as SettingsTweaksRouteImport } from './routes/settings/tweaks/route'
 import { Route as PluginsRouteImport } from './routes/plugins/route'
 import { Route as AccountRouteImport } from './routes/account/route'
 import { Route as IndexImport } from './routes/index'
@@ -52,6 +53,11 @@ import { Route as AccountsAddTypeImport } from './routes/accounts/add/$type'
 
 const SettingsRouteRoute = SettingsRouteImport.update({
   path: '/settings',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const SettingsTweaksRouteRoute = SettingsTweaksRouteImport.update({
+  path: '/settings/tweaks',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -278,6 +284,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/settings/tweaks': {
+      preLoaderRoute: typeof SettingsTweaksRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/account-management/epic-games-settings': {
       preLoaderRoute: typeof AccountManagementEpicGamesSettingsRouteImport
       parentRoute: typeof rootRoute
@@ -416,12 +426,14 @@ export const routeTree = rootRoute.addChildren([
   AccountRouteRoute,
   PluginsRouteRoute,
   SettingsRouteRoute,
+  SettingsTweaksRouteRoute,
   AccountManagementEpicGamesSettingsRouteRoute,
   AccountManagementEulaRouteRoute,
   AccountManagementFriendsRouteRoute,
   AccountManagementGiftsInformationRouteRoute,
   AccountManagementLockerRouteRoute,
   AccountManagementProfileRouteRoute,
+  AccountManagementSpritesRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
   AccountManagementVbucksInformationRouteRoute,
   AccountsRemoveRouteRoute,

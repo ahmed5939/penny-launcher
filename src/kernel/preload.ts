@@ -26,11 +26,13 @@ import * as itemDatabaseActions from './preload-actions/item-database'
 import * as launcherActions from './preload-actions/launcher'
 import * as leaderboardActions from './preload-actions/leaderboard'
 import * as lockerActions from './preload-actions/locker'
+import * as spritesActions from './preload-actions/sprites'
 import * as loadoutsActions from './preload-actions/loadouts'
 import * as matchmakingActions from './preload-actions/matchmaking'
 import * as mcpActions from './preload-actions/mcp'
 import * as partyActions from './preload-actions/party'
 import * as pennydbMissionsActions from './preload-actions/pennydb-missions'
+import * as fileTweaksActions from './preload-actions/file-tweaks'
 import * as outpostActions from './preload-actions/outpost'
 import * as pluginsActions from './preload-actions/plugins'
 import * as questsActions from './preload-actions/quests'
@@ -72,8 +74,10 @@ export const availableElectronAPIs = {
   ...leaderboardActions,
   ...loadoutsActions,
   ...lockerActions,
+  ...spritesActions,
   ...partyActions,
   ...pennydbMissionsActions,
+  ...fileTweaksActions,
   ...outpostActions,
   ...pluginsActions,
   ...questsActions,

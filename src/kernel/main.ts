@@ -1308,6 +1308,277 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     /**
+     * File Tweaks — hidden behind a personal key; every handler refuses
+     * work until the gate is unlocked (session memory only).
+     */
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksUnlock, (_, key: string) => {
+      return import('./core/file-tweaks/gate').then((module) =>
+        module.fileTweaksUnlock(key)
+      )
+    })
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksLockStatus, async () => {
+      const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+      return fileTweaksIsUnlocked()
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevBuildsStatus,
+      async () => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { found: false, activated: false, error: 'locked' }
+        }
+
+        const { getDevBuildsStatus } = await import(
+          './core/file-tweaks/dev-builds'
+        )
+
+        return getDevBuildsStatus()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevBuildsToggle,
+      async () => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, message: 'locked' }
+        }
+
+        const { toggleDevBuilds } = await import(
+          './core/file-tweaks/dev-builds'
+        )
+
+        return toggleDevBuilds()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevStairsStatus,
+      async () => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { found: false, activated: false, error: 'locked' }
+        }
+
+        const { getDevStairsStatus } = await import(
+          './core/file-tweaks/dev-stairs'
+        )
+
+        return getDevStairsStatus()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksDevStairsToggle,
+      async () => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, message: 'locked' }
+        }
+
+        const { toggleDevStairs } = await import(
+          './core/file-tweaks/dev-stairs'
+        )
+
+        return toggleDevStairs()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksAirStrikeStatus,
+      async () => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { found: false, activated: false, error: 'locked' }
+        }
+
+        const { getAirStrikeStatus } = await import(
+          './core/file-tweaks/airstrike'
+        )
+
+        return getAirStrikeStatus()
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksAirStrikeToggle,
+      async () => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, message: 'locked' }
+        }
+
+        const { toggleAirStrike } = await import(
+          './core/file-tweaks/airstrike'
+        )
+
+        return toggleAirStrike()
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksTrapsData, async () => {
+      const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+      if (!fileTweaksIsUnlocked()) {
+        return { base: null, families: {}, heightScale: [], modified: [], namedConfigs: [], traps: [] }
+      }
+
+      const {
+        getBaseStatus,
+        getModifiedTraps,
+        getTrapFamilyInfo,
+        getTrapHeightScale,
+        getTrapList,
+        getTrapNamedConfigs,
+      } = await import('./core/file-tweaks/trap-height')
+
+      return {
+        base: await getBaseStatus(),
+        families: getTrapFamilyInfo(),
+        heightScale: getTrapHeightScale(),
+        modified: getModifiedTraps(),
+        namedConfigs: getTrapNamedConfigs(),
+        traps: getTrapList(),
+      }
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapStatus,
+      async (_, guid: string) => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { currentHeight: null, found: false, isModified: false }
+        }
+
+        const { getTrapStatus } = await import('./core/file-tweaks/trap-height')
+
+        return getTrapStatus(guid)
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapApply,
+      async (_, guid: string, heightHex: string) => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, message: 'locked' }
+        }
+
+        const { applyTrapHeight } = await import(
+          './core/file-tweaks/trap-height'
+        )
+
+        return applyTrapHeight(guid, heightHex)
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapRevert,
+      async (_, guid: string) => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, message: 'locked' }
+        }
+
+        const { revertTrapHeight } = await import(
+          './core/file-tweaks/trap-height'
+        )
+
+        return revertTrapHeight(guid)
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksTrapsRevertAll,
+      async () => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, message: 'locked' }
+        }
+
+        const { revertAllTrapHeights } = await import(
+          './core/file-tweaks/trap-height'
+        )
+
+        return revertAllTrapHeights()
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksBaseStatus, async () => {
+      const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+      if (!fileTweaksIsUnlocked()) {
+        return { currentHeight: '', found: false, isModified: false }
+      }
+
+      const { getBaseStatus } = await import('./core/file-tweaks/trap-height')
+
+      return getBaseStatus()
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksBaseApply,
+      async (_, uuValue: number) => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, message: 'locked' }
+        }
+
+        const { applyBaseHeight } = await import(
+          './core/file-tweaks/trap-height'
+        )
+
+        return applyBaseHeight(uuValue)
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.FileTweaksBaseRevert, async () => {
+      const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+      if (!fileTweaksIsUnlocked()) {
+        return { success: false, message: 'locked' }
+      }
+
+      const { revertBaseHeight } = await import(
+        './core/file-tweaks/trap-height'
+      )
+
+      return revertBaseHeight()
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.FileTweaksWorkerPower,
+      async (_, account: AccountData, mode: 'high' | 'low') => {
+        const { fileTweaksIsUnlocked } = await import('./core/file-tweaks/gate')
+
+        if (!fileTweaksIsUnlocked()) {
+          return { success: false, error: 'locked' }
+        }
+
+        const { generateWorkerPower } = await import(
+          './core/file-tweaks/worker-power'
+        )
+
+        return generateWorkerPower(account, mode)
+      }
+    )
+
+    /**
      * Automation
      */
 
