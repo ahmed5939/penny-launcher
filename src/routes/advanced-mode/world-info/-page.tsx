@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { LoadWorldInfoFiles } from '../../../bootstrap/components/advanced-mode/load-world-info-files'
+import { LoadWorldInfoData } from '../../../bootstrap/components/advanced-mode/load-world-info'
 
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
@@ -46,6 +47,7 @@ export function RouteComponent() {
 
   return (
     <>
+      <LoadWorldInfoData />
       <PageHeader
         icon={Globe}
         section={t('title')}

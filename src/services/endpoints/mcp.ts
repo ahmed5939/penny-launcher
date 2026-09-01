@@ -785,6 +785,50 @@ export function setAssignHeroToLoadout({
   )
 }
 
+export function setAssignDefenderToLoadout({
+  accessToken,
+  accountId,
+  defenderId,
+  loadoutId,
+  slotName,
+}: {
+  accessToken: string
+  accountId: string
+  defenderId: string
+  loadoutId: string
+  slotName: string
+}) {
+  return baseGameService.post<MCPQueryProfile>(
+    `/profile/${accountId}/client/AssignDefenderToLoadout`,
+    { defenderId, loadoutId, slotName },
+    {
+      headers: { Authorization: `bearer ${accessToken}` },
+      params: { profileId: 'campaign', rvn: -1 },
+    }
+  )
+}
+
+export function setAssignWeaponToDefender({
+  accessToken,
+  accountId,
+  defenderId,
+  weaponSchematicId,
+}: {
+  accessToken: string
+  accountId: string
+  defenderId: string
+  weaponSchematicId: string
+}) {
+  return baseGameService.post<MCPQueryProfile>(
+    `/profile/${accountId}/client/AssignWeaponToDefender`,
+    { defenderId, weaponSchematicId },
+    {
+      headers: { Authorization: `bearer ${accessToken}` },
+      params: { profileId: 'campaign', rvn: -1 },
+    }
+  )
+}
+
 export function setActiveHeroLoadout({
   accessToken,
   accountId,

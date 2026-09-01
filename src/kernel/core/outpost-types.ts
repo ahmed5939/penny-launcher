@@ -38,6 +38,11 @@ export type OutpostInfoResult = {
   zones: Array<OutpostZoneInfo>
 }
 
+export type OutpostReportExportResult = {
+  error?: string
+  status: 'cancelled' | 'error' | 'saved'
+}
+
 export type OutpostStructures = {
   cones: number
   floors: number
@@ -107,30 +112,60 @@ export type OutpostTrapInstanceTally = {
 }
 
 /**
- * A packed top-down map of the base. Positions are in cell units (world
- * units ÷ `cell`) with sub-tile precision — walls sit on half-cell grid
- * lines — so the renderer plots them without touching raw coordinates.
+ * A packed spatial map of the base. Positions are in cell units (world units
+ * ÷ `cell`) with sub-tile precision, including height for the 3D explorer.
+ *
+ * Build pieces are stored at their actor origin, which Fortnite puts on the
+ * midpoint of one tile edge rather than the tile centre — the centre lies
+ * half a cell along the piece's forward axis (see `tileCentreOffset`). Walls
+ * stand on that edge, so their origin is the wall itself.
  */
 export type OutpostLayout = {
   /** World units per grid cell — Fortnite's build tile is 512. */
   cell: number
-  /** Whole-cell bounds (floor/ceil of the extremes). */
-  bounds: { maxX: number; maxY: number; minX: number; minY: number }
+  /** Whole-cell bounds (floor/ceil of the extremes) of the player build. */
+  bounds: {
+    maxX: number
+    maxY: number
+    maxZ: number
+    minX: number
+    minY: number
+    minZ: number
+  }
   /**
-   * `[x, y, materialCode, kindCode, yawQuadrant]`.
+   * `[x, y, z, materialCode, kindCode, yawQuadrant, shapeIndex, tier]`.
    * Material: 0 wood, 1 stone, 2 metal, 3 other.
    * Kind: 0 floor, 1 wall, 2 stair, 3 roof, 4 other/edited.
    * Yaw: rotation about Z in 90° steps, 0–3.
+   * Shape: index into `shapes` — the exact edit variant.
+   * Tier: upgrade tier 1–3 (0 when unknown).
    */
-  structures: Array<[number, number, number, number, number]>
+  structures: Array<
+    [number, number, number, number, number, number, number, number]
+  >
   /**
-   * `[x, y, categoryCode, nameIndex]` — category 0 floor, 1 wall, 2 ceiling,
-   * 3 other; `nameIndex` points into `trapNames` so the map can say which
-   * trap each dot is.
+   * Piece shape names from the actor class (`Solid`, `Windows`, `DoorC`,
+   * `StairW`, `RoofC`, `BalconyS` …) referenced by `shapeIndex`.
    */
-  traps: Array<[number, number, number, number]>
+  shapes: Array<string>
+  /**
+   * `[x, y, z, categoryCode, nameIndex, yawQuadrant]` — category 0 floor,
+   * 1 wall, 2 ceiling, 3 other; `nameIndex` points into `trapNames`. Floor
+   * and ceiling traps use the same edge-origin convention as build pieces;
+   * wall traps sit on the wall's edge and face along their yaw.
+   */
+  traps: Array<[number, number, number, number, number, number]>
   /** Trap display names referenced by the dots' `nameIndex`. */
   trapNames: Array<string>
+  /**
+   * World actors the save records alongside the player's build — trees,
+   * rocks, loot containers and the map's own building pieces that the game
+   * tracks per zone. `[x, y, z, kindCode, yawDegrees, scale, nameIndex]`.
+   * Kind: 0 tree, 1 rock, 2 container/plant, 3 world structure, 4 other.
+   */
+  props: Array<[number, number, number, number, number, number, number]>
+  /** World actor class names (`Tree_Pine_02`, `Prop_Rocks_07` …). */
+  propNames: Array<string>
 }
 
 export type OutpostBaseData = {

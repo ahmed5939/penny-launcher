@@ -43,6 +43,7 @@ import { Route as AccountManagementVbucksInformationRouteImport } from './routes
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
 import { Route as AccountManagementLockerRouteImport } from './routes/account-management/locker/route'
+import { Route as AccountManagementSpritesRouteImport } from './routes/account-management/sprites/route'
 import { Route as AccountManagementGiftsInformationRouteImport } from './routes/account-management/gifts-information/route'
 import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
 import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
@@ -228,6 +229,12 @@ const AccountManagementProfileRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AccountManagementSpritesRouteRoute =
+  AccountManagementSpritesRouteImport.update({
+    path: '/account-management/sprites',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountManagementLockerRouteRoute =
   AccountManagementLockerRouteImport.update({
     path: '/account-management/locker',
@@ -306,6 +313,10 @@ declare module '@tanstack/react-router' {
     }
     '/account-management/locker': {
       preLoaderRoute: typeof AccountManagementLockerRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/account-management/sprites': {
+      preLoaderRoute: typeof AccountManagementSpritesRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/profile': {

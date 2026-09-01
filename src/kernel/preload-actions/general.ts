@@ -1,6 +1,10 @@
 import type { IpcRendererEvent } from 'electron'
 import type { DevSettings, Settings } from '../../types/settings'
-import type { WindowChromeState } from '../../types/window'
+import type {
+  AppearanceTheme,
+  ResolvedAppearanceTheme,
+  WindowChromeState,
+} from '../../types/window'
 
 import { ipcRenderer } from 'electron'
 
@@ -102,12 +106,35 @@ export function maximizeWindow() {
   ipcRenderer.send(ElectronAPIEventKeys.MaximizeWindow)
 }
 
-/**
- * Windows draws the caption buttons itself, so it has to be told when the
- * renderer's theme changes — the `.dark` class does not reach them.
- */
-export function syncWindowChromeTheme(theme: 'dark' | 'light') {
-  ipcRenderer.send(ElectronAPIEventKeys.WindowChromeTheme, theme)
+export function setAppearanceTheme(theme: AppearanceTheme) {
+  ipcRenderer.send(ElectronAPIEventKeys.AppearanceSet, theme)
+}
+
+export function onAppearanceChanged(
+  callback: (value: {
+    resolved: ResolvedAppearanceTheme
+    source: AppearanceTheme
+  }) => void
+) {
+  const customCallback = (
+    _: IpcRendererEvent,
+    value: {
+      resolved: ResolvedAppearanceTheme
+      source: AppearanceTheme
+    }
+  ) => callback(value)
+  const rendererInstance = ipcRenderer.on(
+    ElectronAPIEventKeys.AppearanceChanged,
+    customCallback
+  )
+
+  return {
+    removeListener: () =>
+      rendererInstance.removeListener(
+        ElectronAPIEventKeys.AppearanceChanged,
+        customCallback
+      ),
+  }
 }
 
 export function onWindowChromeState(

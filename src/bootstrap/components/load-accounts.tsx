@@ -41,13 +41,25 @@ export function LoadAccounts() {
     const syncAccessTokenListener = window.electronAPI.syncAccountData(
       async ({ accountId, data }) => {
         addOrUpdate(accountId, data as AccountData)
+
+        if (
+          data.authStatus === 'invalid' ||
+          data.authStatus === 'valid'
+        ) {
+          const { accounts, idsList } = useAccountListStore.getState()
+          reconcile(
+            idsList.filter(
+              (id) => accounts[id]?.authStatus !== 'invalid'
+            )
+          )
+        }
       }
     )
 
     return () => {
       syncAccessTokenListener.removeListener()
     }
-  }, [addOrUpdate])
+  }, [addOrUpdate, reconcile])
 
   return null
 }

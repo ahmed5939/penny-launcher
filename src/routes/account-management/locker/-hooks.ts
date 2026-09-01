@@ -27,11 +27,15 @@ export function useLockerPage() {
   const {
     card,
     cardError,
+    companions,
+    companionsError,
+    companionsLoadedFor,
     equipping,
     errorMessage,
     filters,
     isGenerating,
     isLoading,
+    isLoadingCompanions,
     isLoadingOwned,
     loadedFor,
     owned,
@@ -43,11 +47,15 @@ export function useLockerPage() {
     useShallow((state) => ({
       card: state.card,
       cardError: state.cardError,
+      companions: state.companions,
+      companionsError: state.companionsError,
+      companionsLoadedFor: state.companionsLoadedFor,
       equipping: state.equipping,
       errorMessage: state.errorMessage,
       filters: state.filters,
       isGenerating: state.isGenerating,
       isLoading: state.isLoading,
+      isLoadingCompanions: state.isLoadingCompanions,
       isLoadingOwned: state.isLoadingOwned,
       loadedFor: state.loadedFor,
       owned: state.owned,
@@ -60,9 +68,11 @@ export function useLockerPage() {
   const {
     reset,
     setCard,
+    setCompanions,
     setEquipping,
     setGenerating,
     setLoading,
+    setLoadingCompanions,
     setLoadingOwned,
     setOwned,
     setProgress,
@@ -71,9 +81,11 @@ export function useLockerPage() {
     useShallow((state) => ({
       reset: state.reset,
       setCard: state.setCard,
+      setCompanions: state.setCompanions,
       setEquipping: state.setEquipping,
       setGenerating: state.setGenerating,
       setLoading: state.setLoading,
+      setLoadingCompanions: state.setLoadingCompanions,
       setLoadingOwned: state.setLoadingOwned,
       setOwned: state.setOwned,
       setProgress: state.setProgress,
@@ -88,6 +100,9 @@ export function useLockerPage() {
       }),
       window.electronAPI.responseLockerOwned(async (response) => {
         setOwned(response)
+      }),
+      window.electronAPI.responseLockerCompanions(async (response) => {
+        setCompanions(response)
       }),
       window.electronAPI.notificationLockerEquip(async (response) => {
         setEquipping(null)
@@ -137,6 +152,16 @@ export function useLockerPage() {
       setLoadingOwned(true)
       window.electronAPI.requestLockerOwned(selected)
     }
+
+    /*
+     * Sidekicks ride on the same owned list — the main process shares the
+     * read — so asking here costs a catalogue filter, not another profile
+     * query.
+     */
+    if (companionsLoadedFor !== selected.accountId) {
+      setLoadingCompanions(true)
+      window.electronAPI.requestLockerCompanions(selected)
+    }
     /* Keyed on the account id alone — `selected` is a new object each render. */
   }, [accountId])
 
@@ -147,9 +172,11 @@ export function useLockerPage() {
 
     setLoading(true)
     setLoadingOwned(true)
+    setLoadingCompanions(true)
     window.electronAPI.requestLocker(selected)
     /* Reload is the one path that must get past the owned-list cache. */
     window.electronAPI.requestLockerOwned(selected, true)
+    window.electronAPI.requestLockerCompanions(selected, true)
   }
 
   const handleEquip = (
@@ -178,6 +205,8 @@ export function useLockerPage() {
     account: selected,
     card,
     cardError,
+    companions,
+    companionsError,
     equipping,
     errorMessage,
     filters,
@@ -186,6 +215,7 @@ export function useLockerPage() {
     handleReload,
     isGenerating,
     isLoading,
+    isLoadingCompanions,
     isLoadingOwned,
     owned,
     ownedError,

@@ -1,5 +1,6 @@
 import {
   Building2,
+  FileJson2,
   Gauge,
   LoaderCircle,
   Map as MapIcon,
@@ -34,6 +35,12 @@ import type { RatingTables } from '../../../config/constants/fortnite/power'
 import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../../components/ui/tabs'
+import {
   Callout,
   Chip,
   EmptyState,
@@ -52,10 +59,23 @@ import { useItemDatabaseStore, getItemRecord } from '../../../state/items/databa
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { getShortDateFormat, relativeTime } from '../../../lib/dates'
+import { toast } from '../../../lib/notifications'
 import { assets } from '../../../lib/repository'
 import { cn } from '../../../lib/utils'
+import {
+  OUTPOST_MAP_UNDERLAYS,
+  underlayBlueprintRect,
+} from '../../../config/constants/outpost-maps'
 
 import { useOutpostData } from './-hooks'
+import { Blueprint3D } from './-blueprint-3d'
+import {
+  PROP_ROCK,
+  PROP_TREE,
+  propLabel,
+  structureCentre,
+  trapCentre,
+} from './-blueprint-geometry'
 
 const MAX_SHIELD_LEVEL = 10
 const MAX_ENDURANCE_WAVE = 30
@@ -316,6 +336,7 @@ function Content() {
       {zones.map((zone) => (
         <ZoneCard
           baseData={baseData[zone.zoneId]}
+          displayName={primaryAccount.displayName || primaryAccount.accountId}
           isLoadingBase={loadingZone === zone.zoneId}
           key={zone.zoneId}
           onScanBase={handleScanBase}
@@ -330,6 +351,7 @@ function Content() {
 
 function ZoneCard({
   baseData,
+  displayName,
   isLoadingBase,
   onScanBase,
   ratings,
@@ -337,6 +359,7 @@ function ZoneCard({
   zone,
 }: {
   baseData?: OutpostBaseData
+  displayName: string
   isLoadingBase: boolean
   onScanBase: (zoneId: string, saveFile: string) => void
   ratings: RatingTables
@@ -401,6 +424,28 @@ function ZoneCard({
             )}
             {scanned ? 'Rescan base' : 'Scan base'}
           </Button>
+          {baseData?.success && (
+            <Button
+              onClick={async () => {
+                const result = await window.electronAPI.exportOutpostReport(
+                  displayName,
+                  zone,
+                  baseData
+                )
+
+                if (result.status === 'saved') {
+                  toast('Readable outpost report saved.')
+                } else if (result.status === 'error') {
+                  toast(result.error ?? 'Could not save the outpost report.')
+                }
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <FileJson2 className="size-3.5" />
+              Save readable report
+            </Button>
+          )}
         </div>
       </header>
 
@@ -472,6 +517,7 @@ function ZoneCard({
           isLoadingBase={isLoadingBase}
           onScan={() => onScanBase(zone.zoneId, zone.saveFile)}
           onSelectTrap={setSelectedTrap}
+          zoneId={zone.zoneId}
           selectedTrap={selectedTrap}
         />
       </div>
@@ -539,6 +585,7 @@ function BlueprintShowcase({
   onScan,
   onSelectTrap,
   selectedTrap,
+  zoneId,
 }: {
   baseData?: OutpostBaseData
   canScan: boolean
@@ -546,6 +593,7 @@ function BlueprintShowcase({
   onScan: () => void
   onSelectTrap: (name: string | null) => void
   selectedTrap: string | null
+  zoneId: string
 }) {
   if (isLoadingBase) {
     return (
@@ -560,12 +608,30 @@ function BlueprintShowcase({
 
   if (baseData?.success && baseData.layout) {
     return (
-      <Blueprint
-        baseData={baseData}
-        layout={baseData.layout}
-        onSelectTrap={onSelectTrap}
-        selectedTrap={selectedTrap}
-      />
+      <Tabs defaultValue="3d">
+        <TabsList>
+          <TabsTrigger value="3d">3D explorer</TabsTrigger>
+          <TabsTrigger value="blueprint">2D blueprint</TabsTrigger>
+        </TabsList>
+        <TabsContent value="3d">
+          <Blueprint3D
+            layout={baseData.layout}
+            onSelectTrap={onSelectTrap}
+            selectedTrap={selectedTrap}
+            traps={baseData.traps}
+            zoneId={zoneId}
+          />
+        </TabsContent>
+        <TabsContent value="blueprint">
+          <Blueprint
+            baseData={baseData}
+            layout={baseData.layout}
+            onSelectTrap={onSelectTrap}
+            selectedTrap={selectedTrap}
+            zoneId={zoneId}
+          />
+        </TabsContent>
+      </Tabs>
     )
   }
 
@@ -626,12 +692,19 @@ function Blueprint({
   layout,
   onSelectTrap,
   selectedTrap,
+  zoneId,
 }: {
   baseData: OutpostBaseData
   layout: OutpostLayout
   onSelectTrap: (name: string | null) => void
   selectedTrap: string | null
+  zoneId?: string
 }) {
+  const underlay = zoneId ? OUTPOST_MAP_UNDERLAYS[zoneId] : undefined
+  const underlayRect = underlay ? underlayBlueprintRect(underlay) : null
+  const underlayHref = underlay
+    ? (assets(underlay.image) ?? underlay.image)
+    : undefined
   const gridId = useId()
   const gridMajorId = useId()
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -656,32 +729,51 @@ function Blueprint({
   /**
    * Drawn a quarter turn counter-clockwise — world (x, y) → screen (y, −x) —
    * so the plan's north/south matches the in-game compass. Wall yaw
-   * quadrants shift by one, which swaps their axis to match.
+   * quadrants shift by one, which swaps their axis to match. Pieces are
+   * stored at their edge origin, so floors, stairs and roofs first move to
+   * the centre of the tile they actually cover; walls stay on their edge.
    */
   const structures = useMemo(
     () =>
       layout.structures.map(
-        ([x, y, mat, kind, yaw]): [number, number, number, number, number] => [
-          y,
-          -x,
-          mat,
-          kind,
-          yaw + 1,
-        ]
+        (piece): [number, number, number, number, number, number] => {
+          const [, , z, mat, kind, yaw] = piece
+          const centre = structureCentre(piece)
+
+          return [centre.y, -centre.x, z, mat, kind, yaw + 1]
+        }
       ),
     [layout.structures]
   )
   const traps = useMemo(
     () =>
-      layout.traps.map(
-        ([x, y, cat, nameIdx]): [number, number, number, number] => [
-          y,
-          -x,
-          cat,
-          nameIdx,
-        ]
-      ),
+      layout.traps.map((trap): [number, number, number, number, number] => {
+        const [, , z, cat, nameIdx] = trap
+        const centre = trapCentre(trap)
+
+        return [centre.y, -centre.x, z, cat, nameIdx]
+      }),
     [layout.traps]
+  )
+  /* World actors near the build, as faint markers under everything else. */
+  const props = useMemo(
+    () =>
+      layout.props
+        .filter(
+          ([x, y]) =>
+            x >= layout.bounds.minX - 3 &&
+            x <= layout.bounds.maxX + 3 &&
+            y >= layout.bounds.minY - 3 &&
+            y <= layout.bounds.maxY + 3
+        )
+        .map(([x, y, , kind, , scale, nameIdx]) => ({
+          kind,
+          name: propLabel(layout.propNames[nameIdx] ?? 'World asset'),
+          scale: Math.min(2, Math.max(0.5, scale || 1)),
+          x: y,
+          y: -x,
+        })),
+    [layout.bounds, layout.propNames, layout.props]
   )
   const bounds = {
     maxX: layout.bounds.maxY,
@@ -766,12 +858,14 @@ function Blueprint({
   /* Only dim the other dots when the selection actually exists on this map. */
   const selectionOnMap =
     selectedTrap !== null &&
-    layout.traps.some(([, , , nameIdx]) => trapNames[nameIdx] === selectedTrap)
+    layout.traps.some(([, , , , nameIdx]) =>
+      trapNames[nameIdx] === selectedTrap
+    )
   const hoveredGroup = hovered?.name ? trapsByName.get(hovered.name) : undefined
 
   const byKind = (kind: number) =>
-    structures.filter((piece) => piece[3] === kind)
-  const others = structures.filter((piece) => piece[3] > KIND_ROOF)
+    structures.filter((piece) => piece[4] === kind)
+  const others = structures.filter((piece) => piece[4] > KIND_ROOF)
 
   const fill = (mat: number) => MATERIAL_HEX[mat] ?? MATERIAL_HEX[0]
 
@@ -949,6 +1043,23 @@ function Blueprint({
                 />
               </pattern>
             </defs>
+            {underlayRect && underlayHref && (
+              <image
+                height={underlayRect.height}
+                href={underlayHref}
+                opacity={0.85}
+                preserveAspectRatio="none"
+                transform={
+                  underlay?.mirrorX || underlay?.mirrorY
+                    ? /* Mirror about the image's own centre. */
+                      `translate(${underlayRect.x + underlayRect.width / 2} ${underlayRect.y + underlayRect.height / 2}) scale(${underlay.mirrorX ? -1 : 1} ${underlay.mirrorY ? -1 : 1}) translate(${-(underlayRect.x + underlayRect.width / 2)} ${-(underlayRect.y + underlayRect.height / 2)})`
+                    : undefined
+                }
+                width={underlayRect.width}
+                x={underlayRect.x}
+                y={underlayRect.y}
+              />
+            )}
             <rect
               fill={`url(#${gridId})`}
               height={height}
@@ -964,7 +1075,45 @@ function Blueprint({
               y={minY}
             />
 
-            {byKind(KIND_FLOOR).map(([x, y, mat], index) => (
+            {props.map((prop, index) =>
+              prop.kind === PROP_TREE ? (
+                <circle
+                  cx={prop.x}
+                  cy={prop.y}
+                  fill="#4f8a3c"
+                  key={`p${index}`}
+                  opacity={0.45}
+                  r={0.32 * prop.scale}
+                >
+                  <title>{prop.name}</title>
+                </circle>
+              ) : prop.kind === PROP_ROCK ? (
+                <circle
+                  cx={prop.x}
+                  cy={prop.y}
+                  fill="#7a7f86"
+                  key={`p${index}`}
+                  opacity={0.45}
+                  r={0.24 * prop.scale}
+                >
+                  <title>{prop.name}</title>
+                </circle>
+              ) : (
+                <rect
+                  fill="#8a7f72"
+                  height={0.4 * prop.scale}
+                  key={`p${index}`}
+                  opacity={0.4}
+                  rx={0.04}
+                  width={0.4 * prop.scale}
+                  x={prop.x - 0.2 * prop.scale}
+                  y={prop.y - 0.2 * prop.scale}
+                >
+                  <title>{prop.name}</title>
+                </rect>
+              )
+            )}
+            {byKind(KIND_FLOOR).map(([x, y, , mat], index) => (
               <rect
                 fill={fill(mat)}
                 height={0.94}
@@ -976,7 +1125,7 @@ function Blueprint({
                 y={y - 0.47}
               />
             ))}
-            {others.map(([x, y, mat], index) => (
+            {others.map(([x, y, , mat], index) => (
               <rect
                 fill={fill(mat)}
                 height={0.8}
@@ -988,7 +1137,7 @@ function Blueprint({
                 y={y - 0.4}
               />
             ))}
-            {byKind(KIND_ROOF).map(([x, y, mat], index) => (
+            {byKind(KIND_ROOF).map(([x, y, , mat], index) => (
               <rect
                 fill={fill(mat)}
                 height={0.7}
@@ -1000,7 +1149,7 @@ function Blueprint({
                 y={y - 0.35}
               />
             ))}
-            {byKind(KIND_STAIR).map(([x, y, mat], index) => (
+            {byKind(KIND_STAIR).map(([x, y, , mat], index) => (
               <rect
                 fill={fill(mat)}
                 height={0.55}
@@ -1012,7 +1161,7 @@ function Blueprint({
                 y={y - 0.275}
               />
             ))}
-            {byKind(KIND_WALL).map(([x, y, mat, , yaw], index) =>
+            {byKind(KIND_WALL).map(([x, y, , mat, , yaw], index) =>
               yaw % 2 === 0 ? (
                 <rect
                   fill={fill(mat)}
@@ -1038,7 +1187,7 @@ function Blueprint({
               )
             )}
 
-            {traps.map(([x, y, cat, nameIdx], index) => {
+            {traps.map(([x, y, , cat, nameIdx], index) => {
               const name = trapNames[nameIdx]
               const isSelected = selectionOnMap && name === selectedTrap
               const dimmed = selectionOnMap && name !== selectedTrap

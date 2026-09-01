@@ -2,8 +2,6 @@ import { createRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { memo, useState } from 'react'
 
-import { CheckNewVersion } from '../bootstrap/components/check-new-version'
-
 import {
   Tabs,
   TabsContent,
@@ -92,7 +90,6 @@ const MainContent = memo(() => {
         defaultValue={defaultTab}
         onValueChange={(value) => setTab(value as IndexTabs)}
       >
-        <CheckNewVersion />
         <NavigationTab />
         <TabsContent
           className="tab-content"

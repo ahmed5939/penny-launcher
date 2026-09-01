@@ -271,6 +271,7 @@ export class Authentication {
 
     const syncAccessToken = (data: {
       accessToken: string | null
+      authStatus: 'valid' | 'invalid'
       displayName: string
     }) => {
       const newData = {
@@ -294,6 +295,7 @@ export class Authentication {
 
       syncAccessToken({
         accessToken,
+        authStatus: 'valid',
         displayName: response.data.displayName,
       })
 
@@ -312,6 +314,7 @@ export class Authentication {
 
       syncAccessToken({
         accessToken,
+        authStatus: 'valid',
         displayName: response.data.display_name,
       })
 
@@ -333,7 +336,31 @@ export class Authentication {
       }
     }
 
+    syncAccessToken({
+      accessToken: null,
+      authStatus: 'invalid',
+      displayName: currentAccount.displayName,
+    })
+
     return null
+  }
+
+  static async checkAllAccounts() {
+    const accounts = [...AccountsManager.getAccounts().values()]
+
+    for (const account of accounts) {
+      MainWindow.instance.webContents.send(
+        ElectronAPIEventKeys.SyncAccessToken,
+        {
+          accountId: account.accountId,
+          data: { authStatus: 'checking' },
+        } as SyncAccountDataResponse
+      )
+    }
+
+    await Promise.allSettled(
+      accounts.map((account) => Authentication.verifyAccessToken(account))
+    )
   }
 
   private static async createStoreAccess(accountData: AccountData) {
@@ -365,6 +392,7 @@ export class Authentication {
     const { accountId, deviceId, displayName, secret } = data
     const newData: AccountData = {
       accountId,
+      authStatus: 'valid',
       deviceId,
       displayName,
       secret,

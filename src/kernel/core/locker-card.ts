@@ -1,12 +1,10 @@
 import type { CosmeticMeta } from './locker-catalog'
+import type { OverlayOptions } from 'sharp'
 
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import sharp from 'sharp'
 
 import { cosmeticRarityWeight, cosmeticTileColors } from '../../config/fortnite/locker'
-
-import { RuntimeLog } from '../runtime-log'
 
 /**
  * The locker card: an account's cosmetics as one shareable image.
@@ -347,6 +345,11 @@ export async function renderLockerCard({
     throw new Error('Nothing to draw')
   }
 
+  // sharp is native and comparatively expensive to initialize. Loading it
+  // only inside the renderer keeps catalogue sorting and normal locker work
+  // lightweight, and lets this function run cleanly in a utility process.
+  const { default: sharp } = await import('sharp')
+
   const layout = planLockerCard(cosmetics.length)
   const { tileSize } = layout
 
@@ -375,7 +378,7 @@ export async function renderLockerCard({
     cosmetics,
     downloadConcurrency,
     async (cosmetic) => {
-      const overlays: Array<sharp.OverlayOptions> = []
+      const overlays: Array<OverlayOptions> = []
 
       if (cosmetic.color) {
         overlays.push({ input: swatchSvg(tileSize, cosmetic.color), top: 0, left: 0 })
@@ -402,7 +405,7 @@ export async function renderLockerCard({
               left: 0,
             })
           } catch (error) {
-            RuntimeLog.error('caught:core/locker-card.ts', error)
+            console.warn('[penny] Locker art could not be decoded', error)
           }
         }
       }
@@ -435,7 +438,7 @@ export async function renderLockerCard({
    * megabytes of peak memory and a few gigabytes.
    */
   const stripWidth = layout.width - layout.padding * 2
-  const strips: Array<sharp.OverlayOptions> = []
+  const strips: Array<OverlayOptions> = []
 
   for (let row = 0; row < layout.rows; row += 1) {
     const rowTiles = tiles.slice(

@@ -1,4 +1,5 @@
 import { availableElectronAPIs } from './src/kernel/preload'
+import type { OverlaySnapshot } from './src/types/overlay'
 import { router } from './src/app'
 
 export {} // Make this a module
@@ -28,6 +29,11 @@ declare global {
 
   interface Window {
     electronAPI: typeof availableElectronAPIs
+    pennyOverlay: {
+      onSnapshot: (
+        callback: (snapshot: OverlaySnapshot) => void
+      ) => { removeListener: () => void }
+    }
   }
 }
 

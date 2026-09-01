@@ -41,8 +41,11 @@ export enum ElectronAPIEventKeys {
   MaximizeWindow = 'window:maximize-toggle',
   /** Main → renderer: maximised state, and whether Mica is painting. */
   WindowChromeState = 'window:chrome-state',
-  /** Renderer → main: repaint the caption buttons for the active theme. */
-  WindowChromeTheme = 'window:chrome-theme',
+  AppearanceSet = 'appearance:set',
+  AppearanceChanged = 'appearance:changed',
+
+  /** Main → Penny's separate, non-injected game overlay window. */
+  OverlaySnapshot = 'overlay:snapshot',
 
   /**
    * Windows shell surfaces — things that keep working while the window is
@@ -110,6 +113,7 @@ export enum ElectronAPIEventKeys {
   ResponseGenerateExchangeCode = 'auth:generate:exchange:response',
 
   SyncAccessToken = 'auth:access-token:sync',
+  CheckAllAccountStatuses = 'auth:account-status:check-all',
 
   EULAVerificationRequest = 'eula:request',
   EULAVerificationResponse = 'eula:response',
@@ -448,6 +452,9 @@ export enum ElectronAPIEventKeys {
   /** Everything the account owns, so the slot pickers can filter locally. */
   LockerOwnedRequest = 'locker:owned:request',
   LockerOwnedResponse = 'locker:owned:response',
+  /** Every sidekick in the catalogue, flagged owned or not. */
+  LockerCompanionsRequest = 'locker:companions:request',
+  LockerCompanionsResponse = 'locker:companions:response',
   LockerEquip = 'locker:equip',
   LockerEquipNotification = 'locker:equip:notification',
   LockerCardGenerate = 'locker:card:generate',
@@ -455,6 +462,14 @@ export enum ElectronAPIEventKeys {
   LockerCardNotification = 'locker:card:notification',
   LockerCardOpen = 'locker:card:open',
   LockerCardExport = 'locker:card:export',
+
+  /**
+   * BR Sprites
+   */
+
+  /** Every BR sprite Epic has released, flagged owned / lost / missing. */
+  SpritesRequest = 'sprites:request',
+  SpritesResponse = 'sprites:response',
 
   /**
    * Schedules

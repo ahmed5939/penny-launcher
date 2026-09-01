@@ -2,6 +2,10 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge } from 'electron'
+import type {
+  AppearanceTheme,
+  ResolvedAppearanceTheme,
+} from '../types/window'
 
 import * as accountHealthActions from './preload-actions/account-health'
 import * as accountsActions from './preload-actions/accounts'
@@ -49,7 +53,26 @@ import * as vbucksInformationActions from './preload-actions/vbucks-information'
 import * as xpBoostsActions from './preload-actions/xpboosts'
 import * as worldInfoActions from './preload-actions/world-info'
 
+const argument = (name: string) =>
+  process.argv
+    .find((value) => value.startsWith(`--${name}=`))
+    ?.slice(name.length + 3)
+
+const sourceArgument = argument('penny-theme-source')
+const resolvedArgument = argument('penny-theme')
+
+const initialAppearance = {
+  source: (
+    sourceArgument === 'light' || sourceArgument === 'system'
+      ? sourceArgument
+      : 'dark'
+  ) as AppearanceTheme,
+  resolved: (resolvedArgument === 'light' ? 'light' : 'dark') as
+    ResolvedAppearanceTheme,
+}
+
 export const availableElectronAPIs = {
+  initialAppearance,
   ...accountHealthActions,
   ...accountsActions,
   ...alertsActions,

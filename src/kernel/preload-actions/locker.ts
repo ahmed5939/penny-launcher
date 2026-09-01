@@ -3,6 +3,7 @@ import type {
   LockerCardFilters,
   LockerCardNotification,
   LockerCardProgress,
+  LockerCompanionsPayload,
   LockerEquipNotification,
   LockerOwnedPayload,
   LockerPayload,
@@ -21,6 +22,18 @@ export function requestLocker(account: AccountData) {
 /** `refresh` skips the main process's ten-minute cache. */
 export function requestLockerOwned(account: AccountData, refresh = false) {
   ipcRenderer.send(ElectronAPIEventKeys.LockerOwnedRequest, account, refresh)
+}
+
+/** Every catalogue sidekick, owned or not. `refresh` as above. */
+export function requestLockerCompanions(
+  account: AccountData,
+  refresh = false
+) {
+  ipcRenderer.send(
+    ElectronAPIEventKeys.LockerCompanionsRequest,
+    account,
+    refresh
+  )
 }
 
 /** `templateId` of `null` clears the slot. */
@@ -92,6 +105,29 @@ export function responseLockerOwned(
     removeListener: () =>
       rendererInstance.removeListener(
         ElectronAPIEventKeys.LockerOwnedResponse,
+        customCallback
+      ),
+  }
+}
+
+export function responseLockerCompanions(
+  callback: (response: LockerCompanionsPayload) => Promise<void>
+) {
+  const customCallback = (
+    _: IpcRendererEvent,
+    response: LockerCompanionsPayload
+  ) => {
+    callback(response).catch(console.error)
+  }
+  const rendererInstance = ipcRenderer.on(
+    ElectronAPIEventKeys.LockerCompanionsResponse,
+    customCallback
+  )
+
+  return {
+    removeListener: () =>
+      rendererInstance.removeListener(
+        ElectronAPIEventKeys.LockerCompanionsResponse,
         customCallback
       ),
   }

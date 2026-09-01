@@ -27,4 +27,23 @@
  */
 
 import '../globals.css'
-import '../app'
+
+const root = document.documentElement
+const appearance = window.electronAPI.initialAppearance
+const storedColorTheme = localStorage.getItem('penny-color-theme')
+
+root.classList.add(appearance.resolved)
+
+if (storedColorTheme) {
+  root.dataset.theme = storedColorTheme
+}
+
+const isOverlay =
+  new URLSearchParams(window.location.search).get('penny-overlay') === '1'
+
+if (isOverlay) {
+  document.body.dataset.pennyOverlay = 'true'
+  void import('../overlay/app')
+} else {
+  void import('../app')
+}

@@ -125,3 +125,6 @@ typings/
 
 # Electron-Forge
 out/
+
+# Outpost report exports (runtime output)
+/reports/

@@ -44,11 +44,17 @@ export function AccountRail() {
   const { status: taxi } = useGetTaxiServiceDataStatus()
   const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
 
-  const areThereAccounts = accountsArray.length > 0
+  const areThereAccounts = accountsArray.some(
+    (account) => account.authStatus !== 'invalid'
+  )
   const statuses = { 'auto-kick': autoKick, 'taxi-service': taxi }
 
   return (
-    <aside className="chrome-surface flex w-52 shrink-0 flex-col border-r border-border/60">
+    <aside
+      className="chrome-surface flex w-52 shrink-0 flex-col border-r border-border/60 max-[900px]:w-14"
+      data-app-focus-region="accounts"
+      tabIndex={-1}
+    >
       <RailAccountSwitcher />
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-1.5 py-1.5">
@@ -93,7 +99,7 @@ export function AccountRail() {
           return (
             <div key={section.key}>
               {sectionIndex > 0 && (
-                <p className="micro-label px-2 pb-1 pt-3 text-muted-foreground/70">
+                <p className="micro-label px-2 pb-1 pt-3 text-muted-foreground/70 max-[900px]:hidden">
                   {t(section.label)}
                 </p>
               )}
@@ -142,8 +148,8 @@ function NavRow({
   const body = (
     <>
       <Icon className="size-4 shrink-0 opacity-75" />
-      <span className="flex-1 truncate">{label}</span>
-      {item.beta && <BetaBadge />}
+      <span className="flex-1 truncate max-[900px]:sr-only">{label}</span>
+      {item.beta && <span className="max-[900px]:hidden"><BetaBadge /></span>}
       {status != null && (
         <StatusDot
           tone={
@@ -155,7 +161,7 @@ function NavRow({
   )
 
   const className = cn(
-    'relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-[0.8125rem]',
+    'relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-[0.8125rem] max-[900px]:justify-center max-[900px]:px-1',
     'text-muted-foreground',
     !isDisabled && 'hover:bg-accent/30 hover:text-foreground',
     isActive && 'bg-accent/70 font-medium text-foreground',

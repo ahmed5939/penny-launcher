@@ -1,0 +1,455 @@
+{
+  "_comment": "Names, rarities, abilities and art for BR sprite families, keyed by the backend relic family (the part of a relic id before _Variant_). Epic's catalogue carries none of this. Sources: fortnite.gg icon CDN; community trackers for names/abilities. Regenerate/extend by hand when a season adds sprites.",
+  "families": {
+    "8BitBlaster": {
+      "name": "8-Bit",
+      "rarity": "rare",
+      "season": "c7s4",
+      "ability": "Find an 8-Bit Shotgun in your first chest with a damage multiplier.",
+      "icons": {
+        "base": "8bitblaster_base.webp",
+        "cheatmaster": "8bitblaster_cheatmaster.webp",
+        "gold": "8bitblaster_gold.webp"
+      }
+    },
+    "AirSprite": {
+      "name": "Air",
+      "rarity": "rare",
+      "season": "c7s3",
+      "ability": "Sprint faster, jump higher, and take zero fall damage.",
+      "icons": {
+        "base": "airsprite_base.webp",
+        "candy": "airsprite_candy.webp",
+        "galaxy": "airsprite_galaxy.webp",
+        "gold": "airsprite_gold.webp",
+        "holofoil": "airsprite_holofoil.webp"
+      }
+    },
+    "BossSprite": {
+      "name": "Boss",
+      "rarity": "legendary",
+      "season": "c7s3",
+      "ability": "Boosts maximum Health and Shield (up to +25).",
+      "icons": {
+        "base": "bosssprite_base.webp",
+        "candy": "bosssprite_candy.webp",
+        "cube": "bosssprite_cube.webp",
+        "galaxy": "bosssprite_galaxy.webp",
+        "gold": "bosssprite_gold.webp"
+      }
+    },
+    "BurntPeanut": {
+      "name": "Burnt Peanut",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Low chance for extra loot from eliminations, incl. mythic loot when maxed.",
+      "icons": {
+        "base": "burntpeanut_base.webp"
+      }
+    },
+    "BushRangerSprite": {
+      "name": "Bush",
+      "rarity": "rare",
+      "season": "c7s4",
+      "ability": "Spawns a Bush on you for camouflage; at max level, gain a Bush after an elimination too.",
+      "icons": {
+        "base": "bushrangersprite_base.webp",
+        "cheatmaster": "bushrangersprite_cheatmaster.webp",
+        "gold": "bushrangersprite_gold.webp"
+      }
+    },
+    "CokeParmesan": {
+      "name": "Vini Jr.",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Grants a Slidekick that boosts fire rate and reload speed.",
+      "icons": {
+        "base": "cokeparmesan_base.webp"
+      }
+    },
+    "CompanyStargazer": {
+      "name": "Pollo",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Regenerates squad shields after an elimination.",
+      "icons": {
+        "base": "companystargazer_base.webp"
+      }
+    },
+    "CosmicThunderDoubleJumpSprite": {
+      "name": "Jazz Jackrabbit",
+      "rarity": "legendary",
+      "season": "c7s4",
+      "ability": "Perform a second jump while mid-air (double jump).",
+      "icons": {
+        "base": "cosmicthunderdoublejumpsprite_base.webp",
+        "cheatmaster": "cosmicthunderdoublejumpsprite_cheatmaster.webp",
+        "gold": "cosmicthunderdoublejumpsprite_gold.webp"
+      }
+    },
+    "CrownSprite": {
+      "name": "Crown",
+      "rarity": "mythic",
+      "season": "c7s4",
+      "ability": "Gain extra Crown Wins after a Victory Royale. Only levels up by winning matches.",
+      "icons": {
+        "base": "crownsprite_base.webp",
+        "cheatmaster": "crownsprite_cheatmaster.webp",
+        "gold": "crownsprite_gold.webp"
+      }
+    },
+    "DemonSprite": {
+      "name": "Demon",
+      "rarity": "epic",
+      "season": "c7s3",
+      "ability": "Siphons health and shields when you eliminate an opponent.",
+      "icons": {
+        "base": "demonsprite_base.webp",
+        "candy": "demonsprite_candy.webp",
+        "galaxy": "demonsprite_galaxy.webp",
+        "gem": "demonsprite_gem.webp",
+        "gold": "demonsprite_gold.webp"
+      }
+    },
+    "DrifterSprite": {
+      "name": "Aura",
+      "rarity": "epic",
+      "season": "c7s3",
+      "ability": "Grants a Shock Rock charge after dealing a damage threshold.",
+      "icons": {
+        "base": "driftersprite_base.webp",
+        "candy": "driftersprite_candy.webp",
+        "galaxy": "driftersprite_galaxy.webp",
+        "gem": "driftersprite_gem.webp",
+        "gold": "driftersprite_gold.webp"
+      }
+    },
+    "DuckSprite": {
+      "name": "Duck",
+      "rarity": "epic",
+      "season": "c7s3",
+      "ability": "Emoting or Jamming replenishes your shields.",
+      "icons": {
+        "base": "ducksprite_base.webp",
+        "candy": "ducksprite_candy.webp",
+        "galaxy": "ducksprite_galaxy.webp",
+        "gem": "ducksprite_gem.webp",
+        "gold": "ducksprite_gold.webp"
+      }
+    },
+    "Dwarf": {
+      "name": "Adventure",
+      "rarity": "rare",
+      "season": "c7s4",
+      "ability": "Upgrades a random item in your inventory at each level.",
+      "icons": {
+        "base": "dwarf_base.webp",
+        "cheatmaster": "dwarf_cheatmaster.webp",
+        "gold": "dwarf_gold.webp"
+      }
+    },
+    "EarthSprite": {
+      "name": "Earth",
+      "rarity": "rare",
+      "season": "c7s3",
+      "ability": "Chance to find additional rare items when opening chests.",
+      "icons": {
+        "base": "earthsprite_base.webp",
+        "candy": "earthsprite_candy.webp",
+        "cube": "earthsprite_cube.webp",
+        "galaxy": "earthsprite_galaxy.webp",
+        "gem": "earthsprite_gem.webp",
+        "gold": "earthsprite_gold.webp",
+        "quack": "earthsprite_quack.webp"
+      }
+    },
+    "FillerGruntSprite": {
+      "name": "John Wick",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Reveals nearby enemies for ~5s after knocking an opponent.",
+      "icons": {
+        "base": "fillergruntsprite_base.webp"
+      }
+    },
+    "FishySprite": {
+      "name": "Fishy",
+      "rarity": "rare",
+      "season": "c7s3",
+      "ability": "Greatly increases swim speed and gives a brief movement boost.",
+      "icons": {
+        "base": "fishysprite_base.webp",
+        "candy": "fishysprite_candy.webp",
+        "cube": "fishysprite_cube.webp",
+        "galaxy": "fishysprite_galaxy.webp",
+        "gold": "fishysprite_gold.webp"
+      }
+    },
+    "FossilMealSprite": {
+      "name": "Batman",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Glide with the Bat Cape and find rare sprites more often.",
+      "icons": {
+        "base": "fossilmealsprite_base.webp",
+        "candy": "fossilmealsprite_candy.webp",
+        "cube": "fossilmealsprite_cube.webp",
+        "galaxy": "fossilmealsprite_galaxy.webp",
+        "gold": "fossilmealsprite_gold.webp",
+        "holofoil": "fossilmealsprite_holofoil.webp"
+      }
+    },
+    "GhostSprite": {
+      "name": "Ghost",
+      "rarity": "epic",
+      "season": "c7s3",
+      "ability": "Grants a short cloak upon reloading (up to ~4s at max level).",
+      "icons": {
+        "base": "ghostsprite_base.webp",
+        "candy": "ghostsprite_candy.webp",
+        "galaxy": "ghostsprite_galaxy.webp",
+        "gold": "ghostsprite_gold.webp",
+        "holofoil": "ghostsprite_holofoil.webp"
+      }
+    },
+    "GrimSprite": {
+      "name": "Grim Reaper",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Marks players who attack you for a few seconds.",
+      "icons": {
+        "base": "grimsprite_base.webp",
+        "candy": "grimsprite_candy.webp",
+        "cube": "grimsprite_cube.webp",
+        "galaxy": "grimsprite_galaxy.webp",
+        "gem": "grimsprite_gem.webp",
+        "gold": "grimsprite_gold.webp",
+        "holofoil": "grimsprite_holofoil.webp"
+      }
+    },
+    "Jonesy": {
+      "name": "Jonesy",
+      "rarity": "rare",
+      "season": "c7s4",
+      "ability": "After a short delay, recover some Health or Shield after taking damage.",
+      "icons": {
+        "base": "jonesy_base.webp",
+        "cheatmaster": "jonesy_cheatmaster.webp",
+        "gold": "jonesy_gold.webp"
+      }
+    },
+    "KillswitchSprite": {
+      "name": "Killswitch",
+      "rarity": "epic",
+      "season": "c7s4",
+      "ability": "Enter Hangtime with improved accuracy.",
+      "icons": {
+        "base": "killswitchsprite_base.webp",
+        "cheatmaster": "killswitchsprite_cheatmaster.webp",
+        "gold": "killswitchsprite_gold.webp"
+      }
+    },
+    "KingSprite": {
+      "name": "King",
+      "rarity": "epic",
+      "season": "c7s3",
+      "ability": "Your Pickaxe deals significantly more damage (up to +125%).",
+      "icons": {
+        "base": "kingsprite_base.webp",
+        "candy": "kingsprite_candy.webp",
+        "galaxy": "kingsprite_galaxy.webp",
+        "gold": "kingsprite_gold.webp",
+        "holofoil": "kingsprite_holofoil.webp"
+      }
+    },
+    "Klombo": {
+      "name": "Klombo",
+      "rarity": "mythic",
+      "season": "c7s4",
+      "ability": "Grants a random item at each level. Only levels up by using Health/Shield consumables.",
+      "icons": {
+        "base": "klombo_base.webp",
+        "cheatmaster": "klombo_cheatmaster.webp",
+        "gold": "klombo_gold.webp"
+      }
+    },
+    "LlamaSprite": {
+      "name": "Lootin' Llama",
+      "rarity": "legendary",
+      "season": "c7s3",
+      "ability": "Chance for a weapon upgrade when opening ammo boxes (~20%).",
+      "icons": {
+        "base": "llamasprite_base.webp",
+        "candy": "llamasprite_candy.webp",
+        "galaxy": "llamasprite_galaxy.webp",
+        "gem": "llamasprite_gem.webp",
+        "gold": "llamasprite_gold.webp"
+      }
+    },
+    "NarrowFleaMonkeySprite": {
+      "name": "Tails",
+      "rarity": "epic",
+      "season": "c7s4",
+      "ability": "Hover in the air with the help of Tails.",
+      "icons": {
+        "base": "narrowfleamonkeysprite_base.webp",
+        "cheatmaster": "narrowfleamonkeysprite_cheatmaster.webp",
+        "gold": "narrowfleamonkeysprite_gold.webp"
+      }
+    },
+    "NarrowFleaSprite": {
+      "name": "Sonic",
+      "rarity": "epic",
+      "season": "c7s4",
+      "ability": "Sprint faster and use Sonic's Spin Dash.",
+      "icons": {
+        "base": "narrowfleasprite_base.webp",
+        "cheatmaster": "narrowfleasprite_cheatmaster.webp",
+        "gold": "narrowfleasprite_gold.webp"
+      }
+    },
+    "PedicureAntacidSprite": {
+      "name": "Ironmouse",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Regenerates health when low and cloaks with reduced gravity.",
+      "icons": {
+        "base": "pedicureantacidsprite_base.webp"
+      }
+    },
+    "PeelySprite": {
+      "name": "Peeky Peely",
+      "rarity": "legendary",
+      "season": "c7s3",
+      "ability": "Marks rare variant carriers and nearby enemies within ~80m.",
+      "icons": {
+        "base": "peelysprite_base.webp",
+        "candy": "peelysprite_candy.webp",
+        "galaxy": "peelysprite_galaxy.webp",
+        "gold": "peelysprite_gold.webp",
+        "holofoil": "peelysprite_holofoil.webp"
+      }
+    },
+    "PunkSprite": {
+      "name": "Punk",
+      "rarity": "legendary",
+      "season": "c7s3",
+      "ability": "Occasionally grants a buff for unlimited ammo.",
+      "icons": {
+        "base": "punksprite_base.webp",
+        "candy": "punksprite_candy.webp",
+        "cube": "punksprite_cube.webp",
+        "galaxy": "punksprite_galaxy.webp",
+        "gem": "punksprite_gem.webp",
+        "gold": "punksprite_gold.webp"
+      }
+    },
+    "ReloadOverTimeSprite": {
+      "name": "Shadow",
+      "rarity": "epic",
+      "season": "c7s4",
+      "ability": "Automatically reload weapons over time, even while unequipped.",
+      "icons": {
+        "base": "reloadovertimesprite_base.webp",
+        "cheatmaster": "reloadovertimesprite_cheatmaster.webp",
+        "gold": "reloadovertimesprite_gold.webp"
+      }
+    },
+    "SevenSprite": {
+      "name": "Seven",
+      "rarity": "legendary",
+      "season": "c7s3",
+      "ability": "Makes enemy footsteps/trails visible to your whole squad.",
+      "icons": {
+        "base": "sevensprite_base.webp",
+        "candy": "sevensprite_candy.webp",
+        "galaxy": "sevensprite_galaxy.webp",
+        "gold": "sevensprite_gold.webp",
+        "holofoil": "sevensprite_holofoil.webp"
+      }
+    },
+    "SleepySprite": {
+      "name": "Dream",
+      "rarity": "legendary",
+      "season": "c7s3",
+      "ability": "Grants a random item each level, exploding with legendary loot at max.",
+      "icons": {
+        "base": "sleepysprite_base.webp",
+        "candy": "sleepysprite_candy.webp",
+        "cube": "sleepysprite_cube.webp",
+        "galaxy": "sleepysprite_galaxy.webp",
+        "gold": "sleepysprite_gold.webp"
+      }
+    },
+    "SoccerSprite": {
+      "name": "Striker",
+      "rarity": "epic",
+      "season": "c7s3",
+      "ability": "Gain Overdrive when mantling, hurdling or wall-scrambling.",
+      "icons": {
+        "base": "soccersprite_base.webp",
+        "candy": "soccersprite_candy.webp",
+        "galaxy": "soccersprite_galaxy.webp",
+        "gold": "soccersprite_gold.webp",
+        "holofoil": "soccersprite_holofoil.webp"
+      }
+    },
+    "Spitfire": {
+      "name": "Fire",
+      "rarity": "rare",
+      "season": "c7s3",
+      "ability": "Creates a fiery burst when you deal enough damage to an enemy.",
+      "icons": {
+        "base": "spitfire_base.webp",
+        "candy": "spitfire_candy.webp",
+        "cube": "spitfire_cube.webp",
+        "galaxy": "spitfire_galaxy.webp",
+        "gold": "spitfire_gold.webp",
+        "holofoil": "spitfire_holofoil.webp",
+        "quack": "spitfire_quack.webp"
+      }
+    },
+    "StormScoutSprite": {
+      "name": "Storm Scout",
+      "rarity": "legendary",
+      "season": "c7s4",
+      "ability": "Applies Overdrive after taking storm damage.",
+      "icons": {
+        "base": "stormscoutsprite_base.webp",
+        "cheatmaster": "stormscoutsprite_cheatmaster.webp",
+        "gold": "stormscoutsprite_gold.webp"
+      }
+    },
+    "Water": {
+      "name": "Water",
+      "rarity": "rare",
+      "season": "c7s3",
+      "ability": "Replenishes shields for you and nearby squadmates while in water.",
+      "icons": {
+        "base": "water_base.webp",
+        "candy": "water_candy.webp",
+        "galaxy": "water_galaxy.webp",
+        "gem": "water_gem.webp",
+        "gold": "water_gold.webp",
+        "holofoil": "water_holofoil.webp",
+        "quack": "water_quack.webp"
+      }
+    },
+    "ZeroPointSprite": {
+      "name": "Zero Point",
+      "rarity": "mythic",
+      "season": "c7s3",
+      "ability": "Spawns a Shield Bubble Jr. when you use a healing item on yourself.",
+      "icons": {
+        "base": "zeropointsprite_base.webp",
+        "candy": "zeropointsprite_candy.webp",
+        "cube": "zeropointsprite_cube.webp",
+        "galaxy": "zeropointsprite_galaxy.webp",
+        "gem": "zeropointsprite_gem.webp",
+        "gold": "zeropointsprite_gold.webp",
+        "holofoil": "zeropointsprite_holofoil.webp",
+        "quack": "zeropointsprite_quack.webp"
+      }
+    }
+  }
+}

@@ -1,6 +1,8 @@
 import type {
   OutpostBaseData,
   OutpostInfoResult,
+  OutpostReportExportResult,
+  OutpostZoneInfo,
 } from '../core/outpost-types'
 import type { AccountData } from '../../types/accounts'
 
@@ -26,5 +28,18 @@ export function requestOutpostBaseData(
     ElectronAPIEventKeys.OutpostBaseRequest,
     account,
     saveFile
+  )
+}
+
+export function exportOutpostReport(
+  displayName: string,
+  zone: OutpostZoneInfo,
+  baseData: OutpostBaseData
+): Promise<OutpostReportExportResult> {
+  return ipcRenderer.invoke(
+    ElectronAPIEventKeys.OutpostReportExport,
+    displayName,
+    zone,
+    baseData
   )
 }

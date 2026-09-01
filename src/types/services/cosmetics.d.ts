@@ -40,6 +40,7 @@ export type FortniteApiCosmetic = {
   /** Cars are keyed by `id` but equipped by `vehicleId`. */
   vehicleId?: string
   name?: string
+  description?: string
   type?: FortniteApiType
   rarity?: FortniteApiRarity
   series?: FortniteApiSeries

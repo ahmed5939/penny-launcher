@@ -301,7 +301,12 @@ function OfferCard({
       : offer.title
   const isDiscounted = offer.finalPrice < offer.regularPrice
   const purchaseLimit =
-    offer.dailyLimit || offer.weeklyLimit || offer.monthlyLimit
+    [
+      offer.dailyLimit,
+      offer.weeklyLimit,
+      offer.monthlyLimit,
+      offer.eventLimit,
+    ].find((limit) => limit > 0) ?? 0
   const soldOut = purchaseLimit > 0 && offer.purchased >= purchaseLimit
 
   return (
@@ -333,6 +338,7 @@ function OfferCard({
               offer.dailyLimit > 0 && `${offer.dailyLimit}/day`,
               offer.weeklyLimit > 0 && `${offer.weeklyLimit}/week`,
               offer.monthlyLimit > 0 && `${offer.monthlyLimit}/month`,
+              offer.eventLimit > 0 && `${offer.eventLimit}/event`,
               purchaseLimit > 0 &&
                 `${Math.min(offer.purchased, purchaseLimit)}/${purchaseLimit} purchased`,
             ]
@@ -379,6 +385,7 @@ function OfferCard({
             isPurchaseLocked ||
             isPurchasing ||
             !offer.affordable ||
+            offer.fulfillmentOwned ||
             soldOut ||
             offer.currency === 'RealMoney'
           }
@@ -390,6 +397,8 @@ function OfferCard({
             <UpdateIcon className="animate-spin" />
           ) : soldOut ? (
             'Purchased · limit reached'
+          ) : offer.fulfillmentOwned ? (
+            'Already claimed'
           ) : offer.currency === 'RealMoney' ? (
             'Real money only'
           ) : offer.affordable ? (

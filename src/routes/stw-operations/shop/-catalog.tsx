@@ -44,6 +44,17 @@ function formatLimits(offer: ShopCatalogOffer) {
   )
 }
 
+function purchaseLimit(offer: ShopOffer) {
+  return (
+    [
+      offer.dailyLimit,
+      offer.weeklyLimit,
+      offer.monthlyLimit,
+      offer.eventLimit,
+    ].find((limit) => limit > 0) ?? 0
+  )
+}
+
 export function ShopCatalog() {
   const {
     account,
@@ -280,10 +291,8 @@ function CatalogCard({
 }) {
   const soldOut =
     mcpOffer !== null &&
-    (mcpOffer.dailyLimit || mcpOffer.weeklyLimit || mcpOffer.monthlyLimit) >
-      0 &&
-    mcpOffer.purchased >=
-      (mcpOffer.dailyLimit || mcpOffer.weeklyLimit || mcpOffer.monthlyLimit)
+    purchaseLimit(mcpOffer) > 0 &&
+    mcpOffer.purchased >= purchaseLimit(mcpOffer)
 
   return (
     <Panel>
@@ -342,6 +351,7 @@ function CatalogCard({
               isPurchaseLocked ||
               isPurchasing ||
               !mcpOffer.affordable ||
+              mcpOffer.fulfillmentOwned ||
               soldOut ||
               mcpOffer.currency === 'RealMoney'
             }
@@ -353,6 +363,8 @@ function CatalogCard({
               <UpdateIcon className="animate-spin" />
             ) : soldOut ? (
               'Purchased · limit reached'
+            ) : mcpOffer.fulfillmentOwned ? (
+              'Already claimed'
             ) : mcpOffer.currency === 'RealMoney' ? (
               'Real money only'
             ) : mcpOffer.affordable ? (

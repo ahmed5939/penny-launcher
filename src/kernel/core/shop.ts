@@ -82,8 +82,12 @@ export type ShopOffer = {
   dailyLimit: number
   weeklyLimit: number
   monthlyLimit: number
+  /** Cap tied to the current STW event rather than a calendar interval. */
+  eventLimit: number
   /** Purchases already made during this offer's active limit window. */
   purchased: number
+  /** The account already consumed the exact preroll fulfillment being shown. */
+  fulfillmentOwned: boolean
   /** ISO date this specific offer stops being available. */
   saleExpiration: string | null
   itemGrants: Array<ShopGrant>
@@ -286,7 +290,10 @@ export class Shop {
     ])
 
     const items = profile.data.profileChanges[0]?.profile.items ?? {}
-    const prerollsByOfferId = new Map<string, Array<ShopGrant>>()
+    const prerollsByOfferId = new Map<
+      string,
+      { fulfillmentId: string; grants: Array<ShopGrant> }
+    >()
 
     Object.values(items).forEach((item) => {
       if (item.templateId.startsWith('AccountResource:')) {
@@ -315,6 +322,7 @@ export class Shop {
 
       const attributes = (item.attributes ?? {}) as Partial<{
         offerId: string
+        fulfillmentId: string
         items: Array<{
           itemType?: string
           quantity?: number
@@ -328,15 +336,18 @@ export class Shop {
 
       prerollsByOfferId.set(
         attributes.offerId,
-        (attributes.items ?? [])
-          .filter((grant) => typeof grant.itemType === 'string')
-          .map((grant) =>
-            toGrant(
-              grant.itemType as string,
-              grant.quantity ?? 1,
-              grant.attributes?.portrait
+        {
+          fulfillmentId: attributes.fulfillmentId ?? '',
+          grants: (attributes.items ?? [])
+            .filter((grant) => typeof grant.itemType === 'string')
+            .map((grant) =>
+              toGrant(
+                grant.itemType as string,
+                grant.quantity ?? 1,
+                grant.attributes?.portrait
+              )
             )
-          )
+        }
       )
     })
 
@@ -347,6 +358,8 @@ export class Shop {
       ])
     )
     const commonProfile = commonCore.data.profileChanges[0]?.profile
+    const fulfillmentCounts =
+      commonProfile?.stats.attributes.in_app_purchases?.fulfillmentCounts ?? {}
     const purchaseCounts = new Map<string, number>()
     const addPurchases = (values: Record<string, number> | undefined) => {
       Object.entries(values ?? {}).forEach(([offerId, count]) => {
@@ -369,7 +382,8 @@ export class Shop {
       catalog.data,
       prerollsByOfferId,
       balances,
-      purchaseCounts
+      purchaseCounts,
+      fulfillmentCounts
     )
     entry.currencies.sort((currencyA, currencyB) =>
       currencyA.label.localeCompare(currencyB.label)
@@ -380,9 +394,13 @@ export class Shop {
 
   private static parseCatalog(
     catalog: StorefrontCatalogResponse,
-    prerollsByOfferId: Map<string, Array<ShopGrant>>,
+    prerollsByOfferId: Map<
+      string,
+      { fulfillmentId: string; grants: Array<ShopGrant> }
+    >,
     balances: Map<string, number>,
-    purchaseCounts: Map<string, number>
+    purchaseCounts: Map<string, number>,
+    fulfillmentCounts: Record<string, number>
   ) {
     const offers: Array<ShopOffer> = []
 
@@ -401,6 +419,10 @@ export class Shop {
         }
 
         const balance = balances.get(price.currencySubType) ?? 0
+        const eventLimit = Number(catalogEntry.meta?.EventLimit ?? -1)
+        const purchaseKey =
+          catalogEntry.meta?.PurchaseLimitingEventId || catalogEntry.offerId
+        const preroll = prerollsByOfferId.get(catalogEntry.offerId) ?? null
 
         offers.push({
           offerId: catalogEntry.offerId,
@@ -422,12 +444,19 @@ export class Shop {
           dailyLimit: catalogEntry.dailyLimit,
           weeklyLimit: catalogEntry.weeklyLimit,
           monthlyLimit: catalogEntry.monthlyLimit,
-          purchased: purchaseCounts.get(catalogEntry.offerId) ?? 0,
+          eventLimit: Number.isFinite(eventLimit) ? eventLimit : -1,
+          purchased:
+            purchaseCounts.get(purchaseKey) ??
+            purchaseCounts.get(catalogEntry.offerId) ??
+            0,
+          fulfillmentOwned:
+            !!preroll?.fulfillmentId &&
+            (fulfillmentCounts[preroll.fulfillmentId] ?? 0) > 0,
           saleExpiration: usableExpiration(price.saleExpiration),
           itemGrants: catalogEntry.itemGrants.map((grant) =>
             toGrant(grant.templateId, grant.quantity)
           ),
-          preroll: prerollsByOfferId.get(catalogEntry.offerId) ?? null,
+          preroll: preroll?.grants ?? null,
           sortPriority: catalogEntry.sortPriority,
         })
       })
@@ -468,6 +497,17 @@ export class Shop {
       if (!accessToken) {
         notification.errorMessage = 'Unknown Error'
       } else {
+        /*
+         * X-Ray offers are backed by account-specific preroll data. Epic can
+         * invalidate that data after the shop was loaded (and does so for the
+         * daily free Upgrade Llama), so refresh it at checkout just like the
+         * working auto-llama purchase path does.
+         */
+        await populatePrerolledOffers({
+          accessToken,
+          accountId: account.accountId,
+        })
+
         await purchaseCatalogEntry({
           accessToken,
           accountId: account.accountId,

@@ -10,11 +10,11 @@ import type { MatchResult, Region } from './vision'
 import path from 'node:path'
 
 import { screen } from 'electron'
-import { node_process_watcher } from 'node-process-watcher'
 
 import { ElectronAPIEventKeys } from '../../../config/constants/main-process'
 
 import { MainWindow } from '../../startup/windows/main'
+import { ProcessWatcher } from '../../process-watcher'
 import { DataDirectory } from '../../startup/data-directory'
 import { SettingsManager } from '../../startup/settings'
 import { ClaimRewards } from '../claim-rewards'
@@ -564,9 +564,11 @@ export class EnduranceAutomation {
     }
 
     EnduranceAutomation.processWatcherActive = true
-    node_process_watcher.on('endurance', (list) => {
+    ProcessWatcher.on('endurance', (list) => {
       const running = list.some(
-        (item) => item.name === EnduranceAutomation.processName,
+        (item) =>
+          item.name.toLowerCase() ===
+          EnduranceAutomation.processName.toLowerCase(),
       )
 
       if (running !== EnduranceAutomation.processRunning) {
@@ -582,7 +584,7 @@ export class EnduranceAutomation {
     }
 
     EnduranceAutomation.processWatcherActive = false
-    node_process_watcher.close('endurance')
+    ProcessWatcher.close('endurance')
   }
 
   /**

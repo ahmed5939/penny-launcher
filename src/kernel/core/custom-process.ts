@@ -1,9 +1,8 @@
-import { node_process_watcher } from 'node-process-watcher'
-
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
 import { DiscordPresence } from './discord-presence'
 import { MainWindow } from '../startup/windows/main'
+import { ProcessWatcher } from '../process-watcher'
 
 export class CustomProcess {
   private static id: number | null = null
@@ -15,9 +14,10 @@ export class CustomProcess {
       return
     }
 
-    node_process_watcher.on('custom-process', (list) => {
+    ProcessWatcher.on('custom-process', (list) => {
       const filtered = list.find(
-        (item) => item.name === CustomProcess.name
+        (item) =>
+          item.name.toLowerCase() === CustomProcess.name?.toLowerCase()
       )
       const isRunning = filtered !== undefined
 
@@ -35,12 +35,12 @@ export class CustomProcess {
     })
   }
 
-  static kill() {
+  static async kill() {
     if (typeof CustomProcess.id !== 'number') {
       return
     }
 
-    node_process_watcher.kill_process(CustomProcess.id, true)
+    await ProcessWatcher.killProcess(CustomProcess.id, true)
   }
 
   static setName(value: string, restart?: boolean) {
@@ -60,6 +60,6 @@ export class CustomProcess {
     CustomProcess.id = null
     CustomProcess.name = null
     CustomProcess.isRunning = false
-    node_process_watcher.close('custom-process')
+    ProcessWatcher.close('custom-process')
   }
 }

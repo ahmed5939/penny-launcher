@@ -1,6 +1,7 @@
 import type {
   LockerCardFilters,
   LockerCardNotification,
+  LockerCompanionsPayload,
   LockerOwnedPayload,
   LockerPayload,
   LockerSlotState,
@@ -11,8 +12,11 @@ import { create } from 'zustand'
 
 export type LockerCard = NonNullable<LockerCardNotification['card']>
 
-/** The page's three jobs: what is worn, what is owned, and the picture. */
-export type LockerView = 'loadout' | 'collection' | 'card'
+/**
+ * The page's jobs: what is worn, what is owned, which sidekicks exist at all,
+ * and the picture.
+ */
+export type LockerView = 'loadout' | 'collection' | 'sidekicks' | 'card'
 
 export type LockerState = {
   view: LockerView
@@ -27,6 +31,11 @@ export type LockerState = {
   ownedError: string | null
   ownedLoadedFor: string | null
   isLoadingOwned: boolean
+
+  companions: LockerCompanionsPayload['companions']
+  companionsError: string | null
+  companionsLoadedFor: string | null
+  isLoadingCompanions: boolean
 
   /** The slot whose picker is open, or null. */
   pickerSlot: LockerSlotKey | null
@@ -44,10 +53,12 @@ export type LockerState = {
   openPicker: (slotKey: LockerSlotKey) => void
   reset: () => void
   setCard: (notification: LockerCardNotification) => void
+  setCompanions: (payload: LockerCompanionsPayload) => void
   setEquipping: (slotKey: LockerSlotKey | null) => void
   setFilters: (filters: Partial<LockerCardFilters>) => void
   setGenerating: (value: boolean) => void
   setLoading: (value: boolean) => void
+  setLoadingCompanions: (value: boolean) => void
   setLoadingOwned: (value: boolean) => void
   setOwned: (payload: LockerOwnedPayload) => void
   setProgress: (progress: { done: number; total: number } | null) => void
@@ -73,6 +84,11 @@ export const useLockerStore = create<LockerState>()((set) => ({
   ownedLoadedFor: null,
   isLoadingOwned: false,
 
+  companions: [],
+  companionsError: null,
+  companionsLoadedFor: null,
+  isLoadingCompanions: false,
+
   pickerSlot: null,
   equipping: null,
 
@@ -95,6 +111,10 @@ export const useLockerStore = create<LockerState>()((set) => ({
       ownedError: null,
       ownedLoadedFor: null,
       isLoadingOwned: false,
+      companions: [],
+      companionsError: null,
+      companionsLoadedFor: null,
+      isLoadingCompanions: false,
       pickerSlot: null,
       equipping: null,
       card: null,
@@ -109,6 +129,13 @@ export const useLockerStore = create<LockerState>()((set) => ({
       isGenerating: false,
       progress: null,
     }),
+  setCompanions: (payload) =>
+    set({
+      companions: payload.companions,
+      companionsError: payload.errorMessage ?? null,
+      companionsLoadedFor: payload.accountId,
+      isLoadingCompanions: false,
+    }),
   setEquipping: (slotKey) => set({ equipping: slotKey }),
   setFilters: (filters) =>
     set((state) => ({ filters: { ...state.filters, ...filters } })),
@@ -118,6 +145,7 @@ export const useLockerStore = create<LockerState>()((set) => ({
       ...(value ? { cardError: null, progress: null } : {}),
     }),
   setLoading: (value) => set({ isLoading: value }),
+  setLoadingCompanions: (value) => set({ isLoadingCompanions: value }),
   setLoadingOwned: (value) => set({ isLoadingOwned: value }),
   setOwned: (payload) =>
     set({

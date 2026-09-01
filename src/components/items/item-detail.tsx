@@ -413,6 +413,18 @@ export function ItemDetailDialog({
 const romanTiers = ['i', 'ii', 'iii', 'iv', 'v']
 
 /**
+ * Tier N caps levelling at N×10. A maxed tier-5 item — the "130" its power
+ * level reads as — keeps going to 60, but each level past 50 spends a
+ * supercharger from Ventures instead of manuals, so that stays one press
+ * per level and is never folded into a bulk jump.
+ */
+export const superchargeMaxLevel = 60
+
+export function levelCapForTier(tier: number) {
+  return tier > 0 ? Math.min(tier, 5) * 10 : null
+}
+
+/**
  * Levelling, evolving and rarity, each spending materials the moment it is
  * pressed. Costs are shown next to the button rather than buried, because
  * the whole point of doing this outside the game is knowing what it costs.
@@ -431,6 +443,13 @@ function UpgradeActions({
   const [confirming, setConfirming] = useState<string | null>(null)
 
   const tier = subject.tier ?? record?.tier ?? 0
+  const level = subject.level ?? 1
+  const cap = levelCapForTier(tier)
+  const supercharging = tier >= 5 && level >= 50
+  const canLevel = !supercharging || level < superchargeMaxLevel
+  const bulkTarget =
+    cap !== null && !supercharging ? Math.min(level + 10, cap) : null
+  const canBulkLevel = bulkTarget !== null && bulkTarget - level >= 2
   const canEvolve = tier > 0 && tier < 5
   const canUpgradeRarity = Object.keys(record?.upgradeCost ?? {}).length > 0
 
@@ -454,17 +473,46 @@ function UpgradeActions({
       title="Upgrade"
     >
       <div className="flex flex-wrap gap-2">
-        <Button
-          disabled={isBusy}
-          onClick={() =>
-            act('level', { kind: 'level', itemId: subject.itemId as string })
-          }
-          size="sm"
-          variant={confirming === 'level' ? 'destructive' : 'secondary'}
-        >
-          <ArrowUp className="size-3.5" />
-          {label('level', 'Level +1')}
-        </Button>
+        {canLevel && (
+          <Button
+            disabled={isBusy}
+            onClick={() =>
+              act('level', { kind: 'level', itemId: subject.itemId as string })
+            }
+            size="sm"
+            variant={confirming === 'level' ? 'destructive' : 'secondary'}
+          >
+            {supercharging ? (
+              <Zap className="size-3.5" />
+            ) : (
+              <ArrowUp className="size-3.5" />
+            )}
+            {label('level', supercharging ? 'Supercharge +1' : 'Level +1')}
+          </Button>
+        )}
+
+        {canBulkLevel && (
+          <Button
+            disabled={isBusy}
+            onClick={() =>
+              act('bulk-level', {
+                kind: 'level',
+                itemId: subject.itemId as string,
+                desiredLevel: bulkTarget as number,
+              })
+            }
+            size="sm"
+            variant={confirming === 'bulk-level' ? 'destructive' : 'secondary'}
+          >
+            <ArrowUp className="size-3.5" />
+            {label(
+              'bulk-level',
+              bulkTarget === cap
+                ? `Level to ${bulkTarget} (tier max)`
+                : `Level +${(bulkTarget as number) - level}`
+            )}
+          </Button>
+        )}
 
         {canEvolve && (
           <Button
@@ -500,6 +548,18 @@ function UpgradeActions({
           </Button>
         )}
       </div>
+
+      {!canLevel && !canEvolve && !canUpgradeRarity && (
+        <p className="text-xs text-muted-foreground">
+          Fully supercharged — nothing left to upgrade.
+        </p>
+      )}
+
+      {supercharging && level < superchargeMaxLevel && (
+        <p className="text-xs text-muted-foreground">
+          Past level 50 — each level now spends a supercharger from Ventures.
+        </p>
+      )}
 
       {confirming && (
         <p className="text-xs text-muted-foreground">

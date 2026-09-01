@@ -141,18 +141,29 @@ export class Inventory {
         return
       }
 
-      const crew = (
-        item.attributes as { crew_members?: Record<string, unknown> } | undefined
-      )?.crew_members
+      const attributes = item.attributes as
+        | {
+            crew_members?: Record<string, unknown>
+            defenders?: Record<string, unknown>
+            defender_slots?: Record<string, unknown>
+          }
+        | undefined
+      const assigned = [
+        attributes?.crew_members,
+        attributes?.defenders,
+        attributes?.defender_slots,
+      ]
 
-      if (!crew) {
+      if (!assigned.some(Boolean)) {
         return
       }
 
-      Object.values(crew).forEach((value) => {
-        if (typeof value === 'string' && value.length > 0) {
-          memberIds.add(value)
-        }
+      assigned.forEach((slots) => {
+        Object.values(slots ?? {}).forEach((value) => {
+          if (typeof value === 'string' && value.length > 0) {
+            memberIds.add(value)
+          }
+        })
       })
     })
 

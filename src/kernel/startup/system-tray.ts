@@ -2,14 +2,20 @@ import { RuntimeLog } from '../runtime-log'
 import { app, Menu, nativeImage, Tray } from 'electron'
 import path from 'node:path'
 
-import {
-  DiscordPresence,
-  trayLaunchLabels,
-  type TrayLaunchSummary,
-} from '../core/discord-presence'
-import { FortniteLauncher } from '../core/launcher'
-import { AccountsManager } from './accounts'
-import { MainWindow } from './windows/main'
+import type { TrayLaunchSummary } from '../core/discord-presence'
+
+function trayLaunchLabels(summary: TrayLaunchSummary) {
+  const hasAccount = Boolean(summary.primaryId)
+
+  return {
+    launchEnabled: hasAccount && !summary.gameRunning,
+    launchLabel: !hasAccount
+      ? 'Launch Fortnite'
+      : summary.gameRunning
+        ? 'Fortnite is running'
+        : `Launch Fortnite — ${summary.primaryName ?? 'selected account'}`,
+  }
+}
 
 export class SystemTray {
   private static current: Tray | null = null
@@ -107,7 +113,18 @@ export class SystemTray {
           type: 'normal',
           enabled: launchEnabled,
           click: () => {
-            SystemTray.launchSelected()
+            void SystemTray.launchSelected().catch((error) => {
+              RuntimeLog.error('tray:launch', error)
+            })
+          },
+        },
+        {
+          label: 'Toggle quest overlay  Ctrl+Shift+Q',
+          type: 'normal',
+          click: () => {
+            void import('./windows/overlay').then(({ OverlayWindow }) =>
+              OverlayWindow.toggle()
+            )
           },
         },
         {
@@ -121,7 +138,9 @@ export class SystemTray {
           label: 'Exit',
           type: 'normal',
           click: () => {
-            MainWindow.closeApp()
+            void import('./windows/main').then(({ MainWindow }) =>
+              MainWindow.closeApp()
+            )
           },
         },
       ])
@@ -134,13 +153,17 @@ export class SystemTray {
    * Official FortniteLauncher.exe only, same path Settings already stores.
    * Looks the account up in main so the tray never carries device secrets.
    */
-  private static launchSelected() {
+  private static async launchSelected() {
     const accountId = SystemTray.summary.primaryId
 
     if (!accountId) {
       return
     }
 
+    const [{ AccountsManager }, { FortniteLauncher }] = await Promise.all([
+      import('./accounts'),
+      import('../core/launcher'),
+    ])
     const account = AccountsManager.getAccountById(accountId)
 
     if (!account) {
@@ -167,7 +190,11 @@ export class SystemTray {
    */
   static updateSummary(summary: TrayLaunchSummary) {
     SystemTray.summary = summary
-    DiscordPresence.setAccountName(summary.primaryName)
+    void import('../core/discord-presence')
+      .then(({ DiscordPresence }) =>
+        DiscordPresence.setAccountName(summary.primaryName)
+      )
+      .catch((error) => RuntimeLog.error('tray:presence', error))
 
     if (SystemTray.current && SystemTray.onOpenHandler) {
       SystemTray.buildMenu(SystemTray.onOpenHandler)

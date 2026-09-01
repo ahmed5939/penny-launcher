@@ -65,21 +65,23 @@ export function StatusBar() {
       </span>
 
       {/* Auto-kick is temporarily disabled, so its service dot is hidden. */}
-      <Divider />
-      <Service
-        label="Taxi"
-        status={taxi}
-      />
+      <span className="contents max-[700px]:hidden">
+        <Divider />
+        <Service
+          label="Taxi"
+          status={taxi}
+        />
 
-      <Divider />
-      <span
-        className={cn(
-          'micro-label flex items-center gap-1.5',
-          !isOnline && 'text-warning'
-        )}
-      >
-        <StatusDot tone={isOnline ? 'active' : 'warning'} />
-        {isOnline ? 'Online' : 'Offline'}
+        <Divider />
+        <span
+          className={cn(
+            'micro-label flex items-center gap-1.5',
+            !isOnline && 'text-warning'
+          )}
+        >
+          <StatusDot tone={isOnline ? 'active' : 'warning'} />
+          {isOnline ? 'Online' : 'Offline'}
+        </span>
       </span>
 
       <span className="figure ml-auto text-[0.6875rem] text-muted-foreground">

@@ -1,4 +1,13 @@
-import { Check, CheckCheck, UserPlus, X } from 'lucide-react'
+import {
+  Check,
+  CheckCheck,
+  LoaderCircle,
+  RefreshCw,
+  ShieldAlert,
+  ShieldCheck,
+  UserPlus,
+  X,
+} from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -30,12 +39,34 @@ export function RailAccountSwitcher() {
     onToggleMember,
     selected,
   } = useAccountList()
+  const isChecking = accounts.some(
+    (account) => account.authStatus === 'checking'
+  )
 
   return (
     <div className="border-b border-border/60 px-1.5 py-1.5">
-      <p className="micro-label px-2 pb-1 pt-0.5 text-muted-foreground/70">
-        {t('sidebar:customize.accounts')}
-      </p>
+      <div className="flex items-center px-2 pb-1 pt-0.5">
+        <p className="micro-label text-muted-foreground/70 max-[900px]:hidden">
+          {t('sidebar:customize.accounts')}
+        </p>
+        {accounts.length > 0 && (
+          <Button
+            aria-label="Check all account statuses"
+            className="ml-auto size-5 p-0 text-muted-foreground"
+            disabled={isChecking}
+            size="icon"
+            title="Check all account statuses"
+            variant="ghost"
+            onClick={() => window.electronAPI.checkAllAccountStatuses()}
+          >
+            {isChecking ? (
+              <LoaderCircle className="size-3 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3" />
+            )}
+          </Button>
+        )}
+      </div>
 
       {accounts.length === 0 ? (
         <Link
@@ -44,7 +75,7 @@ export function RailAccountSwitcher() {
           className="flex h-8 items-center gap-2 rounded-lg px-2 text-[0.8125rem] text-muted-foreground hover:bg-accent/30 hover:text-foreground"
         >
           <UserPlus className="size-4 shrink-0 opacity-75" />
-          <span className="truncate">{t('form.accounts.no-registered-accounts')}</span>
+          <span className="truncate max-[900px]:sr-only">{t('form.accounts.no-registered-accounts')}</span>
         </Link>
       ) : (
         <>
@@ -54,6 +85,9 @@ export function RailAccountSwitcher() {
               const isCurrent = selected?.accountId === account.accountId
               const isInScope = members.includes(account.accountId)
               const shortcut = index < 9 ? `Ctrl+${index + 1}` : undefined
+              const isInvalid = account.authStatus === 'invalid'
+              const isAccountChecking = account.authStatus === 'checking'
+              const isValid = account.authStatus === 'valid'
 
               return (
                 <li key={account.accountId}>
@@ -61,8 +95,9 @@ export function RailAccountSwitcher() {
                     className={cn(
                       'relative flex h-8 items-center gap-1.5 rounded-lg px-1.5',
                       'text-[0.8125rem] text-muted-foreground',
-                      'hover:bg-accent/30 hover:text-foreground',
-                      isCurrent && 'bg-accent/70 font-medium text-foreground'
+                      !isInvalid && 'hover:bg-accent/30 hover:text-foreground',
+                      isCurrent && 'bg-accent/70 font-medium text-foreground',
+                      isInvalid && 'opacity-45 grayscale'
                     )}
                     onContextMenu={onContextMenu(account)}
                   >
@@ -71,8 +106,15 @@ export function RailAccountSwitcher() {
                     )}
                     <button
                       type="button"
+                      disabled={isInvalid}
                       className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      title={shortcut ? `${displayName} (${shortcut})` : displayName}
+                      title={
+                        isInvalid
+                          ? `${displayName} — authentication expired; re-add this account to authenticate again`
+                          : shortcut
+                            ? `${displayName} (${shortcut})`
+                            : displayName
+                      }
                       onClick={() => onSelect(account)(account.accountId)}
                     >
                       <AccountGlyph
@@ -80,9 +122,18 @@ export function RailAccountSwitcher() {
                         name={displayName}
                         selected={isCurrent}
                       />
-                      <span className="min-w-0 flex-1 truncate">{displayName}</span>
+                      <span className="min-w-0 flex-1 truncate max-[900px]:sr-only">{displayName}</span>
+                      {isInvalid && (
+                        <ShieldAlert className="size-3.5 shrink-0 max-[900px]:hidden" />
+                      )}
+                      {isAccountChecking && (
+                        <LoaderCircle className="size-3.5 shrink-0 animate-spin max-[900px]:hidden" />
+                      )}
+                      {isValid && !isCurrent && (
+                        <ShieldCheck className="size-3.5 shrink-0 text-emerald-500 max-[900px]:hidden" />
+                      )}
                       {isCurrent && (
-                        <Check className="size-3.5 shrink-0 text-primary" />
+                        <Check className="size-3.5 shrink-0 text-primary max-[900px]:hidden" />
                       )}
                     </button>
                     {accounts.length > 1 && (
@@ -91,7 +142,8 @@ export function RailAccountSwitcher() {
                           isInScope ? 'Remove from scope' : 'Add to scope'
                         }
                         checked={isInScope}
-                        className="ml-0.5"
+                        disabled={isInvalid}
+                        className="ml-0.5 max-[900px]:hidden"
                         size="sm"
                         onClick={(event) => event.stopPropagation()}
                         onCheckedChange={() =>
@@ -106,7 +158,7 @@ export function RailAccountSwitcher() {
           </ul>
 
           {accounts.length > 1 && (
-            <div className="mt-1 flex items-center gap-1 px-1">
+            <div className="mt-1 flex items-center gap-1 px-1 max-[900px]:hidden">
               <span className="figure mr-auto px-1 text-[0.625rem] text-muted-foreground">
                 {t('form.multi.select.counter', {
                   selected: members.length,

@@ -14,6 +14,9 @@ export const accountDataSchema = z.intersection(
   accountBasicInformationSchema,
   z.object({
     accessToken: z.string().nullable().optional(),
+    authStatus: z
+      .enum(['unknown', 'checking', 'valid', 'invalid'])
+      .optional(),
     provider: z.string().nullable().optional(),
   })
 )

@@ -11,6 +11,9 @@ jobs:
   publish:
     name: Create release
     runs-on: windows-2022
+    env:
+      SIGNING_CERTIFICATE: ${{ secrets.PENNY_WINDOWS_CERTIFICATE_BASE64 }}
+      SIGNING_PASSWORD: ${{ secrets.PENNY_WINDOWS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -28,6 +31,14 @@ jobs:
           fi
       - name: Install dependencies
         run: npm ci
+      - name: Configure Windows code signing
+        if: env.SIGNING_CERTIFICATE != ''
+        shell: pwsh
+        run: |
+          $certificate = Join-Path $env:RUNNER_TEMP 'penny-signing.pfx'
+          [IO.File]::WriteAllBytes($certificate, [Convert]::FromBase64String($env:SIGNING_CERTIFICATE))
+          "PENNY_WINDOWS_CERTIFICATE_FILE=$certificate" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "PENNY_WINDOWS_CERTIFICATE_PASSWORD=$env:SIGNING_PASSWORD" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Publishing
         run: npm run publish
         env:

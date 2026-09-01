@@ -7,7 +7,6 @@ import { Header } from './header'
 import { AccountRail } from '../components/shell/account-rail'
 import { CommandPalette } from '../components/navigation/command-palette'
 import { FriendsPanel } from '../components/friends/panel'
-import { ScrollArea } from '../components/ui/scroll-area'
 import { StatusBar } from '../components/shell/status-bar'
 
 import { useWindowChrome } from '../hooks/ui/window-chrome'
@@ -41,18 +40,15 @@ export function MainLayout({ children }: PropsWithChildren) {
   useAppKeyboard()
 
   return (
-    <div className="flex h-screen w-full flex-col">
+    <div className="app-shell flex h-screen w-full flex-col">
       <Header onOpenPalette={() => setPaletteOpen(true)} />
 
       <div className="flex min-h-0 flex-1">
         <AccountRail />
 
-        {/*
-          The friends panel is a sibling of the content, not an overlay — the
-          app stays usable while it is open, and the content simply gets less
-          width rather than being covered.
-        */}
-        <div className="mica-content flex min-w-0 flex-1">
+        {/* Docked at full width; below 1000px it overlays the content so a
+            snapped window never collapses both panes into unusable slivers. */}
+        <div className="mica-content relative flex min-w-0 flex-1">
           <div className="flex min-w-0 flex-1 flex-col">
             {/*
               `flex-1 min-h-0` rather than a `100vh` subtraction: every
@@ -60,14 +56,15 @@ export function MainLayout({ children }: PropsWithChildren) {
               takes whatever the titlebar and the status bar leave it and
               cannot fall out of step with either one's height.
             */}
-            <ScrollArea
-              className="min-h-0 flex-1"
-              viewportClassName="main-wrapper-content"
+            <div
+              className="main-wrapper-content min-h-0 flex-1 overflow-y-auto overscroll-contain"
+              data-app-focus-region="content"
+              tabIndex={-1}
             >
               <main className="flex w-full flex-col gap-4 p-5 lg:gap-6">
                 {children}
               </main>
-            </ScrollArea>
+            </div>
           </div>
 
           <FriendsPanel />

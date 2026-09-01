@@ -17,7 +17,6 @@ import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 import { accountListSchema } from '../../lib/validations/schemas/accounts'
 
 import { MainWindow } from './windows/main'
-import { Automation } from './automation'
 import { DataDirectory } from './data-directory'
 import { PluginBridge } from './plugin-api'
 import { RuntimeLog } from '../runtime-log'
@@ -41,6 +40,7 @@ export class AccountsManager {
       const data: AccountData = {
         ...account,
         accessToken: undefined,
+        authStatus: 'unknown',
         customDisplayName: account.customDisplayName ?? '',
         provider: undefined,
       }
@@ -87,6 +87,7 @@ export class AccountsManager {
     AccountsManager._accounts.set(data.accountId, {
       ...data,
       accessToken: undefined,
+      authStatus: 'valid',
       customDisplayName: data.customDisplayName ?? '',
       provider: undefined,
     })
@@ -164,6 +165,7 @@ export class AccountsManager {
       const data: AccountData = {
         ...account,
         accessToken: undefined,
+        authStatus: 'unknown',
         customDisplayName: account.customDisplayName ?? '',
         provider: undefined,
       }
@@ -190,7 +192,8 @@ export class AccountsManager {
     )
 
     AccountsManager._accounts.delete(accountId)
-    Automation.removeAccount(accountId)
+    const { Automation } = await import('./automation')
+    await Automation.removeAccount(accountId)
 
     await DataDirectory.updateAccountsFile(accounts)
     PluginBridge.emit('accounts-changed')

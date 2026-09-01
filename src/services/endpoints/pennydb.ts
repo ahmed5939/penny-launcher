@@ -96,6 +96,20 @@ export type PennyDBProfileResponse = {
   defenders?: Record<string, unknown>
   schematics?: Record<string, unknown>
   expeditions_data?: Record<string, unknown>
+  active_quests?: Record<string, unknown>
+  daily_mission_data?: Record<string, unknown>
+  live_dungeons_quests?: Record<string, unknown>
+  live_endurance_daily_quest?: Record<string, unknown>
+  live_stormshield_quests?: Record<string, unknown>
+  live_ventures_quests?: Record<string, unknown>
+  live_wargames_quests?: Record<string, unknown>
+  live_weekly_quests?: Record<string, unknown>
+  what_mission_data?: {
+    difficulty?: string
+    mission_playing?: string
+    players?: Record<string, string>
+    zone?: string
+  }
 }
 
 /**

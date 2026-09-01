@@ -11,3 +11,6 @@ export type WindowChromeState = {
   mica: boolean
   titleBarHeight: number
 }
+
+export type AppearanceTheme = 'dark' | 'light' | 'system'
+export type ResolvedAppearanceTheme = Exclude<AppearanceTheme, 'system'>

@@ -11,7 +11,7 @@ Windows desktop app for managing Fortnite Save the World accounts: launch the of
 
 Penny is a GPL-3.0 fork of [Aerial Launcher](https://github.com/Ciensprog/Aerial-Launcher) by **Ciensprog** (itself based on Potato Launcher). Maintained by **Ahmed** ([ahmed5939](https://github.com/ahmed5939)). All credit for the original application goes to Ciensprog and contributors.
 
-> Currently in development. Not affiliated with Epic Games. **Not code signed** — Windows SmartScreen will warn on first install. Only download installers from [this repository's Releases](https://github.com/ahmed5939/penny-launcher/releases).
+> Currently in development. Not affiliated with Epic Games. Only download installers from [this repository's Releases](https://github.com/ahmed5939/penny-launcher/releases).
 
 ## Installation
 
@@ -19,7 +19,10 @@ Download the latest installer from the [Releases page](https://github.com/ahmed5
 
 ### Good To Know
 
-The first install shows a Windows confirmation dialog because the app is not code signed. That only happens once.
+Release builds support Authenticode signing through
+`PENNY_WINDOWS_CERTIFICATE_FILE` and `PENNY_WINDOWS_CERTIFICATE_PASSWORD`.
+Local or nightly builds made without those credentials are unsigned and can
+show a Windows SmartScreen confirmation on first install.
 
 Settings are saved to `C:\Users\YOUR_USER\AppData\Roaming\penny-launcher-data`. Device-auth credentials in `accounts.json` (or `dev-accounts.json` while developing) are encrypted at rest with Electron `safeStorage` (Windows DPAPI / the OS keychain) and stored with an `enc:v1:` prefix. Plaintext files, including copies imported from Aerial Launcher, are encrypted the next time the launcher starts.
 
@@ -51,6 +54,7 @@ When a new version is available, you will see a notification on the home screen.
 - Access the [Penny DB](https://pennydb.net) profile of the selected account.
 - Automation: daily quests, mission scheduling, auto-llamas, and more.
 - Discord Rich Presence from the launcher process only (in launcher / in Save the World / in Battle Royale). Nothing is injected into Fortnite.
+- Optional click-through quest overlay (`Ctrl+Shift+Q`) built as a separate Penny window. It does not inject, hook graphics, read game memory, or require Overwolf; Fortnite must use Borderless/Windowed Fullscreen. Quest and squad discovery currently come from PennyDB's public profile index.
 
 ## Development
 

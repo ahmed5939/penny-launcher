@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type {
   LoadoutEntry,
+  LoadoutDefender,
   LoadoutMember,
 } from '../../../kernel/core/loadouts'
 import type {
@@ -22,7 +23,9 @@ import {
   Repeat,
   RefreshCw,
   Rocket,
+  Search,
   Shield,
+  ShieldHalf,
   Star,
   UserX,
   Users,
@@ -32,6 +35,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../../components/ui/button'
+import { Input } from '../../../components/ui/input'
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
 import { ItemIcon } from '../../../components/items/item-icon'
@@ -49,6 +53,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../components/ui/dialog'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../../../components/ui/tooltip'
 import {
   Callout,
   EmptyState,
@@ -133,6 +143,9 @@ function Content() {
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
   const [loadouts, setLoadouts] = useState<Array<LoadoutEntry>>([])
   const [heroes, setHeroes] = useState<Array<InventoryItem>>([])
+  const [availableGadgets, setAvailableGadgets] = useState<Array<string>>([])
+  const [defenders, setDefenders] = useState<Array<InventoryItem>>([])
+  const [schematics, setSchematics] = useState<Array<InventoryItem>>([])
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isLoading, setLoading] = useState(false)
   const [isEditing, setEditing] = useState(false)
@@ -141,7 +154,19 @@ function Content() {
   const [pendingSlot, setPendingSlot] = useState<{
     loadoutId: string
     slot: string
+    kind: 'hero' | 'defender'
   } | null>(null)
+  const [pendingWeapon, setPendingWeapon] = useState<{
+    loadoutId: string
+    defenderId: string
+    defenderTemplateId: string
+  } | null>(null)
+  const [pendingGadget, setPendingGadget] = useState<{
+    loadoutId: string
+    slotIndex: number
+  } | null>(null)
+  const [heroClass, setHeroClass] = useState('All')
+  const [heroSearch, setHeroSearch] = useState('')
 
   useEffect(() => {
     const listener = window.electronAPI.responseLoadouts(
@@ -149,6 +174,7 @@ function Content() {
         setLoading(false)
         setHasLoaded(true)
         setLoadouts(response.loadouts)
+        setAvailableGadgets(response.availableGadgets)
         setErrorMessage(response.errorMessage ?? null)
       }
     )
@@ -166,6 +192,8 @@ function Content() {
 
         if (entry) {
           setHeroes(entry.items.filter((item) => item.kind === 'hero'))
+          setDefenders(entry.items.filter((item) => item.kind === 'defender'))
+          setSchematics(entry.items.filter((item) => item.kind === 'schematic'))
         }
       }
     )
@@ -180,6 +208,8 @@ function Content() {
       async (response) => {
         setEditing(false)
         setPendingSlot(null)
+        setPendingWeapon(null)
+        setPendingGadget(null)
 
         toast(
           response.errorMessage
@@ -188,7 +218,13 @@ function Content() {
               ? 'Loadout equipped'
               : response.kind === 'clear'
                 ? 'Loadout cleared'
-                : 'Hero assigned'
+                : response.kind === 'assign-defender'
+                  ? 'Defender assigned'
+                  : response.kind === 'assign-defender-weapon'
+                    ? 'Defender weapon assigned'
+                    : response.kind === 'assign-gadget'
+                      ? 'Gadget assigned'
+                    : 'Hero assigned'
         )
       }
     )
@@ -230,6 +266,65 @@ function Content() {
         .sort((a, b) => (b.power ?? 0) - (a.power ?? 0)),
     [heroes, ratings, records]
   )
+  const visibleHeroCandidates = useMemo(() => {
+    const search = heroSearch.trim().toLowerCase()
+
+    return candidates.filter((hero) => {
+      const record = getItemRecord(records, hero.templateId)
+      return (
+        (heroClass === 'All' || record?.subType === heroClass) &&
+        (search.length === 0 ||
+          hero.displayName.toLowerCase().includes(search) ||
+          record?.perk?.name.toLowerCase().includes(search) ||
+          record?.commanderPerk?.name.toLowerCase().includes(search))
+      )
+    })
+  }, [candidates, heroClass, heroSearch, records])
+
+  const rankItems = (items: Array<InventoryItem>) =>
+    items
+      .map((item) => ({
+        ...item,
+        displayName: getItemRecord(records, item.templateId)?.name ?? item.name,
+        power: computeItemPower({
+          level: item.level,
+          tables: ratings,
+          templateId: item.templateId,
+        }),
+      }))
+      .sort((a, b) => (b.power ?? 0) - (a.power ?? 0))
+  const defenderCandidates = useMemo(
+    () => rankItems(defenders),
+    [defenders, ratings, records]
+  )
+  const schematicCandidates = useMemo(
+    () => {
+      const defenderType = pendingWeapon
+        ? getItemRecord(records, pendingWeapon.defenderTemplateId)?.subType
+        : null
+      const allowed =
+        defenderType === 'Assault Defender'
+          ? ['Assault', 'SMG']
+          : defenderType === 'Pistol Defender'
+            ? ['Pistol', 'SMG']
+            : defenderType === 'Shotgun Defender'
+              ? ['Shotgun']
+              : defenderType === 'Sniper Defender'
+                ? ['Sniper']
+                : null
+
+      return rankItems(schematics).filter((item) => {
+        const record = getItemRecord(records, item.templateId)
+
+        if (defenderType === 'Melee Defender') {
+          return record?.category === 'Melee'
+        }
+
+        return Boolean(record?.subType && allowed?.includes(record.subType))
+      })
+    },
+    [pendingWeapon, schematics, ratings, records]
+  )
 
   const edit = (
     request: Parameters<typeof window.electronAPI.editLoadout>[1]
@@ -240,6 +335,13 @@ function Content() {
 
     setEditing(true)
     window.electronAPI.editLoadout(selected, request)
+  }
+
+  const pickerHeroPerk = (templateId: string) => {
+    const record = getItemRecord(records, templateId)
+    return pendingSlot?.slot === 'commanderslot'
+      ? record?.commanderPerk ?? record?.perk ?? null
+      : record?.perk ?? null
   }
 
   if (!selected) {
@@ -288,7 +390,7 @@ function Content() {
       )}
 
       {hasLoaded && !errorMessage && loadouts.length > 0 && (
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-3">
           {loadouts.map((loadout) => (
             <LoadoutCard
               isEditing={isEditing}
@@ -301,8 +403,18 @@ function Content() {
                 edit({ kind: 'clear', loadoutId: loadout.itemId })
               }
               onInspect={setDetail}
-              onPickSlot={(slot) =>
-                setPendingSlot({ loadoutId: loadout.itemId, slot })
+              onPickSlot={(slot, kind) =>
+                setPendingSlot({ loadoutId: loadout.itemId, slot, kind })
+              }
+              onPickWeapon={(defenderId, defenderTemplateId) =>
+                setPendingWeapon({
+                  loadoutId: loadout.itemId,
+                  defenderId,
+                  defenderTemplateId,
+                })
+              }
+              onPickGadget={(slotIndex) =>
+                setPendingGadget({ loadoutId: loadout.itemId, slotIndex })
               }
               ratings={ratings}
               records={records}
@@ -330,7 +442,9 @@ function Content() {
         <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              Pick a hero for {pendingSlot && slotLabel(pendingSlot.slot)}
+              Pick {pendingSlot?.kind === 'defender' ? 'a defender' : 'a hero'}
+              {pendingSlot?.kind === 'hero' &&
+                ` for ${slotLabel(pendingSlot.slot)}`}
             </DialogTitle>
             <DialogDescription>
               Highest power first. Epic moves the hero if it is already in
@@ -338,28 +452,84 @@ function Content() {
             </DialogDescription>
           </DialogHeader>
 
-          {candidates.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {candidates.map((hero) => (
-                <ItemTile
-                  disabled={isEditing}
-                  footer={hero.subtitle}
-                  key={hero.itemId}
-                  name={hero.displayName}
-                  onClick={() =>
-                    pendingSlot &&
-                    edit({
-                      kind: 'assign',
-                      loadoutId: pendingSlot.loadoutId,
-                      heroId: hero.itemId,
-                      slotName: slotName(pendingSlot.slot),
-                    })
-                  }
-                  power={hero.power}
-                  records={records}
-                  size="small"
-                  templateId={hero.templateId}
+          {pendingSlot?.kind === 'hero' && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                {['All', 'Soldier', 'Constructor', 'Ninja', 'Outlander'].map(
+                  (value) => (
+                    <Button
+                      key={value}
+                      onClick={() => setHeroClass(value)}
+                      size="sm"
+                      variant={heroClass === value ? 'secondary' : 'ghost'}
+                    >
+                      {value}
+                    </Button>
+                  )
+                )}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  onChange={(event) => setHeroSearch(event.target.value)}
+                  placeholder="Search heroes or perks"
+                  value={heroSearch}
                 />
+              </div>
+            </div>
+          )}
+
+          {(pendingSlot?.kind === 'defender'
+            ? defenderCandidates
+            : visibleHeroCandidates
+          ).length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {(pendingSlot?.kind === 'defender'
+                ? defenderCandidates
+                : visibleHeroCandidates
+              ).map((hero) => (
+                <PerkTooltip
+                  alterations={hero.alterations}
+                  key={hero.itemId}
+                  namedPerks={
+                    pickerHeroPerk(hero.templateId)
+                      ? [pickerHeroPerk(hero.templateId) as ItemRecordPerk]
+                      : []
+                  }
+                  records={records}
+                  title={hero.displayName}
+                >
+                  <ItemTile
+                    disabled={isEditing}
+                    footer={
+                      pickerHeroPerk(hero.templateId)?.name ?? hero.subtitle
+                    }
+                    name={hero.displayName}
+                    onClick={() =>
+                      pendingSlot &&
+                      edit(
+                        pendingSlot.kind === 'defender'
+                          ? {
+                              kind: 'assign-defender',
+                              loadoutId: pendingSlot.loadoutId,
+                              defenderId: hero.itemId,
+                              slotName: `DefenderSlot${pendingSlot.slot.replace('defenderslot', '')}`,
+                            }
+                          : {
+                              kind: 'assign',
+                              loadoutId: pendingSlot.loadoutId,
+                              heroId: hero.itemId,
+                              slotName: slotName(pendingSlot.slot),
+                            }
+                      )
+                    }
+                    power={hero.power}
+                    records={records}
+                    size="small"
+                    templateId={hero.templateId}
+                  />
+                </PerkTooltip>
               ))}
             </div>
           ) : (
@@ -370,6 +540,97 @@ function Content() {
               title="Nothing to assign"
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => !open && setPendingGadget(null)}
+        open={pendingGadget !== null}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Pick a gadget</DialogTitle>
+            <DialogDescription>
+              Select a gadget for this loadout slot.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-wrap gap-2">
+            {availableGadgets.map((templateId) => (
+              <ItemTile
+                key={templateId}
+                name={getItemRecord(records, templateId)?.name}
+                onClick={() =>
+                  pendingGadget &&
+                  edit({
+                    kind: 'assign-gadget',
+                    loadoutId: pendingGadget.loadoutId,
+                    gadgetId: templateId,
+                    slotIndex: pendingGadget.slotIndex,
+                  })
+                }
+                records={records}
+                size="small"
+                templateId={templateId}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => !open && setPendingWeapon(null)}
+        open={pendingWeapon !== null}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Pick a defender weapon</DialogTitle>
+            <DialogDescription>
+              Epic validates that the ranged weapon class matches this defender.
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            onClick={() =>
+              pendingWeapon &&
+              edit({
+                kind: 'assign-defender-weapon',
+                loadoutId: pendingWeapon.loadoutId,
+                defenderId: pendingWeapon.defenderId,
+                schematicId: '',
+              })
+            }
+            variant="secondary"
+          >
+            Use default weapon
+          </Button>
+          <div className="flex flex-wrap gap-2">
+            {schematicCandidates.map((item) => (
+              <PerkTooltip
+                alterations={item.alterations}
+                key={item.itemId}
+                records={records}
+                title={item.displayName}
+              >
+                <ItemTile
+                  disabled={isEditing}
+                  footer={item.subtitle}
+                  name={item.displayName}
+                  onClick={() =>
+                    pendingWeapon &&
+                    edit({
+                      kind: 'assign-defender-weapon',
+                      loadoutId: pendingWeapon.loadoutId,
+                      defenderId: pendingWeapon.defenderId,
+                      schematicId: item.itemId,
+                    })
+                  }
+                  power={item.power}
+                  records={records}
+                  size="small"
+                  templateId={item.templateId}
+                />
+              </PerkTooltip>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -405,9 +666,7 @@ function Content() {
  * it everywhere else, which leaves the perk names as the loudest text in the
  * card — and a perk is what a hero is actually picked for.
  *
- * Defenders are the one band the game has and this does not: the profile's
- * loadout item carries a commander, five crew members, a team perk and
- * gadgets, and nothing about defenders at all.
+ * Defenders and their selected weapon schematics follow the gadget band.
  */
 function LoadoutCard({
   isEditing,
@@ -416,6 +675,8 @@ function LoadoutCard({
   onClear,
   onInspect,
   onPickSlot,
+  onPickWeapon,
+  onPickGadget,
   ratings,
   records,
 }: {
@@ -424,7 +685,9 @@ function LoadoutCard({
   onActivate: () => void
   onClear: () => void
   onInspect: (subject: ItemDetailSubject) => void
-  onPickSlot: (slot: string) => void
+  onPickSlot: (slot: string, kind: 'hero' | 'defender') => void
+  onPickWeapon: (defenderId: string, defenderTemplateId: string) => void
+  onPickGadget: (slotIndex: number) => void
   ratings: RatingTables
   records: ItemRecordMap
 }) {
@@ -459,7 +722,7 @@ function LoadoutCard({
 
   return (
     <Panel className={cn(loadout.active && 'border-primary/50')}>
-      <header className="flex flex-wrap items-center gap-2 border-b border-border/60 px-4 py-3">
+      <header className="flex flex-wrap items-center gap-1.5 border-b border-border/60 px-3 py-2">
         <p className="text-[0.8125rem] font-semibold">
           {loadoutTitle(loadout)}
         </p>
@@ -503,9 +766,14 @@ function LoadoutCard({
           isLead
           member={commander}
           onInspect={commander?.templateId ? inspect(commander) : undefined}
-          onPick={() => onPickSlot('commanderslot')}
+          onPick={() => onPickSlot('commanderslot', 'hero')}
           perk={
             commanderRecord?.commanderPerk ?? commanderRecord?.perk ?? null
+          }
+          perkTemplate={
+            commanderRecord?.commanderPerkTemplate ??
+            commanderRecord?.perkTemplate ??
+            null
           }
           power={commander ? memberPower(commander) : null}
           records={records}
@@ -517,10 +785,10 @@ function LoadoutCard({
           icon={Shield}
           title="Team perk"
         >
-          <div className="flex items-start gap-3 px-2.5 py-2">
+          <div className="flex items-center gap-2 px-1.5 py-1">
             <ItemIcon
               records={records}
-              size="large"
+              size="small"
               templateId={loadout.teamPerk as string}
             />
             <div className="min-w-0">
@@ -528,7 +796,7 @@ function LoadoutCard({
                 {teamPerk.name}
               </p>
               {teamPerk.description && (
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                   {teamPerk.description}
                 </p>
               )}
@@ -548,10 +816,16 @@ function LoadoutCard({
               key={member.slot}
               member={member}
               onInspect={member.templateId ? inspect(member) : undefined}
-              onPick={() => onPickSlot(member.slot)}
+              onPick={() => onPickSlot(member.slot, 'hero')}
               perk={
                 member.templateId
                   ? getItemRecord(records, member.templateId)?.perk ?? null
+                  : null
+              }
+              perkTemplate={
+                member.templateId
+                  ? getItemRecord(records, member.templateId)?.perkTemplate ??
+                    null
                   : null
               }
               power={memberPower(member)}
@@ -561,30 +835,186 @@ function LoadoutCard({
         </div>
       </Band>
 
-      {loadout.gadgets.length > 0 && (
-        <Band
-          icon={Rocket}
-          title="Gadgets"
-        >
-          <div className="flex flex-wrap gap-2 px-2.5 py-1">
-            {loadout.gadgets.map((gadget) => (
-              <span
-                className="flex items-center gap-2 rounded-lg border border-border/60 bg-surface/50 py-1 pl-1 pr-2.5 text-xs"
-                key={gadget}
-              >
+      <Band icon={Rocket} title="Gadgets">
+        <div className="grid grid-cols-2 gap-1 px-1.5">
+          {loadout.gadgets.map((gadget, index) => (
+            <button
+              className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/60 bg-surface/50 p-1 text-left text-xs transition-colors hover:border-primary/50"
+              key={index}
+              onClick={() => onPickGadget(index)}
+              type="button"
+            >
+              {gadget ? (
                 <ItemIcon
                   records={records}
                   size="small"
                   templateId={gadget}
                 />
-                {getItemRecord(records, gadget)?.name ??
-                  gadget.split(':').pop()}
-              </span>
-            ))}
-          </div>
-        </Band>
-      )}
+              ) : (
+                <span className="grid size-8 place-items-center rounded bg-muted/40">
+                  <Plus className="size-3.5" />
+                </span>
+              )}
+              {gadget
+                ? getItemRecord(records, gadget)?.name ??
+                  gadget.split(':').pop()
+                : `Empty gadget slot ${index + 1}`}
+            </button>
+          ))}
+        </div>
+      </Band>
+
+      <Band
+        count={`${loadout.defenders.filter((member) => member.templateId).length}/3`}
+        icon={ShieldHalf}
+        title="Defenders"
+      >
+        <div className="space-y-1">
+          {loadout.defenders.map((defender) => (
+            <DefenderSlot
+              defender={defender}
+              key={defender.slot}
+              onPick={() => onPickSlot(defender.slot, 'defender')}
+              onPickWeapon={() =>
+                defender.itemId &&
+                defender.templateId &&
+                onPickWeapon(defender.itemId, defender.templateId)
+              }
+              records={records}
+            />
+          ))}
+        </div>
+      </Band>
     </Panel>
+  )
+}
+
+function DefenderSlot({
+  defender,
+  onPick,
+  onPickWeapon,
+  records,
+}: {
+  defender: LoadoutDefender
+  onPick: () => void
+  onPickWeapon: () => void
+  records: ItemRecordMap
+}) {
+  if (!defender.templateId) {
+    return (
+      <Button className="w-full justify-start" onClick={onPick} variant="ghost">
+        <Plus className="size-4" /> Empty defender slot
+      </Button>
+    )
+  }
+
+  const defenderRecord = getItemRecord(records, defender.templateId)
+  const weaponRecord = defender.schematicTemplateId
+    ? getItemRecord(records, defender.schematicTemplateId)
+    : null
+
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-border/60 p-1">
+      <PerkTooltip
+        alterations={defender.alterations}
+        className="min-w-0 flex-1"
+        records={records}
+        title={defenderRecord?.name ?? 'Defender perks'}
+      >
+        <button
+          className="flex w-full min-w-0 items-center gap-2 text-left"
+          onClick={onPick}
+          type="button"
+        >
+          <ItemIcon
+            records={records}
+            size="small"
+            templateId={defender.templateId}
+          />
+          <span className="min-w-0 truncate text-xs font-semibold">
+            {defenderRecord?.name ?? defender.templateId.split(':').pop()}
+          </span>
+        </button>
+      </PerkTooltip>
+      <PerkTooltip
+        alterations={defender.schematicAlterations}
+        records={records}
+        title={weaponRecord?.name ?? 'Default weapon'}
+      >
+        <Button onClick={onPickWeapon} size="sm" variant="secondary">
+          {defender.schematicTemplateId && (
+            <ItemIcon
+              records={records}
+              size="small"
+              templateId={defender.schematicTemplateId}
+            />
+          )}
+          <span className="max-w-40 truncate">
+            {weaponRecord?.name ?? 'Default weapon'}
+          </span>
+        </Button>
+      </PerkTooltip>
+    </div>
+  )
+}
+
+function PerkTooltip({
+  alterations,
+  children,
+  className,
+  namedPerks = [],
+  records,
+  title,
+}: {
+  alterations: Array<string>
+  children: ReactNode
+  className?: string
+  namedPerks?: Array<ItemRecordPerk>
+  records: ItemRecordMap
+  title: string
+}) {
+  const perks = [
+    ...namedPerks,
+    ...alterations.map((alteration) => ({
+      name:
+        getItemRecord(records, alteration)?.name ??
+        (alteration.split(':').pop() ?? alteration)
+          .replace(/^aid_att_/, '')
+          .replace(/_t\d+$/i, '')
+          .replaceAll('_', ' '),
+      description: getItemRecord(records, alteration)?.description ?? null,
+    })),
+  ]
+
+  return (
+    <TooltipProvider delayDuration={250}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={cn('inline-flex', className)}>{children}</span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-80 p-3" side="top">
+          <p className="text-xs font-semibold">{title}</p>
+          {perks.length > 0 ? (
+            <ul className="mt-1.5 space-y-1 text-xs text-muted-foreground">
+              {perks.map((perk, index) => (
+                <li key={`${perk.name}-${index}`}>
+                  <span className="font-medium text-foreground">
+                    {perk.name}
+                  </span>
+                  {perk.description && (
+                    <span className="mt-0.5 block">{perk.description}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              No perk data available.
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 
@@ -610,8 +1040,8 @@ function Band({
   title: string
 }) {
   return (
-    <section className="border-b border-border/60 px-2.5 py-2.5 last:border-b-0">
-      <div className="flex items-center gap-1.5 px-1.5 pb-1.5">
+    <section className="border-b border-border/60 px-2 py-1.5 last:border-b-0">
+      <div className="flex items-center gap-1.5 px-1 pb-1">
         <Icon className="size-3 shrink-0 text-muted-foreground/70" />
         <h3 className="section-label">{title}</h3>
         {count && (
@@ -643,6 +1073,7 @@ function HeroSlot({
   onInspect,
   onPick,
   perk,
+  perkTemplate,
   power,
   records,
 }: {
@@ -653,6 +1084,7 @@ function HeroSlot({
   onInspect?: () => void
   onPick: () => void
   perk: ItemRecordPerk | null
+  perkTemplate: string | null
   power: number | null
   records: ItemRecordMap
 }) {
@@ -660,8 +1092,8 @@ function HeroSlot({
     return (
       <button
         className={cn(
-          'flex w-full items-center gap-3 rounded-lg border-2 border-dashed border-border/60',
-          'px-2.5 py-2 text-left text-muted-foreground transition-colors',
+          'flex w-full items-center gap-2 rounded-lg border border-dashed border-border/60',
+          'px-2 py-1 text-left text-muted-foreground transition-colors',
           'hover:border-primary/50 hover:text-primary'
         )}
         onClick={onPick}
@@ -670,7 +1102,7 @@ function HeroSlot({
         <span
           className={cn(
             'grid shrink-0 place-items-center rounded-lg bg-muted/30',
-            isLead ? 'size-16' : 'size-12'
+            isLead ? 'size-10' : 'size-8'
           )}
         >
           <Plus className="size-4" />
@@ -683,18 +1115,14 @@ function HeroSlot({
   }
 
   const record = getItemRecord(records, member.templateId)
-  const caption = [
-    record?.rarity,
-    record?.subType,
-    member.level > 0 && `Level ${member.level}`,
-  ]
+  const caption = [record?.rarity, record?.subType]
     .filter(Boolean)
     .join(' · ')
 
   const row = (
     <button
       className={cn(
-        'flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left',
+        'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left',
         'transition-colors hover:bg-accent/40'
       )}
       onClick={onPick}
@@ -703,7 +1131,7 @@ function HeroSlot({
     >
       <ItemIcon
         records={records}
-        size={isLead ? 'xl' : 'large'}
+        size={isLead ? 'large' : 'small'}
         templateId={member.templateId}
       />
 
@@ -711,7 +1139,7 @@ function HeroSlot({
         <span
           className={cn(
             'block truncate font-semibold leading-tight',
-            isLead ? 'text-sm' : 'text-[0.8125rem]'
+            'text-[0.8125rem]'
           )}
         >
           {record?.name ?? member.templateId.split(':').pop()}
@@ -724,19 +1152,22 @@ function HeroSlot({
 
         {perk && (
           <span
-            className="mt-1 flex items-start gap-1.5"
+            className="mt-0.5 flex items-center gap-1.5"
             title={perk.description ?? undefined}
           >
-            <Star className="mt-0.5 size-3 shrink-0 text-muted-foreground/70" />
+            {perkTemplate ? (
+              <ItemIcon
+                records={records}
+                size="small"
+                templateId={perkTemplate}
+              />
+            ) : (
+              <Star className="mt-0.5 size-3 shrink-0 text-muted-foreground/70" />
+            )}
             <span className="min-w-0">
               <span className="block truncate text-xs font-medium text-foreground/90">
                 {perk.name}
               </span>
-              {isLead && perk.description && (
-                <span className="mt-0.5 block line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                  {perk.description}
-                </span>
-              )}
             </span>
           </span>
         )}

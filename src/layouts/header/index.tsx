@@ -51,14 +51,18 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { t } = useTranslation(['general'])
 
   return (
-    <header className="app-draggable-region titlebar-area chrome-surface relative z-20 flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b border-border/60 pl-3">
+    <header
+      className="app-draggable-region titlebar-area chrome-surface relative z-20 flex h-[var(--header-height)] shrink-0 items-center gap-2 border-b border-border/60 pl-3"
+      data-app-focus-region="header"
+      tabIndex={-1}
+    >
       <Link
         to="/"
         className="not-draggable-region group flex items-center gap-2 rounded-lg py-1 pr-1"
         title="Penny"
       >
         <PennyAvatar className="size-[22px] shadow-[0_0_10px_hsl(var(--primary)/0.45)] transition-transform group-hover:scale-105" />
-        <span className="brand-text text-[0.9375rem] font-bold leading-none tracking-tight">
+        <span className="brand-text text-[0.9375rem] font-bold leading-none tracking-tight max-[760px]:hidden">
           Penny
         </span>
       </Link>
@@ -66,7 +70,7 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
       <button
         type="button"
         className={cn(
-          'not-draggable-region group flex h-7 w-56 items-center gap-2 rounded-lg',
+          'not-draggable-region group flex h-7 w-56 items-center gap-2 rounded-lg max-[900px]:w-8 max-[900px]:justify-center max-[900px]:px-0',
           'border border-border/70 bg-background/60 pl-2.5 pr-1.5',
           'text-xs text-muted-foreground transition-colors',
           'hover:border-primary/40 hover:bg-accent/30 hover:text-foreground'
@@ -74,12 +78,12 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
         onClick={onOpenPalette}
       >
         <Search className="size-3.5 shrink-0" />
-        <span className="flex-1 truncate text-left">{t('actions.search')}</span>
+        <span className="flex-1 truncate text-left max-[900px]:hidden">{t('actions.search')}</span>
         {/*
           `Kbd` draws the chip but takes no class of its own, so the wrapper is
           what stops the label beside it from squeezing the shortcut.
         */}
-        <span className="shrink-0">
+        <span className="shrink-0 max-[900px]:hidden">
           <Kbd>Ctrl K</Kbd>
         </span>
       </button>
@@ -176,7 +180,7 @@ function FriendsToggle() {
       onClick={togglePanel}
     >
       <Contact className="size-4 shrink-0" />
-      <span>Friends</span>
+      <span className="max-[900px]:hidden">Friends</span>
       {total > 0 && (
         <span
           className={cn(

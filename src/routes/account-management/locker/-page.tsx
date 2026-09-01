@@ -30,6 +30,7 @@ import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { CardPanel } from './-card-panel'
 import { Collection } from './-collection'
 import { CosmeticTile } from './-cosmetic-tile'
+import { Sidekicks } from './-sidekicks'
 import { SlotPicker } from './-slot-picker'
 
 import { useLockerStore } from '../../../state/management/locker'
@@ -39,6 +40,7 @@ import { useLockerPage, useOwnedForSlot } from './-hooks'
 const viewOptions: Array<SegmentedOption<LockerView>> = [
   { label: 'Loadout', value: 'loadout' },
   { label: 'Collection', value: 'collection' },
+  { label: 'Sidekicks', value: 'sidekicks' },
   { label: 'Card', value: 'card' },
 ]
 
@@ -48,7 +50,7 @@ export function RouteComponent() {
   return (
     <>
       <PageHeader
-        description="What this account is wearing, everything it owns, and the whole locker as one shareable image. Pick a slot to change what is equipped."
+        description="What this account is wearing, everything it owns, which sidekicks it is still missing, and the whole locker as one shareable image. Pick a slot to change what is equipped."
         icon={Shirt}
         section={t('account-management.title')}
         title={
@@ -68,6 +70,8 @@ function Content() {
     account,
     card,
     cardError,
+    companions,
+    companionsError,
     equipping,
     errorMessage,
     filters,
@@ -76,6 +80,7 @@ function Content() {
     handleReload,
     isGenerating,
     isLoading,
+    isLoadingCompanions,
     isLoadingOwned,
     owned,
     ownedError,
@@ -207,6 +212,14 @@ function Content() {
         <Collection
           isLoading={isLoadingOwned}
           owned={owned}
+        />
+      )}
+
+      {view === 'sidekicks' && (
+        <Sidekicks
+          companions={companions}
+          errorMessage={companionsError}
+          isLoading={isLoadingCompanions}
         />
       )}
 

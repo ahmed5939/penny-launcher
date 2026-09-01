@@ -20,7 +20,7 @@ import { MainWindow } from '../startup/windows/main'
  * Bump when the narrowed shape changes — an older cache is then discarded
  * rather than being read back into a record the renderer cannot use.
  */
-const cacheVersion = 7
+const cacheVersion = 8
 
 /** Re-download roughly weekly; the source only moves when Fortnite patches. */
 const cacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000
@@ -52,6 +52,8 @@ export type ItemRecord = {
   /** Heroes. */
   perk: ItemRecordPerk | null
   commanderPerk: ItemRecordPerk | null
+  perkTemplate: string | null
+  commanderPerkTemplate: string | null
   /** Hero ability template ids, resolvable against this same map. */
   abilities: Array<string>
   /** What crafting one costs, by resource template id. */
@@ -119,7 +121,13 @@ type RawNamedItem = Partial<{
   HeroAbilities: Array<string>
   HeroPerk: string
   HeroPerkDescription: string
-  ImagePaths: Partial<{ LargePreview: string; SmallPreview: string }>
+  HeroPerkTemplate: string
+  CommanderPerkTemplate: string
+  ImagePaths: Partial<{
+    Icon: string
+    LargePreview: string
+    SmallPreview: string
+  }>
   Objectives: Array<
     Partial<{ BackendName: string; Count: number; Description: string }>
   >
@@ -355,7 +363,8 @@ export class ItemDatabase {
             tier: item.Tier ?? 0,
             image:
               fileName(item.ImagePaths?.SmallPreview) ??
-              fileName(item.ImagePaths?.LargePreview),
+              fileName(item.ImagePaths?.LargePreview) ??
+              fileName(item.ImagePaths?.Icon),
             largeImage:
               fileName(item.ImagePaths?.LargePreview) ??
               fileName(item.ImagePaths?.SmallPreview),
@@ -372,6 +381,8 @@ export class ItemDatabase {
               item.CommanderPerk,
               item.CommanderPerkDescription
             ),
+            perkTemplate: item.HeroPerkTemplate ?? null,
+            commanderPerkTemplate: item.CommanderPerkTemplate ?? null,
             abilities: item.HeroAbilities ?? [],
             craftingCost: item.CraftingCost ?? {},
             tierUpCost: item.TierUpRecipe?.Cost ?? {},

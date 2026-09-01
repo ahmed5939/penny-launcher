@@ -1,5 +1,8 @@
 import type { InventoryItem } from '../../../kernel/core/inventory'
-import type { ItemActionRequest } from '../../../kernel/core/item-actions'
+import type {
+  ItemActionKind,
+  ItemActionRequest,
+} from '../../../kernel/core/item-actions'
 import type { ItemKind } from '../../../config/constants/fortnite/items'
 
 import { useShallow } from 'zustand/react/shallow'
@@ -21,6 +24,18 @@ import {
 } from '../../../config/constants/fortnite/items'
 
 import { toast } from '../../../lib/notifications'
+
+/**
+ * What the success toast says, per action. "Item updated" told you nothing —
+ * least of all whether the evolve you just paid for actually happened.
+ */
+const actionToasts: Record<ItemActionKind, string> = {
+  level: 'Levelled up',
+  evolve: 'Evolved to the next tier',
+  rarity: 'Rarity upgraded',
+  'perk-upgrade': 'Perk upgraded',
+  'perk-respec': 'Perk changed',
+}
 
 /** The kind tabs, in the order the strip shows them. */
 export const itemKinds: Array<ItemKind> = [
@@ -110,7 +125,7 @@ export function useInventoryData() {
    * tab strip has to say how many schematics you have *under the current
    * rarity, tier and search* while you are standing on the heroes tab.
    */
-  const { countsByKind, lockedCount, rows } = useMemo(() => {
+  const { allRows, countsByKind, lockedCount, rows } = useMemo(() => {
     const items = entry?.items ?? []
 
     const mapped: Array<InventoryRow> = items.map((item) => {
@@ -183,6 +198,11 @@ export function useInventoryData() {
     )
 
     return {
+      /**
+       * Every item, before any filter — the detail dialog reads from this,
+       * so narrowing the grid never closes what you are looking at.
+       */
+      allRows: mapped,
       countsByKind: counts,
       /** Of what is on screen — the stat sits in a row about the shown set. */
       lockedCount: kindRows.filter((item) => item.lockedReason !== null)
@@ -437,7 +457,7 @@ export function useInventoryData() {
           return
         }
 
-        toast('Item updated')
+        toast(actionToasts[response.kind] ?? 'Item updated')
         handleLoad()
       }
     )
@@ -463,6 +483,7 @@ export function useInventoryData() {
   return {
     account: selected ?? null,
     activeKind,
+    allRows,
     countsByKind,
     confirmOpen,
     errorMessage: entry?.errorMessage ?? null,

@@ -19,6 +19,10 @@ export function createAuthWithExchange(code: string) {
   ipcRenderer.send(ElectronAPIEventKeys.CreateAuthWithExchange, code)
 }
 
+export function checkAllAccountStatuses() {
+  ipcRenderer.send(ElectronAPIEventKeys.CheckAllAccountStatuses)
+}
+
 export function responseAuthWithExchange(
   callback: (values: AuthCallbackResponseParam) => Promise<void>
 ) {

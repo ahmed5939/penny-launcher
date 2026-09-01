@@ -109,13 +109,15 @@ export function AccountList() {
             <CommandGroup>
               {accounts.map((account) => {
                 const displayName = parseCustomDisplayName(account)
+                const isInvalid = account.authStatus === 'invalid'
                 const isCurrent =
                   selected?.accountId === account.accountId
                 const isInScope = members.includes(account.accountId)
 
                 return (
                   <CommandItem
-                    className="gap-2"
+                    className={cn('gap-2', isInvalid && 'grayscale')}
+                    disabled={isInvalid}
                     key={account.accountId}
                     value={account.accountId}
                     keywords={createKeywords(account)}
@@ -130,7 +132,11 @@ export function AccountList() {
                     />
                     <span
                       className="max-w-[9rem] truncate"
-                      title={displayName}
+                      title={
+                        isInvalid
+                          ? `${displayName} — authentication expired; re-add this account to authenticate again`
+                          : displayName
+                      }
                     >
                       {displayName}
                     </span>

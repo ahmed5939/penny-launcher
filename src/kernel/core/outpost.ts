@@ -4,6 +4,7 @@ import type {
   OutpostInfoResult,
   OutpostLayout,
   OutpostPerkTally,
+  OutpostReportExportResult,
   OutpostTrap,
   OutpostTrapInstanceTally,
   OutpostTrapCategory,
@@ -15,11 +16,17 @@ import type { MCPQueryProfile } from '../../types/services/mcp'
 
 import axios from 'axios'
 import { Buffer } from 'node:buffer'
+import { writeFile } from 'node:fs/promises'
 import * as zlib from 'node:zlib'
+import { dialog } from 'electron'
 
 import { RuntimeLog } from '../runtime-log'
 
 import { Authentication } from './authentication'
+import {
+  readableOutpostFileName,
+  serializeReadableOutpostReport,
+} from './outpost-report'
 
 import {
   getQueryProfile,
@@ -170,6 +177,34 @@ function pieceKindCode(pieceType: string): number {
   return 4
 }
 
+/**
+ * World actors recorded in the save, by class name and folder — kept in sync
+ * with `OutpostLayout.props`. 0 tree, 1 rock, 2 container/plant, 3 world
+ * structure, 4 other.
+ */
+export function propKindCode(path: string, className: string): number {
+  const lower = className.toLowerCase()
+
+  if (/(?:^|_)(?:tree|pine|palm|joshuatree|cactus)(?!_log)/.test(lower)) {
+    return 0
+  }
+  if (/rock|boulder|stone|resourcevein|cliff|shelf|ore/.test(lower)) return 1
+  if (
+    path.includes('/Containers/') ||
+    /shrub|plant|bush|crate|cart|barrel|chest|box|tiered_short/.test(lower)
+  ) {
+    return 2
+  }
+  if (
+    /\/(?:Wall|Floor|Stairs|Roof)\//.test(path) ||
+    /fence|pole|tower|_solid|door|_floor|stair|archway|balcony|wall/.test(lower)
+  ) {
+    return 3
+  }
+
+  return 4
+}
+
 const PIECE_TYPES: Record<string, Array<string>> = {
   walls: ['Solid'],
   floors: ['Floor', 'Floor_2'],
@@ -221,17 +256,27 @@ function readGvasString(
  * quaternion must be unit-length and the translation must land inside a
  * plausible Storm Shield, so whichever width satisfies both is the right
  * one — a misread of the other width yields denormal garbage, not a unit
- * quaternion. Only ground-plane X/Y and yaw are kept; build pieces rotate
- * about Z in 90° steps.
+ * quaternion. XYZ, yaw and scale are retained; build pieces rotate about Z
+ * in 90° steps, world props use the full yaw.
  */
+type ActorTransform = {
+  /** Uniform scale from the FTransform's Scale3D (|X|); 1 when absent. */
+  scale: number
+  x: number
+  y: number
+  yawDegrees: number
+  yawQuadrant: number
+  z: number
+}
+
 function readActorTransform(
   buffer: Buffer,
   afterBlueprint: number
-): { x: number; y: number; yawQuadrant: number } | null {
+): ActorTransform | null {
   const attempt = (
     wordBytes: number,
     read: (offset: number) => number
-  ): { x: number; y: number; yawQuadrant: number } | null => {
+  ): ActorTransform | null => {
     if (afterBlueprint + wordBytes * 7 > buffer.length) {
       return null
     }
@@ -242,6 +287,7 @@ function readActorTransform(
     const qw = read(afterBlueprint + wordBytes * 3)
     const x = read(afterBlueprint + wordBytes * 4)
     const y = read(afterBlueprint + wordBytes * 5)
+    const z = read(afterBlueprint + wordBytes * 6)
 
     const norm = Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
 
@@ -252,8 +298,10 @@ function readActorTransform(
     if (
       !Number.isFinite(x) ||
       !Number.isFinite(y) ||
+      !Number.isFinite(z) ||
       Math.abs(x) > 1_000_000 ||
-      Math.abs(y) > 1_000_000
+      Math.abs(y) > 1_000_000 ||
+      Math.abs(z) > 1_000_000
     ) {
       return null
     }
@@ -263,7 +311,28 @@ function readActorTransform(
         180) /
       Math.PI
 
-    return { x, y, yawQuadrant: ((Math.round(yaw / 90) % 4) + 4) % 4 }
+    /**
+     * Scale3D follows the translation. Build pieces are always 1; world
+     * props vary (and mirrored pieces go negative, hence the |X|).
+     */
+    let scale = 1
+
+    if (afterBlueprint + wordBytes * 10 <= buffer.length) {
+      const scaleX = Math.abs(read(afterBlueprint + wordBytes * 7))
+
+      if (Number.isFinite(scaleX) && scaleX > 0.05 && scaleX < 20) {
+        scale = Math.round(scaleX * 100) / 100
+      }
+    }
+
+    return {
+      scale,
+      x,
+      y,
+      yawDegrees: Math.round(yaw * 10) / 10,
+      yawQuadrant: ((Math.round(yaw / 90) % 4) + 4) % 4,
+      z,
+    }
   }
 
   return (
@@ -359,7 +428,7 @@ type TrapGroup = {
   tier: number | null
 }
 
-function parseSav(raw: Buffer): {
+export function parseSav(raw: Buffer): {
   layout: OutpostLayout | null
   perks: Array<OutpostPerkTally>
   structures: OutpostStructures
@@ -401,23 +470,48 @@ function parseSav(raw: Buffer): {
     tiers: { tier1: 0, tier2: 0, tier3: 0 },
   }
 
-  const structureLayout: Array<[number, number, number, number, number]> = []
-  const trapLayout: Array<[number, number, number, number]> = []
+  const structureLayout: OutpostLayout['structures'] = []
+  const trapLayout: OutpostLayout['traps'] = []
+  const propLayout: OutpostLayout['props'] = []
   /** Dot identity for the minimap — display names, deduped by index. */
   const layoutTrapNames: Array<string> = []
   const layoutTrapNameIndex = new Map<string, number>()
+  const layoutShapes: Array<string> = []
+  const layoutShapeIndex = new Map<string, number>()
+  const layoutPropNames: Array<string> = []
+  const layoutPropNameIndex = new Map<string, number>()
+  /** Intern a name into its list, returning its index. */
+  const intern = (
+    names: Array<string>,
+    indexes: Map<string, number>,
+    name: string
+  ) => {
+    let index = indexes.get(name)
+
+    if (index === undefined) {
+      index = names.length
+      names.push(name)
+      indexes.set(name, index)
+    }
+
+    return index
+  }
   const bounds = {
     maxX: -Infinity,
     maxY: -Infinity,
+    maxZ: -Infinity,
     minX: Infinity,
     minY: Infinity,
+    minZ: Infinity,
   }
 
-  const track = (x: number, y: number) => {
+  const track = (x: number, y: number, z: number) => {
     bounds.minX = Math.min(bounds.minX, x)
     bounds.maxX = Math.max(bounds.maxX, x)
     bounds.minY = Math.min(bounds.minY, y)
     bounds.maxY = Math.max(bounds.maxY, y)
+    bounds.minZ = Math.min(bounds.minZ, z)
+    bounds.maxZ = Math.max(bounds.maxZ, z)
   }
 
   /**
@@ -460,14 +554,18 @@ function parseSav(raw: Buffer): {
 
     const cellX = cellUnits(transform.x)
     const cellY = cellUnits(transform.y)
+    const cellZ = cellUnits(transform.z)
 
-    track(cellX, cellY)
+    track(cellX, cellY, cellZ)
     structureLayout.push([
       cellX,
       cellY,
+      cellZ,
       MATERIAL_LAYOUT_CODE[materialCode] ?? 3,
       pieceKindCode(pieceType),
       transform.yawQuadrant,
+      intern(layoutShapes, layoutShapeIndex, pieceType),
+      Number(tierDigit) || 0,
     ])
   }
 
@@ -586,18 +684,52 @@ function parseSav(raw: Buffer): {
     if (transform) {
       const cellX = cellUnits(transform.x)
       const cellY = cellUnits(transform.y)
+      const cellZ = cellUnits(transform.z)
 
-      let nameIndex = layoutTrapNameIndex.get(displayName)
-
-      if (nameIndex === undefined) {
-        nameIndex = layoutTrapNames.length
-        layoutTrapNames.push(displayName)
-        layoutTrapNameIndex.set(displayName, nameIndex)
-      }
-
-      track(cellX, cellY)
-      trapLayout.push([cellX, cellY, TRAP_LAYOUT_CODE[category], nameIndex])
+      track(cellX, cellY, cellZ)
+      trapLayout.push([
+        cellX,
+        cellY,
+        cellZ,
+        TRAP_LAYOUT_CODE[category],
+        intern(layoutTrapNames, layoutTrapNameIndex, displayName),
+        transform.yawQuadrant,
+      ])
     }
+  }
+
+  /**
+   * World actors — everything else the save tracks with a transform: the
+   * zone's trees, rocks, loot containers and pre-built structures. They are
+   * matched by class path outside the player folder; the path must read
+   * back as a standalone FString so that a mention inside some other
+   * property (texture data, loot keys) is not mistaken for an actor record.
+   * They do not widen the build's bounds — a lone tree at the zone edge
+   * would otherwise dwarf the base.
+   */
+  const propPattern =
+    /\/Game\/(?:Building\/ActorBlueprints\/(?!Player\/)[A-Za-z0-9_/]+|Environments\/[A-Za-z0-9_/]+)\.([A-Za-z0-9_]+)_C/g
+
+  while ((match = propPattern.exec(text)) !== null) {
+    const blueprint = readGvasString(buffer, match.index - 4)
+
+    if (blueprint.value !== match[0]) continue
+
+    const transform = readActorTransform(buffer, blueprint.next)
+
+    if (!transform) continue
+
+    const className = match[1]
+
+    propLayout.push([
+      cellUnits(transform.x),
+      cellUnits(transform.y),
+      cellUnits(transform.z),
+      propKindCode(match[0], className),
+      transform.yawDegrees,
+      transform.scale,
+      intern(layoutPropNames, layoutPropNameIndex, className),
+    ])
   }
 
   const traps: Array<OutpostTrap> = [...groups.values()]
@@ -628,10 +760,15 @@ function parseSav(raw: Buffer): {
           bounds: {
             maxX: Math.ceil(bounds.maxX),
             maxY: Math.ceil(bounds.maxY),
+            maxZ: Math.ceil(bounds.maxZ),
             minX: Math.floor(bounds.minX),
             minY: Math.floor(bounds.minY),
+            minZ: Math.floor(bounds.minZ),
           },
           cell: GRID_CELL,
+          propNames: layoutPropNames,
+          props: propLayout,
+          shapes: layoutShapes,
           structures: structureLayout,
           trapNames: layoutTrapNames,
           traps: trapLayout,
@@ -644,6 +781,40 @@ function parseSav(raw: Buffer): {
 // ── Public API ───────────────────────────────────────────────
 
 export class Outpost {
+  /** Save the parsed cloud backup as formatted, human-readable JSON. */
+  static async exportReadableReport(
+    displayName: string,
+    zone: OutpostZoneInfo,
+    baseData: OutpostBaseData
+  ): Promise<OutpostReportExportResult> {
+    try {
+      const response = await dialog.showSaveDialog({
+        defaultPath: readableOutpostFileName(zone.zoneName),
+        filters: [{ extensions: ['json'], name: 'Readable outpost report' }],
+      })
+
+      if (response.canceled || !response.filePath) {
+        return { status: 'cancelled' }
+      }
+
+      await writeFile(
+        response.filePath,
+        serializeReadableOutpostReport({ baseData, displayName, zone }),
+        'utf8'
+      )
+
+      return { status: 'saved' }
+    } catch (error) {
+      RuntimeLog.error('caught:core/outpost.ts', error)
+
+      return {
+        error:
+          error instanceof Error ? error.message : 'Failed to save the report',
+        status: 'error',
+      }
+    }
+  }
+
   /**
    * Zone overview for the given account: level, best endurance wave,
    * amplifier count, edit permissions (resolved to display names) and the

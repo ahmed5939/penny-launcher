@@ -53,7 +53,7 @@ export function popupContextMenu(
 
     const listener = (
       _: IpcRendererEvent,
-      payload: { itemId: string; requestId: string }
+      payload: { itemId: string | null; requestId: string }
     ) => {
       if (payload.requestId !== requestId) {
         return

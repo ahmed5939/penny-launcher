@@ -14,6 +14,7 @@ import type { FriendsActionPayload } from './core/friends-manager'
 import type { ItemActionRequest } from './core/item-actions'
 import type { LoadoutEditRequest } from './core/loadouts'
 import type { LockerCardFilters } from './core/locker'
+import type { OutpostBaseData, OutpostZoneInfo } from './core/outpost-types'
 import type { LockerSlotKey } from '../config/fortnite/locker'
 import type { SquadAssignment } from './core/squads'
 import type { AuthenticationByDeviceProperties } from '../types/authentication'
@@ -32,80 +33,20 @@ import type {
   XPBoostsConsumeTeammateData,
   XPBoostsSearchUserConfig,
 } from '../types/xpboosts'
+import type {
+  AutoLlamasAccountAddParams,
+  AutoLlamasAccountUpdateParams,
+} from '../state/stw-operations/auto/llamas'
 
 import path from 'node:path'
-import localizedFormat from 'dayjs/plugin/localizedFormat'
-import relativeTime from 'dayjs/plugin/relativeTime'
-import timezone from 'dayjs/plugin/timezone'
-import utc from 'dayjs/plugin/utc'
-import dayjs from 'dayjs'
 import { app, BrowserWindow, Menu, shell } from 'electron'
-import schedule from 'node-schedule'
 
 import { ElectronAPIEventKeys } from '../config/constants/main-process'
 
-import { AccountHealth } from './core/account-health'
-import { AlertsDone } from './core/alerts'
-// import { AntiCheatProvider } from './core/anti-cheat-provider'
-import { Authentication } from './core/authentication'
-import { ClaimRewards } from './core/claim-rewards'
-import {
-  endurancePointDefinitions,
-  enduranceZones,
-} from './core/endurance/config'
-import { EULATracking } from './core/eula-tracking'
-import { Expeditions } from './core/expeditions'
-import { AutoExpeditions } from './startup/auto-expeditions'
-import { FortniteLauncher } from './core/launcher'
-import { FriendsManager } from './core/friends-manager'
-import {
-  getGameSettings,
-  getLaunchSettings,
-  restoreGameSettingsBackup,
-  saveGameSettings,
-  saveLaunchSettings as saveFnLaunchSettings,
-} from './core/fn-launch'
-import { GiftsInformation } from './core/gifts-information'
-import { Inventory } from './core/inventory'
-import { ItemActions } from './core/item-actions'
-import { Leaderboard } from './core/leaderboard'
-import { Loadouts } from './core/loadouts'
-import { Locker } from './core/locker'
-import { MCPClientQuestLogin } from './core/mcp'
-import { MatchmakingTrack } from './core/matchmaking-track'
-import { Manifest } from './core/manifest'
-import { Party } from './core/party'
-import { PennyDBMissions } from './core/pennydb-missions'
-import { Quests } from './core/quests'
-import { RedeemCodes } from './core/redeem-codes'
-import { ServerStatus } from './core/server-status'
-import { Shop } from './core/shop'
-import { Squads } from './core/squads'
-import { Timeline } from './core/timeline'
-import { VBucksInformation } from './core/vbucks-information'
-import { WorldInfoManager } from './core/world-info'
-import { XPBoostsManager } from './core/xpboosts'
 import { MainWindow } from './startup/windows/main'
-import { AccountsManager } from './startup/accounts'
-import { Application } from './startup/application'
-import {
-  AutoLlamas,
-  ProcessAutoLlamas,
-  ProcessLlamaType,
-} from './startup/auto-llamas'
-import { AutoPinUrns } from './startup/auto-pin-urns'
-import { Automation } from './startup/automation'
-import { DataDirectory } from './startup/data-directory'
-import { GameInstallManager } from './startup/game-install'
+import { OverlayWindow } from './startup/windows/overlay'
 import { PluginBridge } from './startup/plugin-api'
-import {
-  AppLanguage,
-  CustomizableMenuSettingsManager,
-  DevSettingsManager,
-  SettingsManager,
-} from './startup/settings'
 import { SystemTray } from './startup/system-tray'
-import { TaxiService } from './startup/taxi-service'
 import { Taskbar } from './startup/taskbar'
 import {
   NativeNotifications,
@@ -118,8 +59,8 @@ import {
 import {
   titleBarHeight,
   WindowChrome,
-  type WindowChromeTheme,
 } from './startup/window-chrome'
+import { Appearance } from './startup/appearance'
 import { WindowState } from './startup/window-state'
 import { RuntimeLog } from './runtime-log'
 import { secureIpcHandle, secureIpcOn } from './secure-ipc'
@@ -128,18 +69,7 @@ import {
   parseSecureExternalUrl,
 } from './security'
 
-import {
-  AutoLlamasAccountAddParams,
-  AutoLlamasAccountUpdateParams,
-} from '../state/stw-operations/auto/llamas'
-
 import { Language } from '../locales/resources'
-import { CustomProcess } from './core/custom-process'
-
-dayjs.extend(localizedFormat)
-dayjs.extend(relativeTime)
-dayjs.extend(timezone)
-dayjs.extend(utc)
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -147,10 +77,61 @@ if (require('electron-squirrel-startup')) {
   app.quit()
 }
 
-const gotTheLock = app.requestSingleInstanceLock()
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.squirrel.penny-launcher.Penny')
+}
 
-const loadEndurance = () => import('./core/endurance')
-const loadItemDatabase = () => import('./core/item-database')
+const gotTheLock = app.requestSingleInstanceLock()
+const processCreatedAt = process.getCreationTime() ?? Date.now()
+const markStartup = (name: string) => {
+  RuntimeLog.info(`startup:${name}`, `${Date.now() - processCreatedAt}ms`)
+}
+
+const features = {
+  accountHealth: () => import('./core/account-health'),
+  accounts: () => import('./startup/accounts'),
+  alerts: () => import('./core/alerts'),
+  application: () => import('./startup/application'),
+  authentication: () => import('./core/authentication'),
+  autoExpeditions: () => import('./startup/auto-expeditions'),
+  autoLlamas: () => import('./startup/auto-llamas'),
+  autoPinUrns: () => import('./startup/auto-pin-urns'),
+  automation: () => import('./startup/automation'),
+  claimRewards: () => import('./core/claim-rewards'),
+  customProcess: () => import('./core/custom-process'),
+  dataDirectory: () => import('./startup/data-directory'),
+  endurance: () => import('./core/endurance'),
+  eula: () => import('./core/eula-tracking'),
+  expeditions: () => import('./core/expeditions'),
+  fnLaunch: () => import('./core/fn-launch'),
+  friends: () => import('./core/friends-manager'),
+  gameInstall: () => import('./startup/game-install'),
+  gifts: () => import('./core/gifts-information'),
+  inventory: () => import('./core/inventory'),
+  itemActions: () => import('./core/item-actions'),
+  itemDatabase: () => import('./core/item-database'),
+  launcher: () => import('./core/launcher'),
+  leaderboard: () => import('./core/leaderboard'),
+  loadouts: () => import('./core/loadouts'),
+  locker: () => import('./core/locker'),
+  sprites: () => import('./core/sprites'),
+  manifest: () => import('./core/manifest'),
+  matchmaking: () => import('./core/matchmaking-track'),
+  mcp: () => import('./core/mcp'),
+  party: () => import('./core/party'),
+  pennyDb: () => import('./core/pennydb-missions'),
+  quests: () => import('./core/quests'),
+  redeemCodes: () => import('./core/redeem-codes'),
+  serverStatus: () => import('./core/server-status'),
+  settings: () => import('./startup/settings'),
+  shop: () => import('./core/shop'),
+  squads: () => import('./core/squads'),
+  taxi: () => import('./startup/taxi-service'),
+  timeline: () => import('./core/timeline'),
+  vbucks: () => import('./core/vbucks-information'),
+  worldInfo: () => import('./core/world-info'),
+  xpBoosts: () => import('./core/xpboosts'),
+} as const
 
 process.on('unhandledRejection', (error) => {
   RuntimeLog.error('unhandled-rejection', error)
@@ -166,7 +147,9 @@ process.on('uncaughtExceptionMonitor', (error) => {
   }
 
   const createWindow = async () => {
+    await Appearance.restore()
     const savedState = await WindowState.restore()
+    const appearance = Appearance.resolvedTheme
 
     // Create the browser window.
     const mainWindow = new BrowserWindow({
@@ -179,7 +162,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
        * back to the OS.
        */
       titleBarStyle: 'hidden',
-      titleBarOverlay: WindowChrome.overlay('dark'),
+      titleBarOverlay: WindowChrome.overlay(appearance),
       height: savedState.bounds.height,
       width: savedState.bounds.width,
       minHeight: 400,
@@ -191,7 +174,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
       // renderer has painted its first frame, and paint a backdrop underneath
       // in the meantime so the reveal is seamless.
       show: false,
-      backgroundColor: WindowChrome.backgroundColor,
+      backgroundColor: WindowChrome.backgroundColor(appearance),
       ...(WindowChrome.supportsMica
         ? { backgroundMaterial: 'mica' as const }
         : {}),
@@ -203,8 +186,15 @@ process.on('uncaughtExceptionMonitor', (error) => {
         sandbox: true,
         spellcheck: false,
         webSecurity: true,
+        additionalArguments: [
+          `--penny-theme-source=${Appearance.themeSource}`,
+          `--penny-theme=${appearance}`,
+        ],
       },
     })
+
+    Appearance.attach(mainWindow)
+    markStartup('window-created')
 
     const openExternal = async (rawUrl: string) => {
       const url = parseSecureExternalUrl(rawUrl)
@@ -235,6 +225,9 @@ process.on('uncaughtExceptionMonitor', (error) => {
 
     mainWindow.webContents.on('will-navigate', guardNavigation)
     mainWindow.webContents.on('will-redirect', guardNavigation)
+    mainWindow.webContents.on('context-menu', (_event, params) => {
+      NativeContextMenu.popupEditable(mainWindow.webContents, params)
+    })
 
     WindowState.apply(mainWindow, savedState)
     WindowState.track(mainWindow)
@@ -288,6 +281,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     }
 
     mainWindow.webContents.on('did-finish-load', () => {
+      markStartup('renderer-loaded')
       if (rendererRecoveryReset) clearTimeout(rendererRecoveryReset)
       rendererRecoveryReset = setTimeout(() => {
         rendererRecoveryAttempts = 0
@@ -320,42 +314,45 @@ process.on('uncaughtExceptionMonitor', (error) => {
     Taskbar.attach(mainWindow)
 
     mainWindow.once('ready-to-show', () => {
+      markStartup('first-frame')
       mainWindow.show()
     })
 
     // Manifest discovery can touch many files under ProgramData. Never keep
     // it on the first-paint path; apply it when available instead.
-    void Manifest.getData().then((manifest) => {
-      if (manifest && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.setUserAgent(manifest.UserAgent)
-      }
-    })
+    void features.manifest()
+      .then(({ Manifest }) => Manifest.getData())
+      .then((manifest) => {
+        if (manifest && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.setUserAgent(manifest.UserAgent)
+        }
+      })
+      .catch((error) => {
+        RuntimeLog.error('startup:manifest', error)
+      })
 
     // and load the index.html of the app.
-    try {
-      if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-        await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
+    // Loading continues while the ready handler registers IPC. Waiting for a
+    // full renderer load here made startup serial and allowed early renderer
+    // effects to race handlers that had not been registered yet.
+    void (async () => {
+      try {
+        if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+          await mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL)
 
-        // Open DevTools only once the first navigation has settled. Opening an
-        // undocked window beforehand aborts the in-flight load, and that
-        // rejection used to escape createWindow() and abort app.on('ready')
-        // before a single IPC channel was registered.
-        mainWindow.webContents.openDevTools({
-          mode: 'undocked',
-        })
-      } else {
-        await mainWindow.loadFile(rendererFilePath)
-      }
-    } catch (error) {
-      // ERR_ABORTED (-3) only means a newer navigation superseded this one, so
-      // the window still ends up loaded. Startup must survive it either way:
-      // everything registered after this point depends on it.
-      if ((error as { errno?: number })?.errno !== -3) {
-        throw error
-      }
+          mainWindow.webContents.openDevTools({ mode: 'undocked' })
+        } else {
+          await mainWindow.loadFile(rendererFilePath)
+        }
+      } catch (error) {
+        if ((error as { errno?: number })?.errno !== -3) {
+          RuntimeLog.error('startup:renderer-load', error)
+          return
+        }
 
-      RuntimeLog.error('startup:renderer-load-superseded', error)
-    }
+        RuntimeLog.error('startup:renderer-load-superseded', error)
+      }
+    })()
 
     return mainWindow
   }
@@ -380,17 +377,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
         )
       }
 
-      if (SystemTray.isActive) {
-        if (!MainWindow.instance.isVisible()) {
-          MainWindow.instance.show()
-        }
-      } else {
-        if (MainWindow.instance.isMinimized()) {
-          MainWindow.instance.restore()
-        }
-      }
-
-      MainWindow.instance.focus()
+      MainWindow.showAndFocus()
     }
   })
 
@@ -398,11 +385,24 @@ process.on('uncaughtExceptionMonitor', (error) => {
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.on('ready', async () => {
-    DataDirectory.createDataResources().catch((error) => {
-      RuntimeLog.error('startup:data-resources', error)
+    markStartup('app-ready')
+    MainWindow.setInstance(await createWindow())
+    void OverlayWindow.start().catch((error) => {
+      RuntimeLog.error('overlay:start', error)
     })
 
-    MainWindow.setInstance(await createWindow())
+    void import('./startup/power-lifecycle').then(({ PowerLifecycle }) =>
+      PowerLifecycle.start()
+    )
+    void import('./startup/updater').then(({ AppUpdater }) =>
+      AppUpdater.schedule()
+    )
+
+    void features.dataDirectory()
+      .then(({ DataDirectory }) => DataDirectory.createDataResources())
+      .catch((error) => {
+        RuntimeLog.error('startup:data-resources', error)
+      })
 
     /**
      * Plugins
@@ -415,6 +415,15 @@ process.on('uncaughtExceptionMonitor', (error) => {
     let dailyQuestsRun: Promise<void> | null = null
     const runAutoDailyQuests = () => {
       dailyQuestsRun ??= (async () => {
+        const [
+          { SettingsManager },
+          { AccountsManager },
+          { MCPClientQuestLogin },
+        ] = await Promise.all([
+          features.settings(),
+          features.accounts(),
+          features.mcp(),
+        ])
         const settings = await SettingsManager.getData()
 
         if (!settings.autoDailyQuests) return
@@ -463,6 +472,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
       ElectronAPIEventKeys.PluginAccountScopeSync,
       (_, scope: unknown) => {
         PluginBridge.setAccountScope(scope)
+        OverlayWindow.setAccountScope(scope)
       }
     )
 
@@ -471,7 +481,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
      */
 
     secureIpcHandle(ElectronAPIEventKeys.EnduranceStatusRequest, async () => {
-      const { EnduranceAutomation } = await loadEndurance()
+      const [
+        { EnduranceAutomation },
+        { endurancePointDefinitions, enduranceZones },
+      ] = await Promise.all([
+        features.endurance(),
+        import('./core/endurance/config'),
+      ])
 
       return {
         config: await EnduranceAutomation.getConfig(),
@@ -484,7 +500,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.EnduranceStart,
       async (_, account: AccountData) => {
-        const { EnduranceAutomation } = await loadEndurance()
+        const { EnduranceAutomation } = await features.endurance()
         EnduranceAutomation.start(account).catch((error) => {
           RuntimeLog.error('endurance:start', error)
         })
@@ -492,14 +508,14 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     secureIpcOn(ElectronAPIEventKeys.EnduranceStop, async () => {
-      const { EnduranceAutomation } = await loadEndurance()
+      const { EnduranceAutomation } = await features.endurance()
       EnduranceAutomation.stop()
     })
 
     secureIpcHandle(
       ElectronAPIEventKeys.EnduranceConfigUpdate,
       async (_, partial: Partial<EnduranceConfig>) => {
-        const { EnduranceAutomation } = await loadEndurance()
+        const { EnduranceAutomation } = await features.endurance()
         return EnduranceAutomation.updateConfig(partial)
       }
     )
@@ -507,7 +523,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.EnduranceCalibrateStart,
       async (_, pointId: string) => {
-        const { EnduranceAutomation } = await loadEndurance()
+        const { EnduranceAutomation } = await features.endurance()
         EnduranceAutomation.startCalibration(pointId).catch((error) => {
           RuntimeLog.error('endurance:calibration', error)
         })
@@ -515,7 +531,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     secureIpcOn(ElectronAPIEventKeys.EnduranceCalibrateCancel, async () => {
-      const { EnduranceAutomation } = await loadEndurance()
+      const { EnduranceAutomation } = await features.endurance()
       EnduranceAutomation.cancelCalibration()
     })
 
@@ -524,35 +540,52 @@ process.on('uncaughtExceptionMonitor', (error) => {
      */
 
     secureIpcOn(ElectronAPIEventKeys.AppLanguageRequest, async () => {
+      const { AppLanguage } = await features.settings()
       await AppLanguage.load()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.AppLanguageUpdate,
       async (_, language: Language) => {
+        const { AppLanguage } = await features.settings()
         await AppLanguage.update(language)
       }
     )
 
     secureIpcOn(ElectronAPIEventKeys.RequestAccounts, async () => {
+      const { AccountsManager } = await features.accounts()
       await AccountsManager.load()
-      await AutoExpeditions.ensureStarted([
-        ...AccountsManager.getAccounts().keys(),
-      ])
-      await runAutoDailyQuests()
+
+      // Accounts are visible now. Background account services can hydrate
+      // afterward instead of delaying the renderer's account list.
+      void features.autoExpeditions()
+        .then(({ AutoExpeditions }) =>
+          AutoExpeditions.ensureStarted([
+            ...AccountsManager.getAccounts().keys(),
+          ])
+        )
+        .catch((error) =>
+          RuntimeLog.error('startup:auto-expeditions', error)
+        )
+      void runAutoDailyQuests().catch((error) =>
+        RuntimeLog.error('startup:auto-daily-quests', error)
+      )
     })
 
     secureIpcOn(ElectronAPIEventKeys.RequestSettings, async () => {
+      const { SettingsManager } = await features.settings()
       await SettingsManager.load()
     })
 
     secureIpcOn(ElectronAPIEventKeys.DevSettingsRequest, async () => {
+      const { DevSettingsManager } = await features.settings()
       await DevSettingsManager.load()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.CustomizableMenuSettingsRequest,
       async () => {
+        const { CustomizableMenuSettingsManager } = await features.settings()
         await CustomizableMenuSettingsManager.load()
       }
     )
@@ -560,36 +593,42 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.UpdateSettings,
       async (_, settings: Settings) => {
+        const { SettingsManager } = await features.settings()
         await SettingsManager.update(settings)
       }
     )
 
-    secureIpcHandle(ElectronAPIEventKeys.SettingsDetectPath, () => {
+    secureIpcHandle(ElectronAPIEventKeys.SettingsDetectPath, async () => {
+      const { GameInstallManager } = await features.gameInstall()
       return GameInstallManager.detectAndApply()
     })
 
     secureIpcHandle(
       ElectronAPIEventKeys.GameInstallStatus,
-      (_, forceLatest?: boolean) => {
+      async (_, forceLatest?: boolean) => {
+        const { GameInstallManager } = await features.gameInstall()
         return GameInstallManager.getStatus(forceLatest === true)
       }
     )
 
-    secureIpcHandle(ElectronAPIEventKeys.GameInstallDetect, () => {
+    secureIpcHandle(ElectronAPIEventKeys.GameInstallDetect, async () => {
+      const { GameInstallManager } = await features.gameInstall()
       return GameInstallManager.detectAndApply()
     })
 
-    secureIpcHandle(ElectronAPIEventKeys.GameInstallChooseFolder, () => {
+    secureIpcHandle(ElectronAPIEventKeys.GameInstallChooseFolder, async () => {
+      const { GameInstallManager } = await features.gameInstall()
       return GameInstallManager.chooseFolder()
     })
 
     secureIpcHandle(
       ElectronAPIEventKeys.GameInstallOpenOfficial,
-      (_, target: GameInstallOpenTarget) => {
+      async (_, target: GameInstallOpenTarget) => {
         if (target !== 'updater' && target !== 'egl' && target !== 'xbox') {
           return { ok: false, method: 'none' }
         }
 
+        const { GameInstallManager } = await features.gameInstall()
         return GameInstallManager.openOfficialApp(target)
       }
     )
@@ -597,6 +636,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AccountsOrderingSync,
       async (_, accounts: AccountDataRecord) => {
+        const { AccountsManager } = await features.accounts()
         await AccountsManager.reorder(accounts)
       }
     )
@@ -604,12 +644,14 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.CustomizableMenuSettingsUpdate,
       async (_, key: keyof CustomizableMenuSettings, visibility: boolean) => {
+        const { CustomizableMenuSettingsManager } = await features.settings()
         await CustomizableMenuSettingsManager.update(key, visibility)
       }
     )
 
-    secureIpcOn(ElectronAPIEventKeys.CustomProcessKill, () => {
-      CustomProcess.kill()
+    secureIpcOn(ElectronAPIEventKeys.CustomProcessKill, async () => {
+      const { CustomProcess } = await features.customProcess()
+      await CustomProcess.kill()
     })
 
     /**
@@ -721,20 +763,9 @@ process.on('uncaughtExceptionMonitor', (error) => {
      * The caption buttons are drawn by Windows, so their colours do not follow
      * the renderer's theme class — they have to be repainted explicitly.
      */
-    secureIpcOn(
-      ElectronAPIEventKeys.WindowChromeTheme,
-      (_, theme: WindowChromeTheme) => {
-        try {
-          MainWindow.instance.setTitleBarOverlay(
-            WindowChrome.overlay(theme === 'light' ? 'light' : 'dark')
-          )
-
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (error) {
-          // Not every platform has an overlay to repaint.
-        }
-      }
-    )
+    secureIpcOn(ElectronAPIEventKeys.AppearanceSet, (_, theme) => {
+      Appearance.set(theme)
+    })
 
     /**
      * Events
@@ -743,6 +774,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.OnRemoveAccount,
       async (_, accountId: string) => {
+        const { AccountsManager } = await features.accounts()
         await AccountsManager.remove(accountId)
       }
     )
@@ -770,6 +802,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.CreateAuthWithExchange,
       async (_, code: string) => {
+        const { Authentication } = await features.authentication()
         await Authentication.exchange(code)
       }
     )
@@ -777,6 +810,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.CreateAuthWithAuthorization,
       async (_, code: string) => {
+        const { Authentication } = await features.authentication()
         await Authentication.authorization(code)
       }
     )
@@ -784,6 +818,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.CreateAuthWithDevice,
       async (_, data: AuthenticationByDeviceProperties) => {
+        const { Authentication } = await features.authentication()
         await Authentication.device(data)
       }
     )
@@ -791,6 +826,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.ImportAccountsFromAerial,
       async () => {
+        const { AccountsManager } = await features.accounts()
         await AccountsManager.importFromAerial()
       }
     )
@@ -798,6 +834,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.OpenEpicGamesSettings,
       async (_, account: AccountData) => {
+        const { Authentication } = await features.authentication()
         await Authentication.openEpicGamesSettings(account)
       }
     )
@@ -805,11 +842,18 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.GenerateExchangeCode,
       async (_, account: AccountData) => {
+        const { Authentication } = await features.authentication()
         await Authentication.generateExchangeCode(account)
       }
     )
 
+    secureIpcOn(ElectronAPIEventKeys.CheckAllAccountStatuses, async () => {
+      const { Authentication } = await features.authentication()
+      await Authentication.checkAllAccounts()
+    })
+
     secureIpcOn(ElectronAPIEventKeys.RequestNewVersionStatus, async () => {
+      const { Application } = await features.application()
       await Application.checkVersion()
     })
 
@@ -820,6 +864,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.LauncherStart,
       async (_, account: AccountData) => {
+        const { FortniteLauncher } = await features.launcher()
         await FortniteLauncher.start(account)
       }
     )
@@ -829,6 +874,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
      */
 
     secureIpcOn(ElectronAPIEventKeys.ServerStatusRequest, async () => {
+      const { ServerStatus } = await features.serverStatus()
       await ServerStatus.request()
     })
 
@@ -837,13 +883,15 @@ process.on('uncaughtExceptionMonitor', (error) => {
      */
 
     secureIpcHandle(ElectronAPIEventKeys.FnLaunchSettingsRequest, async () => {
+      const { getLaunchSettings } = await features.fnLaunch()
       return getLaunchSettings()
     })
 
     secureIpcHandle(
       ElectronAPIEventKeys.FnLaunchSettingsUpdate,
       async (_, settings: FnLaunchSettings) => {
-        await saveFnLaunchSettings(settings)
+        const { saveLaunchSettings } = await features.fnLaunch()
+        await saveLaunchSettings(settings)
 
         return { success: true }
       }
@@ -852,6 +900,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcHandle(
       ElectronAPIEventKeys.FnLaunchGameSettingsRequest,
       async () => {
+        const { getGameSettings } = await features.fnLaunch()
         return getGameSettings()
       }
     )
@@ -859,6 +908,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcHandle(
       ElectronAPIEventKeys.FnLaunchGameSettingsUpdate,
       async (_, partial: Partial<GameSettings>) => {
+        const { saveGameSettings } = await features.fnLaunch()
         return saveGameSettings(partial)
       }
     )
@@ -866,6 +916,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcHandle(
       ElectronAPIEventKeys.FnLaunchGameSettingsRestore,
       async () => {
+        const { restoreGameSettingsBackup } = await features.fnLaunch()
         return restoreGameSettingsBackup()
       }
     )
@@ -873,6 +924,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AccountHealthRequest,
       async (_, accounts: Array<AccountData>) => {
+        const { AccountHealth } = await features.accountHealth()
         await AccountHealth.request(accounts)
       }
     )
@@ -880,44 +932,52 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.ExpeditionsRequest,
       async (_, accounts: Array<AccountData>) => {
+        const { Expeditions } = await features.expeditions()
         await Expeditions.request(accounts)
       }
     )
 
-    secureIpcHandle(ElectronAPIEventKeys.AutoExpeditionsStatus, async () =>
-      AutoExpeditions.getData()
-    )
+    secureIpcHandle(ElectronAPIEventKeys.AutoExpeditionsStatus, async () => {
+      const { AutoExpeditions } = await features.autoExpeditions()
+      return AutoExpeditions.getData()
+    })
     secureIpcHandle(
       ElectronAPIEventKeys.AutoExpeditionsUpdate,
       async (
         _,
         accountId: string,
         partial: Partial<import('./startup/auto-expeditions').AutoExpeditionConfig>
-      ) =>
-        AutoExpeditions.update(accountId, partial)
+      ) => {
+        const { AutoExpeditions } = await features.autoExpeditions()
+        return AutoExpeditions.update(accountId, partial)
+      }
     )
     secureIpcHandle(
       ElectronAPIEventKeys.AutoExpeditionsEnsureStarted,
-      async (_, accountIds: Array<string>) =>
-        AutoExpeditions.ensureStarted(accountIds)
+      async (_, accountIds: Array<string>) => {
+        const { AutoExpeditions } = await features.autoExpeditions()
+        return AutoExpeditions.ensureStarted(accountIds)
+      }
     )
     secureIpcOn(ElectronAPIEventKeys.ItemDatabaseRequest, async () => {
-      const { ItemDatabase } = await loadItemDatabase()
+      const { ItemDatabase } = await features.itemDatabase()
       await ItemDatabase.request()
     })
 
     secureIpcOn(ElectronAPIEventKeys.ItemDatabaseRefresh, async () => {
-      const { ItemDatabase } = await loadItemDatabase()
+      const { ItemDatabase } = await features.itemDatabase()
       await ItemDatabase.request(true)
     })
 
     secureIpcOn(ElectronAPIEventKeys.TimelineRequest, async () => {
+      const { Timeline } = await features.timeline()
       await Timeline.request()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.LeaderboardRequest,
       async (_, metric: string, force?: boolean) => {
+        const { Leaderboard } = await features.leaderboard()
         await Leaderboard.request(metric, Boolean(force))
       }
     )
@@ -925,6 +985,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.LoadoutsRequest,
       async (_, account: AccountData) => {
+        const { Loadouts } = await features.loadouts()
         await Loadouts.request(account)
       }
     )
@@ -932,6 +993,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.LoadoutEdit,
       async (_, account: AccountData, request: LoadoutEditRequest) => {
+        const { Loadouts } = await features.loadouts()
         await Loadouts.edit(account, request)
       }
     )
@@ -939,6 +1001,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.ItemAction,
       async (_, account: AccountData, request: ItemActionRequest) => {
+        const { ItemActions } = await features.itemActions()
         await ItemActions.perform(account, request)
       }
     )
@@ -946,6 +1009,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.QuestsRequest,
       async (_, account: AccountData) => {
+        const { Quests } = await features.quests()
         await Quests.request(account)
       }
     )
@@ -953,6 +1017,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.QuestsPin,
       async (_, account: AccountData, pinnedQuestIds: Array<string>) => {
+        const { Quests } = await features.quests()
         await Quests.pin(account, pinnedQuestIds)
       }
     )
@@ -960,6 +1025,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.InventoryRequest,
       async (_, accounts: Array<AccountData>) => {
+        const { Inventory } = await features.inventory()
         await Inventory.request(accounts)
       }
     )
@@ -971,6 +1037,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
         accounts: Array<AccountData>,
         selection: Record<string, Array<string>>
       ) => {
+        const { Inventory } = await features.inventory()
         await Inventory.recycle(accounts, selection)
       }
     )
@@ -978,6 +1045,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.ShopRequest,
       async (_, accounts: Array<AccountData>) => {
+        const { Shop } = await features.shop()
         await Shop.request(accounts)
       }
     )
@@ -987,8 +1055,16 @@ process.on('uncaughtExceptionMonitor', (error) => {
       async (
         _,
         account: AccountData,
-        offer: Parameters<typeof Shop.purchase>[1]
+        offer: {
+          offerId: string
+          title: string
+          currency: string
+          currencySubType: string
+          finalPrice: number
+          quantity: number
+        }
       ) => {
+        const { Shop } = await features.shop()
         await Shop.purchase(account, offer)
       }
     )
@@ -996,17 +1072,20 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.ShopOpen,
       async (_, accounts: Array<AccountData>) => {
+        const { Shop } = await features.shop()
         await Shop.openLlamas(accounts)
       }
     )
 
     secureIpcOn(ElectronAPIEventKeys.ShopCatalogRequest, async () => {
+      const { Shop } = await features.shop()
       await Shop.requestCatalog()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.LockerRequest,
       async (_, account: AccountData) => {
+        const { Locker } = await features.locker()
         await Locker.request(account)
       }
     )
@@ -1014,7 +1093,24 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.LockerOwnedRequest,
       async (_, account: AccountData, refresh: boolean) => {
+        const { Locker } = await features.locker()
         await Locker.requestOwned(account, refresh)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LockerCompanionsRequest,
+      async (_, account: AccountData, refresh: boolean) => {
+        const { Locker } = await features.locker()
+        await Locker.requestCompanions(account, refresh)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.SpritesRequest,
+      async (_, account: AccountData, refresh: boolean) => {
+        const { Sprites } = await features.sprites()
+        await Sprites.request(account, refresh)
       }
     )
 
@@ -1027,6 +1123,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
         templateId: string | null,
         itemName: string
       ) => {
+        const { Locker } = await features.locker()
         await Locker.equip(account, slotKey, templateId, itemName)
       }
     )
@@ -1034,6 +1131,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.LockerCardGenerate,
       async (_, account: AccountData, filters: LockerCardFilters) => {
+        const { Locker } = await features.locker()
         await Locker.generateCard(account, filters)
       }
     )
@@ -1041,6 +1139,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.LockerCardOpen,
       async (_, filePath: string) => {
+        const { Locker } = await features.locker()
         await Locker.openCard(filePath)
       }
     )
@@ -1048,6 +1147,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.LockerCardExport,
       async (_, filePath: string, fileName: string) => {
+        const { Locker } = await features.locker()
         await Locker.exportCard(filePath, fileName)
       }
     )
@@ -1055,6 +1155,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.SquadsRequest,
       async (_, account: AccountData) => {
+        const { Squads } = await features.squads()
         await Squads.request(account)
       }
     )
@@ -1062,6 +1163,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.SquadsAssign,
       async (_, account: AccountData, assignments: Array<SquadAssignment>) => {
+        const { Squads } = await features.squads()
         await Squads.assign(account, assignments)
       }
     )
@@ -1069,6 +1171,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.FriendsManagerRequest,
       async (_, account: AccountData) => {
+        const { FriendsManager } = await features.friends()
         await FriendsManager.request(account)
       }
     )
@@ -1076,6 +1179,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.FriendsManagerSearch,
       async (_, account: AccountData, query: string) => {
+        const { FriendsManager } = await features.friends()
         await FriendsManager.search(account, query)
       }
     )
@@ -1088,6 +1192,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
         targetAccountId: string,
         action: FriendsActionPayload['action']
       ) => {
+        const { FriendsManager } = await features.friends()
         await FriendsManager.action(account, targetAccountId, action)
       }
     )
@@ -1100,6 +1205,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
         targetAccountIds: Array<string>,
         action: 'add' | 'remove'
       ) => {
+        const { FriendsManager } = await features.friends()
         await FriendsManager.bulkAction(account, targetAccountIds, action)
       }
     )
@@ -1107,6 +1213,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.XPBoostsAccountProfileRequest,
       async (_, accounts: Array<AccountData>) => {
+        const { XPBoostsManager } = await features.xpBoosts()
         await XPBoostsManager.requestAccounts(accounts)
       }
     )
@@ -1114,6 +1221,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.XPBoostsConsumePersonal,
       async (_, data: XPBoostsConsumePersonalData) => {
+        const { XPBoostsManager } = await features.xpBoosts()
         await XPBoostsManager.consumePersonal(data)
       }
     )
@@ -1121,6 +1229,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.XPBoostsConsumeTeammate,
       async (_, data: XPBoostsConsumeTeammateData) => {
+        const { XPBoostsManager } = await features.xpBoosts()
         await XPBoostsManager.consumeTeammate(data)
       }
     )
@@ -1128,6 +1237,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.XPBoostsSearchUser,
       async (_, config: XPBoostsSearchUserConfig) => {
+        const { XPBoostsManager } = await features.xpBoosts()
         await XPBoostsManager.searchUser(
           ElectronAPIEventKeys.XPBoostsSearchUserNotification,
           config
@@ -1138,6 +1248,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.XPBoostsGeneralSearchUser,
       async (_, config: XPBoostsSearchUserConfig) => {
+        const { XPBoostsManager } = await features.xpBoosts()
         await XPBoostsManager.generalSearchUser(config)
       }
     )
@@ -1149,6 +1260,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.PartyClaimAction,
       async (_, selectedAccount: Array<AccountData>) => {
+        const { ClaimRewards } = await features.claimRewards()
         await ClaimRewards.start(selectedAccount)
       }
     )
@@ -1161,6 +1273,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
         accounts: AccountDataList,
         claimState: boolean
       ) => {
+        const { Party } = await features.party()
         await Party.kickPartyMembers(selectedAccount, accounts, claimState, {
           force: true,
         })
@@ -1175,17 +1288,20 @@ process.on('uncaughtExceptionMonitor', (error) => {
         accounts: AccountDataList,
         claimState: boolean
       ) => {
+        const { Party } = await features.party()
         await Party.leaveParty(selectedAccounts, accounts, claimState)
       }
     )
 
     secureIpcOn(ElectronAPIEventKeys.PartyLoadFriends, async () => {
+      const { Party } = await features.party()
       await Party.loadFriends()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.PartyAddNewFriendAction,
       async (_, account: AccountData, displayName: string) => {
+        const { Party } = await features.party()
         await Party.addNewFriend(account, displayName)
       }
     )
@@ -1193,6 +1309,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.PartyInviteAction,
       async (_, account: AccountData, accountIds: Array<string>) => {
+        const { Party } = await features.party()
         await Party.invite(account, accountIds)
       }
     )
@@ -1206,6 +1323,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
           displayName: string
         }
       ) => {
+        const { Party } = await features.party()
         await Party.removeFriend(data)
       }
     )
@@ -1217,6 +1335,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.HomeFetchPlayerRequest,
       async (_, config: AlertsDoneSearchPlayerConfig) => {
+        const { AlertsDone } = await features.alerts()
         await AlertsDone.fetchPlayerData(config)
       }
     )
@@ -1224,17 +1343,20 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.HomeWorldInfoRequest,
       async (_, accountId?: string) => {
+        const { WorldInfoManager } = await features.worldInfo()
         await WorldInfoManager.requestForHome(accountId)
       }
     )
 
     secureIpcOn(ElectronAPIEventKeys.HomePennyDBMissionsRequest, async () => {
+      const { PennyDBMissions } = await features.pennyDb()
       await PennyDBMissions.request()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.WorldInfoRequestData,
       async (_, accountId?: string) => {
+        const { WorldInfoManager } = await features.worldInfo()
         await WorldInfoManager.requestForAdvanceSection(accountId)
       }
     )
@@ -1242,17 +1364,20 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.WorldInfoSaveFile,
       async (_, data: SaveWorldInfoData) => {
+        const { WorldInfoManager } = await features.worldInfo()
         await WorldInfoManager.saveFile(data)
       }
     )
 
     secureIpcOn(ElectronAPIEventKeys.WorldInfoRequestFiles, async () => {
+      const { WorldInfoManager } = await features.worldInfo()
       await WorldInfoManager.requestFiles()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.WorldInfoDeleteFile,
       async (_, data: WorldInfoFileData) => {
+        const { WorldInfoManager } = await features.worldInfo()
         await WorldInfoManager.deleteFile(data)
       }
     )
@@ -1260,6 +1385,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.WorldInfoExportFile,
       async (_, data: WorldInfoFileData) => {
+        const { WorldInfoManager } = await features.worldInfo()
         await WorldInfoManager.exportWorldInfoFile(data)
       }
     )
@@ -1267,6 +1393,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.WorldInfoOpenFile,
       async (_, data: WorldInfoFileData) => {
+        const { WorldInfoManager } = await features.worldInfo()
         await WorldInfoManager.openWorldInfoFile(data)
       }
     )
@@ -1274,6 +1401,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.WorldInfoRenameFile,
       async (_, data: WorldInfoFileData, newFilename: string) => {
+        const { WorldInfoManager } = await features.worldInfo()
         await WorldInfoManager.renameFile(data, newFilename)
       }
     )
@@ -1281,6 +1409,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.MatchmakingTrackStatus,
       async (_, account: AccountData, accountId: string) => {
+        const { MatchmakingTrack } = await features.matchmaking()
         await MatchmakingTrack.status(account, accountId)
       }
     )
@@ -1578,17 +1707,33 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
+    secureIpcHandle(
+      ElectronAPIEventKeys.OutpostReportExport,
+      async (
+        _,
+        displayName: string,
+        zone: OutpostZoneInfo,
+        baseData: OutpostBaseData
+      ) => {
+        const { Outpost } = await import('./core/outpost')
+
+        return Outpost.exportReadableReport(displayName, zone, baseData)
+      }
+    )
+
     /**
      * Automation
      */
 
     secureIpcOn(ElectronAPIEventKeys.AutomationServiceRequestData, async () => {
+      const { Automation } = await features.automation()
       await Automation.load()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceStart,
       async (_, accountId: string) => {
+        const { Automation } = await features.automation()
         await Automation.addAccount(accountId)
       }
     )
@@ -1596,6 +1741,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceReload,
       async (_, accountId: string) => {
+        const { Automation } = await features.automation()
         await Automation.reload(accountId)
       }
     )
@@ -1603,6 +1749,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceRemove,
       async (_, accountId: string) => {
+        const { Automation } = await features.automation()
         await Automation.removeAccount(accountId)
       }
     )
@@ -1610,6 +1757,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AutomationServiceActionUpdate,
       async (_, accountId: string, config: AutomationServiceActionConfig) => {
+        const { Automation } = await features.automation()
         await Automation.updateAction(accountId, config)
       }
     )
@@ -1621,6 +1769,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceAddAccounts,
       async (_, origin: Array<string>, destination: Array<string>) => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.sendRequests(origin, destination)
       }
     )
@@ -1628,6 +1777,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceRequestData,
       async () => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.load()
       }
     )
@@ -1635,6 +1785,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceStart,
       async (_, accountId: string) => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.addAccount(accountId)
       }
     )
@@ -1642,6 +1793,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceReload,
       async (_, ids: Array<string>) => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.reload(ids)
       }
     )
@@ -1649,6 +1801,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceRemove,
       async (_, accountId: string) => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.removeAccount(accountId)
       }
     )
@@ -1656,6 +1809,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceServiceActionUpdate,
       async (_, accountId: string, config: TaxiServiceServiceActionConfig) => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.updateAction(accountId, config)
       }
     )
@@ -1663,6 +1817,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceWhitelistAdd,
       async (_, accountId: string, displayName: string) => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.addWhitelist(accountId, displayName)
       }
     )
@@ -1670,6 +1825,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.TaxiServiceWhitelistRemove,
       async (_, accountId: string, targetId: string) => {
+        const { TaxiService } = await features.taxi()
         await TaxiService.removeWhitelist(accountId, targetId)
       }
     )
@@ -1679,12 +1835,14 @@ process.on('uncaughtExceptionMonitor', (error) => {
      */
 
     secureIpcOn(ElectronAPIEventKeys.UrnsServiceRequestData, async () => {
+      const { AutoPinUrns } = await features.autoPinUrns()
       await AutoPinUrns.load()
     })
 
     secureIpcOn(
       ElectronAPIEventKeys.UrnsServiceAdd,
       async (_, accountId: string) => {
+        const { AutoPinUrns } = await features.autoPinUrns()
         await AutoPinUrns.addAccount(accountId)
       }
     )
@@ -1697,6 +1855,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
         templateId: string,
         value: boolean
       ) => {
+        const { AutoPinUrns } = await features.autoPinUrns()
         await AutoPinUrns.updateAccount(accountId, templateId, value)
       }
     )
@@ -1704,6 +1863,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.UrnsServiceRemove,
       async (_, accountId: string) => {
+        const { AutoPinUrns } = await features.autoPinUrns()
         await AutoPinUrns.removeAccount(accountId)
       }
     )
@@ -1715,6 +1875,11 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasLoadAccountsRequest,
       async () => {
+        const {
+          AutoLlamas,
+          ProcessAutoLlamas,
+          ProcessLlamaType,
+        } = await features.autoLlamas()
         await AutoLlamas.load()
 
         ProcessAutoLlamas.start({
@@ -1736,6 +1901,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasAccountAdd,
       async (_, accounts: AutoLlamasAccountAddParams) => {
+        const { AutoLlamas } = await features.autoLlamas()
         await AutoLlamas.addAccount(accounts)
       }
     )
@@ -1743,6 +1909,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasAccountUpdate,
       async (_, data: AutoLlamasAccountUpdateParams) => {
+        const { AutoLlamas } = await features.autoLlamas()
         await AutoLlamas.updateAccounts(data)
       }
     )
@@ -1750,11 +1917,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.AutoLlamasAccountRemove,
       async (_, data: Array<string> | null) => {
+        const { AutoLlamas } = await features.autoLlamas()
         await AutoLlamas.removeAccounts(data)
       }
     )
 
     secureIpcOn(ElectronAPIEventKeys.AutoLlamasAccountCheck, async () => {
+      const { AutoLlamas } = await features.autoLlamas()
       await AutoLlamas.check()
     })
 
@@ -1765,6 +1934,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.VBucksInformationRequest,
       async (_, accounts: Array<AccountData>) => {
+        const { VBucksInformation } = await features.vbucks()
         await VBucksInformation.requestBulkInfo(accounts)
       }
     )
@@ -1776,6 +1946,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.GiftsInformationRequest,
       async (_, accounts: Array<AccountData>) => {
+        const { GiftsInformation } = await features.gifts()
         await GiftsInformation.requestBulkInfo(accounts)
       }
     )
@@ -1787,6 +1958,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.RedeemCodesRedeem,
       async (_, accounts: Array<AccountData>, codes: Array<string>) => {
+        const { RedeemCodes } = await features.redeemCodes()
         await RedeemCodes.redeem(accounts, codes)
       }
     )
@@ -1798,6 +1970,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.UpdateAccountBasicInfo,
       async (_, account: AccountBasicInfo) => {
+        const { AccountsManager } = await features.accounts()
         await AccountsManager.add(account)
         MainWindow.instance.webContents.send(
           ElectronAPIEventKeys.ResponseUpdateAccountBasicInfo
@@ -1808,6 +1981,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(
       ElectronAPIEventKeys.EULAVerificationRequest,
       async (_, accountIds: Array<string>) => {
+        const { EULATracking } = await features.eula()
         await EULATracking.verify(accountIds)
       }
     )
@@ -1816,96 +1990,50 @@ process.on('uncaughtExceptionMonitor', (error) => {
      * Schedules
      */
 
-    schedule.scheduleJob(
-      {
-        /**
-         * Executes in every reset at time: 00:00:10 AM
-         * Hour: 00
-         * Minute: 00
-         * Second: 10
-         */
-        rule: '10 0 0 * * *',
-        /**
-         * Time zone
-         */
-        tz: 'UTC',
-      },
-      () => {
-        WorldInfoManager.requestForHome().catch((error) => {
-          RuntimeLog.error('schedule:world-info-home', error)
+    // Scheduling is intentionally loaded after the first frame. It is useful
+    // background work, but it should never compete with the launch path.
+    setTimeout(() => {
+      void import('node-schedule').then(({ default: schedule }) => {
+        schedule.scheduleJob({ rule: '10 0 0 * * *', tz: 'UTC' }, () => {
+          void features.worldInfo().then(({ WorldInfoManager }) => {
+            WorldInfoManager.requestForHome().catch((error) => {
+              RuntimeLog.error('schedule:world-info-home', error)
+            })
+            WorldInfoManager.requestForAdvanceSection().catch((error) => {
+              RuntimeLog.error('schedule:world-info-advanced', error)
+            })
+          })
         })
-        WorldInfoManager.requestForAdvanceSection().catch((error) => {
-          RuntimeLog.error('schedule:world-info-advanced', error)
+
+        const processLlamas = async (type: 'free-upgrade' | 'survivor') => {
+          const {
+            AutoLlamas,
+            ProcessAutoLlamas,
+            ProcessLlamaType,
+          } = await features.autoLlamas()
+          const processType =
+            type === 'survivor'
+              ? ProcessLlamaType.Survivor
+              : ProcessLlamaType.FreeUpgrade
+
+          ProcessAutoLlamas.start({
+            selected: AutoLlamas.getAccounts({ type: processType }),
+            type: processType,
+          })
+        }
+
+        schedule.scheduleJob({ rule: '1 * * * *', tz: 'UTC' }, () => {
+          void processLlamas('free-upgrade')
         })
-      }
-    )
-
-    schedule.scheduleJob(
-      {
-        /**
-         * Runs: daily every hour
-         * Hour: every hour
-         * Minute: 1
-         */
-        rule: '1 * * * *',
-        /**
-         * Time zone
-         */
-        tz: 'UTC',
-      },
-      () => {
-        ProcessAutoLlamas.start({
-          selected: AutoLlamas.getAccounts({
-            type: ProcessLlamaType.FreeUpgrade,
-          }),
-          type: ProcessLlamaType.FreeUpgrade,
+        schedule.scheduleJob({ rule: '1 0 * * *', tz: 'UTC' }, () => {
+          void processLlamas('survivor')
         })
-      }
-    )
-
-    schedule.scheduleJob(
-      {
-        /**
-         * Runs: every reset at time: 00:01:00 AM
-         * Hour: 0 AM (midnight)
-         * Minute: 1
-         */
-        rule: '1 0 * * *',
-        /**
-         * Time zone
-         */
-        tz: 'UTC',
-      },
-      () => {
-        ProcessAutoLlamas.start({
-          selected: AutoLlamas.getAccounts({
-            type: ProcessLlamaType.Survivor,
-          }),
-          type: ProcessLlamaType.Survivor,
-        })
-      }
-    )
-
-    /**
-     * Auto Daily Quests (ClientQuestLogin)
-     */
-
-    schedule.scheduleJob(
-      {
-        /**
-         * Runs: every reset at time: 00:01:00 AM
-         * Hour: 0 AM (midnight)
-         * Minute: 1
-         * Second: 0
-         */
-        rule: '0 1 0 * * *',
-        /**
-         * Time zone
-         */
-        tz: 'UTC',
-      },
-      runAutoDailyQuests
-    )
+        schedule.scheduleJob(
+          { rule: '0 1 0 * * *', tz: 'UTC' },
+          runAutoDailyQuests
+        )
+      })
+    }, 2_500)
   })
 
   // Quit when all windows are closed, except on macOS. There, it's common
@@ -1921,8 +2049,9 @@ process.on('uncaughtExceptionMonitor', (error) => {
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) {
-    MainWindow.setInstance(await createWindow())
-    AutoExpeditions.start()
+      MainWindow.setInstance(await createWindow())
+      const { AutoExpeditions } = await features.autoExpeditions()
+      AutoExpeditions.start()
     }
   })
 

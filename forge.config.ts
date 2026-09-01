@@ -11,6 +11,17 @@ import path from 'node:path'
 
 import packageJson from './package.json'
 
+const windowsCertificateFile =
+  process.env.PENNY_WINDOWS_CERTIFICATE_FILE
+const windowsCertificatePassword =
+  process.env.PENNY_WINDOWS_CERTIFICATE_PASSWORD
+const windowsSigning = windowsCertificateFile
+  ? {
+      certificateFile: windowsCertificateFile,
+      certificatePassword: windowsCertificatePassword,
+    }
+  : null
+
 /**
  * Copy the main process's runtime dependencies into the packaged app.
  *
@@ -20,8 +31,8 @@ import packageJson from './package.json'
  * bundles still `require()` them from disk. The list is read off the built
  * bundles rather than package.json, so it stays exact: renderer-only
  * libraries never ship, and a new kernel import can't be forgotten here.
- * Copying from the project's node_modules — not reinstalling — keeps the
- * electron-rebuilt native binaries (node-process-watcher) intact.
+ * Copying from the project's node_modules — not reinstalling — keeps native
+ * binaries and ps-list's Windows process-listing executable intact.
  * Peer dependencies are deliberately not followed; they exist for hosts,
  * and chasing them is how 100 MB of @swc/core ends up in an installer.
  */
@@ -40,7 +51,7 @@ async function copyMainProcessDependencies(buildPath: string) {
     const bundle = await readFile(path.join(buildDir, file), 'utf8')
 
     for (const match of bundle.matchAll(
-      /require\(["']([^"'./][^"']*)["']\)/g
+      /(?:require|import)\(["']([^"'./][^"']*)["']\)/g
     )) {
       const id = match[1]
 
@@ -88,10 +99,8 @@ async function copyMainProcessDependencies(buildPath: string) {
     await cp(source, path.join(buildPath, 'node_modules', name), {
       recursive: true,
       /**
-       * Electron-rebuild leaves compiler toolchains nested inside native
-       * modules — node-process-watcher grows a 210 MB nw-gyp/clang tree on
-       * CI. Those are install-time only; genuine nested runtime deps
-       * (stanza's, electron-squirrel-startup's) have ordinary names and
+       * Compiler toolchains nested inside native modules are install-time
+       * only; genuine nested runtime dependencies have ordinary names and
        * pass through.
        */
       filter: (fileSource) => {
@@ -149,6 +158,7 @@ const config: ForgeConfig = {
       unpack: '**/node_modules/@img/sharp-win32-*/lib/*.dll',
     },
     icon: 'icon-transparent.ico',
+    ...(windowsSigning ? { windowsSign: windowsSigning } : {}),
     /**
      * Marketplace packages are plain, readable CommonJS folders. They must
      * stay as real files on disk so users can inspect their README and source
@@ -157,14 +167,14 @@ const config: ForgeConfig = {
     extraResource: ['./plugins', './endurance-assets'],
   },
   /**
-   * sharp and uiohook-napi are N-API modules shipping prebuilt binaries, so
-   * they run under Electron without a rebuild — and this machine has no
-   * Python/MSVC toolchain, so letting @electron/rebuild fall back to
-   * node-gyp on them kills `npm start`. Only node-process-watcher (a
-   * prebuild-install module, which rebuild resolves by download) stays in.
+   * Both native dependencies ship Node-API prebuilds: sharp and uiohook-napi.
+   * Node-API binaries are independent of Electron's module ABI, so rebuilding
+   * them is unnecessary and makes Forge fall back to a local node-gyp
+   * toolchain. An explicit empty allow-list is important: omitting
+   * `onlyModules` tells @electron/rebuild to discover and compile everything.
    */
   rebuildConfig: {
-    onlyModules: ['node-process-watcher'],
+    onlyModules: [],
   },
   makers: [
     new MakerSquirrel({
@@ -176,6 +186,7 @@ const config: ForgeConfig = {
       iconUrl:
         'https://raw.githubusercontent.com/ahmed5939/penny-launcher/main/icon-transparent.ico',
       setupIcon: 'icon-transparent.ico',
+      ...(windowsSigning ?? {}),
     }),
   ],
   plugins: [
@@ -196,6 +207,14 @@ const config: ForgeConfig = {
         {
           entry: 'src/kernel/preload.ts',
           config: 'vite.preload.config.ts',
+        },
+        {
+          entry: 'src/kernel/overlay-preload.ts',
+          config: 'vite.preload.config.ts',
+        },
+        {
+          entry: 'src/kernel/locker-card-worker.ts',
+          config: 'vite.main.config.ts',
         },
       ],
       renderer: [

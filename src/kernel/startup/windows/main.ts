@@ -1,9 +1,5 @@
 import { app, BrowserWindow } from 'electron'
-import schedule from 'node-schedule'
 
-import { CustomProcess } from '../../core/custom-process'
-import { DiscordPresence } from '../../core/discord-presence'
-import { Automation } from '../automation'
 import { SystemTray } from '../system-tray'
 import { RuntimeLog } from '../../runtime-log'
 
@@ -42,14 +38,28 @@ export class MainWindow {
       MainWindow.instance.removeAllListeners()
     }
 
-    Automation.clearActiveChecks(null)
-    Automation.getServices().forEach((accountService) => {
-      accountService.destroy()
-    })
     const shutdowns = await Promise.allSettled([
-      schedule.gracefulShutdown(),
+      import('../automation').then(({ Automation }) => {
+        Automation.clearActiveChecks(null)
+        Automation.getServices().forEach((accountService) => {
+          accountService.destroy()
+        })
+      }),
+      import('node-schedule').then(({ default: schedule }) =>
+        schedule.gracefulShutdown()
+      ),
       import('../plugins').then(({ PluginManager }) =>
         PluginManager.shutdown()
+      ),
+      import('../../core/custom-process').then(({ CustomProcess }) =>
+        CustomProcess.destroy()
+      ),
+      import('../../core/discord-presence').then(({ DiscordPresence }) =>
+        DiscordPresence.destroy()
+      ),
+      import('../updater').then(({ AppUpdater }) => AppUpdater.cancel()),
+      import('./overlay').then(({ OverlayWindow }) =>
+        OverlayWindow.destroy()
       ),
     ])
 
@@ -59,8 +69,6 @@ export class MainWindow {
       }
     })
 
-    CustomProcess.destroy()
-    DiscordPresence.destroy()
     SystemTray.destroy()
   }
 

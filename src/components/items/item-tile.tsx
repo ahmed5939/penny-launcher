@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { ItemRecordMap } from '../../kernel/core/item-database'
 
-import { Lock, Zap } from 'lucide-react'
+import { Check, Lock, Zap } from 'lucide-react'
 
 import { itemBadge, resolveItemArt } from './item-icon'
 import {
@@ -50,6 +50,7 @@ export function ItemTile({
   menu,
   name,
   onClick,
+  onToggleSelect,
   portrait,
   power,
   quantity,
@@ -77,6 +78,12 @@ export function ItemTile({
   /** Overrides the database name. */
   name?: string
   onClick?: () => void
+  /**
+   * Renders a tick box in the plate's corner. Selection lives there so a
+   * plain click can mean the same thing on every tile — inspect — instead
+   * of selecting some items and opening others.
+   */
+  onToggleSelect?: () => void
   /** Survivors: the `WorkerPortrait:` id this copy rolled. */
   portrait?: string | null
   quantity?: number
@@ -96,26 +103,34 @@ export function ItemTile({
     large: 'w-32',
   }[size]
 
-  const Element = onClick ? 'button' : 'div'
+  /*
+   * The tick box is a button of its own, and a button cannot nest inside a
+   * button — with one present the tile falls back to a clickable div.
+   */
+  const isButton = Boolean(onClick) && !onToggleSelect
+  const Element = isButton ? 'button' : 'div'
 
   const tile = (
     <Element
-      aria-pressed={onClick ? selected : undefined}
+      aria-pressed={isButton ? selected : undefined}
       className={cn(
         'group relative block shrink-0 overflow-hidden rounded-lg border-2 text-left',
         'transition-transform',
         box,
         art.accent ? 'border-[color:var(--rarity)]' : 'border-border/60',
         onClick && !disabled && 'hover:-translate-y-0.5 hover:brightness-110',
+        onClick && !isButton && 'cursor-pointer',
         selected && 'ring-2 ring-primary ring-offset-1 ring-offset-background',
         disabled && 'opacity-60',
         className
       )}
-      disabled={onClick ? disabled : undefined}
-      onClick={onClick}
+      disabled={isButton ? disabled : undefined}
+      onClick={disabled ? undefined : onClick}
+      role={onClick && !isButton ? 'button' : undefined}
       style={rarityStyle(art.accent)}
+      tabIndex={onClick && !isButton ? 0 : undefined}
       title={title ?? label}
-      type={onClick ? 'button' : undefined}
+      type={isButton ? 'button' : undefined}
     >
       {/* Rarity plate. */}
       <span className="relative block aspect-square w-full">
@@ -162,6 +177,27 @@ export function ItemTile({
           >
             <Lock className="size-2.5" />
           </span>
+        )}
+
+        {onToggleSelect && !locked && (
+          <button
+            aria-checked={selected}
+            className={cn(
+              'absolute right-1 top-1 grid size-5 place-items-center rounded-md border transition-colors',
+              selected
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border/80 bg-background/70 text-transparent hover:border-primary/70 hover:text-primary/50'
+            )}
+            onClick={(event) => {
+              event.stopPropagation()
+              onToggleSelect()
+            }}
+            role="checkbox"
+            title="Tick to select"
+            type="button"
+          >
+            <Check className="size-3.5" />
+          </button>
         )}
 
         {typeof quantity === 'number' && quantity > 1 && (

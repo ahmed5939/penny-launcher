@@ -2,6 +2,7 @@ import type { AccountData } from '../../types/accounts'
 import type { LockerSlotKey } from '../../config/fortnite/locker'
 import type { CosmeticMeta } from './locker-catalog'
 import type { LockerCardFilters } from './locker-loadout'
+import type { CompanionCollectionEntry } from './locker-companions'
 
 import path from 'node:path'
 import { app, dialog, shell } from 'electron'
@@ -15,7 +16,9 @@ import { MainWindow } from '../startup/windows/main'
 import { RuntimeLog } from '../runtime-log'
 import { Authentication } from './authentication'
 import { getCosmeticsCatalog, resolveCosmetic } from './locker-catalog'
-import { renderLockerCard, sortForCard } from './locker-card'
+import { buildCompanionCollection } from './locker-companions'
+import { sortForCard } from './locker-card'
+import { LockerCardWorker } from '../startup/locker-card-worker'
 import {
   buildLoadoutPayload,
   cardGroupOrder,
@@ -79,6 +82,12 @@ export type LockerOwnedPayload = {
   accountId: string
   errorMessage?: string
   cosmetics: Array<CosmeticMeta>
+}
+
+export type LockerCompanionsPayload = {
+  accountId: string
+  errorMessage?: string
+  companions: Array<CompanionCollectionEntry>
 }
 
 export type LockerEquipNotification = {
@@ -185,7 +194,7 @@ async function mintEOSToken(account: AccountData) {
   return eos.data.access_token
 }
 
-async function eosToken(account: AccountData, { fresh = false } = {}) {
+export async function eosToken(account: AccountData, { fresh = false } = {}) {
   const cached = eosTokens.get(account.accountId)
 
   if (!fresh && cached && cached.expiresAt > Date.now()) {
@@ -218,6 +227,13 @@ export class Locker {
   >()
 
   private static ownedCacheMaxAgeMs = 10 * 60 * 1000
+
+  /**
+   * One read per account at a time. The owned list and the sidekick view
+   * are asked for together on page load, and both start from the same
+   * profile query — without this the second request would repeat it.
+   */
+  private static ownedInFlight = new Map<string, Promise<Array<CosmeticMeta>>>()
 
   static async request(account: AccountData) {
     const payload: LockerPayload = {
@@ -291,6 +307,36 @@ export class Locker {
     }
 
     Locker.send(ElectronAPIEventKeys.LockerOwnedResponse, payload)
+  }
+
+  /**
+   * Every sidekick Epic has shipped, flagged by whether this account owns it.
+   *
+   * Reads the same owned list as `requestOwned` (and shares its cache), so
+   * asking for both costs one profile query, not two.
+   */
+  static async requestCompanions(account: AccountData, refresh = false) {
+    const payload: LockerCompanionsPayload = {
+      accountId: account.accountId,
+      companions: [],
+    }
+
+    try {
+      const [owned, catalog] = await Promise.all([
+        Locker.getOwned(account, refresh),
+        getCosmeticsCatalog(),
+      ])
+
+      payload.companions = buildCompanionCollection(
+        catalog,
+        owned.map((cosmetic) => cosmetic.templateId)
+      )
+    } catch (error) {
+      RuntimeLog.error('caught:core/locker.ts', error)
+      payload.errorMessage = errorMessage(error)
+    }
+
+    Locker.send(ElectronAPIEventKeys.LockerCompanionsResponse, payload)
   }
 
   static async equip(
@@ -405,19 +451,21 @@ export class Locker {
         throw new Error('Nothing matches those filters')
       }
 
-      const card = await renderLockerCard({
-        cosmetics: selected,
-        directory: Locker.outputDirectory(),
-        displayName: account.displayName || account.accountId,
-        subtitle: `${selected.length.toLocaleString()} cosmetics`,
-        onProgress: (done, total) => {
+      const card = await LockerCardWorker.render(
+        {
+          cosmetics: selected,
+          directory: Locker.outputDirectory(),
+          displayName: account.displayName || account.accountId,
+          subtitle: `${selected.length.toLocaleString()} cosmetics`,
+        },
+        (done, total) => {
           Locker.send(ElectronAPIEventKeys.LockerCardProgress, {
             accountId: account.accountId,
             done,
             total,
           } as LockerCardProgress)
-        },
-      })
+        }
+      )
 
       notification.card = {
         filePath: card.filePath,
@@ -484,6 +532,22 @@ export class Locker {
       return cached.cosmetics
     }
 
+    const pending = Locker.ownedInFlight.get(account.accountId)
+
+    if (pending) {
+      return pending
+    }
+
+    const request = Locker.fetchOwned(account).finally(() => {
+      Locker.ownedInFlight.delete(account.accountId)
+    })
+
+    Locker.ownedInFlight.set(account.accountId, request)
+
+    return request
+  }
+
+  private static async fetchOwned(account: AccountData) {
     const accessToken = await Authentication.verifyAccessToken(account)
 
     if (!accessToken) {

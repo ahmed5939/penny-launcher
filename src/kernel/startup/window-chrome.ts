@@ -52,7 +52,11 @@ export class WindowChrome {
    * show through; without it we keep painting the dark ground so launch does
    * not flash white before the renderer's first frame.
    */
-  static get backgroundColor() {
-    return WindowChrome.supportsMica ? '#00000000' : '#0d080a'
+  static backgroundColor(theme: WindowChromeTheme) {
+    if (WindowChrome.supportsMica) {
+      return '#00000000'
+    }
+
+    return theme === 'light' ? '#fcf8f9' : '#0d080a'
   }
 }

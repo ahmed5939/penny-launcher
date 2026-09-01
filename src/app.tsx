@@ -13,7 +13,6 @@ import { routeTree } from './routeTree.gen'
 // import { LoadWorldInfoFiles } from './bootstrap/components/advanced-mode/load-world-info-files'
 import {
   LoadHomeWorldInfo,
-  LoadWorldInfoData,
 } from './bootstrap/components/advanced-mode/load-world-info'
 import { LoadAccounts } from './bootstrap/components/load-accounts'
 import { LoadAutoLlamas } from './bootstrap/components/load-auto-llamas'
@@ -87,7 +86,7 @@ function render() {
     <ThemeProvider>
       <LoadSettings />
       <LoadAccounts />
-      <LoadItemDatabase />
+      <LauncherNotifications />
       <DeferredBootstrap />
 
       <RouterProvider
@@ -104,18 +103,24 @@ function render() {
 }
 
 function DeferredBootstrap() {
-  const [ready, setReady] = useState(false)
+  const [stage, setStage] = useState(0)
 
   useEffect(() => {
     // lib.dom types requestIdleCallback as always present, but the typeof
     // guard stays: the timeout fallback covers any runtime without it.
     const hasIdleCallback =
       typeof window.requestIdleCallback === 'function'
+    const timers: Array<number> = []
+    const advance = () => {
+      setStage(1)
+      timers.push(window.setTimeout(() => setStage(2), 700))
+      timers.push(window.setTimeout(() => setStage(3), 1_800))
+    }
     const id = hasIdleCallback
-      ? window.requestIdleCallback(() => setReady(true), {
+      ? window.requestIdleCallback(advance, {
           timeout: 1_500,
         })
-      : window.setTimeout(() => setReady(true), 250)
+      : window.setTimeout(advance, 250)
 
     return () => {
       if (hasIdleCallback) {
@@ -123,20 +128,27 @@ function DeferredBootstrap() {
       } else {
         window.clearTimeout(id)
       }
+
+      timers.forEach((timer) => window.clearTimeout(timer))
     }
   }, [])
 
-  if (!ready) return null
-
   return (
     <>
-      <LoadFriends />
-      <LoadHomeWorldInfo />
-      <LoadPennyDBMissions />
-      <LoadWorldInfoData />
-      <LoadAutomation />
-      <LoadAutoLlamas />
-      <LauncherNotifications />
+      {stage >= 1 && (
+        <>
+          <LoadFriends />
+          <LoadHomeWorldInfo />
+        </>
+      )}
+      {stage >= 2 && (
+        <>
+          <LoadAutomation />
+          <LoadAutoLlamas />
+          <LoadItemDatabase />
+        </>
+      )}
+      {stage >= 3 && <LoadPennyDBMissions />}
     </>
   )
 }

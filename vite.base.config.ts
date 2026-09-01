@@ -6,8 +6,6 @@ import path from 'node:path'
 import { TanStackRouterVite } from '@tanstack/router-vite-plugin'
 import react from '@vitejs/plugin-react-swc'
 
-import packageJson from './package.json'
-
 export const builtins = [
   'electron',
   ...builtinModules.map((m) => [m, `node:${m}`]).flat(),
@@ -15,11 +13,16 @@ export const builtins = [
 
 export const external = [
   ...builtins,
-  ...Object.keys(
-    'dependencies' in packageJson
-      ? (packageJson.dependencies as Record<string, unknown>)
-      : {}
-  ),
+  // Native modules stay external. ps-list is pure JS, but carries the native
+  // fastlist executable beside its module and therefore must retain its
+  // node_modules directory layout. fnbr/stanza stay external because their
+  // ws dependency performs optional native acceleration probes with dynamic
+  // require(); bundling turns a caught MODULE_NOT_FOUND into a hard failure.
+  'fnbr',
+  'ps-list',
+  'sharp',
+  'stanza',
+  'uiohook-napi',
 ]
 
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {

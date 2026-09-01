@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useLayoutEffect, useState } from 'react'
+import type { AppearanceTheme } from '../types/window'
 
 import {
   type ColorTheme,
@@ -6,12 +7,11 @@ import {
   defaultColorTheme,
 } from '../config/constants/color-themes'
 
-export type Theme = 'dark' | 'light' | 'system'
+export type Theme = AppearanceTheme
 
 type ThemeProviderProps = {
   children: React.ReactNode
   defaultTheme?: Theme
-  storageKey?: string
   colorThemeStorageKey?: string
 }
 
@@ -34,13 +34,11 @@ const ThemeProviderContext =
 
 export function ThemeProvider({
   children,
-  defaultTheme = initialState.theme,
-  storageKey = 'vite-ui-theme',
   colorThemeStorageKey = 'penny-color-theme',
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+    () => window.electronAPI.initialAppearance.source
   )
   const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
     const stored = localStorage.getItem(colorThemeStorageKey)
@@ -50,29 +48,25 @@ export function ThemeProvider({
       : defaultColorTheme
   })
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = window.document.documentElement
+    const apply = (resolved: 'dark' | 'light') => {
+      root.classList.remove('light', 'dark')
+      root.classList.add(resolved)
+    }
 
-    root.classList.remove('light', 'dark')
+    apply(window.electronAPI.initialAppearance.resolved)
+    const listener = window.electronAPI.onAppearanceChanged((appearance) => {
+      setTheme(appearance.source)
+      apply(appearance.resolved)
+    })
 
-    const resolved =
-      theme === 'system'
-        ? window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light'
-        : theme
+    return () => {
+      listener.removeListener()
+    }
+  }, [])
 
-    root.classList.add(resolved)
-
-    /**
-     * Windows draws the caption buttons, so the `.dark` class never reaches
-     * them — they have to be repainted through the main process or they stay
-     * on last session's theme.
-     */
-    window.electronAPI?.syncWindowChromeTheme?.(resolved)
-  }, [theme])
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     /*
      * The colour theme rides on `data-theme` while light/dark stays a class,
      * so the two axes can never clobber each other's DOM writes.
@@ -83,8 +77,8 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme)
       setTheme(theme)
+      window.electronAPI.setAppearanceTheme(theme)
     },
     colorTheme,
     setColorTheme: (colorTheme: ColorTheme) => {

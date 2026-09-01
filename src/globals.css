@@ -115,6 +115,17 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .app-shell {
+    user-select: none;
+  }
+
+  .app-shell input,
+  .app-shell textarea,
+  .app-shell [contenteditable='true'],
+  .app-shell .select-text {
+    user-select: text;
+  }
+
   /*
    * `cursor: pointer` is the *hyperlink* cursor. A native Windows button
    * never shows it — every control in the app was quietly claiming to be a
@@ -184,6 +195,22 @@
       box-shadow: none;
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+html {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.45) transparent;
+  scrollbar-width: thin;
 }
 
 :root {

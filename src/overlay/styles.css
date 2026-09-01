@@ -1,0 +1,245 @@
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+body {
+  margin: 0;
+  color: #fff;
+  font-family:
+    'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', sans-serif;
+}
+
+.quest-overlay {
+  box-sizing: border-box;
+  max-height: 100%;
+  margin: 0;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, rgb(233 59 151 / 20%), transparent 42%),
+    rgb(13 10 14 / 92%);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(18px);
+}
+
+.overlay-header,
+.player-heading,
+.quest-row,
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.overlay-header {
+  padding: 2px 3px 12px;
+}
+
+.eyebrow {
+  margin: 0 0 2px;
+  color: #f36aae;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgb(255 255 255 / 60%);
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.live-indicator span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #49d7ae;
+  box-shadow: 0 0 10px #49d7ae;
+}
+
+.player-list {
+  display: grid;
+  gap: 9px;
+  max-height: 660px;
+  overflow: hidden;
+}
+
+.player-card,
+.overlay-empty {
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.player-card {
+  padding: 11px;
+}
+
+.player-heading {
+  align-items: flex-start;
+  padding-bottom: 9px;
+}
+
+.player-heading h2 {
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.player-heading p {
+  margin-top: 2px;
+  color: rgb(255 255 255 / 58%);
+  font-size: 10px;
+}
+
+.venture-level {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 0 5px;
+  text-align: right;
+}
+
+.venture-level span,
+.venture-level small {
+  color: rgb(255 255 255 / 50%);
+  font-size: 9px;
+}
+
+.venture-level strong {
+  grid-row: span 2;
+  color: #5fe3cf;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.quest-list {
+  display: grid;
+  gap: 7px;
+  max-height: 245px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.quest-list li {
+  min-width: 0;
+}
+
+.quest-row {
+  justify-content: flex-start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.quest-row strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quest-group {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgb(243 106 174 / 16%);
+  color: #ff9aca;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.group-ventures {
+  background: rgb(95 227 207 / 15%);
+  color: #76ead8;
+}
+
+.group-daily,
+.group-weekly {
+  background: rgb(255 190 71 / 15%);
+  color: #ffd27b;
+}
+
+.quest-count {
+  margin-left: auto;
+  color: rgb(255 255 255 / 64%);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.quest-description {
+  margin: 3px 0 0 1px;
+  overflow: hidden;
+  color: rgb(255 255 255 / 48%);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-track {
+  height: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 10%);
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d93d8d, #5fe3cf);
+}
+
+.overlay-empty,
+.no-quests,
+.error-message {
+  padding: 18px;
+  color: rgb(255 255 255 / 58%);
+  font-size: 11px;
+  text-align: center;
+}
+
+.no-quests,
+.error-message {
+  padding: 10px 0 4px;
+}
+
+.error-message {
+  color: #ff9d9d;
+}
+
+footer {
+  padding: 10px 3px 0;
+  color: rgb(255 255 255 / 38%);
+  font-size: 9px;
+}

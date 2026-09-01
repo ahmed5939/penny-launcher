@@ -59,6 +59,10 @@ export function useAccountList() {
     return _keys ? 1 : 0
   }
   const onSelect = (account: AccountData) => (accountId: string) => {
+    if (account.authStatus === 'invalid') {
+      return
+    }
+
     if (accountId !== selected?.accountId) {
       setPrimary(account.accountId)
     }
@@ -67,11 +71,19 @@ export function useAccountList() {
   }
 
   const onToggleMember = (accountId: string) => {
+    if (accountList[accountId]?.authStatus === 'invalid') {
+      return
+    }
+
     toggleMember(accountId)
   }
 
   const onSelectAll = () => {
-    selectAll(accounts.map((account) => account.accountId))
+    selectAll(
+      accounts
+        .filter((account) => account.authStatus !== 'invalid')
+        .map((account) => account.accountId)
+    )
   }
 
   /**
@@ -84,8 +96,12 @@ export function useAccountList() {
     }
   }
 
+  const availableAccounts = accounts.filter(
+    (account) => account.authStatus !== 'invalid'
+  )
   const allSelected =
-    accounts.length > 0 && members.length >= accounts.length
+    availableAccounts.length > 0 &&
+    members.length >= availableAccounts.length
 
   /**
    * A real OS context menu, not an HTML one.
@@ -100,13 +116,18 @@ export function useAccountList() {
       event.preventDefault()
 
       const isInScope = members.includes(account.accountId)
+      const isInvalid = account.authStatus === 'invalid'
       const chosen = await window.electronAPI.popupContextMenu([
-        { id: 'switch', label: `Switch to ${parseCustomDisplayName(account)}` },
+        {
+          id: 'switch',
+          label: `Switch to ${parseCustomDisplayName(account)}`,
+          enabled: !isInvalid,
+        },
         {
           id: 'scope',
           label: isInScope ? 'Remove from scope' : 'Add to scope',
           // The scope may never be emptied, so the last member cannot leave.
-          enabled: !isInScope || members.length > 1,
+          enabled: !isInvalid && (!isInScope || members.length > 1),
         },
         { type: 'separator' },
         { copy: account.accountId, label: 'Copy account ID' },

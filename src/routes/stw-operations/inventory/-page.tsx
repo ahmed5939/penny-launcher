@@ -1,6 +1,5 @@
 import type { InventoryRow } from './-hooks'
 import type { ItemActionRequest } from '../../../kernel/core/item-actions'
-import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type { ItemKind, Rarity } from '../../../config/constants/fortnite/items'
 import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import type { LucideIcon } from 'lucide-react'
@@ -24,15 +23,20 @@ import {
   Trash2,
   Users,
   UserX,
+  Zap,
 } from 'lucide-react'
-import { memo, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { VirtualList } from '../../../components/virtual-list'
 import { Input } from '../../../components/ui/input'
-import { ItemDetailDialog } from '../../../components/items/item-detail'
+import {
+  ItemDetailDialog,
+  levelCapForTier,
+  superchargeMaxLevel,
+} from '../../../components/items/item-detail'
 import { ItemIcon } from '../../../components/items/item-icon'
 import { ItemTile } from '../../../components/items/item-tile'
 import {
@@ -167,6 +171,16 @@ function ItemMenu({
   onRecycle: () => void
 }) {
   const locked = item.lockedReason !== null
+  /*
+   * Same ladder as the detail dialog: manuals to the tier cap, then a maxed
+   * tier-5 item (a "130") supercharges one level at a time up to 60.
+   */
+  const cap = levelCapForTier(item.tier)
+  const supercharging = item.tier >= 5 && item.level >= 50
+  const canLevel = !supercharging || item.level < superchargeMaxLevel
+  const bulkTarget =
+    cap !== null && !supercharging ? Math.min(item.level + 10, cap) : null
+  const canBulkLevel = bulkTarget !== null && bulkTarget - item.level >= 2
 
   return (
     <>
@@ -180,16 +194,42 @@ function ItemMenu({
         Inspect
       </ContextMenuItem>
 
-      <ContextMenuItem
-        disabled={isActing}
-        onSelect={() =>
-          onAction({ kind: 'level', itemId: item.itemId })
-        }
-      >
-        <ArrowUp className="mr-2 size-3.5" />
-        Level up
-        <ContextMenuShortcut>+1</ContextMenuShortcut>
-      </ContextMenuItem>
+      {canLevel && (
+        <ContextMenuItem
+          disabled={isActing}
+          onSelect={() =>
+            onAction({ kind: 'level', itemId: item.itemId })
+          }
+        >
+          {supercharging ? (
+            <Zap className="mr-2 size-3.5" />
+          ) : (
+            <ArrowUp className="mr-2 size-3.5" />
+          )}
+          {supercharging ? 'Supercharge' : 'Level up'}
+          <ContextMenuShortcut>+1</ContextMenuShortcut>
+        </ContextMenuItem>
+      )}
+
+      {canBulkLevel && (
+        <ContextMenuItem
+          disabled={isActing}
+          onSelect={() =>
+            onAction({
+              kind: 'level',
+              itemId: item.itemId,
+              desiredLevel: bulkTarget as number,
+            })
+          }
+        >
+          <ArrowUp className="mr-2 size-3.5" />
+          Level to {bulkTarget}
+          {bulkTarget === cap && ' (tier max)'}
+          <ContextMenuShortcut>
+            +{(bulkTarget as number) - item.level}
+          </ContextMenuShortcut>
+        </ContextMenuItem>
+      )}
 
       {item.tier > 0 && item.tier < 5 && (
         <ContextMenuItem
@@ -240,7 +280,7 @@ export function RouteComponent() {
         icon={Boxes}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.inventory')}
-        description="Every hero, schematic, defender and survivor the account owns. Click to select, right-click for actions."
+        description="Every hero, schematic, defender and survivor the account owns. Click to inspect, tick to select, right-click for quick actions."
       />
       <Content />
     </>
@@ -248,12 +288,13 @@ export function RouteComponent() {
 }
 
 function Content() {
-  const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
   const [sort, setSort] = useState<SortMode>('power')
 
   const {
     account,
     activeKind,
+    allRows,
     alterationPools,
     clearSelection,
     confirmOpen,
@@ -322,12 +363,59 @@ function Content() {
       }))
   }, [rows, sort])
 
+  /**
+   * The dialog reads the live row, not a snapshot taken on open. An upgrade
+   * reloads the vault, and the whole point of pressing "Evolve" with the
+   * dialog open is watching the level, tier and power actually move. It
+   * reads from the unfiltered set, so narrowing the grid underneath never
+   * touches what the dialog is showing.
+   */
+  const detail = useMemo(
+    () => allRows.find((item) => item.itemId === detailId) ?? null,
+    [allRows, detailId]
+  )
+
+  /** The last row the dialog showed — what a successor is matched against. */
+  const lastDetail = useRef<InventoryRow | null>(null)
+
+  useEffect(() => {
+    if (detail) {
+      lastDetail.current = detail
+    }
+  }, [detail])
+
+  /*
+   * Evolving or upgrading rarity replaces the item on Epic's side — new
+   * item id, new template id — so after the reload the open row is gone.
+   * Follow it to its successor (same item at the same level, tier the same
+   * or one up) instead of snapping the dialog shut and losing the item. A
+   * genuinely gone item (recycled) has no successor and closes as before.
+   */
+  useEffect(() => {
+    if (!detailId || detail) {
+      return
+    }
+
+    const previous = lastDetail.current
+    const successor = previous
+      ? allRows.find(
+          (item) =>
+            item.kind === previous.kind &&
+            item.displayName === previous.displayName &&
+            item.level === previous.level &&
+            item.tier >= previous.tier
+        )
+      : undefined
+
+    setDetailId(successor?.itemId ?? null)
+  }, [allRows, detail, detailId])
+
   /*
    * Every handler a tile is given has to keep its identity between renders,
    * or `memo` on the tile buys nothing and one click re-renders the shelf.
    */
   const handleInspect = useStableCallback((item: InventoryRow) => {
-    setDetail(item)
+    setDetailId(item.itemId)
   })
   const handleRecycleOne = useStableCallback((itemId: string) => {
     handleToggleItem(itemId)
@@ -720,7 +808,7 @@ function Content() {
         onAction={handleItemAction}
         onOpenChange={(open) => {
           if (!open) {
-            setDetail(null)
+            setDetailId(null)
           }
         }}
         ratings={ratings}
@@ -1019,7 +1107,10 @@ const VaultTile = memo(function VaultTile({
         />
       }
       name={item.displayName}
-      onClick={() => (locked ? onInspect(item) : onToggleItem(item.itemId))}
+      onClick={() => onInspect(item)}
+      onToggleSelect={
+        locked ? undefined : () => onToggleItem(item.itemId)
+      }
       portrait={item.portrait}
       power={item.power}
       records={records}
@@ -1029,7 +1120,7 @@ const VaultTile = memo(function VaultTile({
       title={
         locked
           ? 'Protected — click to inspect, right-click for actions'
-          : 'Click to select · right-click for actions'
+          : 'Click to inspect · tick the box to select · right-click for actions'
       }
     />
   )

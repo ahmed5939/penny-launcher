@@ -4,9 +4,9 @@ import type { BrowserWindow, Rectangle } from 'electron'
 import { writeFileSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { screen } from 'electron'
+import { app, screen } from 'electron'
 
-import { DataDirectory } from './data-directory'
+import { resolveLauncherDataDirectory } from '../launcher-paths'
 
 type WindowStateData = {
   bounds: Rectangle
@@ -41,7 +41,7 @@ const defaultBounds: Rectangle = {
  */
 export class WindowState {
   private static filePath = path.join(
-    DataDirectory.getDataDirectoryPath(),
+    resolveLauncherDataDirectory(app.getPath('appData')),
     'window-state.json',
   )
 

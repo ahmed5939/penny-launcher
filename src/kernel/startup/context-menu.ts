@@ -1,6 +1,10 @@
-import type { MenuItemConstructorOptions, WebContents } from 'electron'
+import type {
+  ContextMenuParams,
+  MenuItemConstructorOptions,
+  WebContents,
+} from 'electron'
 
-import { clipboard, Menu } from 'electron'
+import { BrowserWindow, clipboard, Menu } from 'electron'
 
 /**
  * One entry as the renderer describes it. Deliberately data-only: the renderer
@@ -30,6 +34,7 @@ export class NativeContextMenu {
     requestId: string,
     items: Array<ContextMenuRequestItem>,
   ) {
+    let selected = false
     const template: Array<MenuItemConstructorOptions> = items.map((item) => {
       if (item.type === 'separator') {
         return { type: 'separator' }
@@ -39,13 +44,14 @@ export class NativeContextMenu {
         label: item.label ?? '',
         enabled: item.enabled !== false,
         click: () => {
+          selected = true
           if (item.copy !== undefined) {
             clipboard.writeText(item.copy)
           }
 
-          if (item.id && !sender.isDestroyed()) {
+          if (!sender.isDestroyed()) {
             sender.send('context-menu:selected', {
-              itemId: item.id,
+              itemId: item.id ?? null,
               requestId,
             })
           }
@@ -57,6 +63,41 @@ export class NativeContextMenu {
       return
     }
 
-    Menu.buildFromTemplate(template).popup()
+    Menu.buildFromTemplate(template).popup({
+      window: BrowserWindow.fromWebContents(sender) ?? undefined,
+      callback: () => {
+        if (!selected && !sender.isDestroyed()) {
+          sender.send('context-menu:selected', {
+            itemId: null,
+            requestId,
+          })
+        }
+      },
+    })
+  }
+
+  static popupEditable(sender: WebContents, params: ContextMenuParams) {
+    if (!params.isEditable) {
+      return false
+    }
+
+    const { editFlags } = params
+    const template: Array<MenuItemConstructorOptions> = [
+      { role: 'undo', enabled: editFlags.canUndo },
+      { role: 'redo', enabled: editFlags.canRedo },
+      { type: 'separator' },
+      { role: 'cut', enabled: editFlags.canCut },
+      { role: 'copy', enabled: editFlags.canCopy },
+      { role: 'paste', enabled: editFlags.canPaste },
+      { role: 'delete', enabled: editFlags.canDelete },
+      { type: 'separator' },
+      { role: 'selectAll', enabled: editFlags.canSelectAll },
+    ]
+
+    Menu.buildFromTemplate(template).popup({
+      window: BrowserWindow.fromWebContents(sender) ?? undefined,
+    })
+
+    return true
   }
 }

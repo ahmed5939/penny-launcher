@@ -39,6 +39,7 @@ describe('navigation', () => {
       '/stw-operations/leaderboards',
       '/stw-operations/outpost',
       '/account-management/locker',
+      '/account-management/sprites',
     ])
   })
 

@@ -54,10 +54,44 @@ export function useAppKeyboard({
         return
       }
 
-      // F5 — refresh the current view's data, not the document.
-      if (event.key === 'F5') {
+      // F5 / Ctrl+R — refresh data without tearing down the renderer.
+      if (event.key === 'F5' || (event.ctrlKey && event.key.toLowerCase() === 'r')) {
         event.preventDefault()
-        onRefresh?.()
+
+        if (onRefresh) {
+          onRefresh()
+        } else {
+          const refreshEvent = new Event('penny:refresh', {
+            cancelable: true,
+          })
+
+          if (window.dispatchEvent(refreshEvent)) {
+            void router.invalidate()
+          }
+        }
+
+        return
+      }
+
+      // F6 / Shift+F6 — cycle through the app's major regions.
+      if (event.key === 'F6') {
+        const regions = [
+          ...document.querySelectorAll<HTMLElement>('[data-app-focus-region]'),
+        ]
+
+        if (regions.length > 0) {
+          event.preventDefault()
+          const current = regions.findIndex(
+            (region) => region === document.activeElement || region.contains(document.activeElement)
+          )
+          const step = event.shiftKey ? -1 : 1
+          const next = regions[(current + step + regions.length) % regions.length]
+          const focusTarget = next?.querySelector<HTMLElement>(
+            'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+
+          ;(focusTarget ?? next)?.focus()
+        }
 
         return
       }
@@ -67,10 +101,13 @@ export function useAppKeyboard({
         const index = Number.parseInt(event.key, 10)
 
         if (Number.isInteger(index) && index >= 1 && index <= 9) {
-          const { idsList } = useAccountListStore.getState()
+          const { accounts, idsList } = useAccountListStore.getState()
           const accountId = idsList[index - 1]
 
-          if (accountId) {
+          if (
+            accountId &&
+            accounts[accountId]?.authStatus !== 'invalid'
+          ) {
             event.preventDefault()
             useAccountScopeStore.getState().setPrimary(accountId)
           }
