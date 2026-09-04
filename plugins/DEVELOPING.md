@@ -57,6 +57,7 @@ my-plugin/
   "version": "1.0.0",
   "author": "Your Name",
   "category": "Automation",
+  "capabilities": ["background", "changes-app-behavior"],
   "entry": "main.js",
   "readme": "README.md",
   "repository": "https://github.com/owner/repository"
@@ -73,6 +74,7 @@ Field reference (see `src/types/plugins.ts` → `PluginManifest`):
 | `version` | no | Shown in the UI. |
 | `author` | no | Shown in the marketplace. |
 | `category` | no | Marketplace grouping (e.g. `"Automation"`). |
+| `capabilities` | no | User-visible effects. Add `"background"` if work continues without the user opening the add-on, and `"changes-app-behavior"` if it alters Penny's normal behavior. These labels are informational, not permissions. |
 | `entry` | no | Entry file relative to the plugin folder. Defaults to `main.js`. |
 | `readme` | no | Docs file relative to the plugin folder. Defaults to `README.md`. |
 | `repository` | no | Public source link shown in the marketplace. |
@@ -111,6 +113,12 @@ module.exports = { activate }
 
 Everything about the return value is optional: a plugin that only wants to
 run in the background can return nothing at all.
+
+Every successfully activated add-on is shown as **Running** in Penny. If it
+does ongoing work from `activate()`, declare the `"background"` capability;
+if it changes Penny's normal behavior, also declare
+`"changes-app-behavior"`. A tool whose `activate()` only returns an `open`
+action does not need either label.
 
 ### The `context` object
 

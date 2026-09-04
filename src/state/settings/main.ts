@@ -3,6 +3,8 @@ import type { DevSettings, Settings } from '../../types/settings'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 
+import { defaultOverlaySettings } from '../../config/constants/overlay'
+
 export type SettingsState = Settings & {
   customProcessIsRunning: boolean
 
@@ -25,14 +27,13 @@ export const useSettingsStore = create<SettingsState>()(
     path: '',
     systemTray: false,
     discordRichPresence: true,
+    overlay: defaultOverlaySettings,
     userAgent: '',
 
     customProcessIsRunning: false,
 
     updateSettings: (settings) => {
-      const newData: Partial<
-        Record<keyof Settings, boolean | number | string>
-      > = {}
+      const newData: Partial<Settings> = {}
 
       if (settings.autoDailyQuests !== undefined) {
         newData.autoDailyQuests = settings.autoDailyQuests
@@ -56,6 +57,10 @@ export const useSettingsStore = create<SettingsState>()(
 
       if (settings.discordRichPresence !== undefined) {
         newData.discordRichPresence = settings.discordRichPresence
+      }
+
+      if (settings.overlay !== undefined) {
+        newData.overlay = settings.overlay
       }
 
       if (settings.userAgent !== undefined) {

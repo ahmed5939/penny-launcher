@@ -66,6 +66,8 @@ import {
   OUTPOST_MAP_UNDERLAYS,
   underlayBlueprintRect,
 } from '../../../config/constants/outpost-maps'
+import { OUTPOST_ZONE_TERRAIN } from '../../../config/constants/outpost-zones'
+import { zoneTerrainImage } from './-blueprint-terrain'
 
 import { useOutpostData } from './-hooks'
 import { Blueprint3D } from './-blueprint-3d'
@@ -700,11 +702,19 @@ function Blueprint({
   selectedTrap: string | null
   zoneId?: string
 }) {
-  const underlay = zoneId ? OUTPOST_MAP_UNDERLAYS[zoneId] : undefined
-  const underlayRect = underlay ? underlayBlueprintRect(underlay) : null
+  const zoneTerrain = zoneId ? OUTPOST_ZONE_TERRAIN[zoneId] : undefined
+  const underlay =
+    zoneId && !zoneTerrain ? OUTPOST_MAP_UNDERLAYS[zoneId] : undefined
+  const terrainImage = useMemo(
+    () => (zoneTerrain ? zoneTerrainImage(zoneTerrain) : null),
+    [zoneTerrain]
+  )
+  const underlayRect = underlay
+    ? underlayBlueprintRect(underlay)
+    : (terrainImage?.rect ?? null)
   const underlayHref = underlay
     ? (assets(underlay.image) ?? underlay.image)
-    : undefined
+    : terrainImage?.href
   const gridId = useId()
   const gridMajorId = useId()
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -730,8 +740,7 @@ function Blueprint({
    * Drawn a quarter turn counter-clockwise — world (x, y) → screen (y, −x) —
    * so the plan's north/south matches the in-game compass. Wall yaw
    * quadrants shift by one, which swaps their axis to match. Pieces are
-   * stored at their edge origin, so floors, stairs and roofs first move to
-   * the centre of the tile they actually cover; walls stay on their edge.
+   * use their saved actor pivots directly.
    */
   const structures = useMemo(
     () =>

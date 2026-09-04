@@ -1,5 +1,17 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { BookOpen, Boxes, Code2, Download, FolderOpen, Puzzle, Trash2 } from 'lucide-react'
+import {
+  Activity,
+  BookOpen,
+  Boxes,
+  Code2,
+  Download,
+  FolderOpen,
+  Puzzle,
+  Settings2,
+  Trash2,
+} from 'lucide-react'
+
+import type { PluginCapability } from '../../types/plugins'
 
 import { Button } from '../../components/ui/button'
 import {
@@ -22,6 +34,43 @@ import {
 } from '../../components/page'
 
 import { usePluginsData } from './-hooks'
+
+const capabilityLabels: Record<
+  PluginCapability,
+  { icon: typeof Activity; label: string }
+> = {
+  background: { icon: Activity, label: 'Runs in background' },
+  'changes-app-behavior': {
+    icon: Settings2,
+    label: 'Changes Penny behavior',
+  },
+}
+
+function CapabilityPills({
+  capabilities,
+}: {
+  capabilities: Array<PluginCapability>
+}) {
+  if (capabilities.length === 0) return null
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {capabilities.map((capability) => {
+        const { icon: Icon, label } = capabilityLabels[capability]
+
+        return (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-wide text-warning"
+            key={capability}
+          >
+            <Icon className="size-3" />
+            {label}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
 
 export function RouteComponent() {
   const {
@@ -56,6 +105,7 @@ export function RouteComponent() {
 
       <Callout className="mb-4" title="Add-ons run with desktop access" tone="warning">
         Review the README and source before installing add-ons you do not trust.
+        Installation starts an add-on immediately, and it starts again with Penny.
         Installed add-ons can access the same files and services as Penny.
       </Callout>
 
@@ -99,6 +149,7 @@ export function RouteComponent() {
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {plugin.description ?? 'No description provided.'}
                     </p>
+                    <CapabilityPills capabilities={plugin.capabilities} />
                   </PanelBody>
                   <PanelFooter>
                     <Button
@@ -151,7 +202,7 @@ export function RouteComponent() {
                       plugin.status === 'error' ? (
                         <StatusPill tone="danger">Error</StatusPill>
                       ) : (
-                        <StatusPill tone="active">Ready</StatusPill>
+                        <StatusPill pulse tone="active">Running</StatusPill>
                       )
                     }
                   />
@@ -159,6 +210,7 @@ export function RouteComponent() {
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {plugin.description ?? 'No description provided.'}
                     </p>
+                    <CapabilityPills capabilities={plugin.capabilities} />
                     {plugin.error && (
                       <Callout className="mt-3" title="Add-on failed to load" tone="warning">
                         {plugin.error}

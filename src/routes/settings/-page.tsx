@@ -25,6 +25,7 @@ import { PageHeader } from '../../components/page'
 import { AccountCustomization } from './-account-customization/-index'
 import { AppSettings } from './-app-settings/-index'
 import { CustomizableMenu } from './-customizable-menu/-index'
+import { OverlaySettingsForm } from './-overlay-settings'
 
 import { useGetAccounts } from '../../hooks/accounts'
 
@@ -34,6 +35,7 @@ enum SettingsSections {
   AppSettings = 'app-settings',
   CustomizableMenu = 'customizable-menu',
   AccountCustomization = 'account-customization',
+  Overlay = 'overlay',
 }
 
 export function RouteComponent() {
@@ -190,6 +192,20 @@ function Content() {
 
             <AccordionItem
               className="mb-3 rounded-xl border border-border/60 bg-card/40 px-4"
+              value={SettingsSections.Overlay}
+            >
+              <AccordionTrigger className="section-trigger" hideIcon>
+                <SeparatorWithTitle className="section-title">
+                  {t('overlay.title')} <ChevronDown className="section-icon" />
+                </SeparatorWithTitle>
+              </AccordionTrigger>
+              <AccordionContent className="section-content">
+                <OverlaySettingsForm />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem
+              className="mb-3 rounded-xl border border-border/60 bg-card/40 px-4"
               value={SettingsSections.CustomizableMenu}
             >
               <AccordionTrigger
@@ -229,4 +245,3 @@ function Content() {
     </div>
   )
 }
-

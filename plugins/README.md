@@ -24,6 +24,7 @@ my-plugin/
   "name": "My Plugin",
   "description": "One-line description shown on the Plugins page.",
   "version": "1.0.0",
+  "capabilities": ["background", "changes-app-behavior"],
   "entry": "main.js",
   "readme": "README.md",
   "repository": "https://github.com/owner/repository"
@@ -63,6 +64,10 @@ Plugins run in the main process with full Electron/Node access, and can
 require the launcher's dependencies (e.g. `uiohook-napi`) by name.
 If `activate()` throws, the plugin shows on the Plugins page with an error
 badge instead of breaking startup.
+
+Use `capabilities` to tell users when an add-on continues working in the
+background or changes Penny's normal behavior. These labels are informational;
+they do not grant or restrict permissions.
 
 Every marketplace package should include a README and a public source link so
 people can understand, audit and reuse the code before installing it.

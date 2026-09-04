@@ -65,6 +65,59 @@
       }
     }
   },
+  "overlay": {
+    "title": "Quest Overlay",
+    "form": {
+      "enabled": {
+        "label": "Enable quest overlay",
+        "note": "Makes the Windows overlay and Ctrl + Shift + Q shortcut available."
+      },
+      "position": {
+        "label": "Screen position",
+        "options": {
+          "top-left": "Top left",
+          "top-right": "Top right",
+          "bottom-left": "Bottom left",
+          "bottom-right": "Bottom right"
+        }
+      },
+      "scale": {
+        "label": "Size",
+        "options": {
+          "compact": "Compact",
+          "normal": "Normal",
+          "large": "Large"
+        }
+      },
+      "opacity": { "label": "Opacity" },
+      "refresh": { "label": "Refresh interval (minutes)" },
+      "players": { "label": "Maximum players" },
+      "quests": { "label": "Maximum quests per player" },
+      "details": {
+        "title": "Information to show",
+        "options": {
+          "squad-members": "Squad members",
+          "mission": "Current mission",
+          "ventures-level": "Ventures level",
+          "descriptions": "Quest descriptions",
+          "progress": "Quest progress"
+        }
+      },
+      "groups": {
+        "title": "Quest categories",
+        "options": {
+          "daily": "Daily",
+          "ventures": "Ventures",
+          "weekly": "Weekly",
+          "storm-shield": "Storm Shield",
+          "wargames": "Wargames",
+          "dungeons": "Dungeons",
+          "endurance": "Endurance",
+          "active": "Other active quests"
+        }
+      }
+    }
+  },
   "custom-menu": {
     "title": "Customizable Menu",
     "description": "Show or hide sidebar items. Hidden tools stay reachable from search (Ctrl+K). The same toggles are available from Customize at the bottom of the rail."

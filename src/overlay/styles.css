@@ -7,6 +7,11 @@ body,
   background: transparent !important;
 }
 
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
 body {
   margin: 0;
   color: #fff;
@@ -27,6 +32,10 @@ body {
     rgb(13 10 14 / 92%);
   box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
   backdrop-filter: blur(18px);
+}
+
+.quest-overlay.position-bottom {
+  margin-top: auto;
 }
 
 .overlay-header,

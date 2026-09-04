@@ -26,6 +26,7 @@ import { app, safeStorage } from 'electron'
 
 import { defaultMissionInterval } from '../../config/constants/automation'
 import { defaultClaimingRewardsDelay } from '../../config/constants/mcp'
+import { defaultOverlaySettings } from '../../config/constants/overlay'
 
 import { accountListSchema } from '../../lib/validations/schemas/accounts'
 import { autoLlamasDataRecordSchema } from '../../lib/validations/schemas/auto-llamas'
@@ -109,6 +110,7 @@ export class DataDirectory {
     path: 'C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Binaries\\Win64',
     systemTray: false,
     discordRichPresence: true,
+    overlay: defaultOverlaySettings,
     userAgent: 'Fortnite/++Fortnite+Release-34.40-CL-41753727-Windows',
   }
 

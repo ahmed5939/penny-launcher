@@ -16,11 +16,19 @@ import {
   OUTPOST_MAP_UNDERLAYS,
   underlayBlueprintRect,
 } from '../../../config/constants/outpost-maps'
+import { OUTPOST_ZONE_TERRAIN } from '../../../config/constants/outpost-zones'
 
 import { assets } from '../../../lib/repository'
 import { cn } from '../../../lib/utils'
 
 import { BlueprintCanvas3D } from './-blueprint-canvas-3d'
+import {
+  CELL_COLORS,
+  CELL_GRASS,
+  buildZoneHeightGrid,
+  cellShade,
+  zonePropsAsLayout,
+} from './-blueprint-terrain'
 import {
   KIND_FLOOR,
   KIND_ROOF,
@@ -245,12 +253,90 @@ function groundTexture() {
   })
 }
 
+/** Fine volcanic grit multiplied over the extracted biome colours. */
+function terrainDetailTexture() {
+  return canvasTexture(256, (context, size) => {
+    const random = seededRandom(47)
+
+    context.fillStyle = '#d5d2c8'
+    context.fillRect(0, 0, size, size)
+
+    for (let index = 0; index < 1800; index += 1) {
+      const tone = Math.round(105 + random() * 95)
+      const alpha = 0.08 + random() * 0.2
+
+      context.fillStyle = `rgba(${tone},${tone},${tone},${alpha})`
+      context.beginPath()
+      context.arc(
+        random() * size,
+        random() * size,
+        0.3 + random() * 1.6,
+        0,
+        Math.PI * 2
+      )
+      context.fill()
+    }
+
+    context.strokeStyle = 'rgba(52, 43, 38, 0.16)'
+    context.lineWidth = 0.8
+    for (let crack = 0; crack < 22; crack += 1) {
+      const x = random() * size
+      const y = random() * size
+
+      context.beginPath()
+      context.moveTo(x, y)
+      context.lineTo(x + random() * 12 - 6, y + random() * 12 - 6)
+      context.lineTo(x + random() * 18 - 9, y + random() * 18 - 9)
+      context.stroke()
+    }
+  })
+}
+
+/** Emissive magma with dark floating crust, based on Twine's lava materials. */
+function lavaTexture() {
+  return canvasTexture(192, (context, size) => {
+    const random = seededRandom(89)
+    const gradient = context.createRadialGradient(
+      size * 0.48,
+      size * 0.52,
+      4,
+      size * 0.5,
+      size * 0.5,
+      size * 0.72
+    )
+
+    gradient.addColorStop(0, '#ffd04b')
+    gradient.addColorStop(0.38, '#ff6929')
+    gradient.addColorStop(1, '#8f1e18')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, size, size)
+
+    context.strokeStyle = 'rgba(47, 24, 27, 0.78)'
+    for (let flow = 0; flow < 34; flow += 1) {
+      const y = random() * size
+
+      context.lineWidth = 1 + random() * 4
+      context.beginPath()
+      context.moveTo(-8, y)
+      context.bezierCurveTo(
+        size * 0.3,
+        y + random() * 28 - 14,
+        size * 0.7,
+        y + random() * 28 - 14,
+        size + 8,
+        y + random() * 14 - 7
+      )
+      context.stroke()
+    }
+  })
+}
+
 // ── Piece geometry ───────────────────────────────────────────
 /*
  * Every piece is modelled in a local frame that matches how the save stores
- * it: the origin is the midpoint of the tile edge the actor sits on, +X runs
- * forward across the tile (so the tile spans X 0…1, Z −0.5…0.5) and Y is up.
- * The yaw quadrant then becomes a plain rotation about Y.
+ * it: the origin is the actor pivot at the tile centre, +X runs forward
+ * across the tile, Z runs across its width and Y is up. The yaw quadrant
+ * then becomes a plain rotation about Y.
  */
 
 type Rectangle = [number, number, number, number]
@@ -330,14 +416,14 @@ function slabGeometry(quarters: Array<Rectangle>) {
   return merged ?? new THREE.BoxGeometry(0.94, FLOOR_THICKNESS, 0.94)
 }
 
-/** A ramp rising forward one storey — Fortnite's stair piece. */
+/** A Fortnite stair rises opposite the actor's stored forward vector. */
 function rampGeometry(rise = STOREY_HEIGHT, thickness = 0.06) {
   const profile = new THREE.Shape()
 
-  profile.moveTo(0.02, -thickness)
-  profile.lineTo(0.98, rise - thickness)
-  profile.lineTo(0.98, rise)
-  profile.lineTo(0.02, 0)
+  profile.moveTo(0.48, -thickness)
+  profile.lineTo(-0.48, rise - thickness)
+  profile.lineTo(-0.48, rise)
+  profile.lineTo(0.48, 0)
   profile.closePath()
 
   const geometry = new THREE.ExtrudeGeometry(profile, {
@@ -397,11 +483,11 @@ const ROOF_HEIGHT = 0.5
 
 /** A pyramid roof; `sides` picks which slopes exist (front, left, back, right). */
 function pyramidGeometry(sides: [boolean, boolean, boolean, boolean]) {
-  const apex: Vec3 = [0.5, ROOF_HEIGHT, 0]
-  const a: Vec3 = [0.02, 0, -0.48]
-  const b: Vec3 = [0.98, 0, -0.48]
-  const c: Vec3 = [0.98, 0, 0.48]
-  const d: Vec3 = [0.02, 0, 0.48]
+  const apex: Vec3 = [0, ROOF_HEIGHT, 0]
+  const a: Vec3 = [-0.48, 0, -0.48]
+  const b: Vec3 = [0.48, 0, -0.48]
+  const c: Vec3 = [0.48, 0, 0.48]
+  const d: Vec3 = [-0.48, 0, 0.48]
   const faces: Array<Array<Vec3>> = [[a, b, c, d]]
   const slopes: Array<Array<Vec3>> = [
     [a, d, apex],
@@ -417,29 +503,36 @@ function pyramidGeometry(sides: [boolean, boolean, boolean, boolean]) {
   return polyhedronGeometry(faces)
 }
 
-/** A single slope rising to a ridge on the far edge. */
+/** Reverse an asymmetric roof edit to match Fortnite's stored facing. */
+function reverseRoofDirection(geometry: THREE.BufferGeometry) {
+  geometry.rotateY(Math.PI)
+
+  return geometry
+}
+
+/** A single slope rising opposite the actor's stored forward vector. */
 function wedgeGeometry(height = ROOF_HEIGHT) {
-  const a: Vec3 = [0.02, 0, -0.48]
-  const b: Vec3 = [0.98, 0, -0.48]
-  const c: Vec3 = [0.98, 0, 0.48]
-  const d: Vec3 = [0.02, 0, 0.48]
-  const bTop: Vec3 = [0.98, height, -0.48]
-  const cTop: Vec3 = [0.98, height, 0.48]
+  const a: Vec3 = [-0.48, 0, -0.48]
+  const b: Vec3 = [0.48, 0, -0.48]
+  const c: Vec3 = [0.48, 0, 0.48]
+  const d: Vec3 = [-0.48, 0, 0.48]
+  const aTop: Vec3 = [-0.48, height, -0.48]
+  const dTop: Vec3 = [-0.48, height, 0.48]
 
   return polyhedronGeometry([
     [a, b, c, d],
-    [a, d, cTop, bTop],
-    [b, bTop, cTop, c],
-    [a, bTop, b],
-    [d, c, cTop],
+    [aTop, dTop, c, b],
+    [a, d, dTop, aTop],
+    [a, aTop, b],
+    [d, c, dTop],
   ])
 }
 
-const FULL_TILE: Array<Rectangle> = [[0, 1, -0.5, 0.5]]
-const NEAR_LEFT: Rectangle = [0, 0.5, -0.5, 0]
-const NEAR_RIGHT: Rectangle = [0, 0.5, 0, 0.5]
-const FAR_LEFT: Rectangle = [0.5, 1, -0.5, 0]
-const FAR_RIGHT: Rectangle = [0.5, 1, 0, 0.5]
+const FULL_TILE: Array<Rectangle> = [[-0.5, 0.5, -0.5, 0.5]]
+const NEAR_LEFT: Rectangle = [-0.5, 0, -0.5, 0]
+const NEAR_RIGHT: Rectangle = [-0.5, 0, 0, 0.5]
+const FAR_LEFT: Rectangle = [0, 0.5, -0.5, 0]
+const FAR_RIGHT: Rectangle = [0, 0.5, 0, 0.5]
 
 /**
  * Geometry for a piece by its class-name shape, falling back to the coarse
@@ -485,9 +578,9 @@ function shapeGeometry(shape: string, kind: number): THREE.BufferGeometry {
     case 'roofc':
       return pyramidGeometry([true, true, true, true])
     case 'roofi':
-      return pyramidGeometry([true, true, true, false])
+      return reverseRoofDirection(pyramidGeometry([true, true, true, false]))
     case 'roofo':
-      return pyramidGeometry([true, true, false, false])
+      return reverseRoofDirection(pyramidGeometry([true, true, false, false]))
     case 'roofs':
       return wedgeGeometry()
     case 'roofwall':
@@ -521,7 +614,7 @@ function shapeGeometry(shape: string, kind: number): THREE.BufferGeometry {
     default: {
       const box = new THREE.BoxGeometry(0.6, 0.4, 0.6)
 
-      box.translate(0.5, 0.2, 0)
+      box.translate(0, 0.2, 0)
 
       return box
     }
@@ -671,6 +764,30 @@ function loadIconTexture(url: string, onLoad: () => void) {
   return texture
 }
 
+/** A flat square outline assembled from four strips, centred on the origin. */
+function squareFrameGeometry(size: number, thickness: number) {
+  const inset = size - thickness
+  const parts = [
+    new THREE.PlaneGeometry(size, thickness).translate(0, inset / 2, 0),
+    new THREE.PlaneGeometry(size, thickness).translate(0, -inset / 2, 0),
+    new THREE.PlaneGeometry(thickness, size - thickness * 2).translate(
+      inset / 2,
+      0,
+      0
+    ),
+    new THREE.PlaneGeometry(thickness, size - thickness * 2).translate(
+      -inset / 2,
+      0,
+      0
+    ),
+  ]
+  const geometry = mergeGeometries(parts, false)
+
+  parts.forEach((part) => part.dispose())
+
+  return geometry ?? new THREE.PlaneGeometry(size, size)
+}
+
 /** Placement of a trap icon: where it sits and which way it faces. */
 function trapPlacement(
   trap: OutpostLayout['traps'][number],
@@ -812,6 +929,7 @@ function BlueprintScene({
       return resource
     }
 
+    const dummy = new THREE.Object3D()
     const centerX = (layout.bounds.minX + layout.bounds.maxX) / 2
     const centerY = (layout.bounds.minY + layout.bounds.maxY) / 2
     const floorZ = layout.bounds.minZ
@@ -828,6 +946,13 @@ function BlueprintScene({
     scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x3a4030, 1.6))
 
     const sun = new THREE.DirectionalLight(0xfff2dc, 2.4)
+    const terrain = zoneId ? OUTPOST_ZONE_TERRAIN[zoneId] : undefined
+
+    if (terrain) {
+      scene.background = new THREE.Color(0x17232b)
+      scene.fog = new THREE.Fog(0x17232b, distance * 2.2, distance * 7)
+    }
+
     const groundMargin = 5
     const propReach = 25
     const visibleProps = showProps
@@ -840,18 +965,27 @@ function BlueprintScene({
             y <= layout.bounds.maxY + propReach
         )
       : []
-    const groundBounds = {
-      maxX: layout.bounds.maxX + groundMargin,
-      maxY: layout.bounds.maxY + groundMargin,
-      minX: layout.bounds.minX - groundMargin,
-      minY: layout.bounds.minY - groundMargin,
-    }
+    const groundBounds = terrain
+      ? {
+          maxX: terrain.bounds.maxX + 3,
+          maxY: terrain.bounds.maxY + 3,
+          minX: terrain.bounds.minX - 3,
+          minY: terrain.bounds.minY - 3,
+        }
+      : {
+          maxX: layout.bounds.maxX + groundMargin,
+          maxY: layout.bounds.maxY + groundMargin,
+          minX: layout.bounds.minX - groundMargin,
+          minY: layout.bounds.minY - groundMargin,
+        }
 
-    for (const [x, y] of visibleProps) {
-      groundBounds.minX = Math.min(groundBounds.minX, x - 2)
-      groundBounds.maxX = Math.max(groundBounds.maxX, x + 2)
-      groundBounds.minY = Math.min(groundBounds.minY, y - 2)
-      groundBounds.maxY = Math.max(groundBounds.maxY, y + 2)
+    if (!terrain) {
+      for (const [x, y] of visibleProps) {
+        groundBounds.minX = Math.min(groundBounds.minX, x - 2)
+        groundBounds.maxX = Math.max(groundBounds.maxX, x + 2)
+        groundBounds.minY = Math.min(groundBounds.minY, y - 2)
+        groundBounds.maxY = Math.max(groundBounds.maxY, y + 2)
+      }
     }
 
     const groundWidth = groundBounds.maxY - groundBounds.minY
@@ -904,34 +1038,186 @@ function BlueprintScene({
     resetRef.current = resetCamera
     controls.addEventListener('change', rememberCamera)
 
-    // Ground and grid.
-    const groundMap = track(groundTexture())
+    // Ground: the zone's extracted terrain when we have it, flat otherwise.
+    if (terrain) {
+      const heightGrid = buildZoneHeightGrid(terrain)
+      const { cols, heights, kinds, minX, minY, rows } = heightGrid
+      const positions = new Float32Array(rows * cols * 3)
+      const colorValues = new Float32Array(rows * cols * 3)
+      const color = new THREE.Color()
+      let zMin = Infinity
+      let zMax = -Infinity
 
-    groundMap.repeat.set(groundWidth / 4, groundDepth / 4)
+      for (const height of heights) {
+        zMin = Math.min(zMin, height)
+        zMax = Math.max(zMax, height)
+      }
 
-    const ground = new THREE.Mesh(
-      track(new THREE.PlaneGeometry(groundWidth, groundDepth)),
-      track(
-        new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          map: groundMap,
-          roughness: 1,
-        })
+      for (let ix = 0; ix < rows; ix++) {
+        for (let iy = 0; iy < cols; iy++) {
+          const i = ix * cols + iy
+          const vertex = toScene(minX + ix, minY + iy, heights[i])
+          const base = CELL_COLORS[kinds[i]] ?? CELL_COLORS[CELL_GRASS]
+          const neighbourHeights = [
+            ix > 0 ? heights[i - cols] : heights[i],
+            ix + 1 < rows ? heights[i + cols] : heights[i],
+            iy > 0 ? heights[i - 1] : heights[i],
+            iy + 1 < cols ? heights[i + 1] : heights[i],
+          ]
+          const slope = Math.max(
+            ...neighbourHeights.map((height) => Math.abs(height - heights[i]))
+          )
+          const rockBlend =
+            kinds[i] === CELL_GRASS ? Math.min(0.72, slope * 0.38) : 0
+          const rock = CELL_COLORS[3]
+          const r = base[0] + (rock[0] - base[0]) * rockBlend
+          const g = base[1] + (rock[1] - base[1]) * rockBlend
+          const b = base[2] + (rock[2] - base[2]) * rockBlend
+          const relief =
+            0.72 + 0.4 * ((heights[i] - zMin) / Math.max(1, zMax - zMin))
+          const shade = cellShade(minX + ix, minY + iy) * relief
+
+          positions.set([vertex.x, vertex.y, vertex.z], i * 3)
+          color.setRGB(
+            Math.min(1, (r / 255) * shade),
+            Math.min(1, (g / 255) * shade),
+            Math.min(1, (b / 255) * shade),
+            THREE.SRGBColorSpace
+          )
+          colorValues.set([color.r, color.g, color.b], i * 3)
+        }
+      }
+
+      const indices: Array<number> = []
+
+      for (let ix = 0; ix < rows - 1; ix++) {
+        for (let iy = 0; iy < cols - 1; iy++) {
+          const a = ix * cols + iy
+          const b = a + 1
+          const c = a + cols
+          const d = c + 1
+
+          indices.push(a, b, c, b, d, c)
+        }
+      }
+
+      const terrainGeometry = track(new THREE.BufferGeometry())
+
+      terrainGeometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(positions, 3)
       )
-    )
+      terrainGeometry.setAttribute(
+        'color',
+        new THREE.BufferAttribute(colorValues, 3)
+      )
+      terrainGeometry.setIndex(indices)
+      terrainGeometry.computeVertexNormals()
 
-    ground.rotation.x = -Math.PI / 2
-    ground.position.copy(groundCentre).setY(-FLOOR_THICKNESS - 0.02)
-    ground.receiveShadow = true
-    scene.add(ground)
+      const terrainMap = track(terrainDetailTexture())
+
+      terrainMap.repeat.set(groundWidth / 3.5, groundDepth / 3.5)
+
+      const terrainMesh = new THREE.Mesh(
+        terrainGeometry,
+        track(
+          new THREE.MeshStandardMaterial({
+            bumpMap: terrainMap,
+            bumpScale: 0.035,
+            map: terrainMap,
+            roughness: 0.9,
+            vertexColors: true,
+          })
+        )
+      )
+
+      terrainMesh.receiveShadow = true
+      scene.add(terrainMesh)
+
+      /* The sea around the island, just above the seabed cells. */
+      const water = new THREE.Mesh(
+        track(new THREE.PlaneGeometry(groundWidth + 20, groundDepth + 20)),
+        track(
+          new THREE.MeshStandardMaterial({
+            color: 0x285f73,
+            metalness: 0.08,
+            opacity: 0.7,
+            roughness: 0.18,
+            transparent: true,
+          })
+        )
+      )
+
+      water.rotation.x = -Math.PI / 2
+      water.position
+        .copy(groundCentre)
+        .setY(terrain.waterZ - floorZ + 0.02)
+      scene.add(water)
+
+      /* Lava pools glow on their own, unlit. */
+      if (terrain.lava.length > 0) {
+        const glowGeometry = track(new THREE.PlaneGeometry(1, 1))
+        const magmaMap = track(lavaTexture())
+
+        magmaMap.repeat.set(2, 2)
+        const glow = new THREE.InstancedMesh(
+          glowGeometry,
+          track(
+            new THREE.MeshBasicMaterial({
+              color: 0xff7b2d,
+              map: magmaMap,
+              opacity: 0.94,
+              side: THREE.DoubleSide,
+              toneMapped: false,
+              transparent: true,
+            })
+          ),
+          terrain.lava.length
+        )
+
+        terrain.lava.forEach(
+          ([x, y, z, halfX = 1.5, halfY = 1.5], index) => {
+            dummy.position.copy(toScene(x, y, z + 0.08))
+            dummy.rotation.set(-Math.PI / 2, 0, 0)
+            dummy.scale.set(halfY * 2, halfX * 2, 1)
+            dummy.updateMatrix()
+            glow.setMatrixAt(index, dummy.matrix)
+          }
+        )
+        glow.computeBoundingSphere()
+        scene.add(glow)
+      }
+    } else {
+      const groundMap = track(groundTexture())
+
+      groundMap.repeat.set(groundWidth / 4, groundDepth / 4)
+
+      const ground = new THREE.Mesh(
+        track(new THREE.PlaneGeometry(groundWidth, groundDepth)),
+        track(
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            map: groundMap,
+            roughness: 1,
+          })
+        )
+      )
+
+      ground.rotation.x = -Math.PI / 2
+      ground.position.copy(groundCentre).setY(-FLOOR_THICKNESS - 0.02)
+      ground.receiveShadow = true
+      scene.add(ground)
+    }
 
     /*
      * A calibrated overhead capture of the zone, when one is configured,
      * lies on top of the ground so the build sits on the real terrain.
+     * Skipped when extracted terrain already provides the real ground.
      * Blueprint x runs along scene X and blueprint y along scene Z, so the
      * rectangle maps straight onto a flat plane.
      */
-    const underlay = zoneId ? OUTPOST_MAP_UNDERLAYS[zoneId] : undefined
+    const underlay =
+      zoneId && !terrain ? OUTPOST_MAP_UNDERLAYS[zoneId] : undefined
 
     if (underlay) {
       const rect = underlayBlueprintRect(underlay)
@@ -1019,8 +1305,6 @@ function BlueprintScene({
       else groups.set(key, [piece])
     }
 
-    const dummy = new THREE.Object3D()
-
     for (const pieces of groups.values()) {
       const [, , , materialCode, kind, , shapeIndex] = pieces[0]
       const shape = layout.shapes[shapeIndex] ?? ''
@@ -1044,7 +1328,7 @@ function BlueprintScene({
       scene.add(mesh)
     }
 
-    // Traps: the item icon on a category-coloured disc, placed where it acts.
+    // Traps: surface-mounted plates with the real inventory art kept legible.
     const visibleTraps = layout.traps.filter((trap) => trap[2] <= maxVisibleZ)
     const fallbackIcon = assets('voucher_generic_trap')
     const iconGroups = new Map<string, Array<OutpostLayout['traps'][number]>>()
@@ -1061,9 +1345,10 @@ function BlueprintScene({
 
     const pickables: Array<THREE.InstancedMesh> = []
     const namesByMesh = new Map<string, Array<string>>()
-    const iconGeometry = track(new THREE.PlaneGeometry(0.7, 0.7))
-    const discGeometry = track(new THREE.CircleGeometry(0.42, 28))
-    const ringGeometry = track(new THREE.RingGeometry(0.46, 0.55, 40))
+    const iconGeometry = track(new THREE.PlaneGeometry(0.46, 0.46))
+    const mountGeometry = track(new THREE.PlaneGeometry(0.58, 0.58))
+    const frameGeometry = track(squareFrameGeometry(0.62, 0.035))
+    const selectionGeometry = track(squareFrameGeometry(0.72, 0.035))
     const selectionOnMap = visibleTraps.some(
       (trap) => layout.trapNames[trap[4]] === selectedTrap
     )
@@ -1071,14 +1356,15 @@ function BlueprintScene({
     const bright = new THREE.Color(1, 1, 1)
     const selectedPlacements: Array<ReturnType<typeof trapPlacement>> = []
     const disposeTrapMaterial = (material: THREE.Material) => track(material)
-    /* Discs are one mesh per category so each carries its own colour. */
-    const discsByCategory = new Map<number, Array<OutpostLayout['traps'][number]>>()
+    const mountsByCategory = new Map<number, Array<OutpostLayout['traps'][number]>>()
 
     for (const [url, traps] of iconGroups) {
       const material = disposeTrapMaterial(
         new THREE.MeshBasicMaterial({
           alphaTest: 0.08,
           depthWrite: false,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
           side: THREE.DoubleSide,
           toneMapped: false,
           transparent: true,
@@ -1100,22 +1386,28 @@ function BlueprintScene({
       traps.forEach((trap, index) => {
         const name = layout.trapNames[trap[4]] ?? 'Unknown trap'
         const selected = selectedTrap === name
-        const placement = trapPlacement(trap, toScene, 0.03 + (selected ? 0.01 : 0))
+        const placement = trapPlacement(
+          trap,
+          toScene,
+          0.03
+        )
 
         names[index] = name
         dummy.position.copy(placement.position)
         dummy.quaternion.copy(placement.quaternion)
-        dummy.scale.setScalar(selected ? 1.3 : 1)
+        dummy.scale.setScalar(1)
         dummy.updateMatrix()
         mesh.setMatrixAt(index, dummy.matrix)
         mesh.setColorAt(index, selectionOnMap && !selected ? dimmed : bright)
 
-        if (selected) selectedPlacements.push(trapPlacement(trap, toScene, 0.02))
+        if (selected) {
+          selectedPlacements.push(trapPlacement(trap, toScene, 0.036))
+        }
 
-        const discs = discsByCategory.get(trap[3])
+        const mounts = mountsByCategory.get(trap[3])
 
-        if (discs) discs.push(trap)
-        else discsByCategory.set(trap[3], [trap])
+        if (mounts) mounts.push(trap)
+        else mountsByCategory.set(trap[3], [trap])
       })
       mesh.renderOrder = 2
       mesh.computeBoundingSphere()
@@ -1124,45 +1416,80 @@ function BlueprintScene({
       namesByMesh.set(mesh.uuid, names)
     }
 
-    for (const [category, traps] of discsByCategory) {
-      const material = disposeTrapMaterial(
+    for (const [category, traps] of mountsByCategory) {
+      const categoryColor = TRAP_COLORS[category] ?? TRAP_COLORS[3]
+      const mountMaterial = disposeTrapMaterial(
         new THREE.MeshBasicMaterial({
-          color: TRAP_COLORS[category] ?? TRAP_COLORS[3],
-          opacity: 0.92,
+          color: 0x17202a,
+          depthWrite: false,
+          opacity: 0.84,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
           side: THREE.DoubleSide,
           toneMapped: false,
           transparent: true,
         })
       )
-      const mesh = new THREE.InstancedMesh(discGeometry, material, traps.length)
+      const frameMaterial = disposeTrapMaterial(
+        new THREE.MeshBasicMaterial({
+          color: categoryColor,
+          depthWrite: false,
+          opacity: 0.95,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          side: THREE.DoubleSide,
+          toneMapped: false,
+          transparent: true,
+        })
+      )
+      const mount = new THREE.InstancedMesh(
+        mountGeometry,
+        mountMaterial,
+        traps.length
+      )
+      const frame = new THREE.InstancedMesh(
+        frameGeometry,
+        frameMaterial,
+        traps.length
+      )
       const names: Array<string> = []
 
       traps.forEach((trap, index) => {
         const name = layout.trapNames[trap[4]] ?? 'Unknown trap'
-        const selected = selectedTrap === name
-        const placement = trapPlacement(trap, toScene, 0.018)
+        const mountPlacement = trapPlacement(trap, toScene, 0.012)
+        const framePlacement = trapPlacement(trap, toScene, 0.02)
 
         names[index] = name
-        dummy.position.copy(placement.position)
-        dummy.quaternion.copy(placement.quaternion)
-        dummy.scale.setScalar(selected ? 1.3 : 1)
+        dummy.position.copy(mountPlacement.position)
+        dummy.quaternion.copy(mountPlacement.quaternion)
+        dummy.scale.setScalar(1)
         dummy.updateMatrix()
-        mesh.setMatrixAt(index, dummy.matrix)
-        mesh.setColorAt(index, selectionOnMap && !selected ? dimmed : bright)
+        mount.setMatrixAt(index, dummy.matrix)
+
+        dummy.position.copy(framePlacement.position)
+        dummy.quaternion.copy(framePlacement.quaternion)
+        dummy.updateMatrix()
+        frame.setMatrixAt(index, dummy.matrix)
       })
-      mesh.renderOrder = 1
-      mesh.computeBoundingSphere()
-      scene.add(mesh)
-      pickables.push(mesh)
-      namesByMesh.set(mesh.uuid, names)
+      mount.renderOrder = 1
+      frame.renderOrder = 2
+      mount.computeBoundingSphere()
+      frame.computeBoundingSphere()
+      scene.add(mount, frame)
+      pickables.push(mount, frame)
+      namesByMesh.set(mount.uuid, names)
+      namesByMesh.set(frame.uuid, names)
     }
 
     if (selectedPlacements.length > 0) {
       const ring = new THREE.InstancedMesh(
-        ringGeometry,
+        selectionGeometry,
         disposeTrapMaterial(
           new THREE.MeshBasicMaterial({
             color: 0xffffff,
+            depthWrite: false,
+            polygonOffset: true,
+            polygonOffsetFactor: -3,
             side: THREE.DoubleSide,
             toneMapped: false,
           })
@@ -1182,15 +1509,28 @@ function BlueprintScene({
       scene.add(ring)
     }
 
-    // World props, instanced per silhouette.
+    // World props, instanced per silhouette. The zone's own vegetation and
+    // boulders (from the extracted terrain) join the save's recorded actors.
+    const zoneExtra =
+      terrain && showProps ? zonePropsAsLayout(terrain, layout.props) : null
+    const propEntries = [
+      ...visibleProps.map((prop) => ({
+        className: layout.propNames[prop[6]] ?? '',
+        prop,
+      })),
+      ...(zoneExtra?.props ?? [])
+        .filter((prop) => prop[2] <= maxVisibleZ)
+        .map((prop) => ({
+          className: zoneExtra.names[prop[6]] ?? '',
+          prop,
+        })),
+    ]
     const propGroups = new Map<
       string,
       { pieces: Array<OutpostLayout['props'][number]>; style: PropStyle }
     >()
 
-    for (const prop of visibleProps) {
-      const className = layout.propNames[prop[6]] ?? ''
-
+    for (const { className, prop } of propEntries) {
       for (const [key, style] of Object.entries(propStyle(prop[3], className))) {
         const group = propGroups.get(key)
 
@@ -1395,7 +1735,9 @@ export function Blueprint3D({
   /** Picks the zone's calibrated map underlay, when one is configured. */
   zoneId?: string
 }) {
-  const underlay = zoneId ? OUTPOST_MAP_UNDERLAYS[zoneId] : undefined
+  const zoneTerrain = zoneId ? OUTPOST_ZONE_TERRAIN[zoneId] : undefined
+  const underlay =
+    zoneId && !zoneTerrain ? OUTPOST_MAP_UNDERLAYS[zoneId] : undefined
   const heights = useMemo(() => outpostHeightLevels(layout), [layout])
   const [levelIndex, setLevelIndex] = useState(Math.max(0, heights.length - 1))
   const [showProps, setShowProps] = useState(true)
@@ -1553,6 +1895,14 @@ export function Blueprint3D({
         <LegendSwatch color={TRAP_COLOR_HEX[0]} label="Floor trap" round />
         <LegendSwatch color={TRAP_COLOR_HEX[1]} label="Wall trap" round />
         <LegendSwatch color={TRAP_COLOR_HEX[2]} label="Ceiling trap" round />
+        {zoneTerrain && (
+          <>
+            <span className="text-border">|</span>
+            <span title={`Terrain layout extracted from ${zoneTerrain.source}`}>
+              Real zone terrain
+            </span>
+          </>
+        )}
         {underlay?.credit && (
           <>
             <span className="text-border">|</span>

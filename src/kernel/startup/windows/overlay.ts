@@ -1,4 +1,5 @@
 import type { BrowserWindowConstructorOptions } from 'electron'
+import type { OverlaySettings } from '../../../types/settings'
 import type {
   OverlayPlayer,
   OverlayQuest,
@@ -15,13 +16,18 @@ import {
 } from 'electron'
 
 import { ElectronAPIEventKeys } from '../../../config/constants/main-process'
+import { defaultOverlaySettings } from '../../../config/constants/overlay'
 import { getPennyDBProfile } from '../../../services/endpoints/pennydb'
 import { RuntimeLog } from '../../runtime-log'
 
 const toggleShortcut = 'Control+Shift+Q'
-const refreshInterval = 5 * 60_000
-const maximumPlayers = 4
-const maximumQuestsPerPlayer = 18
+const baseWidth = 430
+const baseHeight = 760
+const scaleFactors: Record<OverlaySettings['scale'], number> = {
+  compact: 0.8,
+  normal: 1,
+  large: 1.2,
+}
 
 type AccountScope = {
   primary: string | null
@@ -84,7 +90,24 @@ function questEntries(source: QuestSource): Array<OverlayQuest> {
   })
 }
 
-function questsFromProfile(data: PennyDBProfileResponse) {
+const questGroupSetting: Record<
+  OverlayQuestGroup,
+  keyof OverlaySettings['questGroups']
+> = {
+  daily: 'daily',
+  ventures: 'ventures',
+  weekly: 'weekly',
+  'storm-shield': 'stormShield',
+  wargames: 'wargames',
+  dungeons: 'dungeons',
+  endurance: 'endurance',
+  active: 'active',
+}
+
+function questsFromProfile(
+  data: PennyDBProfileResponse,
+  settings: OverlaySettings
+) {
   const sources: Array<QuestSource> = [
     { group: 'daily', value: data.daily_mission_data },
     { group: 'ventures', value: data.live_ventures_quests },
@@ -98,6 +121,7 @@ function questsFromProfile(data: PennyDBProfileResponse) {
   const seen = new Set<string>()
 
   return sources
+    .filter((source) => settings.questGroups[questGroupSetting[source.group]])
     .flatMap(questEntries)
     .filter((quest) => {
       const key = quest.name.toLocaleLowerCase()
@@ -107,7 +131,15 @@ function questsFromProfile(data: PennyDBProfileResponse) {
 
       return true
     })
-    .slice(0, maximumQuestsPerPlayer)
+    .map((quest) => ({
+      ...quest,
+      description: settings.showQuestDescriptions
+        ? quest.description
+        : undefined,
+      current: settings.showQuestProgress ? quest.current : undefined,
+      total: settings.showQuestProgress ? quest.total : undefined,
+    }))
+    .slice(0, settings.maximumQuestsPerPlayer)
 }
 
 function missionPlayers(data: PennyDBProfileResponse) {
@@ -122,7 +154,8 @@ function missionPlayers(data: PennyDBProfileResponse) {
 
 function toOverlayPlayer(
   requestedName: string,
-  data: PennyDBProfileResponse
+  data: PennyDBProfileResponse,
+  settings: OverlaySettings
 ): OverlayPlayer {
   const mission = data.what_mission_data
   const details = [mission?.zone, mission?.difficulty && `PL ${mission.difficulty}`]
@@ -131,14 +164,17 @@ function toOverlayPlayer(
 
   return {
     displayName: data.profile_summary?.display_name ?? requestedName,
-    mission: mission?.mission_playing,
-    missionDetails: details || undefined,
-    quests: questsFromProfile(data),
-    ventureLevel:
-      data.ventures_data?.current_venture_level === undefined
+    mission: settings.showMission ? mission?.mission_playing : undefined,
+    missionDetails: settings.showMission ? details || undefined : undefined,
+    quests: questsFromProfile(data, settings),
+    ventureLevel: settings.showVentures
+      ? data.ventures_data?.current_venture_level === undefined
         ? undefined
-        : String(data.ventures_data.current_venture_level),
-    venturePowerLevel: data.ventures_data?.venture_power_level,
+        : String(data.ventures_data.current_venture_level)
+      : undefined,
+    venturePowerLevel: settings.showVentures
+      ? data.ventures_data?.venture_power_level
+      : undefined,
   }
 }
 
@@ -147,13 +183,18 @@ export class OverlayWindow {
   private static scope: AccountScope = { primary: null, members: [] }
   private static timer: NodeJS.Timeout | null = null
   private static refreshing: Promise<void> | null = null
+  private static settings: OverlaySettings = defaultOverlaySettings
 
   static async start() {
-    if (process.platform !== 'win32' || OverlayWindow.value) return
+    if (
+      process.platform !== 'win32' ||
+      !OverlayWindow.settings.enabled ||
+      OverlayWindow.value
+    ) return
 
     const options: BrowserWindowConstructorOptions = {
-      width: 430,
-      height: 760,
+      width: baseWidth,
+      height: baseHeight,
       frame: false,
       transparent: true,
       backgroundColor: '#00000000',
@@ -178,6 +219,7 @@ export class OverlayWindow {
     const window = new BrowserWindow(options)
 
     OverlayWindow.value = window
+    OverlayWindow.applyAppearance(window)
     window.setIgnoreMouseEvents(true, { forward: true })
     window.setAlwaysOnTop(true, 'pop-up-menu')
     window.setContentProtection(true)
@@ -208,6 +250,8 @@ export class OverlayWindow {
       return
     }
 
+    if (window.isDestroyed() || OverlayWindow.value !== window) return
+
     const registered = globalShortcut.register(toggleShortcut, () => {
       OverlayWindow.toggle()
     })
@@ -217,6 +261,29 @@ export class OverlayWindow {
         'overlay:shortcut',
         new Error(`Could not register ${toggleShortcut}.`)
       )
+    }
+  }
+
+  static async configure(settings: OverlaySettings) {
+    OverlayWindow.settings = settings
+
+    if (process.platform !== 'win32') return
+
+    if (!settings.enabled) {
+      OverlayWindow.destroy()
+      return
+    }
+
+    if (!OverlayWindow.value || OverlayWindow.value.isDestroyed()) {
+      await OverlayWindow.start()
+      return
+    }
+
+    OverlayWindow.applyAppearance(OverlayWindow.value)
+    if (OverlayWindow.value.isVisible()) {
+      OverlayWindow.position(OverlayWindow.value)
+      OverlayWindow.restartRefreshTimer()
+      void OverlayWindow.refresh()
     }
   }
 
@@ -247,20 +314,48 @@ export class OverlayWindow {
       return
     }
 
-    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-    const margin = 24
-
-    window.setBounds({
-      x: display.workArea.x + display.workArea.width - window.getBounds().width - margin,
-      y: display.workArea.y + margin,
-      width: window.getBounds().width,
-      height: Math.min(760, display.workArea.height - margin * 2),
-    })
+    OverlayWindow.position(window)
     window.showInactive()
     void OverlayWindow.refresh()
+    OverlayWindow.restartRefreshTimer()
+  }
+
+  private static applyAppearance(window: BrowserWindow) {
+    const scale = scaleFactors[OverlayWindow.settings.scale]
+
+    window.setOpacity(OverlayWindow.settings.opacity / 100)
+    window.webContents.setZoomFactor(scale)
+  }
+
+  private static position(window: BrowserWindow) {
+    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+    const scale = scaleFactors[OverlayWindow.settings.scale]
+    const margin = Math.round(24 * scale)
+    const width = Math.round(baseWidth * scale)
+    const height = Math.min(
+      Math.round(baseHeight * scale),
+      display.workArea.height - margin * 2
+    )
+    const isRight = OverlayWindow.settings.position.endsWith('right')
+    const isBottom = OverlayWindow.settings.position.startsWith('bottom')
+
+    window.setBounds({
+      x: isRight
+        ? display.workArea.x + display.workArea.width - width - margin
+        : display.workArea.x + margin,
+      y: isBottom
+        ? display.workArea.y + display.workArea.height - height - margin
+        : display.workArea.y + margin,
+      width,
+      height,
+    })
+  }
+
+  private static restartRefreshTimer() {
+    OverlayWindow.stopRefreshing()
     OverlayWindow.timer = setInterval(
       () => void OverlayWindow.refresh(),
-      refreshInterval
+      OverlayWindow.settings.refreshMinutes * 60_000
     )
   }
 
@@ -274,13 +369,15 @@ export class OverlayWindow {
     const accounts = AccountsManager.getAccounts()
     const ids = [
       OverlayWindow.scope.primary,
-      ...OverlayWindow.scope.members,
+      ...(OverlayWindow.settings.includeSquadMembers
+        ? OverlayWindow.scope.members
+        : []),
     ].filter((value): value is string => Boolean(value))
 
     return [...new Set(ids)]
       .map((accountId) => accounts.get(accountId)?.displayName)
       .filter((value): value is string => Boolean(value))
-      .slice(0, maximumPlayers)
+      .slice(0, OverlayWindow.settings.maximumPlayers)
   }
 
   private static async loadProfile(displayName: string) {
@@ -307,6 +404,7 @@ export class OverlayWindow {
     if (requestedNames.length === 0) {
       OverlayWindow.send({
         players: [],
+        position: OverlayWindow.settings.position,
         status: 'Select an account in Penny first.',
         updatedAt: new Date().toISOString(),
       })
@@ -316,20 +414,20 @@ export class OverlayWindow {
     const initial = await Promise.all(
       requestedNames.map(OverlayWindow.loadProfile)
     )
-    const teammates = initial.flatMap(({ data }) =>
-      data ? missionPlayers(data) : []
-    )
+    const teammates = OverlayWindow.settings.includeSquadMembers
+      ? initial.flatMap(({ data }) => (data ? missionPlayers(data) : []))
+      : []
     const known = new Set(requestedNames.map((name) => name.toLocaleLowerCase()))
     const extraNames = [...new Set(teammates)]
       .filter((name) => !known.has(name.toLocaleLowerCase()))
-      .slice(0, maximumPlayers - initial.length)
+      .slice(0, OverlayWindow.settings.maximumPlayers - initial.length)
     const profiles = [
       ...initial,
       ...(await Promise.all(extraNames.map(OverlayWindow.loadProfile))),
     ]
     const players = profiles.map(({ data, displayName }) =>
       data
-        ? toOverlayPlayer(displayName, data)
+        ? toOverlayPlayer(displayName, data, OverlayWindow.settings)
         : {
             displayName,
             errorMessage: 'Public profile unavailable',
@@ -339,6 +437,7 @@ export class OverlayWindow {
 
     OverlayWindow.send({
       players,
+      position: OverlayWindow.settings.position,
       updatedAt: new Date().toISOString(),
     })
   }

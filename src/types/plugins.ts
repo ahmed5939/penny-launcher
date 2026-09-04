@@ -1,3 +1,6 @@
+/** User-visible effects an add-on declares in plugin.json. */
+export type PluginCapability = 'background' | 'changes-app-behavior'
+
 export type PluginManifest = {
   id: string
   name: string
@@ -5,6 +8,8 @@ export type PluginManifest = {
   version?: string
   author?: string
   category?: string
+  /** Effects shown to the user before installation. */
+  capabilities?: Array<PluginCapability>
   /** Documentation file relative to the plugin folder. Defaults to README.md */
   readme?: string
   /** Public source repository shown in the marketplace. */
@@ -60,9 +65,10 @@ export type PluginSummary = {
   description: string | null
   version: string | null
   source: PluginSource
-  status: 'active' | 'error'
+  status: 'running' | 'error'
   error: string | null
   repository: string | null
+  capabilities: Array<PluginCapability>
   /** Whether the plugin exposes a window/action the user can open. */
   canOpen: boolean
 }
@@ -75,6 +81,7 @@ export type MarketplacePlugin = {
   author: string | null
   category: string | null
   repository: string | null
+  capabilities: Array<PluginCapability>
   installed: boolean
 }
 

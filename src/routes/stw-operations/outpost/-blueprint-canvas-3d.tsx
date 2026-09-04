@@ -60,7 +60,7 @@ function polygon(
 
 /**
  * Software-rendered isometric fallback for machines without WebGL. It shares
- * the 3D explorer's placement rules (edge-origin pieces, trap anchors, world
+ * the 3D explorer's placement rules (actor pivots, trap anchors, world
  * props) but paints flat shapes: floors as tiles, walls as upright panels
  * on their edge, ramps as sloped quads, roofs as smaller tiles, traps as
  * dots and world props as simple markers.
@@ -291,13 +291,30 @@ export function BlueprintCanvas3D({
         }
 
         if (kind === KIND_STAIR) {
+          /* Fortnite's stair rises opposite the actor's stored forward vector. */
           const [fx, fy] = forwardVector(yaw)
           const sx = fy * 0.47
           const sy = fx * 0.47
-          const lowA = project(x - sx, y - sy, z)
-          const lowB = project(x + sx, y + sy, z)
-          const highB = project(x + fx + sx, y + fy + sy, z + STOREY_HEIGHT)
-          const highA = project(x + fx - sx, y + fy - sy, z + STOREY_HEIGHT)
+          const lowA = project(
+            centre.x + fx * 0.48 - sx,
+            centre.y + fy * 0.48 - sy,
+            z
+          )
+          const lowB = project(
+            centre.x + fx * 0.48 + sx,
+            centre.y + fy * 0.48 + sy,
+            z
+          )
+          const highB = project(
+            centre.x - fx * 0.48 + sx,
+            centre.y - fy * 0.48 + sy,
+            z + STOREY_HEIGHT
+          )
+          const highA = project(
+            centre.x - fx * 0.48 - sx,
+            centre.y - fy * 0.48 - sy,
+            z + STOREY_HEIGHT
+          )
 
           polygon(context, [lowA, lowB, highB, highA])
           context.globalAlpha = 0.72
@@ -350,15 +367,27 @@ export function BlueprintCanvas3D({
         const name = layout.trapNames[nameIndex] ?? 'Unknown trap'
         const selected = selectedTrap === name
 
-        context.beginPath()
-        context.arc(point.x, point.y, selected ? 6 : 3.5, 0, Math.PI * 2)
-        context.fillStyle = selected
+        const markerSize = selected ? 9 : 7
+
+        context.fillStyle = 'rgba(18, 27, 36, 0.9)'
+        context.fillRect(
+          point.x - markerSize / 2,
+          point.y - markerSize / 2,
+          markerSize,
+          markerSize
+        )
+        context.lineWidth = selected ? 2 : 1.5
+        context.strokeStyle = selected
           ? '#ffffff'
           : (TRAP_COLORS[category] ?? TRAP_COLORS[3])
-        context.fill()
-        context.lineWidth = selected ? 2 : 1
-        context.strokeStyle = selected ? '#ec4899' : 'rgba(0,0,0,0.65)'
-        context.stroke()
+        context.strokeRect(
+          point.x - markerSize / 2,
+          point.y - markerSize / 2,
+          markerSize,
+          markerSize
+        )
+        context.fillStyle = TRAP_COLORS[category] ?? TRAP_COLORS[3]
+        context.fillRect(point.x - 1.5, point.y - 1.5, 3, 3)
         trapPoints.push({ name, x: point.x, y: point.y })
       }
     }

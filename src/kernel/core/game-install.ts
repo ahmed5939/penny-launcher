@@ -113,7 +113,10 @@ export function isUpdateAvailable(
   }
 
   if (!localVersion) {
-    return true
+    // A missing local version means the install could not be compared (for
+    // example, Xbox installs do not expose EGL manifest metadata). It is not
+    // evidence that the installed build is stale.
+    return false
   }
 
   if (localVersion === latestVersion) {
@@ -595,18 +598,40 @@ export async function scanGameInstalls(
     }
   }
 
-  const seen = new Set<string>()
-  const unique = candidates.filter((candidate) => {
+  const candidateIndexByPath = new Map<string, number>()
+  const unique: Array<GameInstallSnapshot> = []
+
+  for (const candidate of candidates) {
     const key = candidate.binariesPath?.toLowerCase()
 
-    if (!key || seen.has(key)) {
-      return false
+    if (!key) {
+      continue
     }
 
-    seen.add(key)
+    const existingIndex = candidateIndexByPath.get(key)
 
-    return true
-  })
+    if (existingIndex === undefined) {
+      candidateIndexByPath.set(key, unique.length)
+      unique.push(candidate)
+      continue
+    }
+
+    // The configured path is intentionally collected first so it remains the
+    // preferred source, but the matching EGL records contain the version and
+    // install size needed for an accurate update check. Keep the source while
+    // enriching it with metadata from duplicate detections.
+    const existing = unique[existingIndex]
+    unique[existingIndex] = {
+      ...existing,
+      platform:
+        existing.platform === 'unknown'
+          ? candidate.platform
+          : existing.platform,
+      version: existing.version ?? candidate.version,
+      diskBytes: existing.diskBytes ?? candidate.diskBytes,
+      incomplete: existing.incomplete || candidate.incomplete,
+    }
+  }
 
   const settingsValid = unique.some((candidate) => candidate.source === 'settings')
 

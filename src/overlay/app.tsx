@@ -19,6 +19,7 @@ const groupLabels: Record<OverlayQuestGroup, string> = {
 function OverlayApp() {
   const [snapshot, setSnapshot] = useState<OverlaySnapshot>({
     players: [],
+    position: 'top-right',
     status: 'Loading public quest data…',
     updatedAt: new Date().toISOString(),
   })
@@ -30,7 +31,9 @@ function OverlayApp() {
   }, [])
 
   return (
-    <main className="quest-overlay">
+    <main
+      className={`quest-overlay ${snapshot.position.startsWith('bottom') ? 'position-bottom' : ''}`}
+    >
       <header className="overlay-header">
         <div>
           <p className="eyebrow">Penny</p>

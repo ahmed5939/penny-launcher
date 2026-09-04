@@ -245,9 +245,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
     })
 
     mainWindow.on('close', () => {
-      if (SystemTray.isActive) {
-        MainWindow.closeApp()
-      }
+      /**
+       * Do not rely on `window-all-closed` here. The quest overlay is its own
+       * (normally hidden) BrowserWindow, so closing Penny's main window does
+       * not emit that event while the overlay exists. Starting shutdown here
+       * also destroys the overlay and releases the single-instance lock.
+       */
+      MainWindow.closeApp()
     })
 
     /**

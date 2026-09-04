@@ -21,6 +21,7 @@ export function useSetupForm() {
     path,
     systemTray,
     discordRichPresence,
+    overlay,
     userAgent,
   } = useSettingsStore(
     useShallow((state) => ({
@@ -31,6 +32,7 @@ export function useSetupForm() {
       path: state.path,
       systemTray: state.systemTray,
       discordRichPresence: state.discordRichPresence,
+      overlay: state.overlay,
       userAgent: state.userAgent,
     })),
   )
@@ -45,6 +47,7 @@ export function useSetupForm() {
       path,
       systemTray,
       discordRichPresence,
+      overlay,
       userAgent,
     },
   })

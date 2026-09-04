@@ -3,11 +3,9 @@ import type { OutpostLayout } from '../../../kernel/core/outpost-types'
 /**
  * Shared spatial conventions for the 2D blueprint and both 3D explorers.
  *
- * Fortnite stores a build piece at the midpoint of one of its tile's edges
- * and points the actor's Y axis (yaw 0) across the tile, so the tile centre
- * is half a cell along that forward axis. Yaw advances in 90° steps rotating
- * +X toward +Y. Walls stand on the edge itself; floors, stairs, roofs and
- * every edited variant fill the tile in front of it.
+ * Fortnite stores each build piece at its own pivot: floors, stairs and roofs
+ * use the tile centre, while walls use the centre of their wall plane. Yaw
+ * advances in 90° steps rotating +X toward +Y.
  */
 
 export const KIND_FLOOR = 0
@@ -51,33 +49,18 @@ export function forwardVector(yaw: number): [number, number] {
   }
 }
 
-/** Offset from a piece's origin (edge midpoint) to the centre of its tile. */
-export function tileCentreOffset(yaw: number): [number, number] {
-  const [dx, dy] = forwardVector(yaw)
-
-  return [dx * 0.5, dy * 0.5]
-}
-
-/**
- * Where a piece visually sits: walls on their edge, everything else centred
- * on the tile in front of the origin.
- */
+/** The saved actor pivot is already the visual centre of every build piece. */
 export function structureCentre(
   piece: StructureTuple
 ): { x: number; y: number; z: number } {
-  const [x, y, z, , kind, yaw] = piece
+  const [x, y, z] = piece
 
-  if (kind === KIND_WALL) return { x, y, z }
-
-  const [dx, dy] = tileCentreOffset(yaw)
-
-  return { x: x + dx, y: y + dy, z }
+  return { x, y, z }
 }
 
 /**
- * Where a trap visually sits: floor and ceiling traps on the tile in front
- * of the origin (they attach to a floor piece with the same origin rule),
- * wall traps on the wall's edge.
+ * Floor and ceiling trap actors use a tile-edge origin; wall traps already
+ * sit at the centre of their supporting wall plane.
  */
 export function trapCentre(
   trap: TrapTuple
@@ -86,9 +69,9 @@ export function trapCentre(
 
   if (category === TRAP_WALL) return { x, y, z }
 
-  const [dx, dy] = tileCentreOffset(yaw)
+  const [dx, dy] = forwardVector(yaw)
 
-  return { x: x + dx, y: y + dy, z }
+  return { x: x + dx * 0.5, y: y + dy * 0.5, z }
 }
 
 /** Human-friendly label for a world actor class name. */

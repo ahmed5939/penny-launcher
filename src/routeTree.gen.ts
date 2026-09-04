@@ -12,7 +12,6 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings/route'
-import { Route as SettingsTweaksRouteImport } from './routes/settings/tweaks/route'
 import { Route as PluginsRouteImport } from './routes/plugins/route'
 import { Route as AccountRouteImport } from './routes/account/route'
 import { Route as IndexImport } from './routes/index'
@@ -33,6 +32,7 @@ import { Route as StwOperationsEnduranceRouteImport } from './routes/stw-operati
 import { Route as StwOperationsCompendiumRouteImport } from './routes/stw-operations/compendium/route'
 import { Route as StwOperationsAutomationRouteImport } from './routes/stw-operations/automation/route'
 import { Route as StwOperationsAutoLlamasRouteImport } from './routes/stw-operations/auto-llamas/route'
+import { Route as SettingsTweaksRouteImport } from './routes/settings/tweaks/route'
 import { Route as InformationCreditsRouteImport } from './routes/information/credits/route'
 import { Route as AdvancedModeWorldInfoRouteImport } from './routes/advanced-mode/world-info/route'
 import { Route as AdvancedModeServerStatusRouteImport } from './routes/advanced-mode/server-status/route'
@@ -40,10 +40,10 @@ import { Route as AdvancedModeMatchmakingTrackRouteImport } from './routes/advan
 import { Route as AdvancedModeGameSettingsRouteImport } from './routes/advanced-mode/game-settings/route'
 import { Route as AccountsRemoveRouteImport } from './routes/accounts/remove/route'
 import { Route as AccountManagementVbucksInformationRouteImport } from './routes/account-management/vbucks-information/route'
+import { Route as AccountManagementSpritesRouteImport } from './routes/account-management/sprites/route'
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
 import { Route as AccountManagementLockerRouteImport } from './routes/account-management/locker/route'
-import { Route as AccountManagementSpritesRouteImport } from './routes/account-management/sprites/route'
 import { Route as AccountManagementGiftsInformationRouteImport } from './routes/account-management/gifts-information/route'
 import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
 import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
@@ -54,11 +54,6 @@ import { Route as AccountsAddTypeImport } from './routes/accounts/add/$type'
 
 const SettingsRouteRoute = SettingsRouteImport.update({
   path: '/settings',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const SettingsTweaksRouteRoute = SettingsTweaksRouteImport.update({
-  path: '/settings/tweaks',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -176,6 +171,11 @@ const StwOperationsAutoLlamasRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const SettingsTweaksRouteRoute = SettingsTweaksRouteImport.update({
+  path: '/tweaks',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+
 const InformationCreditsRouteRoute = InformationCreditsRouteImport.update({
   path: '/information/credits',
   getParentRoute: () => rootRoute,
@@ -217,6 +217,12 @@ const AccountManagementVbucksInformationRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AccountManagementSpritesRouteRoute =
+  AccountManagementSpritesRouteImport.update({
+    path: '/account-management/sprites',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountManagementRedeemCodesRouteRoute =
   AccountManagementRedeemCodesRouteImport.update({
     path: '/account-management/redeem-codes',
@@ -226,12 +232,6 @@ const AccountManagementRedeemCodesRouteRoute =
 const AccountManagementProfileRouteRoute =
   AccountManagementProfileRouteImport.update({
     path: '/account-management/profile',
-    getParentRoute: () => rootRoute,
-  } as any)
-
-const AccountManagementSpritesRouteRoute =
-  AccountManagementSpritesRouteImport.update({
-    path: '/account-management/sprites',
     getParentRoute: () => rootRoute,
   } as any)
 
@@ -291,10 +291,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRoute
     }
-    '/settings/tweaks': {
-      preLoaderRoute: typeof SettingsTweaksRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/account-management/epic-games-settings': {
       preLoaderRoute: typeof AccountManagementEpicGamesSettingsRouteImport
       parentRoute: typeof rootRoute
@@ -315,16 +311,16 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountManagementLockerRouteImport
       parentRoute: typeof rootRoute
     }
-    '/account-management/sprites': {
-      preLoaderRoute: typeof AccountManagementSpritesRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/account-management/profile': {
       preLoaderRoute: typeof AccountManagementProfileRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/redeem-codes': {
       preLoaderRoute: typeof AccountManagementRedeemCodesRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/account-management/sprites': {
+      preLoaderRoute: typeof AccountManagementSpritesRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/vbucks-information': {
@@ -354,6 +350,10 @@ declare module '@tanstack/react-router' {
     '/information/credits': {
       preLoaderRoute: typeof InformationCreditsRouteImport
       parentRoute: typeof rootRoute
+    }
+    '/settings/tweaks': {
+      preLoaderRoute: typeof SettingsTweaksRouteImport
+      parentRoute: typeof SettingsRouteImport
     }
     '/stw-operations/auto-llamas': {
       preLoaderRoute: typeof StwOperationsAutoLlamasRouteImport
@@ -436,16 +436,15 @@ export const routeTree = rootRoute.addChildren([
   IndexRoute,
   AccountRouteRoute,
   PluginsRouteRoute,
-  SettingsRouteRoute,
-  SettingsTweaksRouteRoute,
+  SettingsRouteRoute.addChildren([SettingsTweaksRouteRoute]),
   AccountManagementEpicGamesSettingsRouteRoute,
   AccountManagementEulaRouteRoute,
   AccountManagementFriendsRouteRoute,
   AccountManagementGiftsInformationRouteRoute,
   AccountManagementLockerRouteRoute,
   AccountManagementProfileRouteRoute,
-  AccountManagementSpritesRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
+  AccountManagementSpritesRouteRoute,
   AccountManagementVbucksInformationRouteRoute,
   AccountsRemoveRouteRoute,
   AdvancedModeGameSettingsRouteRoute,

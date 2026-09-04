@@ -127,8 +127,13 @@ describe('build version comparison', () => {
     expect(isUpdateAvailable('CL-100', 'CL-200')).toBe(true)
     expect(isUpdateAvailable('CL-200', 'CL-200')).toBe(false)
     expect(isUpdateAvailable('CL-300', 'CL-200')).toBe(false)
-    expect(isUpdateAvailable(null, 'CL-200')).toBe(true)
+    expect(isUpdateAvailable(null, 'CL-200')).toBe(false)
     expect(isUpdateAvailable('CL-200', null)).toBe(false)
+  })
+
+  it('does not claim an update when either version cannot be compared', () => {
+    expect(isUpdateAvailable(undefined, 'not-a-changelist')).toBe(false)
+    expect(isUpdateAvailable('CL-200', undefined)).toBe(false)
   })
 })
 
@@ -283,6 +288,30 @@ describe('scanGameInstalls', () => {
     expect(scan.settingsPathValid).toBe(true)
     expect(scan.preferred.source).toBe('settings')
     expect(scan.preferred.binariesPath).toBe(path.normalize(custom))
+  })
+
+  it('adds EGL version metadata to the matching configured folder', async () => {
+    const custom = 'E:\\Games\\Fortnite\\FortniteGame\\Binaries\\Win64'
+    const io = memoryIo({
+      [`${custom}\\${launcher}`]: '',
+      'C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests\\fortnite.item':
+        JSON.stringify({
+          DisplayName: 'Fortnite',
+          AppName: 'Fortnite',
+          CatalogNamespace: 'fn',
+          InstallLocation: 'E:\\Games\\Fortnite',
+          AppVersionString: '++Fortnite+Release-38.00-CL-47722112-Windows',
+          LaunchExecutable: 'FortniteGame/Binaries/Win64/FortniteLauncher.exe',
+          InstallSize: 120_000_000_000,
+        }),
+    })
+
+    const scan = await scanGameInstalls(io, { settingsPath: custom })
+
+    expect(scan.preferred.source).toBe('settings')
+    expect(scan.preferred.platform).toBe('egl')
+    expect(scan.preferred.version).toContain('CL-47722112')
+    expect(scan.preferred.diskBytes).toBe(120_000_000_000)
   })
 
   it('returns a missing snapshot when no launcher exists', async () => {

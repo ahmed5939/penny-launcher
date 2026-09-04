@@ -14,6 +14,12 @@ import {
   resolutionQualityRange,
   resolutionRange,
 } from '../../../config/fortnite/game-settings'
+import {
+  defaultOverlayQuestGroups,
+  defaultOverlaySettings,
+  overlayPositions,
+  overlayScales,
+} from '../../../config/constants/overlay'
 
 import { Language } from '../../../locales/resources'
 
@@ -31,6 +37,35 @@ export const appLanguageSchema = z.object({
     .default(Language.English),
 })
 
+export const overlaySettingsSchema = z
+  .object({
+    enabled: z.boolean().default(defaultOverlaySettings.enabled),
+    position: z.enum(overlayPositions).default(defaultOverlaySettings.position),
+    scale: z.enum(overlayScales).default(defaultOverlaySettings.scale),
+    opacity: z.number().int().min(50).max(100).default(defaultOverlaySettings.opacity),
+    refreshMinutes: z.number().int().min(1).max(30).default(defaultOverlaySettings.refreshMinutes),
+    maximumPlayers: z.number().int().min(1).max(4).default(defaultOverlaySettings.maximumPlayers),
+    maximumQuestsPerPlayer: z.number().int().min(1).max(30).default(defaultOverlaySettings.maximumQuestsPerPlayer),
+    includeSquadMembers: z.boolean().default(defaultOverlaySettings.includeSquadMembers),
+    showMission: z.boolean().default(defaultOverlaySettings.showMission),
+    showVentures: z.boolean().default(defaultOverlaySettings.showVentures),
+    showQuestDescriptions: z.boolean().default(defaultOverlaySettings.showQuestDescriptions),
+    showQuestProgress: z.boolean().default(defaultOverlaySettings.showQuestProgress),
+    questGroups: z
+      .object({
+        daily: z.boolean().default(defaultOverlayQuestGroups.daily),
+        ventures: z.boolean().default(defaultOverlayQuestGroups.ventures),
+        weekly: z.boolean().default(defaultOverlayQuestGroups.weekly),
+        stormShield: z.boolean().default(defaultOverlayQuestGroups.stormShield),
+        wargames: z.boolean().default(defaultOverlayQuestGroups.wargames),
+        dungeons: z.boolean().default(defaultOverlayQuestGroups.dungeons),
+        endurance: z.boolean().default(defaultOverlayQuestGroups.endurance),
+        active: z.boolean().default(defaultOverlayQuestGroups.active),
+      })
+      .default(defaultOverlayQuestGroups),
+  })
+  .default(defaultOverlaySettings)
+
 export const settingsSchema = z.object({
   autoDailyQuests: z.boolean().default(true),
   claimingRewards: createRangeValidation({
@@ -46,6 +81,7 @@ export const settingsSchema = z.object({
   path: z.string().trim().min(1),
   systemTray: z.boolean().default(false),
   discordRichPresence: z.boolean().default(true),
+  overlay: overlaySettingsSchema,
   userAgent: z.string().trim().min(1),
 })
 

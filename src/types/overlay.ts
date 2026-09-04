@@ -29,6 +29,7 @@ export type OverlayPlayer = {
 
 export type OverlaySnapshot = {
   players: Array<OverlayPlayer>
+  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
   status?: string
   updatedAt: string
 }

@@ -250,18 +250,22 @@ function readGvasString(
 }
 
 /**
- * The actor transform sits immediately after the blueprint path string: an
- * FQuat (X, Y, Z, W), then the XYZ translation. Saves written before the
- * UE5 move store these as 4-byte floats; newer ones as 8-byte doubles. The
- * quaternion must be unit-length and the translation must land inside a
- * plausible Storm Shield, so whichever width satisfies both is the right
- * one — a misread of the other width yields denormal garbage, not a unit
- * quaternion. XYZ, yaw and scale are retained; build pieces rotate about Z
- * in 90° steps, world props use the full yaw.
+ * The actor transform sits immediately after the blueprint path string.
+ * FortActorRecord commonly stores a three-value compressed rotation followed
+ * by translation and scale; a few generations use a full four-value FQuat.
+ * Scalars may be 4-byte floats or 8-byte doubles. The transform is followed
+ * by `bSpawnedActor` and the ActorData byte count, which are also validated so
+ * an asset reference elsewhere in a property cannot masquerade as an actor.
  */
 type ActorTransform = {
+  /** End of this actor's serialized property bytes. */
+  actorDataEnd: number
+  /** `EFortBuildingPersistentState`; 3 means the actor was destroyed. */
+  actorState: number
   /** Uniform scale from the FTransform's Scale3D (|X|); 1 when absent. */
   scale: number
+  /** True when the game must spawn this actor rather than find it in the map. */
+  spawned: boolean
   x: number
   y: number
   yawDegrees: number
@@ -271,25 +275,35 @@ type ActorTransform = {
 
 function readActorTransform(
   buffer: Buffer,
+  blueprintStart: number,
   afterBlueprint: number
 ): ActorTransform | null {
   const attempt = (
+    rotationWords: 3 | 4,
     wordBytes: number,
     read: (offset: number) => number
   ): ActorTransform | null => {
-    if (afterBlueprint + wordBytes * 7 > buffer.length) {
+    const scalarWords = rotationWords + 6
+    const spawnedOffset = afterBlueprint + wordBytes * scalarWords
+    const actorDataSizeOffset = spawnedOffset + 4
+
+    if (
+      blueprintStart < 5 ||
+      actorDataSizeOffset + 4 > buffer.length
+    ) {
       return null
     }
 
-    const qx = read(afterBlueprint)
-    const qy = read(afterBlueprint + wordBytes)
-    const qz = read(afterBlueprint + wordBytes * 2)
-    const qw = read(afterBlueprint + wordBytes * 3)
-    const x = read(afterBlueprint + wordBytes * 4)
-    const y = read(afterBlueprint + wordBytes * 5)
-    const z = read(afterBlueprint + wordBytes * 6)
+    const rotation = Array.from({ length: rotationWords }, (_, index) =>
+      read(afterBlueprint + wordBytes * index)
+    )
+    const x = read(afterBlueprint + wordBytes * rotationWords)
+    const y = read(afterBlueprint + wordBytes * (rotationWords + 1))
+    const z = read(afterBlueprint + wordBytes * (rotationWords + 2))
 
-    const norm = Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw)
+    const norm = Math.sqrt(
+      rotation.reduce((total, value) => total + value * value, 0)
+    )
 
     if (!Number.isFinite(norm) || Math.abs(norm - 1) > 0.05) {
       return null
@@ -306,10 +320,35 @@ function readActorTransform(
       return null
     }
 
-    const yaw =
-      (Math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz)) *
-        180) /
-      Math.PI
+    const spawned = buffer.readUInt32LE(spawnedOffset)
+    const actorDataSize = buffer.readUInt32LE(actorDataSizeOffset)
+    const actorDataEnd = actorDataSizeOffset + 4 + actorDataSize
+    const actorState = buffer.readUInt8(blueprintStart - 5)
+
+    if (
+      spawned > 1 ||
+      actorState > 5 ||
+      actorDataEnd > buffer.length
+    ) {
+      return null
+    }
+
+    let yaw: number
+
+    if (rotationWords === 3) {
+      /**
+       * FortActorRecord uses FVector_NetQuantizeNormal for rotation in these
+       * saves: the last two components are sin/cos of half the upright yaw.
+       */
+      yaw = (2 * Math.atan2(rotation[1], rotation[2]) * 180) / Math.PI
+    } else {
+      const [qx, qy, qz, qw] = rotation
+
+      yaw =
+        (Math.atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz)) *
+          180) /
+        Math.PI
+    }
 
     /**
      * Scale3D follows the translation. Build pieces are always 1; world
@@ -317,8 +356,10 @@ function readActorTransform(
      */
     let scale = 1
 
-    if (afterBlueprint + wordBytes * 10 <= buffer.length) {
-      const scaleX = Math.abs(read(afterBlueprint + wordBytes * 7))
+    if (spawnedOffset <= buffer.length) {
+      const scaleX = Math.abs(
+        read(afterBlueprint + wordBytes * (rotationWords + 3))
+      )
 
       if (Number.isFinite(scaleX) && scaleX > 0.05 && scaleX < 20) {
         scale = Math.round(scaleX * 100) / 100
@@ -326,7 +367,10 @@ function readActorTransform(
     }
 
     return {
+      actorDataEnd,
+      actorState,
       scale,
+      spawned: spawned === 1,
       x,
       y,
       yawDegrees: Math.round(yaw * 10) / 10,
@@ -336,8 +380,10 @@ function readActorTransform(
   }
 
   return (
-    attempt(4, (offset) => buffer.readFloatLE(offset)) ??
-    attempt(8, (offset) => buffer.readDoubleLE(offset))
+    attempt(3, 4, (offset) => buffer.readFloatLE(offset)) ??
+    attempt(4, 4, (offset) => buffer.readFloatLE(offset)) ??
+    attempt(3, 8, (offset) => buffer.readDoubleLE(offset)) ??
+    attempt(4, 8, (offset) => buffer.readDoubleLE(offset))
   )
 }
 
@@ -535,9 +581,25 @@ export function parseSav(raw: Buffer): {
   while ((match = buildPattern.exec(text)) !== null) {
     const blueprintStart = text.lastIndexOf('/Game/Building', match.index)
     const blueprint = readGvasString(buffer, blueprintStart - 4)
-    const transform = readActorTransform(buffer, blueprint.next)
+    const transform = readActorTransform(
+      buffer,
+      blueprintStart,
+      blueprint.next
+    )
 
     if (!transform) continue
+
+    /**
+     * The save also records pre-built map actors that use PBWA classes. The
+     * game finds those in the level instead of spawning them, and some no
+     * longer exist in the currently shipped map. Only spawned, non-destroyed
+     * PBWA actors are player-built pieces that the game will load into the
+     * base. Reading the record field avoids guessing from nearby property
+     * names and crossing into the next actor.
+     */
+    if (!transform.spawned || transform.actorState === 3) {
+      continue
+    }
 
     const [, materialCode, tierDigit, pieceType] = match
 
@@ -604,7 +666,7 @@ export function parseSav(raw: Buffer): {
   for (let trapIndex = 0; trapIndex < trapMatches.length; trapIndex += 1) {
     match = trapMatches[trapIndex] as RegExpExecArray
     /** The next trap's record bounds this one's property scan. */
-    const recordEnd = Math.min(
+    const fallbackRecordEnd = Math.min(
       trapIndex + 1 < trapMatches.length
         ? trapMatches[trapIndex + 1].index
         : text.length,
@@ -617,7 +679,13 @@ export function parseSav(raw: Buffer): {
 
     /* The regex match starts exactly at the blueprint path string. */
     const blueprint = readGvasString(buffer, match.index - 4)
-    const transform = readActorTransform(buffer, blueprint.next)
+    const transform = readActorTransform(buffer, match.index, blueprint.next)
+
+    if (transform && (!transform.spawned || transform.actorState === 3)) {
+      continue
+    }
+
+    const recordEnd = transform?.actorDataEnd ?? fallbackRecordEnd
 
     const category = trapCategory(blueprintName)
     const tid = text
@@ -715,9 +783,9 @@ export function parseSav(raw: Buffer): {
 
     if (blueprint.value !== match[0]) continue
 
-    const transform = readActorTransform(buffer, blueprint.next)
+    const transform = readActorTransform(buffer, match.index, blueprint.next)
 
-    if (!transform) continue
+    if (!transform || transform.actorState === 3) continue
 
     const className = match[1]
 

@@ -4,6 +4,7 @@ import type {
   PluginAccountInfo,
   PluginAccountScope,
   PluginActionResult,
+  PluginCapability,
   PluginEventName,
   PluginManifest,
   PluginOpenResult,
@@ -90,7 +91,7 @@ type LoadedPlugin = {
   manifest: PluginManifest
   source: PluginSource
   directory: string
-  status: 'active' | 'error'
+  status: 'running' | 'error'
   error: string | null
   controller: Exclude<PluginController, void> | null
 }
@@ -119,6 +120,20 @@ export class PluginManager {
 
   private static isValidId(value: unknown): value is string {
     return typeof value === 'string' && /^[a-z0-9-]{1,64}$/.test(value)
+  }
+
+  private static capabilities(manifest: PluginManifest) {
+    const supported = new Set<PluginCapability>([
+      'background',
+      'changes-app-behavior',
+    ])
+
+    return Array.isArray(manifest.capabilities)
+      ? manifest.capabilities.filter(
+          (capability): capability is PluginCapability =>
+            supported.has(capability)
+        )
+      : []
   }
 
   private static async resolveInside(directory: string, relativePath: string) {
@@ -157,6 +172,7 @@ export class PluginManager {
       status: plugin.status,
       error: plugin.error,
       repository: plugin.manifest.repository ?? null,
+      capabilities: PluginManager.capabilities(plugin.manifest),
       canOpen: typeof plugin.controller?.open === 'function',
     }))
   }
@@ -175,6 +191,7 @@ export class PluginManager {
       author: manifest.author ?? null,
       category: manifest.category ?? null,
       repository: manifest.repository ?? null,
+      capabilities: PluginManager.capabilities(manifest),
       installed: PluginManager.plugins.some(
         (plugin) => plugin.manifest.id === manifest.id
       ),
@@ -490,7 +507,7 @@ export class PluginManager {
       manifest,
       source,
       directory,
-      status: 'active',
+      status: 'running',
       error: null,
       controller: null,
     }

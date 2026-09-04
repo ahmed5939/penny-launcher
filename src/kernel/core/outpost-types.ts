@@ -115,10 +115,9 @@ export type OutpostTrapInstanceTally = {
  * A packed spatial map of the base. Positions are in cell units (world units
  * ÷ `cell`) with sub-tile precision, including height for the 3D explorer.
  *
- * Build pieces are stored at their actor origin, which Fortnite puts on the
- * midpoint of one tile edge rather than the tile centre — the centre lies
- * half a cell along the piece's forward axis (see `tileCentreOffset`). Walls
- * stand on that edge, so their origin is the wall itself.
+ * Build pieces are stored at their actor pivot. Fortnite places floor, roof
+ * and stair pivots at the centre of their tile and wall pivots at the centre
+ * of the wall plane, so the saved XYZ can be used directly.
  */
 export type OutpostLayout = {
   /** World units per grid cell — Fortnite's build tile is 512. */
@@ -151,8 +150,8 @@ export type OutpostLayout = {
   /**
    * `[x, y, z, categoryCode, nameIndex, yawQuadrant]` — category 0 floor,
    * 1 wall, 2 ceiling, 3 other; `nameIndex` points into `trapNames`. Floor
-   * and ceiling traps use the same edge-origin convention as build pieces;
-   * wall traps sit on the wall's edge and face along their yaw.
+   * and ceiling traps use the edge-origin convention and move half a tile
+   * forward; wall traps sit directly on the saved wall plane.
    */
   traps: Array<[number, number, number, number, number, number]>
   /** Trap display names referenced by the dots' `nameIndex`. */

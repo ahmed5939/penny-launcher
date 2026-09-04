@@ -27,6 +27,7 @@ import { MainWindow } from './windows/main'
 import { DataDirectory } from './data-directory'
 import { PluginBridge } from './plugin-api'
 import { SystemTray } from './system-tray'
+import { OverlayWindow } from './windows/overlay'
 
 import { launcherAvailablePlatforms } from '../../services/config/launcher'
 import { getLauncherAssetForCatalogItem } from '../../services/endpoints/launcher'
@@ -103,6 +104,7 @@ export class SettingsManager {
       discordRichPresence:
         result.settings.discordRichPresence ??
         defaultSettingsData.discordRichPresence,
+      overlay: result.settings.overlay ?? defaultSettingsData.overlay,
       userAgent:
         result.settings.userAgent ?? defaultSettingsData.userAgent,
     }
@@ -130,6 +132,7 @@ export class SettingsManager {
 
     CustomProcess.setName(settings.customProcess)
     DiscordPresence.setEnabled(settings.discordRichPresence !== false)
+    await OverlayWindow.configure(settings.overlay)
 
     await DataDirectory.updateSettingsFile(settings)
 
