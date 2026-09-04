@@ -1,10 +1,18 @@
 import { useNavigate } from '@tanstack/react-router'
-import { Monitor, Moon, Sun } from 'lucide-react'
+import {
+  Monitor,
+  Moon,
+  Sun,
+  PanelLeft,
+  Rocket,
+  Square,
+  Settings,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEffect } from 'react'
 
 import { colorThemes } from '../../config/constants/color-themes'
-import { navSections, resolveNavLabel, visibilityKeys } from '../../config/navigation'
+import { navSections, visibilityKeys } from '../../config/navigation'
 
 import { BetaBadge } from './beta-badge'
 import {
@@ -20,6 +28,9 @@ import { ThemeSwatch } from '../theme-picker'
 import { useTheme } from '../theme-provider'
 
 import { useCustomizableMenuSettingsVisibility } from '../../hooks/settings'
+
+import { useShellStore } from '../../state/ui/shell'
+import { useGameAction } from '../../hooks/ui/game-action'
 
 import { useAccountListStore } from '../../state/accounts/list'
 
@@ -41,10 +52,12 @@ export function CommandPalette({
 
   const navigate = useNavigate()
   const accounts = useAccountListStore((state) => state.accounts)
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
 
-  const areThereAccounts = Object.keys(accounts).length > 0
+  const areThereAccounts = Object.values(accounts).some(
+    (account) => account.authStatus !== 'invalid',
+  )
+  const game = useGameAction()
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -62,21 +75,18 @@ export function CommandPalette({
   }, [open, onOpenChange])
 
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={onOpenChange}
-    >
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput placeholder={t('general:actions.search')} />
       <CommandList>
         <CommandEmpty>{t('general:no-item-found')}</CommandEmpty>
 
         {navSections.map((section) => {
           const items = section.items.filter(
-            (item) => !(item.needsAccount && !areThereAccounts)
+            (item) => !(item.needsAccount && !areThereAccounts),
           )
 
-          const destinations =
-            items.length === 0 && section.to
+          const destinations = [
+            ...(section.to && !items.some((item) => item.to === section.to)
               ? [
                   {
                     beta: false,
@@ -87,30 +97,30 @@ export function CommandPalette({
                     to: section.to,
                   },
                 ]
-              : items
+              : []),
+            ...items,
+          ]
 
           if (destinations.length === 0) {
             return null
           }
 
           return (
-            <CommandGroup
-              key={section.key}
-              heading={resolveNavLabel(t, section.label)}
-            >
+            <CommandGroup key={section.key} heading={t(section.label)}>
               {destinations.map((item) => {
                 const Icon = item.icon
-                const label = resolveNavLabel(t, item.label)
+                const label = t(item.label)
                 const keys = visibilityKeys(item)
                 const hidden =
-                  keys.length > 0 &&
-                  !keys.some((key) => getMenuOptionVisibility(key))
+                  (section.can && !getMenuOptionVisibility(section.can)) ||
+                  (keys.length > 0 &&
+                    !keys.some((key) => getMenuOptionVisibility(key)))
 
                 return (
                   <CommandItem
                     className="gap-2"
                     key={`${item.to}-${item.label}`}
-                    value={label}
+                    value={`${t(section.label)} ${label}`}
                     onSelect={() => {
                       onOpenChange(false)
                       navigate({
@@ -134,6 +144,46 @@ export function CommandPalette({
           )
         })}
 
+        <CommandGroup heading={t('general:actions.search')}>
+          <CommandItem
+            className="gap-2"
+            onSelect={() => {
+              useShellStore.getState().togglePane()
+              onOpenChange(false)
+            }}
+          >
+            <PanelLeft className="size-4" />
+            {t('sidebar:toggle-pane')} (Ctrl+B)
+          </CommandItem>
+          <CommandItem
+            className="gap-2"
+            disabled={!game.isRunning && !game.canLaunch}
+            onSelect={() => {
+              if (game.isRunning) game.close()
+              else game.launch()
+              onOpenChange(false)
+            }}
+          >
+            {game.isRunning ? (
+              <Square className="size-4" />
+            ) : (
+              <Rocket className="size-4" />
+            )}
+            {game.isRunning
+              ? t('general:close-game.button')
+              : t('general:launch-game.button')}
+          </CommandItem>
+          <CommandItem
+            className="gap-2"
+            onSelect={() => {
+              void navigate({ to: '/settings', search: { tab: 'app' } })
+              onOpenChange(false)
+            }}
+          >
+            <Settings className="size-4" />
+            {t('general:settings')}
+          </CommandItem>
+        </CommandGroup>
         <AppearanceCommands onDone={() => onOpenChange(false)} />
       </CommandList>
     </CommandDialog>
@@ -194,10 +244,7 @@ function AppearanceCommands({ onDone }: { onDone: () => void }) {
             onDone()
           }}
         >
-          <ThemeSwatch
-            className="size-4"
-            gradient={current.gradient}
-          />
+          <ThemeSwatch className="size-4" gradient={current.gradient} />
           <span className="flex-1">{current.name}</span>
           {colorTheme === current.id && (
             <span className="text-[0.625rem] text-muted-foreground">

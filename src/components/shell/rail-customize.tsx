@@ -4,14 +4,10 @@ import { Link } from '@tanstack/react-router'
 import { SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { navSections, resolveNavLabel, visibilityKeys } from '../../config/navigation'
+import { navSections, visibilityKeys } from '../../config/navigation'
 
 import { Label } from '../ui/label'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import { ScrollArea } from '../ui/scroll-area'
 import { Switch } from '../ui/switch'
 
@@ -28,26 +24,31 @@ import {
  * Writes the same keys Settings does, so a hide here survives restart and
  * stays in sync with the Settings page. Hidden destinations remain in ⌘K.
  */
-export function RailCustomize() {
+export function RailCustomize({ compact = false }: { compact?: boolean }) {
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
+  const { updateMenuOption } = useCustomizableMenuSettingsActions()
   const { t } = useTranslation(['sidebar', 'settings'])
 
   return (
-    <div className="border-t border-border/60 p-1.5">
+    <div className={compact ? undefined : 'border-t border-border/60 p-1.5'}>
       <Popover>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[0.8125rem] text-muted-foreground hover:bg-accent/30 hover:text-foreground"
+            aria-label={t('sidebar:customize.title')}
+            title={t('sidebar:customize.title')}
+            className={cn(
+              'flex items-center gap-2 rounded-lg text-[0.8125rem] text-muted-foreground hover:bg-accent/30 hover:text-foreground',
+              compact ? 'size-10 justify-center' : 'h-8 w-full px-2',
+            )}
           >
             <SlidersHorizontal className="size-4 shrink-0 opacity-75" />
-            <span className="truncate">{t('sidebar:customize.title')}</span>
+            <span className={compact ? 'sr-only' : 'truncate'}>
+              {t('sidebar:customize.title')}
+            </span>
           </button>
         </PopoverTrigger>
-        <PopoverContent
-          align="start"
-          side="right"
-          className="w-64 p-0"
-        >
+        <PopoverContent align="start" side="right" className="w-64 p-0">
           <div className="border-b border-border/60 px-3 py-2.5">
             <p className="text-[0.8125rem] font-medium">
               {t('sidebar:customize.title')}
@@ -58,11 +59,14 @@ export function RailCustomize() {
           </div>
           <ScrollArea className="h-[min(24rem,70vh)]">
             <div className="space-y-3 p-3">
+              <ToggleRow
+                checked={getMenuOptionVisibility('stwOperations')}
+                id="rail-stw-and-automations"
+                label={t('sidebar:stw-and-automations')}
+                onCheckedChange={updateMenuOption('stwOperations')}
+              />
               {navSections.map((section) => (
-                <CustomizeSection
-                  key={section.key}
-                  section={section}
-                />
+                <CustomizeSection key={section.key} section={section} />
               ))}
             </div>
           </ScrollArea>
@@ -82,8 +86,7 @@ export function RailCustomize() {
 
 function CustomizeSection({ section }: { section: NavSection }) {
   const { t } = useTranslation(['sidebar'])
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
   const { updateMenuOption } = useCustomizableMenuSettingsActions()
 
   if (section.items.length === 0) {
@@ -95,7 +98,7 @@ function CustomizeSection({ section }: { section: NavSection }) {
       <ToggleRow
         checked={getMenuOptionVisibility(section.can)}
         id={`rail-${section.key}`}
-        label={resolveNavLabel(t, section.label)}
+        label={t(section.label)}
         onCheckedChange={updateMenuOption(section.can)}
       />
     )
@@ -103,25 +106,22 @@ function CustomizeSection({ section }: { section: NavSection }) {
 
   return (
     <div>
-      {section.can ? (
+      {section.can && section.can !== 'stwOperations' ? (
         <ToggleRow
           checked={getMenuOptionVisibility(section.can)}
           className="mb-1 font-medium"
           id={`rail-section-${section.key}`}
-          label={resolveNavLabel(t, section.label)}
+          label={t(section.label)}
           onCheckedChange={updateMenuOption(section.can)}
         />
       ) : (
         <p className="mb-1 text-[0.6875rem] font-medium text-muted-foreground">
-          {resolveNavLabel(t, section.label)}
+          {t(section.label)}
         </p>
       )}
       <div className="space-y-0.5 pl-1">
         {section.items.map((item) => (
-          <ItemToggle
-            key={`${item.to}-${item.label}`}
-            item={item}
-          />
+          <ItemToggle key={`${item.to}-${item.label}`} item={item} />
         ))}
       </div>
     </div>
@@ -130,8 +130,7 @@ function CustomizeSection({ section }: { section: NavSection }) {
 
 function ItemToggle({ item }: { item: NavItem }) {
   const { t } = useTranslation(['sidebar'])
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
   const { updateMenuOption } = useCustomizableMenuSettingsActions()
 
   const keys = visibilityKeys(item)
@@ -147,7 +146,7 @@ function ItemToggle({ item }: { item: NavItem }) {
     <ToggleRow
       checked={checked}
       id={id}
-      label={resolveNavLabel(t, item.label)}
+      label={t(item.label)}
       onCheckedChange={(visibility) => {
         for (const key of keys) {
           updateMenuOption(key)(visibility)
@@ -181,11 +180,7 @@ function ToggleRow({
       >
         {label}
       </Label>
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-      />
+      <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   )
 }

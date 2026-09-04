@@ -8,24 +8,24 @@ import {
   UserPlus,
   X,
 } from 'lucide-react'
+import { useState } from 'react'
+import { Input } from '../ui/input'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 
-import { useAccountList } from '../account-list/hooks'
+import type { useAccountList } from '../account-list/hooks'
 
 import { cn, parseCustomDisplayName } from '../../lib/utils'
 
-/**
- * Always-visible account switcher for the rail.
- *
- * The titlebar combobox is still there for search on a large roster. This
- * list is the at-a-glance control: every account is on screen, the current
- * one is marked, and Ctrl+1..9 matches the order you see.
- */
-export function RailAccountSwitcher() {
+export function AccountRoster({
+  model,
+}: {
+  model: ReturnType<typeof useAccountList>
+}) {
+  const [query, setQuery] = useState('')
   const { t } = useTranslation(['general', 'sidebar'])
 
   const {
@@ -38,15 +38,16 @@ export function RailAccountSwitcher() {
     onSelectAll,
     onToggleMember,
     selected,
-  } = useAccountList()
+    createKeywords,
+  } = model
   const isChecking = accounts.some(
-    (account) => account.authStatus === 'checking'
+    (account) => account.authStatus === 'checking',
   )
 
   return (
     <div className="border-b border-border/60 px-1.5 py-1.5">
       <div className="flex items-center px-2 pb-1 pt-0.5">
-        <p className="micro-label text-muted-foreground/70 max-[900px]:hidden">
+        <p className="micro-label text-muted-foreground/70">
           {t('sidebar:customize.accounts')}
         </p>
         {accounts.length > 0 && (
@@ -75,12 +76,34 @@ export function RailAccountSwitcher() {
           className="flex h-8 items-center gap-2 rounded-lg px-2 text-[0.8125rem] text-muted-foreground hover:bg-accent/30 hover:text-foreground"
         >
           <UserPlus className="size-4 shrink-0 opacity-75" />
-          <span className="truncate max-[900px]:sr-only">{t('form.accounts.no-registered-accounts')}</span>
+          <span className="truncate">
+            {t('form.accounts.no-registered-accounts')}
+          </span>
         </Link>
       ) : (
         <>
-          <ul className="max-h-40 overflow-y-auto">
+          <Input
+            autoFocus
+            className="mb-2"
+            aria-label={t('sidebar:search-accounts')}
+            placeholder={t('sidebar:search-accounts')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <p className="mb-2 px-2 text-xs text-muted-foreground">
+            {t('sidebar:primary-account')} · {t('sidebar:account-scope')}
+          </p>
+          <ul className="max-h-[min(22rem,50vh)] overflow-y-auto">
             {accounts.map((account, index) => {
+              if (
+                query.trim() &&
+                !createKeywords(account)?.some((keyword) =>
+                  keyword
+                    .toLocaleLowerCase()
+                    .includes(query.trim().toLocaleLowerCase()),
+                )
+              )
+                return null
               const displayName = parseCustomDisplayName(account)
               const isCurrent = selected?.accountId === account.accountId
               const isInScope = members.includes(account.accountId)
@@ -97,7 +120,7 @@ export function RailAccountSwitcher() {
                       'text-[0.8125rem] text-muted-foreground',
                       !isInvalid && 'hover:bg-accent/30 hover:text-foreground',
                       isCurrent && 'bg-accent/70 font-medium text-foreground',
-                      isInvalid && 'opacity-45 grayscale'
+                      isInvalid && 'opacity-45 grayscale',
                     )}
                     onContextMenu={onContextMenu(account)}
                   >
@@ -122,28 +145,28 @@ export function RailAccountSwitcher() {
                         name={displayName}
                         selected={isCurrent}
                       />
-                      <span className="min-w-0 flex-1 truncate max-[900px]:sr-only">{displayName}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {displayName}
+                      </span>
                       {isInvalid && (
-                        <ShieldAlert className="size-3.5 shrink-0 max-[900px]:hidden" />
+                        <ShieldAlert className="size-3.5 shrink-0" />
                       )}
                       {isAccountChecking && (
-                        <LoaderCircle className="size-3.5 shrink-0 animate-spin max-[900px]:hidden" />
+                        <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
                       )}
                       {isValid && !isCurrent && (
-                        <ShieldCheck className="size-3.5 shrink-0 text-emerald-500 max-[900px]:hidden" />
+                        <ShieldCheck className="size-3.5 shrink-0 text-emerald-500" />
                       )}
                       {isCurrent && (
-                        <Check className="size-3.5 shrink-0 text-primary max-[900px]:hidden" />
+                        <Check className="size-3.5 shrink-0 text-primary" />
                       )}
                     </button>
                     {accounts.length > 1 && (
                       <Checkbox
-                        aria-label={
-                          isInScope ? 'Remove from scope' : 'Add to scope'
-                        }
+                        aria-label={`${t('sidebar:account-scope')}: ${displayName}`}
                         checked={isInScope}
                         disabled={isInvalid}
-                        className="ml-0.5 max-[900px]:hidden"
+                        className="ml-0.5"
                         size="sm"
                         onClick={(event) => event.stopPropagation()}
                         onCheckedChange={() =>
@@ -156,28 +179,37 @@ export function RailAccountSwitcher() {
               )
             })}
           </ul>
+          {accounts.every(
+            (account) =>
+              !createKeywords(account)?.some((keyword) =>
+                keyword
+                  .toLocaleLowerCase()
+                  .includes(query.trim().toLocaleLowerCase()),
+              ),
+          ) && (
+            <p className="p-3 text-sm text-muted-foreground">
+              {t('no-item-found')}
+            </p>
+          )}
 
           {accounts.length > 1 && (
-            <div className="mt-1 flex items-center gap-1 px-1 max-[900px]:hidden">
+            <div className="mt-1 flex items-center gap-1 px-1">
               <span className="figure mr-auto px-1 text-[0.625rem] text-muted-foreground">
                 {t('form.multi.select.counter', {
                   selected: members.length,
                   total: accounts.length,
                 })}
               </span>
-              <ScopeAction
-                disabled={allSelected}
-                onClick={onSelectAll}
-              >
+              <ScopeAction disabled={allSelected} onClick={onSelectAll}>
                 <CheckCheck className="size-3" />
-                {t('form.multi.select.all')}
+                {t('sidebar:all-accounts')}
               </ScopeAction>
               <ScopeAction
                 disabled={members.length <= 1}
                 onClick={onClearScope}
               >
                 <X className="size-3" />
-                {t('form.multi.select.clear')}
+                {t('sidebar:only-primary')}
               </ScopeAction>
             </div>
           )}
@@ -187,7 +219,7 @@ export function RailAccountSwitcher() {
   )
 }
 
-function AccountGlyph({
+export function AccountGlyph({
   accountId,
   name,
   selected,
@@ -200,7 +232,7 @@ function AccountGlyph({
     <span
       className={cn(
         'grid size-5 shrink-0 place-items-center rounded-md text-[0.5625rem] font-semibold uppercase text-white',
-        selected ? 'ring-1 ring-primary/70' : 'opacity-90'
+        selected ? 'ring-1 ring-primary/70' : 'opacity-90',
       )}
       style={{ backgroundColor: `hsl(${accountHue(accountId)} 42% 36%)` }}
     >

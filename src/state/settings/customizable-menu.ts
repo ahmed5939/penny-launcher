@@ -15,25 +15,18 @@ export type CustomizableMenuSettingsState = {
 export const customizableMenuSettingsRelations: Record<
   keyof Pick<
     CustomizableMenuSettings,
-    | 'currentAlerts'
-    | 'stwOperations'
-    | 'accountManagement'
-    | 'advancedMode'
-    | 'myAccounts'
+    'stwOperations' | 'accountManagement' | 'advancedMode' | 'myAccounts'
   >,
   Array<
     keyof Omit<
       CustomizableMenuSettings,
-      | 'currentAlerts'
-      | 'stwOperations'
-      | 'accountManagement'
-      | 'advancedMode'
-      | 'myAccounts'
+      'stwOperations' | 'accountManagement' | 'advancedMode' | 'myAccounts'
     >
   >
 > = {
-  currentAlerts: [],
   stwOperations: [
+    'currentAlerts',
+    'endurance',
     'autoKick',
     'taxiService',
     'party',

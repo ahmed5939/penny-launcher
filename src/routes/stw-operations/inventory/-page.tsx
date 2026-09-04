@@ -465,7 +465,8 @@ function Content() {
           title={parseCustomDisplayName(account)}
         />
 
-        <PanelBody className="space-y-3 px-3 py-3">
+      </Panel>
+      <div className="chrome-surface sticky top-0 z-10 space-y-3 rounded-xl border border-border/60 p-3">
           {/*
             A hand-rolled strip rather than the Radix `Tabs`, for the same
             reason `Segmented` is: there are no tab *panels* here. The tab
@@ -597,8 +598,7 @@ function Content() {
               </SelectContent>
             </Select>
           </div>
-        </PanelBody>
-      </Panel>
+      </div>
 
       {errorMessage && (
         <Callout

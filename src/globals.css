@@ -807,3 +807,14 @@ html.maximized .app-window-edge {
     --mobile-offset: 0px !important;
   }
 }
+
+/* Dashboard columns follow the content width, including when Friends is docked. */
+.home-dashboard { container-type: inline-size; }
+@container (min-width: 760px) {
+  .home-dashboard-panels { grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem); }
+}
+
+.collection-container { container-type: inline-size; }
+@container (min-width: 700px) {
+  .collection-workspace { grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr); }
+}

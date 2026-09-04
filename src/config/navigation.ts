@@ -50,12 +50,14 @@ export type MenuKey = keyof CustomizableMenuSettings
 export type NavItem = {
   /** Still settling — a small badge, not a quarantine. */
   beta?: boolean
+  /** Account administration shown after the everyday tools. */
+  secondary?: boolean
   /** Customisable-menu key controlling visibility. */
   can?: MenuKey
   /** Visible while any of these keys is enabled — for one entry standing in for several legacy toggles. */
   canAny?: Array<MenuKey>
   icon: LucideIcon
-  /** i18n key, or a literal when the product name is not translated. */
+  /** Translation key including its namespace. */
   label: string
   /** Meaningless with no linked account. */
   needsAccount?: boolean
@@ -73,14 +75,6 @@ export type NavSection = {
   key: string
   label: string
   to?: string
-}
-
-/** Literal product names are not i18n keys. */
-export function resolveNavLabel(
-  t: (key: string) => string,
-  label: string,
-): string {
-  return label.includes(':') ? t(label) : label
 }
 
 export function navDestinations(): Array<string> {
@@ -110,7 +104,6 @@ export const navSections: Array<NavSection> = [
     label: 'sidebar:home',
     icon: LayoutDashboard,
     to: '/',
-    can: 'currentAlerts',
     items: [],
   },
   {
@@ -154,8 +147,15 @@ export const navSections: Array<NavSection> = [
     key: 'stw',
     label: 'sidebar:groups.stw',
     icon: Swords,
+    to: '/stw-operations/missions',
     can: 'stwOperations',
     items: [
+      {
+        can: 'currentAlerts',
+        icon: Compass,
+        label: 'sidebar:missions',
+        to: '/stw-operations/missions',
+      },
       {
         can: 'inventory',
         icon: Boxes,
@@ -214,9 +214,17 @@ export const navSections: Array<NavSection> = [
         beta: true,
         can: 'outpost',
         icon: Shield,
-        label: 'Outpost',
+        label: 'sidebar:outpost',
         needsAccount: true,
         to: '/stw-operations/outpost',
+      },
+      {
+        beta: true,
+        can: 'endurance',
+        icon: Shield,
+        label: 'sidebar:endurance',
+        needsAccount: true,
+        to: '/stw-operations/endurance',
       },
       {
         can: 'xpBoosts',
@@ -237,8 +245,9 @@ export const navSections: Array<NavSection> = [
         // One entry for all three sign-in methods; the page switches between
         // them in place. The legacy per-method toggles still gate it together.
         canAny: ['authorizationCode', 'exchangeCode', 'deviceAuth'],
+        secondary: true,
         icon: UserPlus,
-        label: 'Add account',
+        label: 'sidebar:add-account',
         params: { type: 'authorization-code' },
         to: '/accounts/add/$type',
       },
@@ -251,14 +260,14 @@ export const navSections: Array<NavSection> = [
       {
         beta: true,
         icon: Shirt,
-        label: 'BR Locker',
+        label: 'sidebar:br-locker',
         needsAccount: true,
         to: '/account-management/locker',
       },
       {
         beta: true,
         icon: Ghost,
-        label: 'Sprites',
+        label: 'sidebar:sprites',
         needsAccount: true,
         to: '/account-management/sprites',
       },
@@ -288,6 +297,7 @@ export const navSections: Array<NavSection> = [
       },
       {
         can: 'epicGamesSettings',
+        secondary: true,
         icon: Cog,
         label: 'sidebar:account-management.options.epic-settings',
         needsAccount: true,
@@ -295,13 +305,15 @@ export const navSections: Array<NavSection> = [
       },
       {
         can: 'eula',
+        secondary: true,
         icon: FileText,
-        label: 'EULA',
+        label: 'sidebar:eula',
         needsAccount: true,
         to: '/account-management/eula',
       },
       {
         can: 'removeAccount',
+        secondary: true,
         icon: Trash2,
         label: 'sidebar:accounts.options.remove',
         needsAccount: true,
@@ -344,9 +356,61 @@ export const navSections: Array<NavSection> = [
   },
   {
     key: 'plugins',
-    label: 'Add-ons',
+    label: 'sidebar:add-ons',
     icon: Puzzle,
     to: '/plugins',
     items: [],
   },
 ]
+
+/** Match whole path segments; the root must never claim unrelated routes. */
+export function matchesNavPath(pathname: string, destination: string): boolean {
+  const prefix = destination.split('/$')[0]
+  return (
+    pathname === prefix || (prefix !== '/' && pathname.startsWith(`${prefix}/`))
+  )
+}
+
+export function activeSectionFor(pathname: string): NavSection | undefined {
+  return navSections
+    .flatMap((section) => [
+      ...(section.to ? [{ section, to: section.to }] : []),
+      ...section.items.map((item) => ({ section, to: item.to })),
+    ])
+    .filter(({ to }) => matchesNavPath(pathname, to))
+    .sort((a, b) => b.to.split('/$')[0].length - a.to.split('/$')[0].length)[0]
+    ?.section
+}
+
+export function visibleSectionItems(
+  section: NavSection,
+  isVisible: (key: MenuKey) => boolean,
+): Array<NavItem> {
+  if (section.can && !isVisible(section.can)) return []
+  return section.items.filter((item) => {
+    const keys = visibilityKeys(item)
+    return keys.length === 0 || keys.some(isVisible)
+  })
+}
+
+/** A landing is always reachable and never picks an account-only disabled row. */
+export function sectionLanding(
+  section: NavSection,
+  visibleItems: Array<NavItem>,
+  hasAccount: boolean,
+  rememberedPath?: string,
+): Pick<NavItem, 'to' | 'params'> | undefined {
+  const available = visibleItems.filter(
+    (item) => !item.needsAccount || hasAccount,
+  )
+  const standaloneLanding =
+    section.to && !section.items.some((item) => item.to === section.to)
+  if (
+    rememberedPath &&
+    ((standaloneLanding && rememberedPath === section.to) ||
+      available.some((item) => matchesNavPath(rememberedPath, item.to)))
+  )
+    return { to: rememberedPath }
+  if (standaloneLanding) return { to: section.to! }
+  return available.find((item) => item.to === section.to) ?? available[0]
+}

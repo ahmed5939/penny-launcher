@@ -169,10 +169,10 @@ const TRAP_LAYOUT_CODE: Record<OutpostTrapCategory, number> = {
 
 /** Layout piece kinds — kept in sync with `OutpostLayout.structures`. */
 function pieceKindCode(pieceType: string): number {
-  if (PIECE_TYPES.walls.includes(pieceType)) return 1
-  if (PIECE_TYPES.floors.includes(pieceType)) return 0
   if (pieceType.startsWith('Stair')) return 2
   if (pieceType.startsWith('Roof')) return 3
+  if (/^(?:Solid|.*Wall|Door|Window|Arch|Brace)/i.test(pieceType)) return 1
+  if (/^(?:Floor|Balcony)/i.test(pieceType)) return 0
 
   return 4
 }
@@ -565,7 +565,7 @@ export function parseSav(raw: Buffer): {
    * so rounding to whole cells would collapse them onto the floors.
    */
   const cellUnits = (value: number) =>
-    Math.round((value / GRID_CELL) * 100) / 100
+    Math.round((value / GRID_CELL) * 10_000) / 10_000
 
   /**
    * Structures — one record per placed PlayerBuilding actor. The class name

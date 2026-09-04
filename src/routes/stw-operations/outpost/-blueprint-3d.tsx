@@ -4,7 +4,7 @@ import type {
 } from '../../../kernel/core/outpost-types'
 import type { MutableRefObject } from 'react'
 
-import { Box, Grid3x3, Layers3, Maximize2, Trees } from 'lucide-react'
+import { Box, Grid3x3, Layers3, Map as MapIcon, Maximize2, Trees } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -50,14 +50,9 @@ import {
 } from './-blueprint-geometry'
 
 /**
- * The 3D explorer: the base rebuilt piece by piece from the save. Every
- * structure is drawn as the edit it actually is (windows, doors, arches,
- * half floors, ramps, roof cones and their corner variants) with procedural
- * wood / stone / metal surfaces, tier-shaded and shadowed; traps are their
- * real item icons laid on the floor, hung under the ceiling or mounted on
- * the wall they face; and the world actors the save records — trees, rocks,
- * loot containers and the map's own pre-built pieces — stand around the
- * build on a textured ground.
+ * Reconstructs saved build positions using procedural piece geometry and
+ * trap icons. Known edits have dedicated shapes; other edits and scenery
+ * use simplified stand-ins because the save does not contain game meshes.
  */
 
 const MATERIAL_COLORS = ['#c9a06a', '#9aa4ad', '#6fd3e0', '#b7a5ca']
@@ -80,7 +75,7 @@ export function outpostHeightLevels(layout: OutpostLayout) {
   return [
     ...new Set(
       [...layout.structures.map((piece) => piece[2]), ...layout.traps.map((trap) => trap[2])]
-        .map((height) => Math.round(height * 100) / 100)
+        .filter(Number.isFinite)
     ),
   ].sort((a, b) => a - b)
 }
@@ -840,6 +835,8 @@ function BlueprintScene({
   selectedTrap,
   showGrid,
   showProps,
+  showTerrain,
+  topViewRef,
   zoneId,
 }: {
   iconByTrapName: Map<string, string | undefined>
@@ -853,6 +850,8 @@ function BlueprintScene({
   selectedTrap: string | null
   showGrid: boolean
   showProps: boolean
+  showTerrain: boolean
+  topViewRef: MutableRefObject<(() => void) | null>
   zoneId?: string
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -1017,11 +1016,13 @@ function BlueprintScene({
         target: controls.target.toArray(),
       }
     }
+    camera.near = Math.max(0.05, distance / 500)
+    camera.far = Math.max(500, distance * 12)
+    controls.maxDistance = Math.max(220, distance * 4)
+
     const resetCamera = () => {
       controls.target.set(0, spanZ * 0.35, 0)
       camera.position.set(distance * 0.7, Math.max(9, spanZ + distance * 0.45), distance * 0.72)
-      camera.near = Math.max(0.05, distance / 500)
-      camera.far = distance * 12
       camera.updateProjectionMatrix()
       controls.update()
       rememberCamera()
@@ -1036,14 +1037,29 @@ function BlueprintScene({
       resetCamera()
     }
     resetRef.current = resetCamera
+    topViewRef.current = () => {
+      controls.target.set(0, spanZ * 0.5, 0)
+      const halfFov = THREE.MathUtils.degToRad(camera.fov / 2)
+      const fitDistance = Math.max(spanX, spanY / camera.aspect) / (2 * Math.tan(halfFov))
+
+      camera.position.set(0, spanZ + Math.max(6, fitDistance * 1.15), 0.001)
+      controls.update()
+      rememberCamera()
+    }
     controls.addEventListener('change', rememberCamera)
 
     // Ground: the zone's extracted terrain when we have it, flat otherwise.
+    const groundObjects = new THREE.Group()
+
+    groundObjects.visible = showTerrain
+    scene.add(groundObjects)
+
     if (terrain) {
       const heightGrid = buildZoneHeightGrid(terrain)
       const { cols, heights, kinds, minX, minY, rows } = heightGrid
       const positions = new Float32Array(rows * cols * 3)
       const colorValues = new Float32Array(rows * cols * 3)
+      const uvs = new Float32Array(rows * cols * 2)
       const color = new THREE.Color()
       let zMin = Infinity
       let zMax = -Infinity
@@ -1078,6 +1094,7 @@ function BlueprintScene({
           const shade = cellShade(minX + ix, minY + iy) * relief
 
           positions.set([vertex.x, vertex.y, vertex.z], i * 3)
+          uvs.set([iy / groundWidth, ix / groundDepth], i * 2)
           color.setRGB(
             Math.min(1, (r / 255) * shade),
             Math.min(1, (g / 255) * shade),
@@ -1111,6 +1128,7 @@ function BlueprintScene({
         'color',
         new THREE.BufferAttribute(colorValues, 3)
       )
+      terrainGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
       terrainGeometry.setIndex(indices)
       terrainGeometry.computeVertexNormals()
 
@@ -1132,7 +1150,7 @@ function BlueprintScene({
       )
 
       terrainMesh.receiveShadow = true
-      scene.add(terrainMesh)
+      groundObjects.add(terrainMesh)
 
       /* The sea around the island, just above the seabed cells. */
       const water = new THREE.Mesh(
@@ -1152,7 +1170,7 @@ function BlueprintScene({
       water.position
         .copy(groundCentre)
         .setY(terrain.waterZ - floorZ + 0.02)
-      scene.add(water)
+      groundObjects.add(water)
 
       /* Lava pools glow on their own, unlit. */
       if (terrain.lava.length > 0) {
@@ -1185,7 +1203,7 @@ function BlueprintScene({
           }
         )
         glow.computeBoundingSphere()
-        scene.add(glow)
+        groundObjects.add(glow)
       }
     } else {
       const groundMap = track(groundTexture())
@@ -1206,7 +1224,7 @@ function BlueprintScene({
       ground.rotation.x = -Math.PI / 2
       ground.position.copy(groundCentre).setY(-FLOOR_THICKNESS - 0.02)
       ground.receiveShadow = true
-      scene.add(ground)
+      groundObjects.add(ground)
     }
 
     /*
@@ -1244,7 +1262,7 @@ function BlueprintScene({
         rect.y + rect.height / 2 + centerX
       )
       plane.receiveShadow = true
-      scene.add(plane)
+      groundObjects.add(plane)
     }
 
     if (showGrid) {
@@ -1681,6 +1699,7 @@ function BlueprintScene({
       renderer.dispose()
       renderer.domElement.remove()
       resetRef.current = null
+      topViewRef.current = null
     }
   }, [
     iconByTrapName,
@@ -1694,6 +1713,8 @@ function BlueprintScene({
     selectedTrap,
     showGrid,
     showProps,
+    showTerrain,
+    topViewRef,
     zoneId,
   ])
 
@@ -1742,6 +1763,7 @@ export function Blueprint3D({
   const [levelIndex, setLevelIndex] = useState(Math.max(0, heights.length - 1))
   const [showProps, setShowProps] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
+  const [showTerrain, setShowTerrain] = useState(true)
   const [hovered, setHovered] = useState<HoverInfo | null>(null)
   const [canvasFallback, setCanvasFallback] = useState(
     () => sessionStorage.getItem(canvasFallbackSessionKey) === '1'
@@ -1752,6 +1774,7 @@ export function Blueprint3D({
       : null
   )
   const resetRef = useRef<(() => void) | null>(null)
+  const topViewRef = useRef<(() => void) | null>(null)
   const maxVisibleZ = heights[levelIndex] ?? layout.bounds.maxZ
   const visibleStructures = layout.structures.filter(
     (piece) => piece[2] <= maxVisibleZ
@@ -1786,7 +1809,7 @@ export function Blueprint3D({
           {worldAssets > 0 && ` · ${worldAssets} world assets`}
           {rendererMode && ` · ${rendererMode}`}
         </p>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           <Layers3 className="size-3.5 text-muted-foreground" />
           <label className="micro-label text-muted-foreground" htmlFor="outpost-height-layer">
             {levelIndex === heights.length - 1
@@ -1806,7 +1829,7 @@ export function Blueprint3D({
           <Button
             aria-pressed={showProps}
             className="size-7"
-            disabled={worldAssets === 0}
+            disabled={worldAssets === 0 && (canvasFallback || !zoneTerrain)}
             onClick={() => setShowProps((value) => !value)}
             size="icon"
             title={showProps ? 'Hide world assets' : 'Show world assets'}
@@ -1821,10 +1844,32 @@ export function Blueprint3D({
             onClick={() => setShowGrid((value) => !value)}
             size="icon"
             title={showGrid ? 'Hide build grid' : 'Show build grid'}
+            disabled={canvasFallback}
             type="button"
             variant={showGrid ? 'secondary' : 'outline'}
           >
             <Grid3x3 className="size-3.5" />
+          </Button>
+          <Button
+            aria-pressed={showTerrain}
+            className="size-7"
+            disabled={canvasFallback}
+            onClick={() => setShowTerrain((value) => !value)}
+            size="icon"
+            title={showTerrain ? 'Hide terrain to inspect builds' : 'Show terrain'}
+            type="button"
+            variant={showTerrain ? 'secondary' : 'outline'}
+          >
+            <MapIcon className="size-3.5" />
+          </Button>
+          <Button
+            disabled={canvasFallback}
+            onClick={() => topViewRef.current?.()}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Top view
           </Button>
           <Button
             className="size-7"
@@ -1862,6 +1907,8 @@ export function Blueprint3D({
             selectedTrap={selectedTrap}
             showGrid={showGrid}
             showProps={showProps}
+            showTerrain={showTerrain}
+            topViewRef={topViewRef}
             zoneId={zoneId}
           />
         )}
@@ -1887,6 +1934,11 @@ export function Blueprint3D({
         </div>
       </div>
 
+      <p className="micro-label text-muted-foreground">
+        Saved build positions · simplified piece and scenery models
+        {canvasFallback && ' · compatibility view uses basic shapes and flat ground'}
+      </p>
+
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 micro-label text-muted-foreground">
         <LegendSwatch color={MATERIAL_COLORS[0]} label="Wood" />
         <LegendSwatch color={MATERIAL_COLORS[1]} label="Stone" />
@@ -1899,7 +1951,7 @@ export function Blueprint3D({
           <>
             <span className="text-border">|</span>
             <span title={`Terrain layout extracted from ${zoneTerrain.source}`}>
-              Real zone terrain
+              Reconstructed zone terrain
             </span>
           </>
         )}

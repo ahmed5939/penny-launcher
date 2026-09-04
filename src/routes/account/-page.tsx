@@ -2,7 +2,7 @@ import { Users } from 'lucide-react'
 
 import { PageHeader } from '../../components/page'
 
-import { AccountHub } from '../-index/-account-hub'
+import { AccountHub } from './-hub'
 
 /**
  * Epic account hub as its own page: everything that belongs to the Epic

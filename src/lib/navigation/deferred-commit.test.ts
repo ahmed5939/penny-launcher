@@ -1,0 +1,40 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createDeferredCommit } from './deferred-commit'
+
+afterEach(() => vi.useRealTimers())
+describe('pending account edits', () => {
+  it('commits only the final input after the delay', () => {
+    vi.useFakeTimers()
+    const save = vi.fn()
+    const pending = createDeferredCommit<string>(500)
+    pending.schedule('first', save)
+    pending.schedule('last', save)
+    vi.advanceTimersByTime(499)
+    expect(save).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(save).toHaveBeenCalledExactlyOnceWith('last')
+  })
+  it('flushes before navigation without saving twice', () => {
+    vi.useFakeTimers()
+    const save = vi.fn()
+    const pending = createDeferredCommit<number>(700)
+    pending.schedule(42, save)
+    pending.flush()
+    pending.flush()
+    vi.runAllTimers()
+    expect(save).toHaveBeenCalledExactlyOnceWith(42)
+  })
+  it('keeps edits associated with their own account callback', () => {
+    vi.useFakeTimers()
+    const saveA = vi.fn()
+    const saveB = vi.fn()
+    const first = createDeferredCommit<string>(500)
+    const second = createDeferredCommit<string>(500)
+    first.schedule('A status', saveA)
+    second.schedule('B status', saveB)
+    first.flush()
+    vi.runAllTimers()
+    expect(saveA).toHaveBeenCalledExactlyOnceWith('A status')
+    expect(saveB).toHaveBeenCalledExactlyOnceWith('B status')
+  })
+})

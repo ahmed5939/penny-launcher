@@ -12,11 +12,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 
-/**
- * Epic account hub: everything that belongs to the Epic account (not to
- * Fortnite the game) in one launcher-style grid — shown under the "Account"
- * tab of the detail view.
- */
+/** Account administration destinations. */
 
 type HubItem = {
   title: string
@@ -29,7 +25,8 @@ type HubItem = {
 const items: Array<HubItem> = [
   {
     title: 'Add account',
-    description: 'Authorization code, device auth, exchange code, or Aerial import',
+    description:
+      'Authorization code, device auth, exchange code, or Aerial import',
     icon: UserPlus,
     to: '/accounts/add/$type',
     params: { type: 'authorization-code' },
@@ -93,9 +90,7 @@ export function AccountHub() {
               <item.icon className="size-5" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold">
-                {item.title}
-              </span>
+              <span className="block text-sm font-semibold">{item.title}</span>
               <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
                 {item.description}
               </span>

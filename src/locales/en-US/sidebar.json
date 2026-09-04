@@ -75,5 +75,32 @@
   "version": {
     "release": "Release v{{version}}",
     "all-releases": "All Releases"
-  }
+  },
+  "missions": "Missions",
+  "endurance": "Endurance",
+  "outpost": "Outpost",
+  "br-locker": "BR Locker",
+  "sprites": "Sprites",
+  "eula": "EULA",
+  "add-account": "Add account",
+  "add-ons": "Add-ons",
+  "toggle-pane": "Toggle navigation pane",
+  "more": "More",
+  "manage-accounts": "Manage accounts",
+  "account-scope": "In scope",
+  "primary-account": "Primary account",
+  "search-accounts": "Search accounts",
+  "all-accounts": "All eligible accounts",
+  "only-primary": "Only primary",
+  "open-missions": "Open Missions",
+  "no-tools": "No available tools. Customize the menu or add an account.",
+  "your-accounts": "Your accounts",
+  "look-up-player": "Look up player",
+  "choose-account": "Choose an account",
+  "choose-loadout": "Choose a loadout",
+  "navigation": "Navigation",
+  "stw-and-automations": "Save the World & automations",
+  "service-accounts": "{{count}} accounts configured",
+  "history": "History",
+  "account-attention": "Account authentication needs attention"
 }

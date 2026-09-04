@@ -10,42 +10,26 @@ import { PennyRender } from '../../components/branding/penny-portrait'
 import { Button } from '../../components/ui/button'
 
 import { useGetAccounts, useGetSelectedAccount } from '../../hooks/accounts'
-import { useGameInstall } from '../../hooks/game-install'
-import { useCustomProcessStatus } from '../../hooks/settings'
+import { useGameAction } from '../../hooks/ui/game-action'
 import { useAlertsSummary, useAutomationServices } from './-hooks'
 
 import { numberWithCommaSeparator } from '../../lib/parsers/numbers'
 import { parseCustomDisplayName, cn } from '../../lib/utils'
 
-/**
- * Home hero: identity, the one action that matters, and the numbers worth
- * knowing before you press it.
- *
- * The launch/kill notification listener is registered by the titlebar's
- * `useHandlers`, so this calls the electron API directly rather than reusing
- * that hook — otherwise every toast would fire twice.
- */
+/** Home identity, launch action and live summary. */
 export function HomeHero() {
   const { t } = useTranslation(['general'])
 
   const { accountsArray } = useGetAccounts()
   const { selected } = useGetSelectedAccount()
-  const { customProcessIsRunning } = useCustomProcessStatus()
-  const { status: gameInstall } = useGameInstall({ autoLoad: false })
+  const { isRunning: customProcessIsRunning, canLaunch, launch: handleLaunch, close } = useGameAction()
   const { running, services } = useAutomationServices()
   const alerts = useAlertsSummary()
 
   const elapsed = useSessionTimer(customProcessIsRunning)
 
   const hasAccounts = accountsArray.length > 0
-  const installMissing = gameInstall?.install.found === false
   const displayName = selected ? parseCustomDisplayName(selected) : null
-
-  const handleLaunch = () => {
-    if (selected) {
-      window.electronAPI.launcherStart(selected)
-    }
-  }
 
   const headline = !hasAccounts
     ? t('home.no-account')
@@ -54,7 +38,7 @@ export function HomeHero() {
       : t('home.ready')
 
   return (
-    <section className="relative mb-4 select-none overflow-hidden rounded-xl border border-border/70 bg-card">
+    <section className="relative select-none overflow-hidden rounded-xl border border-border/70 bg-card">
       {/*
         Backdrop: a brand-gradient wash over the card plus two soft light
         sources. Everything is tokens — the wash follows the active colour
@@ -133,9 +117,7 @@ export function HomeHero() {
                   'disabled:opacity-40 disabled:shadow-none'
                 )}
                 disabled={
-                  selected === null ||
-                  customProcessIsRunning ||
-                  installMissing
+                  !canLaunch
                 }
                 onClick={handleLaunch}
               >
@@ -150,7 +132,7 @@ export function HomeHero() {
               <Button
                 className="h-11 rounded-lg border-destructive/40 px-5 text-sm font-semibold uppercase tracking-wider text-destructive hover:bg-destructive/15"
                 variant="outline"
-                onClick={() => window.electronAPI.killProcess()}
+                onClick={close}
               >
                 <Square className="mr-2 size-3.5" />
                 {t('close-game.button')}

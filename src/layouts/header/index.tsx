@@ -1,30 +1,19 @@
-import type { ReactNode } from 'react'
-
 import { Link } from '@tanstack/react-router'
 import { useShallow } from 'zustand/react/shallow'
-import {
-  Contact,
-  History,
-  Rocket,
-  Search,
-  Settings,
-  UserCog,
-} from 'lucide-react'
+import { Contact, Rocket, Square, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../components/ui/button'
-import { Sheet, SheetContent, SheetTrigger } from '../../components/ui/sheet'
+import { Sheet, SheetContent } from '../../components/ui/sheet'
 
-import { AccountList } from '../../components/account-list'
+import { AccountSwitcher } from '../../components/shell/account-switcher'
+import { OverflowMenu } from '../../components/shell/overflow-menu'
+import { useGameAction } from '../../hooks/ui/game-action'
 import { HistoryMenu } from '../../components/menu/history'
 import { Kbd } from '../../components/page'
 import { PennyAvatar } from '../../components/branding/penny-portrait'
-import { ThemeSwitcher } from '../../components/shell/theme-switcher'
 
 import { useUISidebarHistory } from '../../hooks/ui/sidebars'
-import { useGetSelectedAccount } from '../../hooks/accounts'
-import { useGameInstall } from '../../hooks/game-install'
-import { useCustomProcessStatus } from '../../hooks/settings'
 
 import { useFriendsManagerStore } from '../../state/management/friends-manager'
 
@@ -73,12 +62,14 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
           'not-draggable-region group flex h-7 w-56 items-center gap-2 rounded-lg max-[900px]:w-8 max-[900px]:justify-center max-[900px]:px-0',
           'border border-border/70 bg-background/60 pl-2.5 pr-1.5',
           'text-xs text-muted-foreground transition-colors',
-          'hover:border-primary/40 hover:bg-accent/30 hover:text-foreground'
+          'hover:border-primary/40 hover:bg-accent/30 hover:text-foreground',
         )}
         onClick={onOpenPalette}
       >
         <Search className="size-3.5 shrink-0" />
-        <span className="flex-1 truncate text-left max-[900px]:hidden">{t('actions.search')}</span>
+        <span className="flex-1 truncate text-left max-[900px]:hidden">
+          {t('actions.search')}
+        </span>
         {/*
           `Kbd` draws the chip but takes no class of its own, so the wrapper is
           what stops the label beside it from squeezing the shortcut.
@@ -89,27 +80,13 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
       </button>
 
       <div className="not-draggable-region ml-auto flex items-center gap-1 pr-1">
-        <AccountList />
+        <AccountSwitcher />
 
         <LaunchGameButton />
 
         <FriendsToggle />
 
-        <ThemeSwitcher />
-
-        <TitlebarButton
-          label="Epic account"
-          to="/account"
-        >
-          <UserCog className="size-4" />
-        </TitlebarButton>
-
-        <TitlebarButton
-          label="Settings"
-          to="/settings"
-        >
-          <Settings className="size-4" />
-        </TitlebarButton>
+        <OverflowMenu />
 
         <HistorySheet />
       </div>
@@ -120,33 +97,31 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
 /** Launch Fortnite for the account currently selected in the titlebar. */
 function LaunchGameButton() {
   const { t } = useTranslation(['general'])
-  const { selected } = useGetSelectedAccount()
-  const { customProcessIsRunning } = useCustomProcessStatus()
-  const { status: gameInstall } = useGameInstall()
-
-  const installMissing = gameInstall?.install.found === false
-  const disabled =
-    selected === null || customProcessIsRunning || installMissing
-  const label = customProcessIsRunning
-    ? t('is-running')
-    : t('launch-game.button')
-
+  const { isRunning, canLaunch, launch, close } = useGameAction({
+    autoLoad: true,
+  })
+  const label = isRunning ? t('close-game.button') : t('launch-game.button')
   return (
     <Button
       type="button"
-      className="text-primary hover:bg-primary/15 hover:text-primary"
-      size="icon"
-      variant="ghost"
+      size="sm"
+      variant={isRunning ? 'outline' : 'default'}
+      className={
+        isRunning
+          ? 'border-destructive/40 text-destructive hover:text-destructive'
+          : undefined
+      }
       title={label}
       aria-label={label}
-      disabled={disabled}
-      onClick={() => {
-        if (selected) {
-          window.electronAPI.launcherStart(selected)
-        }
-      }}
+      disabled={!isRunning && !canLaunch}
+      onClick={isRunning ? close : launch}
     >
-      <Rocket className="size-4" />
+      {isRunning ? (
+        <Square className="size-3.5" />
+      ) : (
+        <Rocket className="size-4" />
+      )}
+      <span className="max-[700px]:hidden">{label}</span>
     </Button>
   )
 }
@@ -164,7 +139,7 @@ function FriendsToggle() {
       isOpen: state.isOpen,
       togglePanel: state.togglePanel,
       total: state.entries.filter((entry) => entry.kind === 'friend').length,
-    }))
+    })),
   )
 
   return (
@@ -174,7 +149,7 @@ function FriendsToggle() {
         'flex h-7 items-center gap-1.5 rounded-lg border px-2 text-xs font-medium transition-colors',
         isOpen
           ? 'border-primary/40 bg-primary/15 text-primary'
-          : 'border-transparent text-muted-foreground hover:bg-accent/30 hover:text-foreground'
+          : 'border-transparent text-muted-foreground hover:bg-accent/30 hover:text-foreground',
       )}
       title={isOpen ? 'Hide friends' : 'Show friends'}
       onClick={togglePanel}
@@ -185,7 +160,7 @@ function FriendsToggle() {
         <span
           className={cn(
             'figure rounded-lg px-1 text-[0.625rem] font-semibold',
-            isOpen ? 'bg-primary/20' : 'bg-muted'
+            isOpen ? 'bg-primary/20' : 'bg-muted',
           )}
         >
           {total}
@@ -195,54 +170,16 @@ function FriendsToggle() {
   )
 }
 
-function TitlebarButton({
-  children,
-  label,
-  to,
-}: {
-  children: ReactNode
-  label: string
-  to: string
-}) {
-  return (
-    <Button
-      asChild
-      className="text-muted-foreground"
-      size="icon"
-      variant="ghost"
-    >
-      <Link
-        to={to}
-        title={label}
-      >
-        {children}
-        <span className="sr-only">{label}</span>
-      </Link>
-    </Button>
-  )
-}
-
 function HistorySheet() {
   const { changeVisibility, visibility } = useUISidebarHistory()
 
   return (
-    <Sheet
-      open={visibility}
-      onOpenChange={changeVisibility}
-    >
-      <SheetTrigger asChild>
-        <Button
-          type="button"
-          className="text-muted-foreground"
-          size="icon"
-          variant="ghost"
-          title="History"
-        >
-          <History className="size-4" />
-          <span className="sr-only">toggle history sidebar</span>
-        </Button>
-      </SheetTrigger>
+    <Sheet open={visibility} onOpenChange={changeVisibility}>
       <SheetContent
+        onCloseAutoFocus={(event) => {
+          event.preventDefault()
+          document.getElementById('shell-more')?.focus()
+        }}
         className="flex flex-col p-0"
         hideCloseButton
       >

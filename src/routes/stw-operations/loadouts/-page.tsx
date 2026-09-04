@@ -1,3 +1,6 @@
+import { CollectionPicker } from '../../../components/page/collection-picker'
+import { resolveCollectionSelection } from '../../../lib/navigation/page-tabs'
+import { Route } from './route'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { ItemDetailSubject } from '../../../components/items/item-detail'
@@ -117,6 +120,7 @@ function loadoutTitle(loadout: LoadoutEntry) {
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
+  const { selected } = useGetSelectedAccount()
 
   return (
     <>
@@ -126,12 +130,14 @@ export function RouteComponent() {
         title={t('stw-operations.options.loadouts')}
         description="Every loadout the account has saved, in the game's own order. Click a seat to change who is in it, right-click one to inspect them."
       />
-      <Content />
+      <Content key={selected?.accountId ?? 'none'} />
     </>
   )
 }
 
 function Content() {
+  const { loadout: requestedLoadout } = Route.useSearch()
+  const navigate = Route.useNavigate()
   useRequestItemDatabase()
 
   const { selected } = useGetSelectedAccount()
@@ -142,6 +148,7 @@ function Content() {
 
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
   const [loadouts, setLoadouts] = useState<Array<LoadoutEntry>>([])
+  const currentLoadout = resolveCollectionSelection(loadouts.map((loadout) => loadout.itemId), requestedLoadout, loadouts.find((loadout) => loadout.active)?.itemId)
   const [heroes, setHeroes] = useState<Array<InventoryItem>>([])
   const [availableGadgets, setAvailableGadgets] = useState<Array<string>>([])
   const [defenders, setDefenders] = useState<Array<InventoryItem>>([])
@@ -171,6 +178,7 @@ function Content() {
   useEffect(() => {
     const listener = window.electronAPI.responseLoadouts(
       async (response) => {
+        if (response.accountId !== accountId) return
         setLoading(false)
         setHasLoaded(true)
         setLoadouts(response.loadouts)
@@ -206,6 +214,7 @@ function Content() {
   useEffect(() => {
     const listener = window.electronAPI.notificationLoadoutEdit(
       async (response) => {
+        if (response.accountId !== accountId) return
         setEditing(false)
         setPendingSlot(null)
         setPendingWeapon(null)
@@ -390,8 +399,13 @@ function Content() {
       )}
 
       {hasLoaded && !errorMessage && loadouts.length > 0 && (
-        <div className="grid gap-2 lg:grid-cols-2 2xl:grid-cols-3">
-          {loadouts.map((loadout) => (
+        <div className="collection-container">
+        <div className="collection-workspace grid items-start gap-4">
+          <CollectionPicker label="Loadouts" value={currentLoadout}
+            items={loadouts.map((loadout) => ({ value: loadout.itemId, label: loadoutTitle(loadout), status: loadout.active ? <StatusPill tone="active">Equipped</StatusPill> : undefined }))}
+            onValueChange={(value) => { void navigate({ search: (previous) => ({ ...previous, loadout: value }), resetScroll: false }) }} />
+          <div className="min-w-0">
+          {loadouts.filter((loadout) => loadout.itemId === currentLoadout).map((loadout) => (
             <LoadoutCard
               isEditing={isEditing}
               key={loadout.itemId}
@@ -420,6 +434,8 @@ function Content() {
               records={records}
             />
           ))}
+          </div>
+        </div>
         </div>
       )}
 

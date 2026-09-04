@@ -53,7 +53,7 @@ export function HomeGameInstall() {
 
   if (!status) {
     return (
-      <Panel className="mb-6">
+      <Panel>
         <PanelBody className="grid gap-3">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-full" />
@@ -66,7 +66,6 @@ export function HomeGameInstall() {
   if (!status.install.found) {
     return (
       <EmptyState
-        className="mb-6"
         icon={HardDrive}
         title={t('home.game.missing-title')}
         description={t('home.game.missing-description')}
@@ -105,7 +104,7 @@ export function HomeGameInstall() {
   const sourceKey = `home.game.source-${install.source}` as const
 
   return (
-    <Panel className="mb-6">
+    <Panel>
       <PanelHeader
         compact
         icon={HardDrive}

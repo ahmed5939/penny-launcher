@@ -23,7 +23,7 @@ import { isLegendaryOrMythicSurvivor } from '../../../lib/validations/resources'
 import { assets } from '../../../lib/repository'
 import { cn } from '../../../lib/utils'
 
-export function HomeAlerts() {
+export function HomeAlerts({ summaryOnly = false }: { summaryOnly?: boolean }) {
   const { t } = useTranslation(['general'])
 
   const {
@@ -55,9 +55,9 @@ export function HomeAlerts() {
 
   return (
     <>
-      <h2 className="micro-label mb-2 px-0.5">
+      {!summaryOnly && <h2 className="micro-label mb-2 px-0.5">
         {t('home.alerts.title')}
-      </h2>
+      </h2>}
       <ul className="gap-3 grid grid-cols-2 sm:grid-cols-3">
         <PreviewItem
           imageUrl={assets('currency_mtxswap')}
@@ -79,7 +79,7 @@ export function HomeAlerts() {
         />
       </ul>
 
-      <div className="mt-6 space-y-6">
+      {!summaryOnly && <div className="mt-6 space-y-6">
         {loading.isFetching ? (
           <div className="space-y-6">
             <LoadingMissions
@@ -102,7 +102,7 @@ export function HomeAlerts() {
             <UncommonPerkUpSection data={uncommonPerks} />
           </>
         )}
-      </div>
+      </div>}
     </>
   )
 }

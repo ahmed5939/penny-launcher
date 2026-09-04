@@ -23,7 +23,7 @@ export function CustomizableMenu() {
 
   return (
     <Panel>
-      {/* The accordion trigger already names this section. */}
+      {/* The page tabs already name this section. */}
       <div className="border-b border-border/60 px-5 py-3.5">
         <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
           {t('custom-menu.description')}
@@ -38,39 +38,12 @@ export function CustomizableMenu() {
           '[&_.item]:flex [&_.item]:items-center [&_.item]:justify-between [&_.item]:py-1 [&_.item.main]:mb-2'
         )}
       >
-        <CurrentAlertsSection />
         <STWOperationsSection />
         <AccountManagementSection />
         <AdvancedModeSection />
         <MyAccountsSection />
       </PanelBody>
     </Panel>
-  )
-}
-
-function CurrentAlertsSection() {
-  // const { t } = useTranslation(['sidebar'])
-
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
-  const { updateMenuOption } = useCustomizableMenuSettingsActions()
-
-  return (
-    <div className="category">
-      <div className="item main">
-        <Label
-          className="title text-lg"
-          htmlFor="current-alerts"
-        >
-          Current Alerts
-        </Label>
-        <Switch
-          id="current-alerts"
-          checked={getMenuOptionVisibility('currentAlerts')}
-          onCheckedChange={updateMenuOption('currentAlerts')}
-        />
-      </div>
-    </div>
   )
 }
 
@@ -97,6 +70,12 @@ function STWOperationsSection() {
         />
       </div>
       <div className="list">
+        {(['currentAlerts', 'endurance'] as const).map((key) => (
+          <div className="item" key={key}>
+            <Label className="title" htmlFor={`menu-${key}`}>{t(key === 'currentAlerts' ? 'missions' : 'endurance')}</Label>
+            <Switch id={`menu-${key}`} checked={getMenuOptionVisibility(key)} onCheckedChange={updateMenuOption(key)} />
+          </div>
+        ))}
         {/* The auto-kick toggle is hidden while the feature is disabled —
             party kicks no longer work while a match is running. */}
         <div className="item">

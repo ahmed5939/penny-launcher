@@ -8,7 +8,10 @@ import type {
 
 import { FormEvent, useRef, type ChangeEvent } from 'react'
 
-import { useDebouncedCallback } from '@mantine/hooks'
+import { useDeferredCommit } from '../../../hooks/ui/deferred-commit'
+import { CollectionPicker } from '../../../components/page/collection-picker'
+import { resolveCollectionSelection } from '../../../lib/navigation/page-tabs'
+import { Route } from './route'
 import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ArrowDownLeftIcon,
@@ -101,7 +104,9 @@ function StatusItem({
 }
 
 export function Content() {
-  const { t } = useTranslation(['stw-operations', 'general'])
+  const { t } = useTranslation(['stw-operations', 'general', 'sidebar'])
+  const { account: requestedAccount } = Route.useSearch()
+  const navigate = Route.useNavigate()
 
   const {
     accounts,
@@ -117,6 +122,8 @@ export function Content() {
   } = useTaxiServiceData()
   const { getMenuOptionVisibility } =
     useCustomizableMenuSettingsVisibility()
+
+  const currentAccount = resolveCollectionSelection(accounts.map((account) => account.accountId), requestedAccount)
 
   return (
     <>
@@ -232,7 +239,14 @@ export function Content() {
           title={t('form.accounts.no-options', { ns: 'general' })}
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="collection-container">
+        <div className="collection-workspace grid items-start gap-4">
+          <CollectionPicker label={t('sidebar:choose-account')} value={currentAccount}
+            items={accounts.map((account) => ({ value: account.accountId, label: parseCustomDisplayName(account),
+              status: <span className="text-[0.625rem] text-muted-foreground">{selectedAccounts[account.accountId]?.status ?? 'loading'}</span>,
+            }))}
+            onValueChange={(value) => { void navigate({ search: (previous) => ({ ...previous, account: value }), resetScroll: false }) }} />
+          <div className="min-w-0">
           {accounts.map((account) => {
               const current = selectedAccounts[account.accountId]
               const isLoading =
@@ -250,7 +264,7 @@ export function Content() {
               current.actions.busyStatus?.trim() ?? ''
 
             return (
-              <Panel key={account.accountId}>
+              <Panel key={account.accountId} hidden={account.accountId !== currentAccount}>
                 <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
                   {current.status !== AutomationStatusType.LOADING &&
                     current.status !== null && (
@@ -513,6 +527,8 @@ export function Content() {
               </Panel>
             )
           })}
+          </div>
+        </div>
         </div>
       )}
 
@@ -532,12 +548,12 @@ function InputActiveStatus({
   placeholder: string
   onChange?: (value: string) => void
 }) {
-  const debouncedHandleStatus = useDebouncedCallback((value: string) => {
+  const debouncedHandleStatus = useDeferredCommit((value: string) => {
     onChange?.(value)
   }, 500)
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    debouncedHandleStatus(
+    debouncedHandleStatus.schedule(
       event.currentTarget.value.replace(/[\s]+/gi, ' '),
     )
   }
@@ -550,6 +566,7 @@ function InputActiveStatus({
         defaultValue={defaultValue}
         disabled={disabled}
         onChange={handleChange}
+        onBlur={debouncedHandleStatus.flush}
       />
     </div>
   )
@@ -568,7 +585,7 @@ function InputPowerLevel({
   min?: number
   onChange?: (value: number) => void
 }) {
-  const debouncedHandleValue = useDebouncedCallback((value: number) => {
+  const debouncedHandleValue = useDeferredCommit((value: number) => {
     onChange?.(value)
   }, 700)
 
@@ -579,7 +596,7 @@ function InputPowerLevel({
       return
     }
 
-    debouncedHandleValue(Math.min(max, Math.max(min, parsed)))
+    debouncedHandleValue.schedule(Math.min(max, Math.max(min, parsed)))
   }
 
   return (
@@ -589,6 +606,7 @@ function InputPowerLevel({
       disabled={disabled}
       inputMode="numeric"
       onChange={handleChange}
+      onBlur={debouncedHandleValue.flush}
     />
   )
 }

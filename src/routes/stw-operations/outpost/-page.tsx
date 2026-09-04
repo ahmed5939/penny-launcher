@@ -45,6 +45,7 @@ import {
   Chip,
   EmptyState,
   PageHeader,
+  PageTabs,
   Panel,
   ProgressBar,
   StatRow,
@@ -68,6 +69,9 @@ import {
 } from '../../../config/constants/outpost-maps'
 import { OUTPOST_ZONE_TERRAIN } from '../../../config/constants/outpost-zones'
 import { zoneTerrainImage } from './-blueprint-terrain'
+
+import { Route } from './route'
+import { resolveCollectionSelection } from '../../../lib/navigation/page-tabs'
 
 import { useOutpostData } from './-hooks'
 import { Blueprint3D } from './-blueprint-3d'
@@ -212,6 +216,8 @@ export function RouteComponent() {
 }
 
 function Content() {
+  const { tab } = Route.useSearch()
+  const navigate = Route.useNavigate()
   const {
     baseData,
     errorMessage,
@@ -335,7 +341,16 @@ function Content() {
         </StatRow>
       )}
 
-      {zones.map((zone) => (
+      {zones.length > 0 && <PageTabs label="Outpost zones"
+        value={resolveCollectionSelection(zones.map((zone) => zone.zoneId), tab) ?? tab}
+        tabs={zones.map((zone) => ({ value: zone.zoneId, label: zone.zoneName }))}
+        onValueChange={(value) => {
+          if (value === 'pve_01' || value === 'pve_02' || value === 'pve_03' || value === 'pve_04') {
+            void navigate({ search: (previous) => ({ ...previous, tab: value }), resetScroll: false })
+          }
+        }}>
+        {zones.map((zone) => (
+          <TabsContent key={zone.zoneId} value={zone.zoneId}>
         <ZoneCard
           baseData={baseData[zone.zoneId]}
           displayName={primaryAccount.displayName || primaryAccount.accountId}
@@ -346,7 +361,9 @@ function Content() {
           records={records}
           zone={zone}
         />
-      ))}
+          </TabsContent>
+        ))}
+      </PageTabs>}
     </>
   )
 }

@@ -47,7 +47,7 @@ export function FriendsPanel() {
 
   return (
     <aside
-      className="chrome-surface flex w-[25rem] shrink-0 flex-col border-l border-border/60 max-[1000px]:absolute max-[1000px]:inset-y-0 max-[1000px]:right-0 max-[1000px]:z-30 max-[1000px]:max-w-[calc(100%-3.5rem)] max-[1000px]:shadow-2xl"
+      className="chrome-surface flex w-[25rem] shrink-0 flex-col border-l border-border/60 max-[1399px]:absolute max-[1399px]:inset-y-0 max-[1399px]:right-0 max-[1399px]:z-30 max-[1399px]:max-w-[calc(100%-3.5rem)] max-[1399px]:shadow-2xl"
       data-app-focus-region="friends"
       tabIndex={-1}
     >

@@ -61,6 +61,19 @@ function actorRecord({
 }
 
 describe('parseSav actor records', () => {
+  it('preserves sub-cell offsets instead of snapping actors to hundredths', () => {
+    const result = parseSav(Buffer.concat([
+      Buffer.from('SavedActors', 'latin1'),
+      actorRecord({ piece: 'Solid', spawned: true, x: 513 }),
+      actorRecord({ piece: 'Solid', spawned: true, x: -513 }),
+    ]))
+
+    expect(result.layout?.structures.map((piece) => piece[0]))
+      .toEqual([1.002, -1.002])
+    expect(result.layout?.bounds).toMatchObject({ minX: -2, maxX: 2 })
+  })
+
+
   it('keeps player-built structures and rejects map-owned or destroyed PBWA actors', () => {
     const raw = Buffer.concat([
       Buffer.from('SavedActors', 'latin1'),
@@ -78,5 +91,30 @@ describe('parseSav actor records', () => {
     })
     expect(result.layout?.structures).toHaveLength(1)
     expect(result.layout?.structures[0]?.slice(0, 3)).toEqual([1, 1, 1.5])
+  })
+})
+
+
+describe('edited build classification', () => {
+  it.each([
+    ['WindowC', 1],
+    ['DoorSide', 1],
+    ['HalfWallHalf', 1],
+    ['ArchwayLarge', 1],
+    ['Brace', 1],
+    ['BalconyI', 0],
+    ['Floor_2', 0],
+    ['StairSpiral', 2],
+    ['RoofWall', 3],
+    ['UnknownPiece', 4],
+  ])('keeps %s in the correct spatial family', (piece, kind) => {
+    const result = parseSav(Buffer.concat([
+      Buffer.from('SavedActors', 'latin1'),
+      actorRecord({ piece, spawned: true, x: 512 }),
+    ]))
+
+    expect(result.layout?.structures[0]?.[4]).toBe(kind)
+    expect(result.layout?.shapes).toEqual([piece])
+    expect(result.structures.total).toBe(1)
   })
 })

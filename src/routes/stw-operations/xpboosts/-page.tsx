@@ -31,6 +31,8 @@ import {
   FieldGroup,
   FieldRow,
   PageHeader,
+  PageTabs,
+  PageTabPanel,
   Panel,
   PanelBody,
   PanelFooter,
@@ -76,6 +78,8 @@ import {
 } from './-shared'
 import { cn, parseCustomDisplayName } from '../../../lib/utils'
 
+import { Route } from './route'
+
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
 
@@ -92,7 +96,9 @@ export function RouteComponent() {
 }
 
 function Content() {
-  const { t } = useTranslation(['stw-operations', 'general'])
+  const { t } = useTranslation(['stw-operations', 'general', 'sidebar'])
+  const { tab } = Route.useSearch()
+  const navigate = Route.useNavigate()
 
   const {
     actionFormIsDisabled,
@@ -147,12 +153,11 @@ function Content() {
 
   return (
     <>
-      {/*
-        Lookup and your-own-accounts are two separate jobs on this page. Side
-        by side they stay distinct; stacked in one column they read as one
-        long form.
-      */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      <PageTabs label={t('sidebar:stw-operations.options.xp-boosts')} value={tab} tabs={[
+        { value: 'accounts', label: t('sidebar:your-accounts') },
+        { value: 'lookup', label: t('sidebar:look-up-player') },
+      ]} onValueChange={(value) => { void navigate({ search: (previous) => ({ ...previous, tab: value }), resetScroll: false }) }}>
+        <PageTabPanel value="lookup" activeValue={tab}>
             <Panel>
               <PanelBody className="space-y-4">
                 <div className="space-y-4">
@@ -296,6 +301,8 @@ function Content() {
               </PanelBody>
             </Panel>
 
+        </PageTabPanel>
+        <PageTabPanel value="accounts" activeValue={tab}>
             <Panel id="xpboosts-card">
               <PanelBody>
                 <FieldGroup>
@@ -341,7 +348,6 @@ function Content() {
                 <SendBoostsSheet recalculateTotal={recalculateTotal} />
               </PanelFooter>
             </Panel>
-      </div>
 
       {data.length > 0 && (
         <>
@@ -406,6 +412,8 @@ function Content() {
         </>
       )}
 
+        </PageTabPanel>
+      </PageTabs>
       <GoToTop containerId="xpboosts-card" />
     </>
   )

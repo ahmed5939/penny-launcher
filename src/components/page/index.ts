@@ -43,3 +43,4 @@ export {
  */
 export * from './rarity'
 export * from './reward'
+export { PageTabs, PageTabPanel } from './page-tabs'

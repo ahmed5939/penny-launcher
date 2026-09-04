@@ -1,17 +1,10 @@
-import { ChevronDown, Cog, LoaderCircle, Lock } from 'lucide-react'
+import { Cog, LoaderCircle, Lock } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import packageJson from '../../../package.json'
 
-import { SeparatorWithTitle } from '../../components/ui/extended/separator'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '../../components/ui/accordion'
 import { Button } from '../../components/ui/button'
 import {
   Dialog,
@@ -20,7 +13,12 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
-import { PageHeader } from '../../components/page'
+import {
+  PageHeader,
+  PageTabs,
+  PageTabPanel,
+  EmptyState,
+} from '../../components/page'
 
 import { AccountCustomization } from './-account-customization/-index'
 import { AppSettings } from './-app-settings/-index'
@@ -29,24 +27,14 @@ import { OverlaySettingsForm } from './-overlay-settings'
 
 import { useGetAccounts } from '../../hooks/accounts'
 
-import { cn } from '../../lib/utils'
-
-enum SettingsSections {
-  AppSettings = 'app-settings',
-  CustomizableMenu = 'customizable-menu',
-  AccountCustomization = 'account-customization',
-  Overlay = 'overlay',
-}
+import { Route } from './route'
 
 export function RouteComponent() {
   const { t } = useTranslation(['general'])
 
   return (
     <>
-      <PageHeader
-        icon={Cog}
-        title={t('settings')}
-      />
+      <PageHeader icon={Cog} title={t('settings')} />
       <Content />
       <HiddenTweaksTrigger />
     </>
@@ -155,93 +143,54 @@ function HiddenTweaksTrigger() {
 }
 
 function Content() {
-  const { t } = useTranslation(['settings'])
-
+  const { t } = useTranslation(['settings', 'general'])
   const { accountsArray } = useGetAccounts()
-
+  const { tab } = Route.useSearch()
+  const navigate = Route.useNavigate()
   return (
-    <div className="max-w-3xl">
-          <Accordion
-            className={cn(
-              'w-full',
-              '[&_.section-trigger[data-state=open]_.section-icon]:rotate-180',
-              '[&_.section-title]:flex [&_.section-title]:gap-1.5 [&_.section-title]:items-center',
-              '[&_.section-icon]:h-4 [&_.section-icon]:w-4 [&_.section-icon]:shrink-0 [&_.section-icon]:transition-transform [&_.section-icon]:duration-200',
-              '[&_.section-content]:py-6'
-            )}
-            type="multiple"
-            defaultValue={[SettingsSections.AccountCustomization]}
-          >
-            <AccordionItem
-              className="mb-3 rounded-xl border border-border/60 bg-card/40 px-4"
-              value={SettingsSections.AppSettings}
-            >
-              <AccordionTrigger
-                className="section-trigger"
-                hideIcon
-              >
-                <SeparatorWithTitle className="section-title">
-                  {t('app-settings.title')}{' '}
-                  <ChevronDown className="section-icon" />
-                </SeparatorWithTitle>
-              </AccordionTrigger>
-              <AccordionContent className="section-content">
-                <AppSettings />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              className="mb-3 rounded-xl border border-border/60 bg-card/40 px-4"
-              value={SettingsSections.Overlay}
-            >
-              <AccordionTrigger className="section-trigger" hideIcon>
-                <SeparatorWithTitle className="section-title">
-                  {t('overlay.title')} <ChevronDown className="section-icon" />
-                </SeparatorWithTitle>
-              </AccordionTrigger>
-              <AccordionContent className="section-content">
-                <OverlaySettingsForm />
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem
-              className="mb-3 rounded-xl border border-border/60 bg-card/40 px-4"
-              value={SettingsSections.CustomizableMenu}
-            >
-              <AccordionTrigger
-                className="section-trigger"
-                hideIcon
-              >
-                <SeparatorWithTitle className="section-title">
-                  {t('custom-menu.title')}{' '}
-                  <ChevronDown className="section-icon" />
-                </SeparatorWithTitle>
-              </AccordionTrigger>
-              <AccordionContent className="section-content">
-                <CustomizableMenu />
-              </AccordionContent>
-            </AccordionItem>
-
-            {accountsArray.length > 0 && (
-              <AccordionItem
-                className="border-none"
-                value={SettingsSections.AccountCustomization}
-              >
-                <AccordionTrigger
-                  className="section-trigger"
-                  hideIcon
-                >
-                  <SeparatorWithTitle className="section-title">
-                    {t('account-customization.title')}{' '}
-                    <ChevronDown className="section-icon" />
-                  </SeparatorWithTitle>
-                </AccordionTrigger>
-                <AccordionContent className="section-content">
-                  <AccountCustomization />
-                </AccordionContent>
-              </AccordionItem>
-            )}
-          </Accordion>
-    </div>
+    <PageTabs
+      label={t('general:settings')}
+      value={tab}
+      tabs={[
+        { value: 'app', label: t('app-settings.title') },
+        { value: 'overlay', label: t('overlay.title') },
+        { value: 'menu', label: t('custom-menu.title') },
+        { value: 'accounts', label: t('account-customization.title') },
+      ]}
+      onValueChange={(value) => {
+        void navigate({
+          search: (previous) => ({ ...previous, tab: value }),
+          resetScroll: false,
+        })
+      }}
+    >
+      <PageTabPanel value="app" activeValue={tab}>
+        <div className="max-w-3xl">
+          <AppSettings />
+        </div>
+      </PageTabPanel>
+      <PageTabPanel value="overlay" activeValue={tab}>
+        <div className="max-w-3xl">
+          <OverlaySettingsForm />
+        </div>
+      </PageTabPanel>
+      <PageTabPanel value="menu" activeValue={tab}>
+        <div className="max-w-3xl">
+          <CustomizableMenu />
+        </div>
+      </PageTabPanel>
+      <PageTabPanel value="accounts" activeValue={tab}>
+        {accountsArray.length > 0 ? (
+          <div className="max-w-3xl">
+            <AccountCustomization />
+          </div>
+        ) : (
+          <EmptyState
+            icon={Cog}
+            title={t('general:form.accounts.no-registered-accounts')}
+          />
+        )}
+      </PageTabPanel>
+    </PageTabs>
   )
 }

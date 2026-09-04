@@ -33,6 +33,14 @@ describe('outpostHeightLevels', () => {
 
     /* World props do not add height levels — they are scenery, not storeys. */
     expect(outpostHeightLevels(layout)).toEqual([-1, 0, 0.75])
+
+    // A rounded-down cutoff used to hide its own highest piece.
+    layout.structures[1][2] = 0.754
+    const levels = outpostHeightLevels(layout)
+
+    expect(levels).toEqual([-1, 0, 0.75, 0.754])
+    expect(layout.structures.filter((piece) => piece[2] <= levels[levels.length - 1]))
+      .toHaveLength(2)
   })
 })
 

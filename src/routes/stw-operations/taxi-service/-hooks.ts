@@ -6,6 +6,9 @@ import type { TaxiServiceAccountData } from '../../../types/taxi-service'
 
 import { useEffect } from 'react'
 
+import { useTaxiServiceStore } from '../../../state/stw-operations/taxi-service'
+import { useAccountListStore } from '../../../state/accounts/list'
+
 import { useAutomationStore } from '../../../state/stw-operations/automation'
 
 import {
@@ -128,6 +131,8 @@ export function useTaxiServiceData() {
   const handleUpdateStatusAction =
     (type: keyof TaxiServiceAccountData['actions'], accountId: string) =>
     (value: boolean | number | string) => {
+      const current = useTaxiServiceStore.getState().accounts[accountId]
+      if (!current || current.submittings.removing || !useAccountListStore.getState().accounts[accountId]) return
       updateAccountAction(type, {
         accountId,
         value,
