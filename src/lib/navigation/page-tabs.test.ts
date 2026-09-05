@@ -43,8 +43,9 @@ describe('page selection', () => {
       history,
     })
     await router.load()
-    await router.navigate({
-      href: '/test?tab=menu',
+    await router.navigate<'/test', typeof router>({
+      to: '/test',
+      search: { tab: 'menu' },
       resetScroll: false,
     })
     expect(history.location.search).toBe('?tab=menu')
