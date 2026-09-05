@@ -67,7 +67,7 @@ import { AreaNavigation } from './area-rail'
 
 const render = () =>
   renderToStaticMarkup(
-    createElement(TooltipProvider, {}, createElement(AreaNavigation)),
+    createElement(TooltipProvider, { children: createElement(AreaNavigation) }),
   )
 beforeEach(() => {
   state.pathname = '/stw-operations/inventory'

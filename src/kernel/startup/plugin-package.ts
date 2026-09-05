@@ -32,7 +32,7 @@ export async function inspectPlugin(directory: string) {
   const hash = createHash('sha256')
   for (const file of files) {
     hash.update(JSON.stringify([file.name, file.content.length]))
-    hash.update(file.content)
+    hash.update(new Uint8Array(file.content))
   }
   return {
     directory: root, manifest, digest: hash.digest('hex'), source: entry.content.toString('utf8'),

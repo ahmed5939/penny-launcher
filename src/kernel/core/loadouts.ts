@@ -159,7 +159,7 @@ export class Loadouts {
     payload.availableGadgets = Object.values(items)
       .map((item) => item.templateId)
       .filter(
-        (templateId, index, all): templateId is string =>
+        (templateId, index, all) =>
           templateId.startsWith('Gadget:') && all.indexOf(templateId) === index
       )
 
