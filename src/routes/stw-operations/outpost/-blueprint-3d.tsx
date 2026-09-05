@@ -22,6 +22,7 @@ import { assets } from '../../../lib/repository'
 import { cn } from '../../../lib/utils'
 
 import { BlueprintCanvas3D } from './-blueprint-canvas-3d'
+import { buildPieceMesh } from './-blueprint-build-meshes'
 import {
   CELL_COLORS,
   CELL_GRASS,
@@ -55,7 +56,7 @@ import {
  * use simplified stand-ins because the save does not contain game meshes.
  */
 
-const MATERIAL_COLORS = ['#c9a06a', '#9aa4ad', '#6fd3e0', '#b7a5ca']
+const MATERIAL_COLORS = ['#c9a06a', '#be795b', '#8ea0b2', '#b7a5ca']
 const TRAP_COLORS = [0xed7e39, 0x51a1db, 0xd076f6, 0xbfbaba]
 const TRAP_COLOR_HEX = ['#ed7e39', '#51a1db', '#d076f6', '#bfbaba']
 const TRAP_LABEL = ['Floor', 'Wall', 'Ceiling', 'Other']
@@ -119,9 +120,12 @@ function canvasTexture(
 function woodTexture() {
   return canvasTexture(128, (context, size) => {
     const random = seededRandom(7)
-    const plank = size / 4
+    const plank = size / 9
 
-    for (let row = 0; row < 4; row += 1) {
+    context.translate(size, 0)
+    context.rotate(Math.PI / 2)
+
+    for (let row = 0; row < 9; row += 1) {
       const shade = 0.9 + random() * 0.2
 
       context.fillStyle = `rgb(${Math.round(176 * shade)}, ${Math.round(126 * shade)}, ${Math.round(80 * shade)})`
@@ -149,21 +153,21 @@ function woodTexture() {
 function stoneTexture() {
   return canvasTexture(128, (context, size) => {
     const random = seededRandom(11)
-    const rows = 4
+    const rows = 6
     const brickHeight = size / rows
 
-    context.fillStyle = '#6d747c'
+    context.fillStyle = '#786c61'
     context.fillRect(0, 0, size, size)
 
     for (let row = 0; row < rows; row += 1) {
-      const offset = row % 2 === 0 ? 0 : size / 4
-      const bricks = 2
+      const offset = row % 2 === 0 ? 0 : size / 8
+      const bricks = 4
 
       for (let brick = -1; brick <= bricks; brick += 1) {
         const x = brick * (size / bricks) + offset
         const shade = 0.88 + random() * 0.24
 
-        context.fillStyle = `rgb(${Math.round(158 * shade)}, ${Math.round(166 * shade)}, ${Math.round(172 * shade)})`
+        context.fillStyle = `rgb(${Math.round(190 * shade)}, ${Math.round(113 * shade)}, ${Math.round(79 * shade)})`
         context.fillRect(x + 2, row * brickHeight + 2, size / bricks - 4, brickHeight - 4)
         context.fillStyle = 'rgba(255, 255, 255, 0.12)'
         context.fillRect(x + 2, row * brickHeight + 2, size / bricks - 4, 3)
@@ -1294,18 +1298,21 @@ function BlueprintScene({
         new THREE.MeshStandardMaterial({
           color: code === 3 ? MATERIAL_COLORS[3] : 0xffffff,
           map: surfaces[code] ?? null,
+          bumpMap: surfaces[code] ?? null,
+          bumpScale: code === 0 ? 0.008 : 0.004,
+          vertexColors: true,
           metalness: code === 2 ? 0.42 : 0.02,
           roughness: code === 2 ? 0.42 : 0.9,
         })
       )
     )
     const geometryCache = new Map<string, THREE.BufferGeometry>()
-    const geometryFor = (shape: string, kind: number) => {
-      const key = `${shape}|${kind}`
+    const geometryFor = (shape: string, kind: number, material: number, tier: number) => {
+      const key = `${shape}|${kind}|${material}|${tier}`
       let geometry = geometryCache.get(key)
 
       if (!geometry) {
-        geometry = track(shapeGeometry(shape, kind))
+        geometry = track(buildPieceMesh(shape, material, tier, () => shapeGeometry(shape, kind)))
         geometryCache.set(key, geometry)
       }
 
@@ -1316,7 +1323,7 @@ function BlueprintScene({
     for (const piece of layout.structures) {
       if (piece[2] > maxVisibleZ) continue
 
-      const key = `${piece[6]}:${piece[4]}:${piece[3]}`
+      const key = `${piece[6]}:${piece[4]}:${piece[3]}:${piece[7]}`
       const group = groups.get(key)
 
       if (group) group.push(piece)
@@ -1324,10 +1331,10 @@ function BlueprintScene({
     }
 
     for (const pieces of groups.values()) {
-      const [, , , materialCode, kind, , shapeIndex] = pieces[0]
+      const [, , , materialCode, kind, , shapeIndex, upgradeTier] = pieces[0]
       const shape = layout.shapes[shapeIndex] ?? ''
       const mesh = new THREE.InstancedMesh(
-        geometryFor(shape, kind),
+        geometryFor(shape, kind, materialCode, upgradeTier),
         materials[materialCode] ?? materials[3],
         pieces.length
       )
@@ -1935,7 +1942,7 @@ export function Blueprint3D({
       </div>
 
       <p className="micro-label text-muted-foreground">
-        Saved build positions · simplified piece and scenery models
+        Saved build positions · material and tier details · simplified scenery
         {canvasFallback && ' · compatibility view uses basic shapes and flat ground'}
       </p>
 

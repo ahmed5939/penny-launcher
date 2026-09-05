@@ -28,22 +28,22 @@
 
 import '../globals.css'
 
-const root = document.documentElement
-const appearance = window.electronAPI.initialAppearance
-const storedColorTheme = localStorage.getItem('penny-color-theme')
-
-root.classList.add(appearance.resolved)
-
-if (storedColorTheme) {
-  root.dataset.theme = storedColorTheme
-}
-
 const isOverlay =
   new URLSearchParams(window.location.search).get('penny-overlay') === '1'
 
+// The overlay has a deliberately separate preload bridge. Choose its entry
+// before touching main-window APIs or main-window appearance preferences.
 if (isOverlay) {
+  document.documentElement.classList.add('dark')
   document.body.dataset.pennyOverlay = 'true'
   void import('../overlay/app')
 } else {
+  const root = document.documentElement
+  const appearance = window.electronAPI.initialAppearance
+  const storedColorTheme = localStorage.getItem('penny-color-theme')
+
+  root.classList.add(appearance.resolved)
+  if (storedColorTheme) root.dataset.theme = storedColorTheme
+
   void import('../app')
 }
