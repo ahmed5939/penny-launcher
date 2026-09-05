@@ -36,6 +36,8 @@
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
+    "plugin:create": "node scripts/create-plugin.mjs",
+    "plugin:validate": "node scripts/validate-plugin.cjs",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",

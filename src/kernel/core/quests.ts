@@ -67,7 +67,7 @@ export class Quests {
     }
   }
 
-  private static async getQuests(account: AccountData) {
+  static async getQuests(account: AccountData) {
     const payload: QuestsPayload = {
       accountId: account.accountId,
       quests: [],

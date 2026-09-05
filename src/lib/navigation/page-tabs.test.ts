@@ -43,7 +43,7 @@ describe('page selection', () => {
       history,
     })
     await router.load()
-    await router.navigate({
+    await router.navigate<'/test', typeof router>({
       to: '/test',
       search: { tab: 'menu' },
       resetScroll: false,

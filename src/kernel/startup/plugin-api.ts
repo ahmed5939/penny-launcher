@@ -1,6 +1,6 @@
 import type { PluginAccountScopeIds, PluginEventName } from '../../types/plugins'
 
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, rename, rm } from 'node:fs/promises'
 import path from 'node:path'
 
 import { RuntimeLog } from '../runtime-log'
@@ -12,8 +12,10 @@ import { RuntimeLog } from '../runtime-log'
  *
  *   1 — storageDirectory / getMainWindow / openRoute
  *   2 — accounts, events, storage, settings, log, apiVersion
+ *   3 — lifecycle, timers, notifications, external links
+ *   4 — sandbox-only async SDK, reviewed permissions and declarative UI
  */
-export const PLUGIN_API_VERSION = 2
+export const PLUGIN_API_VERSION = 4
 
 type PluginEventListener = (payload: unknown) => unknown
 
@@ -102,7 +104,7 @@ export class PluginBridge {
 
       for (const listener of set) {
         try {
-          Promise.resolve(listener(payload)).catch((error) => {
+          Promise.resolve(listener(structuredClone(payload))).catch((error) => {
             RuntimeLog.error(`plugin-event:${pluginId}:${event}`, error)
           })
         } catch (error) {
@@ -130,74 +132,108 @@ export class PluginBridge {
 export class PluginStorage {
   private filePath: string
   private data: Record<string, unknown> | null = null
-  private queue: Promise<void> = Promise.resolve()
+  private queue: Promise<unknown> = Promise.resolve()
 
   constructor(storageDirectory: string) {
     this.filePath = path.join(storageDirectory, 'storage.json')
   }
 
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.queue.then(operation)
+    this.queue = result.catch(() => {})
+    return result
+  }
+
   private async ensureLoaded(): Promise<Record<string, unknown>> {
     if (this.data) return this.data
-
     try {
       const parsed: unknown = JSON.parse(await readFile(this.filePath, 'utf8'))
-
-      this.data =
-        typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-          ? (parsed as Record<string, unknown>)
-          : {}
-    } catch {
-      // Missing or corrupt file — start empty rather than failing the plugin.
-      this.data = {}
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Plugin storage must contain a JSON object.')
+      }
+      this.data = parsed as Record<string, unknown>
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+      this.data = Object.create(null) as Record<string, unknown>
     }
-
     return this.data
   }
 
-  private persist() {
-    this.queue = this.queue
-      .then(() =>
-        writeFile(this.filePath, JSON.stringify(this.data, null, 2), 'utf8')
-      )
-      .catch((error) => {
-        RuntimeLog.error('plugin-storage', error)
-      })
-
-    return this.queue
-  }
-
   async get(key: string, fallback?: unknown) {
-    const data = await this.ensureLoaded()
-
-    return key in data ? data[key] : fallback
+    return this.enqueue(async () => {
+      const data = await this.ensureLoaded()
+      return structuredClone(Object.prototype.hasOwnProperty.call(data, key) ? data[key] : fallback)
+    })
   }
 
   async set(key: string, value: unknown) {
-    if (typeof key !== 'string' || key.length === 0) {
-      throw new Error('Storage keys must be non-empty strings.')
+    if (typeof key !== 'string' || !key.length || key.length > 256) {
+      throw new Error('Storage keys must contain 1–256 characters.')
     }
-
-    const data = await this.ensureLoaded()
-
-    if (value === undefined) {
-      delete data[key]
-    } else {
-      // Round-trip through JSON so functions, class instances and cycles
-      // fail loudly here instead of producing an unreadable file later.
-      data[key] = JSON.parse(JSON.stringify(value)) as unknown
-    }
-
-    await this.persist()
+    // Snapshot before queueing so callers cannot mutate a pending write.
+    const snapshot = value === undefined ? undefined : JSON.parse(JSON.stringify(value))
+    return this.enqueue(async () => {
+      const next = Object.assign(Object.create(null), await this.ensureLoaded())
+      if (snapshot === undefined) delete next[key]
+      else next[key] = snapshot
+      const json = JSON.stringify(next, null, 2)
+      if (Buffer.byteLength(json) > 1024 * 1024) {
+        throw new Error('Plugin JSON storage is limited to 1 MiB.')
+      }
+      const temporary = `${this.filePath}.tmp`
+      try {
+        await writeFile(temporary, json, { encoding: 'utf8', mode: 0o600 })
+        await rename(temporary, this.filePath)
+        this.data = next
+      } finally {
+        await rm(temporary, { force: true }).catch(() => {})
+      }
+    })
   }
 
   async delete(key: string) {
-    const data = await this.ensureLoaded()
-
-    delete data[key]
-    await this.persist()
+    return this.set(key, undefined)
   }
 
   async all() {
-    return { ...(await this.ensureLoaded()) }
+    return this.enqueue(async () => structuredClone(await this.ensureLoaded()))
+  }
+}
+
+/** Resources registered through the API are disposed even if activation fails. */
+export class PluginLifecycle {
+  private cleanups = new Set<() => unknown>()
+  private abort = new AbortController()
+  get signal() { return this.abort.signal }
+
+  add(cleanup: () => unknown) {
+    if (this.signal.aborted) throw new Error('Plugin has stopped.')
+    this.cleanups.add(cleanup)
+    return () => { this.cleanups.delete(cleanup) }
+  }
+
+  async dispose() {
+    this.abort.abort()
+    for (const cleanup of [...this.cleanups].reverse()) {
+      try { await cleanup() } catch (error) { RuntimeLog.error('plugin-cleanup', error) }
+    }
+    this.cleanups.clear()
+  }
+
+  interval(callback: () => unknown, milliseconds: number) {
+    if (!Number.isFinite(milliseconds) || milliseconds < 1000 || milliseconds > 2_147_483_647) {
+      throw new Error('Timer interval must be between 1000 and 2147483647 ms.')
+    }
+    if (this.signal.aborted) throw new Error('Plugin has stopped.')
+    let busy = false
+    const timer = setInterval(async () => {
+      if (busy || this.signal.aborted) return
+      busy = true
+      try { await callback() } catch (error) { RuntimeLog.error('plugin-timer', error) }
+      finally { busy = false }
+    }, milliseconds)
+    const cancel = () => clearInterval(timer)
+    const unregister = this.add(cancel)
+    return () => { cancel(); unregister() }
   }
 }

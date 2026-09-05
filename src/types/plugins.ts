@@ -1,7 +1,20 @@
 /** User-visible effects an add-on declares in plugin.json. */
-export type PluginCapability = 'background' | 'changes-app-behavior'
+export const PLUGIN_CAPABILITIES = [
+  'background', 'changes-app-behavior', 'accounts', 'notifications',
+  'network', 'filesystem', 'opens-windows',
+] as const
+
+export type PluginCapability = (typeof PLUGIN_CAPABILITIES)[number]
+
+export const PLUGIN_PERMISSIONS = [
+  'accounts:read', 'quests:read', 'settings:read', 'storage', 'navigation',
+  'notifications', 'external-links', 'ui',
+] as const
+export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 
 export type PluginManifest = {
+  runtime?: 'sandbox'
+  permissions?: PluginPermission[]
   id: string
   name: string
   description?: string
@@ -65,12 +78,18 @@ export type PluginSummary = {
   description: string | null
   version: string | null
   source: PluginSource
-  status: 'running' | 'error'
+  status: 'running' | 'error' | 'disabled' | 'review'
   error: string | null
   repository: string | null
   capabilities: Array<PluginCapability>
   /** Whether the plugin exposes a window/action the user can open. */
   canOpen: boolean
+  permissions: PluginPermission[]
+  safeMode: boolean
+  canRollback: boolean
+  ui: PluginUI
+  jobs: PluginJob[]
+  logs: PluginLog[]
 }
 
 export type MarketplacePlugin = {
@@ -83,6 +102,7 @@ export type MarketplacePlugin = {
   repository: string | null
   capabilities: Array<PluginCapability>
   installed: boolean
+  permissions: PluginPermission[]
 }
 
 export type PluginActionResult = {
@@ -95,3 +115,27 @@ export type PluginReadmeResult = PluginActionResult & {
 }
 
 export type PluginOpenResult = PluginActionResult
+
+export type PluginUI = {
+  panels: Array<{ id: string; title: string; body: string }>
+  actions: Array<{ id: string; label: string }>
+  settings: Array<{ id: string; label: string; type: 'text' | 'boolean'; default?: string | boolean }>
+}
+export type PluginJob = { id: string; label: string; status: 'running' | 'completed' | 'cancelled' | 'error'; error?: string }
+export type PluginLog = { time: string; level: 'info' | 'error'; message: string }
+export type PluginReview = {
+  token: string
+  manifest: PluginManifest
+  digest: string
+  previousVersion: string | null
+  addedPermissions: PluginPermission[]
+  installed: boolean
+  readme: string
+}
+export type PluginReviewResult = PluginActionResult & { review?: PluginReview }
+export type PluginManageRequest =
+  | { action: 'disable' | 'enable' | 'reload' | 'rollback' | 'cancel-job'; id: string; jobId?: string }
+  | { action: 'safe-mode'; enabled: boolean }
+  | { action: 'run-action'; id: string; actionId: string }
+  | { action: 'save-settings'; id: string; values: Record<string, string | boolean> }
+export type PluginSettingsResult = PluginActionResult & { values?: Record<string, string | boolean> }

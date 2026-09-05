@@ -10,13 +10,18 @@ vi.mock('../../services/endpoints/lookup', () => ({}))
 
 import { parseSav } from './outpost'
 
+// Normalize Buffer views for the installed Node/TypeScript library definitions.
+function concatBuffers(parts: Buffer[]) {
+  return Buffer.concat(parts.map((part) => new Uint8Array(part)))
+}
+
 function gvasString(value: string) {
   const text = Buffer.from(`${value}\0`, 'latin1')
   const length = Buffer.alloc(4)
 
   length.writeInt32LE(text.length)
 
-  return Buffer.concat([length, text])
+  return concatBuffers([length, text])
 }
 
 function actorRecord({
@@ -49,7 +54,7 @@ function actorRecord({
   spawnedField.writeUInt32LE(spawned ? 1 : 0)
   actorDataSize.writeUInt32LE(actorData.length)
 
-  return Buffer.concat([
+  return concatBuffers([
     Buffer.alloc(16), // ActorGuid
     Buffer.from([actorState]),
     gvasString(path),
@@ -62,7 +67,7 @@ function actorRecord({
 
 describe('parseSav actor records', () => {
   it('preserves sub-cell offsets instead of snapping actors to hundredths', () => {
-    const result = parseSav(Buffer.concat([
+    const result = parseSav(concatBuffers([
       Buffer.from('SavedActors', 'latin1'),
       actorRecord({ piece: 'Solid', spawned: true, x: 513 }),
       actorRecord({ piece: 'Solid', spawned: true, x: -513 }),
@@ -75,7 +80,7 @@ describe('parseSav actor records', () => {
 
 
   it('keeps player-built structures and rejects map-owned or destroyed PBWA actors', () => {
-    const raw = Buffer.concat([
+    const raw = concatBuffers([
       Buffer.from('SavedActors', 'latin1'),
       actorRecord({ piece: 'Solid', spawned: true, x: 512 }),
       actorRecord({ piece: 'StairW', spawned: false, x: 1024 }),
@@ -108,7 +113,7 @@ describe('edited build classification', () => {
     ['RoofWall', 3],
     ['UnknownPiece', 4],
   ])('keeps %s in the correct spatial family', (piece, kind) => {
-    const result = parseSav(Buffer.concat([
+    const result = parseSav(concatBuffers([
       Buffer.from('SavedActors', 'latin1'),
       actorRecord({ piece, spawned: true, x: 512 }),
     ]))

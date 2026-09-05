@@ -484,6 +484,12 @@ export enum ElectronAPIEventKeys {
    * Plugins
    */
 
+  PluginReview = 'plugins:review',
+  PluginAccept = 'plugins:accept',
+  PluginDiscard = 'plugins:discard',
+  PluginManage = 'plugins:manage',
+  PluginSettings = 'plugins:settings',
+  PluginMode = 'plugins:mode',
   PluginsList = 'plugins:list',
   PluginsMarketplaceList = 'plugins:marketplace:list',
   PluginInstall = 'plugins:install',

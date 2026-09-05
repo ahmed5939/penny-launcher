@@ -444,6 +444,19 @@ process.on('uncaughtExceptionMonitor', (error) => {
       return dailyQuestsRun
     }
 
+    secureIpcHandle(ElectronAPIEventKeys.PluginReview, (_, kind, id) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.review(kind, id)))
+    secureIpcHandle(ElectronAPIEventKeys.PluginAccept, (_, token) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.acceptReview(token)))
+    secureIpcHandle(ElectronAPIEventKeys.PluginDiscard, (_, token) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.discardReview(token)))
+    secureIpcHandle(ElectronAPIEventKeys.PluginManage, (_, request) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.manage(request)))
+    secureIpcHandle(ElectronAPIEventKeys.PluginSettings, (_, id) =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.getSettings(id)))
+    secureIpcHandle(ElectronAPIEventKeys.PluginMode, () =>
+      import('./startup/plugins').then(({ PluginManager }) => PluginManager.mode()))
+
     secureIpcHandle(ElectronAPIEventKeys.PluginsList, () =>
       import('./startup/plugins').then(({ PluginManager }) => PluginManager.list())
     )
