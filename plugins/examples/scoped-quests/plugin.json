@@ -1,0 +1,12 @@
+{
+  "id": "scoped-quests",
+  "name": "Selected account quests",
+  "description": "Read the active quest count for the currently selected account.",
+  "version": "1.0.0",
+  "runtime": "sandbox",
+  "apiVersion": 4,
+  "permissions": ["accounts:read", "quests:read", "ui"],
+  "capabilities": ["accounts"],
+  "entry": "main.js",
+  "readme": "README.md"
+}

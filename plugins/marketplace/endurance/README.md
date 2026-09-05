@@ -1,28 +1,20 @@
 # Endurance Automation
 
-An optional Penny add-on for running Fortnite Save the World Storm Shield
-Endurance with the currently selected account.
+Opens Penny's built-in Endurance controls for the currently selected account.
+The actual game automation is owned by Penny; this add-on is a navigation shortcut.
 
-## What it does
+## Access
 
-- Starts an Endurance session for the selected zone.
-- Verifies each Fortnite screen with bundled reference images and retries
-  clicks until the destination screen appears.
-- Detects blocked/crashed sessions, recovers post-run reward screens and can
-  repeat the run.
-- Keeps its settings in Penny's per-add-on data directory.
+Runs in the API v4 sandbox and requests only `navigation`. It does not directly
+read accounts, access files, control the game, or store plugin data.
 
 ## Install and use
 
-Open **Add-ons**, choose **Discover**, review this README and the source, then
-select **Install**. The add-on appears under **Installed**, where **Open** takes
-you to its controls.
-
-Automation controls your game window. Test calibration with supervision before
-leaving a run unattended.
+In **Add-ons → Discover**, choose **Review & install**, read the requested access,
+and approve. Press **Open** on its installed card to reach Endurance controls.
+Existing legacy installations can migrate by reviewing this catalog version.
 
 ## Source
 
-This package is plain CommonJS. `main.js` is its entry point and is intentionally
-small: it registers the add-on with Penny and opens the Endurance controls. The
-current automation implementation is maintained in Penny's public repository.
+`main.js` exports a small Open action. The public source is linked in the manifest
+and on the marketplace card.

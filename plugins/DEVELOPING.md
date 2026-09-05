@@ -1,362 +1,201 @@
-# Developing Penny Launcher plugins
+# Developing Penny plugins — API v4
 
-This guide explains how the plugin (add-on) system works and how to write your
-own plugin, from an empty folder to a marketplace package. For the short
-overview, see [README.md](./README.md).
+## Quick start
 
-## How the system works
+1. Run `npm run plugin:create -- my-plugin`. An optional second argument chooses
+   the parent directory. Existing directories are never overwritten.
+2. Edit `plugins/local/my-plugin/main.js` and `plugin.json`. The generated
+   `penny.d.ts` supplies completion and types through JSDoc; no plugin build is needed.
+3. Run `npm run plugin:validate -- plugins/local/my-plugin`. This uses the same
+   package inspector as Penny, then parses JavaScript syntax without executing it.
+4. In **Add-ons**, choose **Import folder**, review permissions and README, then
+   approve. The starter displays a settings form and a notification action.
+5. Edit and import again to update. If you edit the installed folder, choose
+   **Reload**, then **Review access** to approve its new contents.
 
-Penny plugins are **plain CommonJS folders** — no build step, no bundler, no
-TypeScript compilation. The launcher never bundles plugin code into its own
-Vite build; plugins stay as real files on disk so they can carry their own
-windows, preload scripts, assets and helper scripts.
+See [DESIGN.md](./DESIGN.md), the [typed SDK](./sdk/index.d.ts), and the
+[selected-account example](./examples/scoped-quests/).
 
-There are two directories involved:
-
-| Directory | Purpose |
-| --- | --- |
-| `plugins/marketplace/` (in the repo; `resources/plugins/marketplace` when packaged) | The catalog. Packages here are **inert, readable source** — never executed. |
-| `%APPDATA%\penny-launcher-data\plugins\` | The user directory. This is the **only** place Penny loads and runs plugins from. |
-
-The flow, driven by `src/kernel/startup/plugins.ts` (`PluginManager`):
-
-1. On startup, Penny scans every subfolder of the user plugin directory.
-2. A folder is treated as a plugin if it contains a valid `plugin.json`
-   (invalid or stray folders are skipped silently — they never break startup).
-3. Penny `require()`s the entry file and calls its exported
-   `activate(context)` once.
-4. `activate()` may return a controller object (`open`, `deactivate`). The
-   returned `open` function backs the **Open** button on the Add-ons page.
-5. If `activate()` throws, the plugin still shows on the Add-ons page but with
-   an **error** badge and the error message — the rest of the app keeps
-   working.
-6. On app shutdown, controllers' `deactivate()` hooks are called in reverse
-   load order.
-
-Clicking **Install** on a marketplace package simply copies its folder from
-the catalog into the user directory and loads it. Duplicate ids and existing
-destination folders are rejected; a failed install is rolled back.
-
-## Folder contract
-
-```
-my-plugin/
-├── plugin.json   ← manifest (required)
-├── main.js       ← entry point (required, CommonJS)
-├── README.md     ← documentation (strongly recommended)
-└── …             ← anything else: windows, preload scripts, assets, scripts
-```
-
-### `plugin.json`
+## Manifest and package
 
 ```json
 {
   "id": "my-plugin",
   "name": "My Plugin",
-  "description": "One-line description shown on the Add-ons page.",
+  "description": "A brief description of the user's task.",
   "version": "1.0.0",
-  "author": "Your Name",
-  "category": "Automation",
-  "capabilities": ["background", "changes-app-behavior"],
+  "author": "Your name",
+  "runtime": "sandbox",
+  "apiVersion": 4,
+  "permissions": ["ui", "notifications"],
+  "capabilities": ["notifications"],
   "entry": "main.js",
   "readme": "README.md",
-  "repository": "https://github.com/owner/repository"
+  "repository": "https://github.com/owner/project"
 }
 ```
 
-Field reference (see `src/types/plugins.ts` → `PluginManifest`):
+`id` uses 1–64 lowercase letters, digits or hyphens, excluding Windows reserved
+names. Names are limited to 100 characters. File paths must be relative, without
+traversal, colons or backslashes. Repository links must be HTTPS without embedded
+credentials. Unknown permissions/capabilities and invalid metadata are rejected.
 
-| Field | Required | Notes |
-| --- | --- | --- |
-| `id` | yes | Lowercase letters, digits and hyphens only (`^[a-z0-9-]{1,64}$`). Must be unique — a second plugin with the same id is ignored. |
-| `name` | yes | Display name on the Add-ons page. |
-| `description` | no | One-liner shown in the plugin list and marketplace. |
-| `version` | no | Shown in the UI. |
-| `author` | no | Shown in the marketplace. |
-| `category` | no | Marketplace grouping (e.g. `"Automation"`). |
-| `capabilities` | no | User-visible effects. Add `"background"` if work continues without the user opening the add-on, and `"changes-app-behavior"` if it alters Penny's normal behavior. These labels are informational, not permissions. |
-| `entry` | no | Entry file relative to the plugin folder. Defaults to `main.js`. |
-| `readme` | no | Docs file relative to the plugin folder. Defaults to `README.md`. |
-| `repository` | no | Public source link shown in the marketplace. |
-| `apiVersion` | no | Minimum plugin API version you need (currently `2`). If the launcher is older than that, the plugin shows an "update Penny" error instead of half-working. Omit it if the v1 trio (`storageDirectory` / `getMainWindow` / `openRoute`) is enough. |
+Packages allow at most 500 regular files, 1,000 total filesystem entries, 12 levels
+of nesting, and 10 MiB total. The entry may be at most 1 MiB and the manifest at
+most 64 KiB. Symlinks and special files are rejected. All package contents,
+including documentation, contribute to its SHA-256 review fingerprint.
 
-`entry` and `readme` must be **relative paths that stay inside the plugin
-folder** — absolute paths or `../` escapes are rejected.
+An entry is browser-compatible JavaScript exporting `module.exports = { activate }`.
+`activate(context)` may be async and return `{ open?, deactivate? }`. This CommonJS
+export convention does **not** provide `require`, `process`, Node, or Electron.
+Bundle any browser-compatible dependencies into the entry yourself if needed.
 
-### The entry file
+## Isolation and enforced permissions
 
-`main.js` must export an `activate(context)` function. It is called once,
-after the Electron app is ready. It may be `async`.
+Each plugin gets a worker inside a hidden sandboxed renderer and a unique in-memory session. Plugin code has no DOM or WebRTC constructors; the host page only relays messages. Blob workers inherit the restrictive host CSP.
+Node integration is disabled, context isolation is enabled, browser permissions
+are denied, new windows/navigation/downloads are blocked, and CSP plus request
+filtering prohibit direct network and file access. The trusted preload exposes
+only the plugin bridge, not Penny's renderer APIs. Every host request checks the
+exact sender and main frame, validates payloads, and enforces the approved
+package's permissions. Penny refuses plugin execution under `--no-sandbox`.
 
-```js
-const path = require('node:path')
-const fs = require('node:fs')
-
-function activate(context) {
-  // Runs once at startup (or right after the user installs the plugin).
-  const settingsFile = path.join(context.storageDirectory, 'settings.json')
-
-  return {
-    // Optional. Backs the "Open" button on the Add-ons page.
-    open: () => {
-      // Show a window, start your automation, or jump to a launcher page:
-      context.openRoute('/stw-operations/endurance')
-    },
-
-    // Optional. Called on app shutdown — stop timers, close windows, etc.
-    deactivate: () => {},
-  }
-}
-
-module.exports = { activate }
-```
-
-Everything about the return value is optional: a plugin that only wants to
-run in the background can return nothing at all.
-
-Every successfully activated add-on is shown as **Running** in Penny. If it
-does ongoing work from `activate()`, declare the `"background"` capability;
-if it changes Penny's normal behavior, also declare
-`"changes-app-behavior"`. A tool whose `activate()` only returns an `open`
-action does not need either label.
-
-### The `context` object
-
-The context is versioned (`context.apiVersion`, currently **2**). Everything
-below is available today; declare `"apiVersion": 2` in your manifest if you
-rely on anything beyond the first three rows.
-
-| Member | Description |
+| Permission | Operations |
 | --- | --- |
-| `context.storageDirectory` | A per-plugin folder under the launcher's data directory (`penny-launcher-data/plugin-data/<id>`), created for you before `activate()` runs. Persist settings, caches and state here — it survives reinstalls of the plugin folder. |
-| `context.getMainWindow()` | The launcher's `BrowserWindow`, or `null` if it isn't open. |
-| `context.openRoute(path)` | Navigates the launcher's UI to an in-app route (must start with `/`). Navigation goes through the renderer's router via IPC, so it works in packaged `file://` builds too. |
-| `context.apiVersion` | The plugin API version this launcher provides. |
-| `context.manifest` | Your own parsed `plugin.json`. |
-| `context.log(message)` | Writes an `INFO` line to Penny's runtime log (`penny-runtime.log` in the Electron logs folder), tagged `plugin:<id>`. Use it instead of `console.log` — main-process stdout is invisible in packaged builds. |
-| `context.accounts.list()` | All accounts, **sanitized**: `{ accountId, displayName, customDisplayName }`. Never tokens, device ids or secrets. |
-| `context.accounts.getScoped()` | Who the app is currently about, as selected in the UI: `{ primary, members }` with the same sanitized shape (`primary` may be `null`). This is what "run for the current account" should mean in your plugin. |
-| `context.events.on(event, listener)` | Subscribe to launcher change events; returns an unsubscribe function. Events: `'accounts-changed'` (an account was added, removed, loaded or imported — call `accounts.list()` for the new state), `'account-scope-changed'` (payload: `{ primary, members }` as raw account ids), `'settings-changed'` (re-read `settings.get()`). Listener errors are caught and logged, never fatal. |
-| `context.storage` | Durable JSON key/value storage backed by `<storageDirectory>/storage.json`, with queued writes. All methods are async: `get(key, fallback?)`, `set(key, value)` (`undefined` deletes; the value must be JSON-serializable), `delete(key)`, `all()`. |
-| `context.settings.get()` | Async; a **stable subset** of the launcher settings: `{ gamePath, customProcess, userAgent }`. These fields are a contract — unlike the raw `settings.json`, they won't be renamed out from under you. |
+| `accounts:read` | Account names/ids, current scope, account change events |
+| `quests:read` | Read active quests for an account in the current scope; internal authentication |
+| `settings:read` | Read game path, watched process name, user agent; settings events |
+| `storage` | Per-plugin JSON storage operations |
+| `navigation` | Navigate to an existing Penny route |
+| `notifications` | Desktop notifications prefixed with plugin name |
+| `external-links` | Open HTTPS links in the system browser |
+| `ui` | Register declarative panels, actions and settings; read saved form values |
 
-A worked example — an add-on that reacts to the current account:
+Logging, job status, the plugin's own manifest and lifecycle messaging need no
+permission. Capabilities (`background`, `changes-app-behavior`, `accounts`,
+`notifications`, `network`, `filesystem`, `opens-windows`) are behavior disclosures,
+not grants. Declaring `network` or `filesystem` does not unlock raw access.
+
+There is no general authenticated request API, credential API, script injection,
+or custom privileged window API. New account operations should be explicit,
+validated host methods. The quest reader returns only quest DTOs, accepts only a
+current account id, checks scope again after the service response, and permits
+one read per 10 seconds. Already dispatched reads are not aborted at the service
+layer; their results are discarded if the plugin stops or scope changes.
+
+## Context API
+
+All host operations are asynchronous. Await them and handle failures.
+
+| Member | Contract |
+| --- | --- |
+| `apiVersion`, `manifest` | API version 4 and the approved manifest |
+| `accounts.list()` | Promise of `{ accountId, displayName, customDisplayName }[]` |
+| `accounts.getScoped()` | Promise of `{ primary, members }` with sanitized accounts |
+| `accounts.quests(accountId)` | Promise of `{ accountId, quests, rerolls, errorMessage? }`; read-only |
+| `settings.get()` | Promise of `{ gamePath, customProcess, userAgent }` |
+| `storage.get(key, fallback?)` / `set(key, value)` / `delete(key)` / `all()` | JSON storage; atomic queued writes, detached reads, explicit errors |
+| `events.on(name, listener)` | Local subscription; returns unsubscribe |
+| `openRoute(route)` | Navigate to an existing local route |
+| `openExternal(url)` | Open a credential-free HTTPS URL; 5 seconds between opens |
+| `notifications.show(title, body)` | Promise of support/success boolean; 100/1000 character limits, 5 seconds between notifications |
+| `log(message)` | Bounded, redacted diagnostic entry shown on the plugin card |
+| `lifecycle.signal` | Aborted during graceful shutdown |
+| `lifecycle.add(cleanup)` | Registers cleanup; returns unregister |
+| `timers.every(callback, ms)` | Non-overlapping async timer; 1000–2147483647 ms, returns cancel |
+| `ui.register({ panels, actions, settings })` | Replaces this plugin's contributions; see below |
+| `ui.getSettings()` | Promise of current typed form values |
+| `jobs.run(id, label, task)` | Runs `task(signal)`, records status, and supports cancellation |
+
+Events: `accounts-changed`, `account-scope-changed` (raw ids), `settings-changed`,
+and `plugin-settings-changed` (saved form values). Account/settings events require
+the corresponding read permission. Cleanup and timers run inside the sandbox;
+forced process termination may skip cleanup. Always design data writes accordingly.
+
+Storage is limited to 1 MiB total and keys of 1–256 characters. Individual bridge
+requests are limited to 128,000 serialized characters, 100 calls/second, and 16
+concurrent host operations. Use smaller records instead of large requests. Invalid
+existing JSON is preserved and reported. Saved form values use the reserved
+`ui-settings` storage key; do not overwrite it yourself.
+
+## Reusable UI
 
 ```js
-function activate(context) {
-  const unsubscribe = context.events.on(
-    'account-scope-changed',
-    async () => {
-      const { primary } = context.accounts.getScoped()
-
-      if (!primary) return
-
-      await context.storage.set('lastAccountId', primary.accountId)
-      context.log(`scope moved to ${primary.displayName}`)
-    }
-  )
-
-  return {
-    open: async () => {
-      const settings = await context.settings.get()
-      // e.g. launch a helper against settings.gamePath for the scoped account
-    },
-    deactivate: () => unsubscribe(),
-  }
+async function activate(context) {
+  await context.ui.register({
+    panels: [{ id: 'intro', title: 'My tool', body: 'Plain text instructions.' }],
+    settings: [{ id: 'enabled', label: 'Enable reminders', type: 'boolean', default: false }],
+    actions: [{ id: 'run', label: 'Run tool', run: async () => {
+      const values = await context.ui.getSettings()
+      await context.log(`Reminders enabled: ${values.enabled}`)
+    } }]
+  })
 }
-
 module.exports = { activate }
 ```
 
-## What plugins are allowed to do, and what they actually have
+Penny renders plain text, accessible controls and buttons using its own components.
+No plugin HTML, CSS, React code or event handlers execute in Penny's renderer.
+Limits: 10 panels, 10 actions, 20 settings; unique ids within each group, 100-character
+labels/titles, 4,000-character panel bodies, 2,000-character text settings. Settings
+can be `text` or `boolean`; default values and submitted values must match their type.
 
-There is **no permission system and no sandbox**. Once installed, a plugin is
-fully trusted code running in the Electron **main process** — the same
-process the launcher itself runs in. "Allowed" is therefore social, not
-technical: the marketplace rule is that **every package must ship a README
-and a public source link** so people can read and audit the code before
-installing it. Technically, a plugin can do anything the launcher can.
+## Jobs, timeouts, and diagnostics
 
-What a plugin *has* falls into three tiers:
+Activation and actions must finish within 10 seconds. A heartbeat detects hung
+renderers independently of plugin code. Shutdown has a 1.5-second grace period,
+then destroys the sandbox. Put long work in `jobs.run` and return promptly from
+Open/actions. Check the job's signal between steps. Cancelling a job aborts its
+signal; if it is still running after 3 seconds, Penny stops the whole plugin.
 
-### Tier 1 — the official API: the `context` object
+The plugin card shows job status, recent logs (up to 100 entries), permissions,
+and the latest runtime failure. Errors sent from the host to the sandbox omit
+internal service details. SDK listener/timer errors are logged. A crash or timeout
+stops that plugin and leaves it in an error state; it does not automatically restart.
 
-This is the **entire** supported API surface — everything documented under
-[The `context` object](#the-context-object): your storage directory and
-JSON storage helper, the main window, route navigation, the runtime log,
-the sanitized account list, the current account scope, launcher change
-events, and the stable settings subset. These are contracts: they keep
-working across launcher releases, and `context.apiVersion` / the manifest's
-`apiVersion` field exist so both sides can tell when they don't match.
+## Review, update, and rollback
 
-What the context deliberately does **not** hand you: auth tokens, device
-secrets, or any game/Epic API client. Account data is always sanitized to
-`{ accountId, displayName, customDisplayName }`. There is also no way to
-call the launcher's internal services directly — its code is bundled into
-`.vite/build/main.js`, so you cannot `require()` its modules
-(`DataDirectory`, the MCP/Epic request layer, etc.) from a plugin. If your
-plugin needs an authenticated Epic call, that currently means proposing a
-context API for it upstream rather than extracting credentials.
+Every import and catalog install/update starts with an inert snapshot. The review
+shows requested permissions, newly added access, README and fingerprint. Approval
+is tied to the exact snapshot, expires after 10 minutes, and cannot be replayed.
+Changing an installed file requires review again. Existing installations are not
+automatically grandfathered into permission grants.
 
-### Tier 2 — full Node/Electron access
+Updates keep one prior code version. Failed activation restores the previous code
+and grants; **Roll back code** swaps to the previously approved backup. Rollback
+shares plugin data and does not undo writes or external side effects. Disabled
+plugins stay disabled when updated. Package replacement rolls back caught errors;
+it is not a power-loss transaction, and a machine crash during file moves can
+require recovering the folder from `plugin-backups`.
 
-Because you run unsandboxed in the main process, you can:
+Runtime data directories under Penny's data directory:
 
-- Create your own `BrowserWindow`s with your own HTML/preload scripts
-  (ship them as files in your plugin folder and reference them with
-  `path.join(__dirname, ...)`).
-- Register your own IPC channels with `require('electron').ipcMain` to talk
-  to **your own** windows. (You cannot add channels to the launcher's main
-  window — its preload only exposes a fixed, launcher-owned set.)
-- Use any Node built-in (`fs`, `child_process`, `net`, …) — read files,
-  spawn helpers (e.g. PowerShell scripts shipped in your folder), make
-  network requests.
-- `require()` any of the **launcher's own dependencies by name** (e.g.
-  `uiohook-napi`, `electron`). In packaged builds the loader puts the app's
-  `node_modules` on the global resolution path before loading plugins, so
-  this works the same as in development.
+| Folder | Purpose |
+| --- | --- |
+| `plugins/<id>` | Installed source |
+| `plugin-data/<id>` | Persistent JSON data; retained after removal |
+| `plugin-control` | Approved fingerprints, enabled state and safe mode |
+| `plugin-backups/<id>` | Previous code version |
+| `plugin-staging` | Temporary reviewed snapshots; discarded after restart |
 
-There is no `package.json`/`npm install` step for plugins — if you need a
-library the launcher doesn't ship, vendor it into your plugin folder or ask
-for it to be added to the launcher's dependencies.
+Safe mode persists and stops all plugins. `--disable-plugins` forces safe mode for
+that launch. Turning off safe mode resumes only approved, enabled plugins.
 
-### Tier 3 — the launcher's data files (internal, read at your own risk)
+## Migrating API v1–v3
 
-The launcher keeps its state as plain JSON files in its data directory
-(`%APPDATA%\penny-launcher-data\`), right next to your `storageDirectory`:
-`settings.json`, `automation.json`, `friends.json`, `taxi-service.json`,
-`auto-llamas.json`, `urns.json`, `accounts.json`, `world-info/`, and so on.
+Legacy plugins are never executed in the main process. Set `runtime: "sandbox"`
+and `apiVersion: 4`, declare the permissions you use, and replace Node/Electron
+operations with the context API. Account getters, navigation, notifications and
+logging now return promises. Replace filesystem access with `storage`; replace
+BrowserWindows with UI contributions; remove `getMainWindow`, `storageDirectory`,
+and direct launcher internals. No unrestricted fallback is provided.
 
-A plugin *can* read these with `fs`, but treat them as **internals, not an
-API**:
+The bundled Endurance plugin is migrated: it needs only `navigation` and opens
+Penny's existing Endurance page. Its actual automation remains launcher-owned.
 
-- Their schemas are private to the launcher and can change in any release
-  without notice — prefer the stable `context.settings.get()` /
-  `context.accounts.*` APIs wherever they cover your need.
-- **Never write to them.** The launcher validates them against schemas and
-  queues its own writes; a plugin writing concurrently can corrupt state or
-  be silently overwritten.
-- **Leave `accounts.json` alone.** The plugin API already gives you every
-  account field you may see (`context.accounts.list()`); what it withholds
-  is credentials, and that is deliberate. Credentials in `accounts.json`
-  are encrypted at rest with Electron `safeStorage` (`enc:v1:` values) —
-  a marketplace package that touches them will not be accepted.
+## Publishing
 
-If your plugin needs launcher data that isn't reasonably reachable this way,
-the intended path is to propose a proper feature or context API in the main
-repository — that's how the Endurance automation ended up as a built-in page
-with the plugin reduced to an `openRoute()` shortcut.
-
-### How plugins integrate with the launcher UI
-
-The only supported hook into the launcher's own window is
-`context.openRoute(path)` — jumping to a page that already exists in the
-launcher (the endurance plugin's whole `open` action is
-`context.openRoute('/stw-operations/endurance')`). You cannot inject
-components, menu items, or scripts into the launcher's renderer; it doesn't
-load plugin code. For any custom UI, open your own `BrowserWindow` with your
-own HTML and preload.
-
-## Where plugins keep data
-
-Each plugin gets its own private folder, created before `activate()` runs
-and passed in as `context.storageDirectory`:
-
-```
-%APPDATA%\penny-launcher-data\
-├── plugins\<id>\        ← your code (replaced on reinstall/update)
-└── plugin-data\<id>\    ← your storageDirectory (persists across reinstalls)
-```
-
-Persist everything there — settings, caches, logs, tokens your plugin
-obtained itself. Read and write it with plain `fs`; the format is entirely
-up to you (the built-in pages use JSON files, e.g. a `settings.json`).
-Never write into your own plugin folder at runtime: it is what gets
-replaced when the user reinstalls or updates the package, while
-`plugin-data` survives.
-
-## Error handling rules
-
-- A folder without a readable, valid `plugin.json` is skipped silently.
-- A manifest with an invalid `id` (must match `^[a-z0-9-]{1,64}$`) or a
-  missing `name` is skipped.
-- If the entry file is missing, doesn't export `activate()`, or `activate()`
-  throws, the plugin is listed with status `error` and the message is shown
-  on the Add-ons page. Startup is never blocked by a broken plugin.
-- `open()` errors are caught and reported back to the UI as a failed action.
-
-Design your plugin the same way: fail inside your own code without taking the
-launcher down, and surface problems through your own UI or by throwing early
-in `activate()` so the error badge explains what's wrong.
-
-## Development workflow
-
-1. Open **Add-ons** in Penny and use the "open plugins folder" action (or go
-   to `%APPDATA%\penny-launcher-data\plugins` yourself).
-2. Create `my-plugin/` there with a `plugin.json` and `main.js`.
-3. Restart the launcher — plugins are scanned once at startup. Check the
-   Add-ons page for your plugin (and its error badge, if any).
-4. Iterate: edit files, restart, repeat. Use `context.storageDirectory` for
-   anything you write at runtime, never your plugin folder itself.
-
-When running the launcher from source (`npm start`), the same flow applies —
-the user plugin directory under the dev data directory is what gets loaded;
-the repo's `plugins/marketplace/` remains catalog-only.
-
-## Publishing to the marketplace
-
-1. Add your package as a folder under `plugins/marketplace/<your-id>/` in the
-   repo.
-2. Include `plugin.json` (with `author`, `category` and `repository` filled
-   in), `main.js`, and a `README.md` that explains what the plugin does, how
-   to use it, and where the source lives.
-3. Open a pull request. Marketplace packages should be small and readable —
-   see `plugins/marketplace/endurance/` for the reference example: its
-   `main.js` is seven lines and just registers an **Open** action that routes
-   to a launcher page.
-
-## Minimal working example
-
-`plugin.json`:
-
-```json
-{
-  "id": "hello-window",
-  "name": "Hello Window",
-  "description": "Opens a tiny window from a plugin.",
-  "version": "1.0.0"
-}
-```
-
-`main.js`:
-
-```js
-const path = require('node:path')
-const { BrowserWindow } = require('electron')
-
-function activate(context) {
-  let window = null
-
-  return {
-    open: () => {
-      if (window && !window.isDestroyed()) {
-        window.focus()
-        return
-      }
-
-      window = new BrowserWindow({ width: 480, height: 320 })
-      window.loadFile(path.join(__dirname, 'index.html'))
-    },
-    deactivate: () => {
-      if (window && !window.isDestroyed()) {
-        window.close()
-      }
-    },
-  }
-}
-
-module.exports = { activate }
-```
-
-Add an `index.html` next to it, drop the folder into the user plugin
-directory, restart Penny, and press **Open** on the Add-ons page.
+Validate the package, include author, version, description, README and a public
+HTTPS source link, then submit it under `plugins/marketplace/<id>`. Test the
+release checklist in [DESIGN.md](./DESIGN.md). Marketplace presence is not a claim
+that a package is signed or independently audited; users still review access.
