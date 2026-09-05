@@ -1539,7 +1539,7 @@ function BlueprintScene({
       ...(zoneExtra?.props ?? [])
         .filter((prop) => prop[2] <= maxVisibleZ)
         .map((prop) => ({
-          className: zoneExtra.names[prop[6]] ?? '',
+          className: zoneExtra?.names[prop[6]] ?? '',
           prop,
         })),
     ]

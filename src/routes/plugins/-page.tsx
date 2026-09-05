@@ -34,11 +34,17 @@ import {
 } from '../../components/page'
 
 import { usePluginsData } from './-hooks'
+import { PluginContributions, PluginReviewDialog } from './-extensions'
 
 const capabilityLabels: Record<
   PluginCapability,
   { icon: typeof Activity; label: string }
 > = {
+  accounts: { icon: Activity, label: 'Reads account info' },
+  notifications: { icon: Activity, label: 'Desktop notifications' },
+  network: { icon: Activity, label: 'Network access' },
+  filesystem: { icon: FolderOpen, label: 'File access' },
+  'opens-windows': { icon: Boxes, label: 'Opens windows' },
   background: { icon: Activity, label: 'Runs in background' },
   'changes-app-behavior': {
     icon: Settings2,
@@ -75,6 +81,7 @@ function CapabilityPills({
 export function RouteComponent() {
   const {
     handleInstall,
+    handleReview, handleAccept, handleCancelReview, handleManage, review, mode,
     handleOpen,
     handleReadme,
     handleRemove,
@@ -94,19 +101,24 @@ export function RouteComponent() {
         icon={Puzzle}
         section="Penny add-ons"
         title="Add-on library"
-        description="Optional tools you choose to install. Every add-on includes readable documentation and source code."
+        description="Optional tools with reviewed permissions, isolated execution, and controls you own."
         actions={
+          <div className="flex flex-wrap gap-2">
+          <Button disabled={pendingId !== null || review !== null} onClick={() => handleReview('import')}>Import folder</Button>
           <Button variant="outline" onClick={() => window.electronAPI.openPluginsDirectory()}>
             <FolderOpen className="mr-2 size-4" />
             Open add-ons folder
           </Button>
+          </div>
         }
       />
 
-      <Callout className="mb-4" title="Add-ons run with desktop access" tone="warning">
-        Review the README and source before installing add-ons you do not trust.
-        Installation starts an add-on immediately, and it starts again with Penny.
-        Installed add-ons can access the same files and services as Penny.
+      <Callout className="mb-4" title={mode.safeMode ? 'Safe mode: add-ons are stopped' : 'Add-ons run in isolated sandboxes'} tone={mode.safeMode ? 'warning' : 'info'}>
+        {mode.safeMode ? 'Installed code and saved data are retained. Turn off safe mode to resume enabled add-ons.' : 'Every installation and update is reviewed before execution. Plugins receive only their declared launcher permissions.'}
+        {mode.forced && <p>Restart without --disable-plugins to leave safe mode.</p>}
+        <Button className="mt-3" variant="outline" disabled={pendingId !== null || mode.forced} onClick={() => handleManage({ action: 'safe-mode', enabled: !mode.safeMode })}>
+          {mode.safeMode ? 'Turn off safe mode' : 'Stop all with safe mode'}
+        </Button>
       </Callout>
 
       <Tabs defaultValue="discover">
@@ -153,7 +165,7 @@ export function RouteComponent() {
                   </PanelBody>
                   <PanelFooter>
                     <Button
-                      disabled={plugin.installed || pendingId !== null}
+                      disabled={pendingId !== null || review !== null}
                       onClick={() => handleInstall(plugin)}
                     >
                       {pendingId === plugin.id ? (
@@ -161,7 +173,7 @@ export function RouteComponent() {
                       ) : (
                         <Download className="mr-2 size-4" />
                       )}
-                      {plugin.installed ? 'Installed' : 'Install'}
+                      {plugin.installed ? 'Review catalog version' : 'Review & install'}
                     </Button>
                     <Button variant="outline" onClick={() => handleReadme(plugin)}>
                       <BookOpen className="mr-2 size-4" />
@@ -202,7 +214,7 @@ export function RouteComponent() {
                       plugin.status === 'error' ? (
                         <StatusPill tone="danger">Error</StatusPill>
                       ) : (
-                        <StatusPill pulse tone="active">Running</StatusPill>
+                        <StatusPill pulse={plugin.status === 'running'} tone={plugin.status === 'running' ? 'active' : 'warning'}>{plugin.status === 'running' ? 'Running' : plugin.status === 'review' ? 'Needs review' : 'Disabled'}</StatusPill>
                       )
                     }
                   />
@@ -211,13 +223,19 @@ export function RouteComponent() {
                       {plugin.description ?? 'No description provided.'}
                     </p>
                     <CapabilityPills capabilities={plugin.capabilities} />
+                    <PluginContributions plugin={plugin} manage={handleManage} busy={pendingId !== null} />
                     {plugin.error && (
-                      <Callout className="mt-3" title="Add-on failed to load" tone="warning">
+                      <Callout className="mt-3" title="Add-on needs attention" tone="warning">
                         {plugin.error}
                       </Callout>
                     )}
                   </PanelBody>
                   <PanelFooter>
+                    {plugin.status === 'review'
+                      ? <Button disabled={pendingId !== null || review !== null} onClick={() => handleReview('installed', plugin.id)}>Review access</Button>
+                      : <Button variant="outline" disabled={pendingId !== null || mode.safeMode} onClick={() => handleManage({ action: plugin.status === 'running' ? 'disable' : 'enable', id: plugin.id })}>{plugin.status === 'running' ? 'Disable' : 'Enable'}</Button>}
+                    <Button variant="outline" disabled={pendingId !== null || mode.safeMode} onClick={() => handleManage({ action: 'reload', id: plugin.id })}>Reload</Button>
+                    {plugin.canRollback && <Button variant="outline" disabled={pendingId !== null} onClick={() => handleManage({ action: 'rollback', id: plugin.id })}>Roll back code</Button>}
                     {plugin.canOpen && (
                       <Button disabled={pendingId !== null} onClick={() => handleOpen(plugin)}>
                         {pendingId === plugin.id && <UpdateIcon className="mr-2 animate-spin" />}
@@ -253,6 +271,7 @@ export function RouteComponent() {
         </TabsContent>
       </Tabs>
 
+      <PluginReviewDialog review={review} busy={pendingId !== null} accept={handleAccept} cancel={handleCancelReview} />
       <Dialog open={readme !== null} onOpenChange={(open) => !open && setReadme(null)}>
         <DialogContent className="max-h-[80vh] max-w-3xl grid-rows-[auto_minmax(0,1fr)]">
           <DialogHeader>

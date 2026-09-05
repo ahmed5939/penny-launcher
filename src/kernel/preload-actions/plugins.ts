@@ -1,5 +1,8 @@
 import type {
   MarketplacePlugin,
+  PluginManageRequest,
+  PluginReviewResult,
+  PluginSettingsResult,
   PluginActionResult,
   PluginOpenResult,
   PluginReadmeResult,
@@ -65,4 +68,23 @@ export function pluginNavigation(
     removeListener: () =>
       ipcRenderer.removeListener(ElectronAPIEventKeys.PluginNavigate, listener),
   }
+}
+
+export function reviewPlugin(kind: 'catalog' | 'installed' | 'import', id?: string): Promise<PluginReviewResult> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.PluginReview, kind, id)
+}
+export function acceptPluginReview(token: string): Promise<PluginActionResult> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.PluginAccept, token)
+}
+export function discardPluginReview(token: string): Promise<PluginActionResult> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.PluginDiscard, token)
+}
+export function managePlugin(request: PluginManageRequest): Promise<PluginActionResult> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.PluginManage, request)
+}
+export function pluginSettings(id: string): Promise<PluginSettingsResult> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.PluginSettings, id)
+}
+export function pluginMode(): Promise<{ safeMode: boolean; forced: boolean }> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.PluginMode)
 }
