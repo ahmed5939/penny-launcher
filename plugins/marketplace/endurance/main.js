@@ -1,6 +1,6 @@
 function activate(context) {
   return {
-    open: () => context.openRoute('/stw-operations/endurance'),
+    open: () => context.openRoute('/plugins/endurance'),
   }
 }
 

@@ -185,7 +185,10 @@ export class OverlayWindow {
   private static refreshing: Promise<void> | null = null
   private static settings: OverlaySettings = defaultOverlaySettings
 
-  static async start() {
+  private static opening = false
+  private static shortcutRegistered = false
+
+  private static async start() {
     if (
       process.platform !== 'win32' ||
       !OverlayWindow.settings.enabled ||
@@ -226,7 +229,11 @@ export class OverlayWindow {
     window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
     window.webContents.on('will-navigate', (event) => event.preventDefault())
     window.on('closed', () => {
-      if (OverlayWindow.value === window) OverlayWindow.value = null
+      if (OverlayWindow.value === window) {
+        OverlayWindow.value = null
+        OverlayWindow.refreshing = null
+        OverlayWindow.stopRefreshing()
+      }
     })
 
     const rendererFilePath = path.join(
@@ -246,21 +253,7 @@ export class OverlayWindow {
       }
     } catch (error) {
       RuntimeLog.error('overlay:load', error)
-      OverlayWindow.destroy()
-      return
-    }
-
-    if (window.isDestroyed() || OverlayWindow.value !== window) return
-
-    const registered = globalShortcut.register(toggleShortcut, () => {
-      OverlayWindow.toggle()
-    })
-
-    if (!registered) {
-      RuntimeLog.error(
-        'overlay:shortcut',
-        new Error(`Could not register ${toggleShortcut}.`)
-      )
+      if (!window.isDestroyed()) window.destroy()
     }
   }
 
@@ -274,10 +267,16 @@ export class OverlayWindow {
       return
     }
 
-    if (!OverlayWindow.value || OverlayWindow.value.isDestroyed()) {
-      await OverlayWindow.start()
-      return
+    if (!OverlayWindow.shortcutRegistered) {
+      OverlayWindow.shortcutRegistered = globalShortcut.register(toggleShortcut, () => {
+        void OverlayWindow.toggle()
+      })
+      if (!OverlayWindow.shortcutRegistered) {
+        RuntimeLog.error('overlay:shortcut', new Error(`Could not register ${toggleShortcut}.`))
+      }
     }
+
+    if (!OverlayWindow.value || OverlayWindow.value.isDestroyed()) return
 
     OverlayWindow.applyAppearance(OverlayWindow.value)
     if (OverlayWindow.value.isVisible()) {
@@ -303,14 +302,27 @@ export class OverlayWindow {
     if (OverlayWindow.value?.isVisible()) void OverlayWindow.refresh()
   }
 
-  static toggle() {
+  static async toggle() {
+    if (process.platform !== 'win32' || !OverlayWindow.settings.enabled || OverlayWindow.opening) return
+
+    if (!OverlayWindow.value) {
+      OverlayWindow.opening = true
+      try {
+        await OverlayWindow.start()
+      } catch (error) {
+        RuntimeLog.error('overlay:start', error)
+      } finally {
+        OverlayWindow.opening = false
+      }
+    }
     const window = OverlayWindow.value
 
     if (!window || window.isDestroyed()) return
 
     if (window.isVisible()) {
-      window.hide()
       OverlayWindow.stopRefreshing()
+      window.destroy()
+      OverlayWindow.value = null
       return
     }
 
@@ -391,15 +403,22 @@ export class OverlayWindow {
   }
 
   private static refresh() {
-    OverlayWindow.refreshing ??= OverlayWindow.performRefresh().finally(() => {
-      OverlayWindow.refreshing = null
+    if (OverlayWindow.refreshing) return OverlayWindow.refreshing
+    const window = OverlayWindow.value
+    if (!window || window.isDestroyed() || !window.isVisible()) return
+    const refresh = OverlayWindow.performRefresh(window).catch((error) => {
+      RuntimeLog.error('overlay:refresh', error)
+    }).finally(() => {
+      if (OverlayWindow.refreshing === refresh) OverlayWindow.refreshing = null
     })
-
-    return OverlayWindow.refreshing
+    OverlayWindow.refreshing = refresh
+    return refresh
   }
 
-  private static async performRefresh() {
+  private static async performRefresh(window: BrowserWindow) {
+    const isCurrent = () => OverlayWindow.value === window && !window.isDestroyed() && window.isVisible()
     const requestedNames = await OverlayWindow.displayNamesFromScope()
+    if (!isCurrent()) return
 
     if (requestedNames.length === 0) {
       OverlayWindow.send({
@@ -414,6 +433,7 @@ export class OverlayWindow {
     const initial = await Promise.all(
       requestedNames.map(OverlayWindow.loadProfile)
     )
+    if (!isCurrent()) return
     const teammates = OverlayWindow.settings.includeSquadMembers
       ? initial.flatMap(({ data }) => (data ? missionPlayers(data) : []))
       : []
@@ -425,6 +445,7 @@ export class OverlayWindow {
       ...initial,
       ...(await Promise.all(extraNames.map(OverlayWindow.loadProfile))),
     ]
+    if (!isCurrent()) return
     const players = profiles.map(({ data, displayName }) =>
       data
         ? toOverlayPlayer(displayName, data, OverlayWindow.settings)
@@ -451,7 +472,8 @@ export class OverlayWindow {
 
   static destroy() {
     OverlayWindow.stopRefreshing()
-    globalShortcut.unregister(toggleShortcut)
+    if (OverlayWindow.shortcutRegistered) globalShortcut.unregister(toggleShortcut)
+    OverlayWindow.shortcutRegistered = false
 
     if (OverlayWindow.value && !OverlayWindow.value.isDestroyed()) {
       OverlayWindow.value.destroy()

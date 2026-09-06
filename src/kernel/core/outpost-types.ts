@@ -116,8 +116,8 @@ export type OutpostTrapInstanceTally = {
  * ÷ `cell`) with sub-tile precision, including height for the 3D explorer.
  *
  * Build pieces are stored at their actor pivot. Fortnite places floor, roof
- * and stair pivots at the centre of their tile and wall pivots at the centre
- * of the wall plane, so the saved XYZ can be used directly.
+ * and stair pivots at a tile edge and wall pivots at the centre of the wall
+ * plane. Renderers must preserve each mesh pivot when applying saved XYZ.
  */
 export type OutpostLayout = {
   /** World units per grid cell — Fortnite's build tile is 512. */

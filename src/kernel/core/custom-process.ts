@@ -14,6 +14,7 @@ export class CustomProcess {
       return
     }
 
+    let first = true
     ProcessWatcher.on('custom-process', (list) => {
       const filtered = list.find(
         (item) =>
@@ -21,9 +22,10 @@ export class CustomProcess {
       )
       const isRunning = filtered !== undefined
 
-      if (filtered?.id !== undefined) {
-        CustomProcess.id = filtered.id
-      }
+      CustomProcess.id = filtered?.id ?? null
+      ProcessWatcher.setInterval('custom-process', isRunning ? 2_000 : 10_000)
+      if (!first && CustomProcess.isRunning === isRunning) return
+      first = false
 
       CustomProcess.isRunning = isRunning
       DiscordPresence.setGameRunning(isRunning)
@@ -32,7 +34,7 @@ export class CustomProcess {
         ElectronAPIEventKeys.CustomProcessStatus,
         CustomProcess.isRunning
       )
-    })
+    }, 10_000)
   }
 
   static async kill() {
@@ -48,10 +50,10 @@ export class CustomProcess {
       return
     }
 
+    if (restart) CustomProcess.destroy()
     CustomProcess.name = value
 
     if (restart) {
-      CustomProcess.destroy()
       CustomProcess.init()
     }
   }

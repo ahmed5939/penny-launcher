@@ -1,0 +1,52 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+
+const psList = vi.hoisted(() => vi.fn())
+vi.mock('ps-list', () => ({ default: psList }))
+vi.mock('./runtime-log', () => ({ RuntimeLog: { error: vi.fn() } }))
+
+beforeEach(() => { vi.resetModules(); vi.useFakeTimers(); psList.mockReset() })
+afterEach(async () => {
+  const { ProcessWatcher } = await import('./process-watcher')
+  for (const id of ['idle', 'active', 'a', 'b']) ProcessWatcher.close(id)
+  await vi.dynamicImportSettled()
+  vi.clearAllTimers(); vi.useRealTimers()
+})
+
+it('uses slow idle checks, honors fast subscribers, and stops when unused', async () => {
+  psList.mockResolvedValue([])
+  const { ProcessWatcher } = await import('./process-watcher')
+  ProcessWatcher.on('idle', vi.fn(), 10_000)
+  await vi.dynamicImportSettled()
+  expect(psList).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(9_999)
+  expect(psList).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(1)
+  await vi.dynamicImportSettled()
+  expect(psList).toHaveBeenCalledTimes(2)
+  ProcessWatcher.on('active', vi.fn())
+  await vi.dynamicImportSettled()
+  await vi.advanceTimersByTimeAsync(2_000)
+  await vi.dynamicImportSettled()
+  expect(psList).toHaveBeenCalledTimes(4)
+  ProcessWatcher.close('active')
+  ProcessWatcher.close('idle')
+  await vi.advanceTimersByTimeAsync(20_000)
+  expect(psList).toHaveBeenCalledTimes(4)
+})
+
+it('does not overlap scans or restart after an in-flight scan loses its listeners', async () => {
+  let finish!: (value: unknown[]) => void
+  psList.mockImplementation(() => new Promise((resolve) => { finish = resolve }))
+  const { ProcessWatcher } = await import('./process-watcher')
+  ProcessWatcher.on('a', vi.fn())
+  await vi.dynamicImportSettled()
+  ProcessWatcher.on('b', vi.fn())
+  await vi.advanceTimersByTimeAsync(20_000)
+  expect(psList).toHaveBeenCalledTimes(1)
+  ProcessWatcher.close('a')
+  ProcessWatcher.close('b')
+  finish([])
+  await vi.advanceTimersByTimeAsync(20_000)
+  expect(psList).toHaveBeenCalledTimes(1)
+  expect(vi.getTimerCount()).toBe(0)
+})

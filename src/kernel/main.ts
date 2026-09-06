@@ -100,7 +100,7 @@ const features = {
   claimRewards: () => import('./core/claim-rewards'),
   customProcess: () => import('./core/custom-process'),
   dataDirectory: () => import('./startup/data-directory'),
-  endurance: () => import('./core/endurance'),
+  endurance: () => import('./startup/endurance-plugin').then(({ getEndurancePlugin }) => getEndurancePlugin()),
   eula: () => import('./core/eula-tracking'),
   expeditions: () => import('./core/expeditions'),
   fnLaunch: () => import('./core/fn-launch'),
@@ -391,9 +391,6 @@ process.on('uncaughtExceptionMonitor', (error) => {
   app.on('ready', async () => {
     markStartup('app-ready')
     MainWindow.setInstance(await createWindow())
-    void OverlayWindow.start().catch((error) => {
-      RuntimeLog.error('overlay:start', error)
-    })
 
     void import('./startup/power-lifecycle').then(({ PowerLifecycle }) =>
       PowerLifecycle.start()

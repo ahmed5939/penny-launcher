@@ -86,6 +86,7 @@ function render() {
     <ThemeProvider>
       <LoadSettings />
       <LoadAccounts />
+      <LoadItemDatabase />
       <LauncherNotifications />
       <DeferredBootstrap />
 
@@ -145,7 +146,6 @@ function DeferredBootstrap() {
         <>
           <LoadAutomation />
           <LoadAutoLlamas />
-          <LoadItemDatabase />
         </>
       )}
       {stage >= 3 && <LoadPennyDBMissions />}

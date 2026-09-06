@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
+import { archiveBuildMesh } from './-blueprint-archive-assets'
+
 import { STOREY_HEIGHT } from './-blueprint-geometry'
 
 type Point = [number, number, number]
@@ -46,7 +48,18 @@ export function buildPieceMesh(
   tier: number,
   fallback: () => THREE.BufferGeometry
 ): THREE.BufferGeometry {
+  const recovered = archiveBuildMesh(shape, material, tier)
+
+  if (recovered) return applyBuildUVs(recovered)
+
   const name = shape.toLowerCase()
+  const finish = (geometry: THREE.BufferGeometry) => {
+    // Archive Floor/Stair/Roof bounds are centred at local UE Y=256.
+    // Generated shapes are centred at zero; restore their tile-edge pivot.
+    if (/^(?:floor|stair|roof|balcony)/.test(name)) geometry.translate(0.5, 0, 0)
+
+    return applyBuildUVs(geometry)
+  }
   const parts: THREE.BufferGeometry[] = []
   const upgrade = Math.max(1, Math.min(3, tier || 1))
   const wood = material === 0
@@ -58,7 +71,7 @@ export function buildPieceMesh(
   const roof = name === 'roofc'
 
   if ((!wall && !floor && !stair && !roof) || (!wood && !brick && !metal)) {
-    return applyBuildUVs(fallback())
+    return finish(fallback())
   }
 
   const box = (width: number, height: number, depth: number, at: Point, shade = 1) => {
@@ -201,5 +214,5 @@ export function buildPieceMesh(
   normalized.forEach((part) => part.dispose())
   parts.forEach((part, index) => { if (part !== normalized[index]) part.dispose() })
 
-  return applyBuildUVs(merged ?? fallback())
+  return finish(merged ?? fallback())
 }

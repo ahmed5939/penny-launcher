@@ -21,29 +21,27 @@ const execFileAsync = promisify(execFile)
  * Forge fell back to node-gyp before the app could start.
  */
 export class ProcessWatcher {
-  private static listeners = new Map<string, Listener>()
+  private static listeners = new Map<string, { listener: Listener; intervalMs: number }>()
   private static timer: NodeJS.Timeout | null = null
   private static polling = false
   private static lastErrorAt = 0
 
-  static on(id: string, listener: Listener) {
-    ProcessWatcher.listeners.set(id, listener)
-
-    if (!ProcessWatcher.timer) {
-      ProcessWatcher.timer = setInterval(() => {
-        void ProcessWatcher.poll()
-      }, 2_000)
-      ProcessWatcher.timer.unref()
-    }
-
+  static on(id: string, listener: Listener, intervalMs = 2_000) {
+    ProcessWatcher.listeners.set(id, { listener, intervalMs })
+    if (ProcessWatcher.timer) clearTimeout(ProcessWatcher.timer)
+    ProcessWatcher.timer = null
     void ProcessWatcher.poll()
+  }
+
+  static setInterval(id: string, intervalMs: number) {
+    const entry = ProcessWatcher.listeners.get(id)
+    if (entry) entry.intervalMs = intervalMs
   }
 
   static close(id: string) {
     ProcessWatcher.listeners.delete(id)
-
     if (ProcessWatcher.listeners.size === 0 && ProcessWatcher.timer) {
-      clearInterval(ProcessWatcher.timer)
+      clearTimeout(ProcessWatcher.timer)
       ProcessWatcher.timer = null
     }
   }
@@ -73,7 +71,7 @@ export class ProcessWatcher {
       const { default: psList } = await import('ps-list')
       const processes = (await psList()).map(ProcessWatcher.toWatchedProcess)
 
-      for (const listener of ProcessWatcher.listeners.values()) {
+      for (const { listener } of ProcessWatcher.listeners.values()) {
         listener(processes)
       }
     } catch (error) {
@@ -84,6 +82,14 @@ export class ProcessWatcher {
       }
     } finally {
       ProcessWatcher.polling = false
+      if (ProcessWatcher.listeners.size > 0) {
+        const intervalMs = Math.min(...[...ProcessWatcher.listeners.values()].map((entry) => entry.intervalMs))
+        ProcessWatcher.timer = setTimeout(() => {
+          ProcessWatcher.timer = null
+          void ProcessWatcher.poll()
+        }, intervalMs)
+        ProcessWatcher.timer.unref()
+      }
     }
   }
 

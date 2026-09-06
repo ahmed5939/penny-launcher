@@ -219,14 +219,6 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/outpost',
       },
       {
-        beta: true,
-        can: 'endurance',
-        icon: Shield,
-        label: 'sidebar:endurance',
-        needsAccount: true,
-        to: '/stw-operations/endurance',
-      },
-      {
         can: 'xpBoosts',
         icon: Zap,
         label: 'sidebar:stw-operations.options.xp-boosts',

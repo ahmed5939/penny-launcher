@@ -61,7 +61,7 @@ export function RouteComponent() {
     <>
       <PageHeader
         icon={Repeat}
-        section="STW Operations"
+        section="Add-ons"
         title={
           <span className="flex items-center gap-2">
             Endurance

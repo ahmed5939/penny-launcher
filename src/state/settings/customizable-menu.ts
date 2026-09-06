@@ -26,7 +26,6 @@ export const customizableMenuSettingsRelations: Record<
 > = {
   stwOperations: [
     'currentAlerts',
-    'endurance',
     'autoKick',
     'taxiService',
     'party',

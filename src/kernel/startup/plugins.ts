@@ -43,6 +43,19 @@ export class PluginManager {
   private static loading: Promise<void> | null = null
   private static queue: Promise<unknown> = Promise.resolve()
   private static safeMode = false
+  private static hostCleanups = new Map<string, () => void>()
+
+  /** Host-backed add-on features must check this before every operation. */
+  static isRunning(id: string) {
+    const plugin = PluginManager.plugins.get(id)
+    return !PluginManager.safeMode && plugin?.status === 'running' && !!plugin.host
+  }
+  static registerHostCleanup(id: string, cleanup: () => void) {
+    PluginManager.hostCleanups.set(id, cleanup)
+  }
+  private static stopHostFeature(id: string) {
+    PluginManager.hostCleanups.get(id)?.()
+  }
 
   private static serialize<T>(action: () => Promise<T>): Promise<T> {
     const result = PluginManager.queue.then(action)
@@ -119,6 +132,7 @@ export class PluginManager {
         (message) => {
           plugin.host = null
           plugin.status = 'error'
+          PluginManager.stopHostFeature(manifest.id)
           plugin.error = redactSecrets(message)
           PluginBridge.clearPlugin(manifest.id)
           for (const job of plugin.jobs) if (job.status === 'running') job.status = 'cancelled'
@@ -142,6 +156,8 @@ export class PluginManager {
     }
   }
   private static async stop(plugin: Installed) {
+    plugin.status = 'disabled'
+    PluginManager.stopHostFeature(plugin.manifest.id)
     PluginBridge.clearPlugin(plugin.manifest.id)
     const host = plugin.host
     plugin.host = null

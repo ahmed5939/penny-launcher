@@ -4,7 +4,7 @@ import type { OutpostLayout } from '../../../kernel/core/outpost-types'
  * Shared spatial conventions for the 2D blueprint and both 3D explorers.
  *
  * Fortnite stores each build piece at its own pivot: floors, stairs and roofs
- * use the tile centre, while walls use the centre of their wall plane. Yaw
+ * use a tile-edge pivot, while walls use the centre of their wall plane. Yaw
  * advances in 90° steps rotating +X toward +Y.
  */
 
@@ -49,13 +49,19 @@ export function forwardVector(yaw: number): [number, number] {
   }
 }
 
-/** The saved actor pivot is already the visual centre of every build piece. */
+/** Archive mesh bounds put floor/stair/roof centres half a tile forward. */
 export function structureCentre(
   piece: StructureTuple
 ): { x: number; y: number; z: number } {
-  const [x, y, z] = piece
+  const [x, y, z, , kind, yaw] = piece
 
-  return { x, y, z }
+  if (kind !== KIND_FLOOR && kind !== KIND_STAIR && kind !== KIND_ROOF) {
+    return { x, y, z }
+  }
+
+  const [dx, dy] = forwardVector(yaw)
+
+  return { x: x + dx * 0.5, y: y + dy * 0.5, z }
 }
 
 /**

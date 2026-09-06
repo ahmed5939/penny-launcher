@@ -1,0 +1,119 @@
+{
+  "archive": "assets.zip",
+  "geometrySource": "collision-hulls",
+  "textureResolutionLimit": 512,
+  "textures": {
+    "wood-planks": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Wood/Textures/PBW_wood_2_D.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        512,
+        512
+      ],
+      "normal": false,
+      "atlasRegion": null
+    },
+    "brick-wall": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/Textures/BrickT1_D.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        512,
+        512
+      ],
+      "normal": false,
+      "atlasRegion": null
+    },
+    "brick-wall-normal": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/Textures/BrickT1_N.uasset",
+      "format": "PF_BC5",
+      "size": [
+        512,
+        512
+      ],
+      "normal": true,
+      "atlasRegion": null
+    },
+    "brick-floor": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/Textures/BrickT1_Floor_D.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        512,
+        512
+      ],
+      "normal": false,
+      "atlasRegion": null
+    },
+    "brick-floor-normal": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/Textures/BrickT1_Floor_N.uasset",
+      "format": "PF_BC5",
+      "size": [
+        512,
+        512
+      ],
+      "normal": true,
+      "atlasRegion": null
+    },
+    "stone-tier3": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/Textures/T_BrickL3.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        512,
+        156
+      ],
+      "normal": false,
+      "atlasRegion": [
+        0,
+        0,
+        512,
+        156
+      ]
+    },
+    "stone-tier3-normal": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/Textures/T_BrickL3_N.uasset",
+      "format": "PF_BC5",
+      "size": [
+        512,
+        156
+      ],
+      "normal": true,
+      "atlasRegion": [
+        0,
+        0,
+        512,
+        156
+      ]
+    }
+  },
+  "meshes": {
+    "1:1:roofc": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/L1/PBW_B1_RoofC.uasset",
+      "vertices": 24,
+      "triangles": 32
+    },
+    "1:3:archway": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/L3/PBW_B3_Archway.uasset",
+      "vertices": 52,
+      "triangles": 80
+    },
+    "1:3:balconyo": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/L3/PBW_B3_BalconyO.uasset",
+      "vertices": 74,
+      "triangles": 116
+    },
+    "1:3:balconys": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/L3/PBW_B3_BalconyS.uasset",
+      "vertices": 56,
+      "triangles": 84
+    },
+    "1:3:doors": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/L3/PBW_B3_DoorS.uasset",
+      "vertices": 48,
+      "triangles": 72
+    },
+    "1:3:quarterwalls": {
+      "package": "assets/FortniteGame/Content/Packages/PBW/Brick/L3/PBW_B3_QuarterWalls.uasset",
+      "vertices": 48,
+      "triangles": 72
+    }
+  }
+}

@@ -45,7 +45,6 @@ describe('navigation', () => {
     expect(betaItems.map((item) => item.to)).toEqual([
       '/stw-operations/leaderboards',
       '/stw-operations/outpost',
-      '/stw-operations/endurance',
       '/account-management/locker',
       '/account-management/sprites',
     ])
@@ -99,7 +98,7 @@ describe('area navigation', () => {
   it.each([
     ['/', 'home'],
     ['/stw-operations/missions', 'stw'],
-    ['/stw-operations/endurance', 'stw'],
+    ['/stw-operations/endurance', undefined],
     ['/stw-operations/taxi-service', 'automate'],
     ['/accounts/add/device-auth', 'accounts'],
     ['/account-management/profile', 'accounts'],
@@ -118,12 +117,13 @@ describe('area navigation', () => {
     expect(matchesNavPath('/plugins-extra', '/plugins')).toBe(false)
   })
 
-  it('keeps Home visible and places Missions and Endurance in STW', () => {
+  it('keeps Home and Missions visible and Endurance in Add-ons', () => {
     expect(
       navSections.find((section) => section.key === 'home')?.can,
     ).toBeUndefined()
     expect(stw.items[0].can).toBe('currentAlerts')
-    expect(customizableMenuSettingsRelations.stwOperations).toContain(
+    expect(navDestinations()).not.toContain('/stw-operations/endurance')
+    expect(customizableMenuSettingsRelations.stwOperations).not.toContain(
       'endurance',
     )
   })

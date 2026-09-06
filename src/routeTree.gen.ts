@@ -29,11 +29,11 @@ import { Route as StwOperationsLoadoutsRouteImport } from './routes/stw-operatio
 import { Route as StwOperationsLeaderboardsRouteImport } from './routes/stw-operations/leaderboards/route'
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
 import { Route as StwOperationsExpeditionsRouteImport } from './routes/stw-operations/expeditions/route'
-import { Route as StwOperationsEnduranceRouteImport } from './routes/stw-operations/endurance/route'
 import { Route as StwOperationsCompendiumRouteImport } from './routes/stw-operations/compendium/route'
 import { Route as StwOperationsAutomationRouteImport } from './routes/stw-operations/automation/route'
 import { Route as StwOperationsAutoLlamasRouteImport } from './routes/stw-operations/auto-llamas/route'
 import { Route as SettingsTweaksRouteImport } from './routes/settings/tweaks/route'
+import { Route as PluginsEnduranceRouteImport } from './routes/plugins_/endurance/route'
 import { Route as InformationCreditsRouteImport } from './routes/information/credits/route'
 import { Route as AdvancedModeWorldInfoRouteImport } from './routes/advanced-mode/world-info/route'
 import { Route as AdvancedModeServerStatusRouteImport } from './routes/advanced-mode/server-status/route'
@@ -155,12 +155,6 @@ const StwOperationsExpeditionsRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
-const StwOperationsEnduranceRouteRoute =
-  StwOperationsEnduranceRouteImport.update({
-    path: '/stw-operations/endurance',
-    getParentRoute: () => rootRoute,
-  } as any)
-
 const StwOperationsCompendiumRouteRoute =
   StwOperationsCompendiumRouteImport.update({
     path: '/stw-operations/compendium',
@@ -182,6 +176,11 @@ const StwOperationsAutoLlamasRouteRoute =
 const SettingsTweaksRouteRoute = SettingsTweaksRouteImport.update({
   path: '/tweaks',
   getParentRoute: () => SettingsRouteRoute,
+} as any)
+
+const PluginsEnduranceRouteRoute = PluginsEnduranceRouteImport.update({
+  path: '/plugins/endurance',
+  getParentRoute: () => rootRoute,
 } as any)
 
 const InformationCreditsRouteRoute = InformationCreditsRouteImport.update({
@@ -359,6 +358,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InformationCreditsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/plugins/endurance': {
+      preLoaderRoute: typeof PluginsEnduranceRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/settings/tweaks': {
       preLoaderRoute: typeof SettingsTweaksRouteImport
       parentRoute: typeof SettingsRouteImport
@@ -373,10 +376,6 @@ declare module '@tanstack/react-router' {
     }
     '/stw-operations/compendium': {
       preLoaderRoute: typeof StwOperationsCompendiumRouteImport
-      parentRoute: typeof rootRoute
-    }
-    '/stw-operations/endurance': {
-      preLoaderRoute: typeof StwOperationsEnduranceRouteImport
       parentRoute: typeof rootRoute
     }
     '/stw-operations/expeditions': {
@@ -464,10 +463,10 @@ export const routeTree = rootRoute.addChildren([
   AdvancedModeServerStatusRouteRoute,
   AdvancedModeWorldInfoRouteRoute,
   InformationCreditsRouteRoute,
+  PluginsEnduranceRouteRoute,
   StwOperationsAutoLlamasRouteRoute,
   StwOperationsAutomationRouteRoute,
   StwOperationsCompendiumRouteRoute,
-  StwOperationsEnduranceRouteRoute,
   StwOperationsExpeditionsRouteRoute,
   StwOperationsInventoryRouteRoute,
   StwOperationsLeaderboardsRouteRoute,

@@ -756,8 +756,8 @@ function Blueprint({
   /**
    * Drawn a quarter turn counter-clockwise — world (x, y) → screen (y, −x) —
    * so the plan's north/south matches the in-game compass. Wall yaw
-   * quadrants shift by one, which swaps their axis to match. Pieces are
-   * use their saved actor pivots directly.
+   * quadrants shift by one, which swaps their axis to match. Tile centres
+   * include the half-cell offset from floor/stair/roof actor pivots.
    */
   const structures = useMemo(
     () =>

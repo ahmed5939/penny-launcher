@@ -158,6 +158,25 @@ function perk(
 
 export class ItemDatabase {
   private static cache: ItemDatabasePayload | null = null
+  private static eviction: NodeJS.Timeout | null = null
+  private static loading: Promise<ItemDatabasePayload> | null = null
+
+  private static async load(force: boolean) {
+    if (ItemDatabase.eviction) clearTimeout(ItemDatabase.eviction)
+    ItemDatabase.loading ??= ItemDatabase.loadData(force).finally(() => {
+      ItemDatabase.loading = null
+    })
+    try {
+      return await ItemDatabase.loading
+    } finally {
+      if (ItemDatabase.eviction) clearTimeout(ItemDatabase.eviction)
+      ItemDatabase.eviction = setTimeout(() => {
+        ItemDatabase.cache = null
+        ItemDatabase.eviction = null
+      }, 60_000)
+      ItemDatabase.eviction.unref()
+    }
+  }
 
   private static get filePath() {
     return path.join(
@@ -196,7 +215,7 @@ export class ItemDatabase {
     }
   }
 
-  private static async load(force: boolean) {
+  private static async loadData(force: boolean) {
     if (!force && ItemDatabase.cache) {
       return ItemDatabase.cache
     }

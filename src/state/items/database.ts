@@ -25,6 +25,7 @@ export type ItemDatabaseState = {
     total: number
   }) => void
   updateLoading: (value: boolean) => void
+  clear: () => void
 }
 
 export const useItemDatabaseStore = create<ItemDatabaseState>()((set) => ({
@@ -47,6 +48,10 @@ export const useItemDatabaseStore = create<ItemDatabaseState>()((set) => ({
       total: payload.total,
     }),
   updateLoading: (value) => set({ isLoading: value }),
+  clear: () => set({
+    alterationPools: {}, errorMessage: null, fetchedAt: null,
+    isLoading: false, ratings: {}, records: {}, total: 0,
+  }),
 }))
 
 /**

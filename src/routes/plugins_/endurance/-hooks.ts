@@ -7,6 +7,7 @@ import type {
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { useNavigate } from '@tanstack/react-router'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
@@ -14,9 +15,30 @@ const maxFeedLength = 80
 
 export function useEnduranceData() {
   const { selected } = useGetSelectedAccount()
+  const navigate = useNavigate()
   const [snapshot, setSnapshot] = useState<EnduranceSnapshot | null>(null)
   const [feed, setFeed] = useState<Array<EnduranceEvent>>([])
   const statusRef = useRef<EnduranceStatus | null>(null)
+
+  useEffect(() => {
+    let active = true
+    let timer: ReturnType<typeof setTimeout>
+    const checkPlugin = async () => {
+      try {
+        const plugins = await window.electronAPI.listPlugins()
+        if (active && !plugins.some((plugin) => plugin.id === 'endurance' && plugin.status === 'running' && !plugin.safeMode)) {
+          void navigate({ to: '/plugins', replace: true })
+          return
+        }
+      } catch {
+        if (active) void navigate({ to: '/plugins', replace: true })
+        return
+      }
+      if (active) timer = setTimeout(checkPlugin, 2000)
+    }
+    void checkPlugin()
+    return () => { active = false; clearTimeout(timer) }
+  }, [navigate])
 
   useEffect(() => {
     window.electronAPI

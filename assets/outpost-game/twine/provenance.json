@@ -1,0 +1,67 @@
+{
+  "archive": "assets.zip",
+  "source": "Zone_Outpost_TwinePeaks.umap",
+  "collisionModels": 82,
+  "boundsModels": 5,
+  "instances": 3832,
+  "skippedComponents": 0,
+  "meshResolution": "public-export-hash",
+  "textures": {
+    "grass": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Grasslands_D.uasset",
+      "normal": false,
+      "size": [
+        64,
+        64
+      ]
+    },
+    "grass-normal": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Grasslands_N.uasset",
+      "normal": true,
+      "size": [
+        64,
+        64
+      ]
+    },
+    "rock": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Volcano_Exterior_Wall_Volcanic_Andesite.uasset",
+      "normal": false,
+      "size": [
+        512,
+        512
+      ]
+    },
+    "cave-normal": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Cave_Exterior_Wall_N.uasset",
+      "normal": true,
+      "size": [
+        64,
+        64
+      ]
+    },
+    "ground": {
+      "package": "assets/FortniteGame/Plugins/GameFeatures/SaveTheWorld/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Volcano_Pebbles_D.uasset",
+      "normal": false,
+      "size": [
+        512,
+        512
+      ]
+    },
+    "lava": {
+      "package": "assets/FortniteGame/Content/Environments/Sets/Vulcano/Textures/LavaGround_D.uasset",
+      "normal": false,
+      "size": [
+        64,
+        64
+      ]
+    },
+    "lava-normal": {
+      "package": "assets/FortniteGame/Content/Environments/Sets/Vulcano/Textures/LavaGround_N.uasset",
+      "normal": true,
+      "size": [
+        64,
+        64
+      ]
+    }
+  }
+}

@@ -1,46 +1,61 @@
 import { useEffect } from 'react'
-import { useShallow } from 'zustand/react/shallow'
 
 import { useItemDatabaseStore } from '../../state/items/database'
 
-/**
- * Registers the single global response listener. Feature pages request the
- * large database only when one of them is actually opened.
- */
+let consumers = 0
+let pending = false
+let eviction: ReturnType<typeof setTimeout> | undefined
+
+function request() {
+  const state = useItemDatabaseStore.getState()
+  if (!consumers || document.hidden || pending || state.total > 0) return
+  pending = true
+  state.updateLoading(true)
+  window.electronAPI.requestItemDatabase()
+}
+
+function updateLifetime() {
+  if (eviction) clearTimeout(eviction)
+  eviction = undefined
+  if (consumers > 0 && !document.hidden) {
+    request()
+  } else {
+    eviction = setTimeout(() => {
+      eviction = undefined
+      useItemDatabaseStore.getState().clear()
+    }, 60_000)
+  }
+}
+
+/** Register before feature pages request data, and pause its lifetime in tray. */
 export function LoadItemDatabase() {
-  const update = useItemDatabaseStore((state) => state.update)
-
   useEffect(() => {
-    const listener = window.electronAPI.responseItemDatabase(
-      async (response) => {
-        update(response)
+    const listener = window.electronAPI.responseItemDatabase(async (response) => {
+      pending = false
+      // A response arriving after navigation/minimize must not revive the cache.
+      if (consumers > 0 && !document.hidden) {
+        useItemDatabaseStore.getState().update(response)
+      } else {
+        useItemDatabaseStore.getState().clear()
       }
-    )
-
+    })
+    document.addEventListener('visibilitychange', updateLifetime)
     return () => {
       listener.removeListener()
+      document.removeEventListener('visibilitychange', updateLifetime)
+      if (eviction) clearTimeout(eviction)
     }
   }, [])
-
   return null
 }
 
-let requestStarted = false
-
 export function useRequestItemDatabase() {
-  const { isLoading, total, updateLoading } = useItemDatabaseStore(
-    useShallow((state) => ({
-      isLoading: state.isLoading,
-      total: state.total,
-      updateLoading: state.updateLoading,
-    }))
-  )
-
   useEffect(() => {
-    if (requestStarted || isLoading || total > 0) return
-
-    requestStarted = true
-    updateLoading(true)
-    window.electronAPI.requestItemDatabase()
-  }, [isLoading, total, updateLoading])
+    consumers += 1
+    updateLifetime()
+    return () => {
+      consumers -= 1
+      updateLifetime()
+    }
+  }, [])
 }

@@ -69,9 +69,9 @@ describe('buildPieceMesh', () => {
       return ray.intersectObject(mesh)[0]?.point.y
     }
 
-    expect(heightAt(-0.44)).toBeCloseTo(0.75)
-    expect(heightAt(0.44)).toBeCloseTo(0.0625)
-    expect(heightAt(0.43)).toBeCloseTo(heightAt(0.45)!)
+    expect(heightAt(0.06)).toBeCloseTo(0.75)
+    expect(heightAt(0.94)).toBeCloseTo(0.0625)
+    expect(heightAt(0.93)).toBeCloseTo(heightAt(0.95)!)
     geometry.dispose()
     material.dispose()
   })

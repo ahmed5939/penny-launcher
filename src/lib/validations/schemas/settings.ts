@@ -111,7 +111,6 @@ export const customizableMenuSettingsSchema = z
     autoPinUrns: z.boolean().default(true),
     autoLlamas: z.boolean().default(true),
     outpost: z.boolean().default(true),
-    endurance: z.boolean().default(true),
 
     accountManagement: z.boolean().default(true),
     vbucksInformation: z.boolean().default(true),

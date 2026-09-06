@@ -7,7 +7,7 @@ import {
 } from './-blueprint-geometry'
 
 describe('structureCentre', () => {
-  it('uses the saved actor pivot for every piece kind', () => {
+  it('keeps wall pivots and centres floors and stairs from their edge pivots', () => {
     expect(structureCentre([-7, 0.5, 1.5, 1, 1, 0, 0, 3])).toEqual({
       x: -7,
       y: 0.5,
@@ -15,11 +15,11 @@ describe('structureCentre', () => {
     })
     expect(structureCentre([-7, 0.5, 1.5, 1, 0, 0, 0, 3])).toEqual({
       x: -7,
-      y: 0.5,
+      y: 1,
       z: 1.5,
     })
     expect(structureCentre([-8.5, 1, 0, 1, 2, 3, 0, 1])).toEqual({
-      x: -8.5,
+      x: -8,
       y: 1,
       z: 0,
     })

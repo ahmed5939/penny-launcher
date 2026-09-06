@@ -19,10 +19,13 @@ import {
 import { OUTPOST_ZONE_TERRAIN } from '../../../config/constants/outpost-zones'
 
 import { assets } from '../../../lib/repository'
+import { renderOnDemand } from '../../../lib/render-on-demand'
 import { cn } from '../../../lib/utils'
 
 import { BlueprintCanvas3D } from './-blueprint-canvas-3d'
 import { buildPieceMesh } from './-blueprint-build-meshes'
+import { archiveBuildSurface } from './-blueprint-archive-assets'
+import { createTwineTerrain, twineOceanGeometry } from './-blueprint-twine-terrain'
 import {
   CELL_COLORS,
   CELL_GRASS,
@@ -746,23 +749,6 @@ function propStyle(kind: number, className: string): Record<string, PropStyle> {
 
 // ── Trap art ─────────────────────────────────────────────────
 
-/** Icon textures outlive the scene — they are shared across re-renders. */
-const iconTextureCache = new Map<string, THREE.Texture>()
-
-function loadIconTexture(url: string, onLoad: () => void) {
-  const cached = iconTextureCache.get(url)
-
-  if (cached) return cached
-
-  const texture = new THREE.TextureLoader().load(url, onLoad)
-
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
-  iconTextureCache.set(url, texture)
-
-  return texture
-}
-
 /** A flat square outline assembled from four strips, centred on the origin. */
 function squareFrameGeometry(size: number, thickness: number) {
   const inset = size - thickness
@@ -850,7 +836,7 @@ function BlueprintScene({
   onRendererMode: (mode: string | null) => void
   onSelectTrap: (name: string | null) => void
   onUnavailable: () => void
-  resetRef: MutableRefObject<(() => void) | null>
+  resetRef: MutableRefObject<((wholeMap?: boolean) => void) | null>
   selectedTrap: string | null
   showGrid: boolean
   showProps: boolean
@@ -925,11 +911,35 @@ function BlueprintScene({
     controls.minDistance = 1.5
     controls.screenSpacePanning = true
 
+    let disposed = false
+    const frames = renderOnDemand(() => {
+      // OrbitControls emits change while damping is still settling.
+      controls.update()
+      renderer.render(scene, camera)
+    })
+    const requestDraw = frames.request
+    controls.addEventListener('change', requestDraw)
+
     const resources: Array<{ dispose: () => void }> = []
     const track = <T extends { dispose: () => void }>(resource: T) => {
       resources.push(resource)
 
       return resource
+    }
+
+    const iconTextures = new Map<string, THREE.Texture>()
+    const loadIconTexture = (url: string, onLoad: () => void) => {
+      const cached = iconTextures.get(url)
+      if (cached) return cached
+      const texture = track(new THREE.TextureLoader().load(url, () => {
+        if (disposed) { texture.dispose(); return }
+        onLoad()
+        requestDraw()
+      }))
+      texture.colorSpace = THREE.SRGBColorSpace
+      texture.anisotropy = 4
+      iconTextures.set(url, texture)
+      return texture
     }
 
     const dummy = new THREE.Object3D()
@@ -1024,7 +1034,33 @@ function BlueprintScene({
     camera.far = Math.max(500, distance * 12)
     controls.maxDistance = Math.max(220, distance * 4)
 
-    const resetCamera = () => {
+    const resetCamera = (wholeMap = false) => {
+      if (wholeMap && terrain) {
+        const mapCentre = toScene(
+          (terrain.bounds.minX + terrain.bounds.maxX) / 2,
+          (terrain.bounds.minY + terrain.bounds.maxY) / 2,
+          floorZ
+        )
+        const reach = Math.max(groundWidth, groundDepth, groundWidth / camera.aspect)
+        const mapDistance = reach / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+
+        controls.maxDistance = Math.max(controls.maxDistance, mapDistance * 2)
+        camera.far = Math.max(camera.far, mapDistance * 4)
+        if (scene.fog instanceof THREE.Fog) {
+          scene.fog.near = mapDistance * 0.8
+          scene.fog.far = mapDistance * 3.5
+        }
+        controls.target.copy(mapCentre)
+        camera.position.copy(mapCentre).add(new THREE.Vector3(mapDistance * 0.5, mapDistance * 0.65, mapDistance * 0.5))
+        camera.updateProjectionMatrix()
+        controls.update()
+        rememberCamera()
+        return
+      }
+      if (scene.fog instanceof THREE.Fog) {
+        scene.fog.near = distance * 2.2
+        scene.fog.far = distance * 7
+      }
       controls.target.set(0, spanZ * 0.35, 0)
       camera.position.set(distance * 0.7, Math.max(9, spanZ + distance * 0.45), distance * 0.72)
       camera.updateProjectionMatrix()
@@ -1058,7 +1094,21 @@ function BlueprintScene({
     groundObjects.visible = showTerrain
     scene.add(groundObjects)
 
-    if (terrain) {
+    if (terrain && zoneId === 'pve_04') {
+      const recoveredTerrain = createTwineTerrain({ onLoad: requestDraw, track })
+
+      recoveredTerrain.position.set(-centerY, -floorZ, centerX)
+      groundObjects.add(recoveredTerrain)
+      const water = new THREE.Mesh(
+        track(twineOceanGeometry(terrain)),
+        track(new THREE.MeshStandardMaterial({
+          color: 0x285f73, metalness: 0.08, opacity: 0.96, roughness: 0.2, transparent: true,
+        }))
+      )
+
+      water.position.set(-centerY, -floorZ, centerX)
+      groundObjects.add(water)
+    } else if (terrain) {
       const heightGrid = buildZoneHeightGrid(terrain)
       const { cols, heights, kinds, minX, minY, rows } = heightGrid
       const positions = new Float32Array(rows * cols * 3)
@@ -1293,19 +1343,48 @@ function BlueprintScene({
       track(stoneTexture()),
       track(metalTexture()),
     ]
-    const materials = [0, 1, 2, 3].map((code) =>
-      track(
-        new THREE.MeshStandardMaterial({
-          color: code === 3 ? MATERIAL_COLORS[3] : 0xffffff,
-          map: surfaces[code] ?? null,
-          bumpMap: surfaces[code] ?? null,
-          bumpScale: code === 0 ? 0.008 : 0.004,
-          vertexColors: true,
-          metalness: code === 2 ? 0.42 : 0.02,
-          roughness: code === 2 ? 0.42 : 0.9,
-        })
-      )
-    )
+    const textureCache = new Map<string, THREE.Texture>()
+    const materialCache = new Map<string, THREE.MeshStandardMaterial>()
+    const surfaceTexture = (url: string, normal = false) => {
+      const key = `${url}:${normal}`
+      const cached = textureCache.get(key)
+
+      if (cached) return cached
+
+      const texture = track(new THREE.TextureLoader().load(url, requestDraw))
+
+      texture.colorSpace = normal ? THREE.NoColorSpace : THREE.SRGBColorSpace
+      texture.wrapS = THREE.RepeatWrapping
+      texture.wrapT = THREE.RepeatWrapping
+      texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy())
+      textureCache.set(key, texture)
+
+      return texture
+    }
+    const materialFor = (code: number, tier: number, kind: number) => {
+      const key = `${code}:${tier}:${kind}`
+      const cached = materialCache.get(key)
+
+      if (cached) return cached
+
+      const surface = archiveBuildSurface(code, tier, kind)
+      const map = surface ? surfaceTexture(surface.color) : surfaces[code] ?? null
+      const material = track(new THREE.MeshStandardMaterial({
+        color: code === 3 ? MATERIAL_COLORS[3] : 0xffffff,
+        map,
+        normalMap: surface?.normal ? surfaceTexture(surface.normal, true) : null,
+        normalScale: new THREE.Vector2(0.55, 0.55),
+        bumpMap: surface?.normal ? null : map,
+        bumpScale: code === 0 ? 0.008 : 0.004,
+        vertexColors: true,
+        metalness: code === 2 ? 0.42 : 0.02,
+        roughness: code === 2 ? 0.42 : 0.9,
+      }))
+
+      materialCache.set(key, material)
+
+      return material
+    }
     const geometryCache = new Map<string, THREE.BufferGeometry>()
     const geometryFor = (shape: string, kind: number, material: number, tier: number) => {
       const key = `${shape}|${kind}|${material}|${tier}`
@@ -1335,7 +1414,7 @@ function BlueprintScene({
       const shape = layout.shapes[shapeIndex] ?? ''
       const mesh = new THREE.InstancedMesh(
         geometryFor(shape, kind, materialCode, upgradeTier),
-        materials[materialCode] ?? materials[3],
+        materialFor(materialCode, upgradeTier, kind),
         pieces.length
       )
 
@@ -1345,7 +1424,8 @@ function BlueprintScene({
         dummy.scale.setScalar(1)
         dummy.updateMatrix()
         mesh.setMatrixAt(index, dummy.matrix)
-        mesh.setColorAt(index, tierTint(tier))
+        mesh.setColorAt(index, materialCode === 0 || materialCode === 1
+          ? new THREE.Color(1, 1, 1) : tierTint(tier))
       })
       mesh.castShadow = true
       mesh.receiveShadow = true
@@ -1674,23 +1754,19 @@ function BlueprintScene({
       renderer.setSize(width, height, false)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
+      requestDraw()
     }
     const observer = new ResizeObserver(resize)
 
     observer.observe(host)
     resize()
 
-    let frame = 0
-    const draw = () => {
-      controls.update()
-      renderer.render(scene, camera)
-      frame = requestAnimationFrame(draw)
-    }
-
-    draw()
+    requestDraw()
 
     return () => {
-      cancelAnimationFrame(frame)
+      disposed = true
+      frames.dispose()
+      controls.removeEventListener('change', requestDraw)
       observer.disconnect()
       rememberCamera()
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
@@ -1699,6 +1775,7 @@ function BlueprintScene({
       renderer.domElement.removeEventListener('pointerup', onPointerUp)
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
       controls.dispose()
+      sun.shadow.dispose()
       scene.traverse((object) => {
         if (object instanceof THREE.InstancedMesh) object.dispose()
       })
@@ -1780,7 +1857,7 @@ export function Blueprint3D({
       ? 'Canvas 2D compatibility'
       : null
   )
-  const resetRef = useRef<(() => void) | null>(null)
+  const resetRef = useRef<((wholeMap?: boolean) => void) | null>(null)
   const topViewRef = useRef<(() => void) | null>(null)
   const maxVisibleZ = heights[levelIndex] ?? layout.bounds.maxZ
   const visibleStructures = layout.structures.filter(
@@ -1869,6 +1946,17 @@ export function Blueprint3D({
           >
             <MapIcon className="size-3.5" />
           </Button>
+          {zoneTerrain && (
+            <Button
+              disabled={canvasFallback}
+              onClick={() => resetRef.current?.(true)}
+              size="sm"
+              type="button"
+              variant="outline"
+            >
+              Whole map
+            </Button>
+          )}
           <Button
             disabled={canvasFallback}
             onClick={() => topViewRef.current?.()}
@@ -1942,7 +2030,9 @@ export function Blueprint3D({
       </div>
 
       <p className="micro-label text-muted-foreground">
-        Saved build positions · material and tier details · simplified scenery
+        {canvasFallback
+          ? 'Saved build positions · simplified models'
+          : 'Game wood/stone textures · recovered shapes where available · simplified scenery'}
         {canvasFallback && ' · compatibility view uses basic shapes and flat ground'}
       </p>
 
@@ -1958,7 +2048,7 @@ export function Blueprint3D({
           <>
             <span className="text-border">|</span>
             <span title={`Terrain layout extracted from ${zoneTerrain.source}`}>
-              Reconstructed zone terrain
+              {zoneId === 'pve_04' ? 'Recovered Twine terrain' : 'Reconstructed zone terrain'}
             </span>
           </>
         )}

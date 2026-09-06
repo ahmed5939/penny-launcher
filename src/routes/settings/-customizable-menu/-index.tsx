@@ -70,9 +70,9 @@ function STWOperationsSection() {
         />
       </div>
       <div className="list">
-        {(['currentAlerts', 'endurance'] as const).map((key) => (
+        {(['currentAlerts'] as const).map((key) => (
           <div className="item" key={key}>
-            <Label className="title" htmlFor={`menu-${key}`}>{t(key === 'currentAlerts' ? 'missions' : 'endurance')}</Label>
+            <Label className="title" htmlFor={`menu-${key}`}>{t('missions')}</Label>
             <Switch id={`menu-${key}`} checked={getMenuOptionVisibility(key)} onCheckedChange={updateMenuOption(key)} />
           </div>
         ))}

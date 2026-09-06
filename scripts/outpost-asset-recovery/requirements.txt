@@ -1,0 +1,2 @@
+pythonnet==3.1.0
+Pillow==12.3.0
