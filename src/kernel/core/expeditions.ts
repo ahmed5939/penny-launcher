@@ -1,3 +1,4 @@
+import { expeditionKind, metadata, selectTeam } from '../../features/expeditions/model'
 import { RuntimeLog } from '../runtime-log'
 import type { AccountData } from '../../types/accounts'
 
@@ -14,37 +15,11 @@ import {
   setStartExpedition,
 } from '../../services/endpoints/mcp'
 
-/**
- * Expedition metadata, decoded from the template id.
- *
- * The classification and the duration figures follow PennyDB's own reading
- * of these ids (`ExpeditionsManager.jsx`) rather than being guessed — Epic
- * ships the marketing names ("Cache Grab") in game data we do not have, so
- * the *kind* of expedition is the useful label.
- *
- * @see https://github.com/ahmed5939/pennydb
- */
-const expeditionKinds: Array<[string, string]> = [
-  ['supplyrun', 'Supply Run'],
-  ['survivorscouting', 'Survivor Scouting'],
-  ['traprun', 'Trap Run'],
-  ['craftingrun', 'Crafting Run'],
-  ['choppingwood', 'Wood Gathering'],
-  ['miningore', 'Ore Mining'],
-]
-
-const expeditionDurations: Array<[string, string, number]> = [
-  ['_short_', 'Short', 20],
-  ['_medium_', 'Medium', 75],
-  ['_long_', 'Long', 168],
-]
-
 function parseExpeditionTemplate(templateId: string) {
   const body = templateId.toLowerCase()
 
   const kind =
-    expeditionKinds.find(([token]) => body.includes(token))?.[1] ??
-    'Expedition'
+    expeditionKind(templateId).name
 
   const vehicle = body.includes('_sea_')
     ? 'Sea'
@@ -52,9 +27,7 @@ function parseExpeditionTemplate(templateId: string) {
       ? 'Air'
       : 'Land'
 
-  const duration = expeditionDurations.find(([token]) =>
-    body.includes(token)
-  )
+  const durationMinutes = metadata(templateId).expedition_duration_minutes ?? 0
 
   const tierMatch = /_t(\d+)/.exec(body)
 
@@ -62,8 +35,8 @@ function parseExpeditionTemplate(templateId: string) {
     name: kind,
     vehicle,
     tier: tierMatch ? Number(tierMatch[1]) : 0,
-    duration: duration?.[1] ?? 'Quick',
-    durationMinutes: duration?.[2] ?? 10,
+    duration: durationMinutes ? `${durationMinutes} min` : 'Unknown',
+    durationMinutes,
   }
 }
 
@@ -93,14 +66,6 @@ function parseCriteria(rawCriteria: unknown) {
   })
 }
 
-function heroClass(templateId: string) {
-  const id = templateId.toLowerCase()
-  if (id.includes('ninja')) return 'Ninja'
-  if (id.includes('outlander')) return 'Outlander'
-  if (id.includes('constructor')) return 'Constructor'
-  if (id.includes('soldier') || id.includes('commando')) return 'Soldier'
-  return 'Any'
-}
 
 export type ExpeditionState = 'available' | 'in-flight' | 'ready'
 
@@ -129,6 +94,7 @@ export type ExpeditionSlot = {
   /** 0–1. Only meaningful once running. */
   successChance: number
   suggestedHeroIds: Array<string>
+  suggestedSquadId?: string | null
   suggestedPower: number
   targetPower: number
 }
@@ -154,23 +120,6 @@ export type ExpeditionActionNotification = {
   action: 'abandon' | 'collect' | 'start'
   errorMessage?: string
   expeditionId: string
-}
-
-const rarityPower: Record<string, number> = {
-  Common: 1,
-  Uncommon: 2,
-  Rare: 3,
-  Epic: 4,
-  Legendary: 5,
-}
-
-function heroRarity(templateId: string) {
-  const id = templateId.toLowerCase()
-  if (id.includes('_sr_')) return 'Legendary'
-  if (id.includes('_vr_')) return 'Epic'
-  if (id.includes('_r_')) return 'Rare'
-  if (id.includes('_uc_')) return 'Uncommon'
-  return 'Common'
 }
 
 export class Expeditions {
@@ -223,80 +172,9 @@ export class Expeditions {
       accessToken,
       accountId: account.accountId,
     })
-    const items = response.data.profileChanges[0]?.profile.items ?? {}
+    const items = response.data.profileChanges[0]?.profile?.items
+    if (!items) throw new Error('Epic did not return a campaign profile')
     const now = Date.now()
-    const occupiedHeroIds = new Set<string>()
-
-    Object.values(items).forEach((item) => {
-      if (item.templateId.includes('CampaignHeroLoadout')) {
-        const crewMembers = (item.attributes as {
-          crew_members?: Record<string, string>
-        }).crew_members
-
-        Object.values(crewMembers ?? {}).forEach((heroId) => {
-          if (heroId) occupiedHeroIds.add(heroId)
-        })
-      }
-    })
-
-    Object.entries(items).forEach(([itemId, item]) => {
-      if (!item.templateId.startsWith('Hero:')) return
-      const attributes = item.attributes as {
-        squad_id?: string
-        squad_slot_idx?: number
-      }
-
-      if (
-        attributes.squad_id &&
-        typeof attributes.squad_slot_idx === 'number' &&
-        attributes.squad_slot_idx >= 0
-      ) {
-        occupiedHeroIds.add(itemId)
-      }
-    })
-
-    const occupiedExpeditionSquads = new Set(
-      Object.values(items)
-        .filter((item) => item.templateId.startsWith('Expedition:'))
-        .map((item) => item.attributes as Record<string, unknown>)
-        .filter((attributes) => Boolean(attributes.expedition_end_time))
-        .map((attributes) => `${attributes.expedition_squad_id ?? ''}`)
-        .filter(Boolean)
-    )
-    const heroes = Object.entries(items)
-      .filter(([, item]) => item.templateId.startsWith('Hero:'))
-      .map(([itemId, item]) => {
-        const attributes = item.attributes as {
-          building_slot_used?: number
-          level?: number
-          squad_id?: string
-        }
-        const rarity = heroRarity(item.templateId)
-
-        return {
-          itemId,
-          level: attributes.level ?? 1,
-          rarity,
-          type: heroClass(item.templateId),
-          squadId: attributes.squad_id ?? '',
-          usedInLoadout: (attributes.building_slot_used ?? 0) > 0,
-          power:
-            (attributes.level ?? 1) * 10 +
-            (rarityPower[rarity] ?? 0) * 20,
-        }
-      })
-      .filter(
-        (hero) =>
-          !hero.usedInLoadout &&
-          !occupiedHeroIds.has(hero.itemId) &&
-          !occupiedExpeditionSquads.has(hero.squadId)
-      )
-      .sort(
-        (heroA, heroB) =>
-          rarityPower[heroB.rarity] - rarityPower[heroA.rarity] ||
-          heroB.level - heroA.level
-      )
-
     Object.entries(items).forEach(([itemId, item]) => {
       if (!item.templateId.startsWith('Expedition:')) {
         return
@@ -319,40 +197,8 @@ export class Expeditions {
           : 'in-flight'
 
       const criteria = parseCriteria(attributes.expedition_criteria ?? [])
-      const remainingHeroes = [...heroes]
-      const requiredHeroes = criteria.flatMap((requirement) => {
-        const minimum = rarityPower[requirement.rarity] ?? 0
-        const index = remainingHeroes.findIndex(
-          (hero) =>
-            rarityPower[hero.rarity] >= minimum &&
-            (requirement.type.length === 0 ||
-              requirement.type === 'Hero' ||
-              requirement.type.toLowerCase().includes(hero.type.toLowerCase()) ||
-              hero.type.toLowerCase().includes(requirement.type.toLowerCase()))
-        )
-
-        return index < 0 ? [] : remainingHeroes.splice(index, 1)
-      })
-      const suggestedHeroes = [
-        ...requiredHeroes,
-        ...remainingHeroes.slice(0, Math.max(0, 5 - requiredHeroes.length)),
-      ]
-      const targetPower = Number(
-        attributes.expedition_target_power ??
-          attributes.expedition_max_target_power ??
-          0
-      )
-      const requiredPower = Math.ceil(targetPower * 0.8)
-      const requiredIds = new Set(requiredHeroes.map((hero) => hero.itemId))
-      const compactTeam = suggestedHeroes.reduce<typeof suggestedHeroes>(
-        (team, hero) => {
-          const power = team.reduce((total, item) => total + item.power, 0)
-          if (requiredIds.has(hero.itemId) || power < requiredPower) team.push(hero)
-          return team
-        },
-        []
-      )
-      const finalTeam = compactTeam.length > 0 ? compactTeam : suggestedHeroes.slice(0, 1)
+      const selection = selectTeam(items, item.templateId, attributes)
+      const targetPower = selection.target
 
       const rawSuccessChance = Number(attributes.expedition_success_chance ?? 0)
       const durationMinutes = Number(
@@ -369,7 +215,7 @@ export class Expeditions {
         durationMinutes:
           durationMinutes > 0
             ? durationMinutes
-            : parseExpeditionTemplate(item.templateId).durationMinutes,
+            : (metadata(item.templateId).expedition_duration_minutes ?? 0),
         criteria,
         state,
         endTime,
@@ -379,8 +225,10 @@ export class Expeditions {
         squadId: attributes.expedition_squad_id ?? null,
         successChance:
           rawSuccessChance > 1 ? rawSuccessChance / 100 : rawSuccessChance,
-        suggestedHeroIds: finalTeam.map((hero) => hero.itemId),
-        suggestedPower: finalTeam.reduce((total, hero) => total + hero.power, 0),
+        suggestedHeroIds: selection.heroIds,
+        suggestedSquadId: selection.squadId,
+        vehicle: selection.vehicle,
+        suggestedPower: selection.power,
         targetPower,
       })
     })

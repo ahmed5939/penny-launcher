@@ -1,0 +1,11 @@
+# Collection Book beta
+
+Native page under Save the World → Collection Book, using the existing BETA navigation badge. Clicking a slot opens a keyboard-accessible modal with the live item's details; Escape or Close returns to the grid.
+
+Uses the selected account and its existing Epic authentication. A restricted IPC query reads campaign, collection_book_people0 and collection_book_schematics0 via QueryProfile. Only required item fields, resource balances and a timestamp cross IPC. Authentication stays in the main process. Incomplete or mismatched profiles fail visibly. Account changes invalidate pending results and remove previous account contents. Refresh reloads all three profiles.
+
+The installed-build adapter preserves the current archive and reuses its React, account selector, item database, ItemIcon and PageHeader. The broken iframe and account snapshot assets are removed. `scripts/build-installed-collection-book.cjs` stages the native renderer, restricted main-process handler and preload bridge. The local installer verifies staging hashes, backs up the archive and executable, then restarts Penny. Executable archive integrity remains enabled.
+
+Read-only beta: no slotting, upgrades or reward claims. Resources shows reconstructed investment, remaining costs to the natural cap at current rarity, live balances and shortfalls across all slotted items. Cost definitions include ordinary level XP and evolution inputs. Published XP increments are cross-checked against extracted XPAccountItemLevels. Existing ore/crystal paths are preserved; unresolved choices expose a path selector. Acquisition, rarity increases, perks, superchargers and refunds are excluded. Investment is a present-day reconstruction, not actual historical spending. Unverifiable investment and remaining costs are identified independently rather than silently treated as zero. Reward XP and mutation flows still require implementation and verification. Public catalogs never contain account snapshots.
+
+Validation: 36 focused tests, TypeScript and scoped ESLint. The new query code was exercised against Epic for the authorized account: 1,150 slotted items, all uniquely matched to the 1,156 catalog slots. Private test output remains ignored.

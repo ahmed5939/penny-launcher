@@ -40,6 +40,7 @@ export const customizableMenuSettingsRelations: Record<
     'xpBoosts',
     'autoPinUrns',
     'autoLlamas',
+    'autoDailyReroll',
     'outpost',
   ],
   accountManagement: [

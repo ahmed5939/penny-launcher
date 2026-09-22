@@ -20,7 +20,7 @@ import { MainWindow } from '../startup/windows/main'
  * Bump when the narrowed shape changes — an older cache is then discarded
  * rather than being read back into a record the renderer cannot use.
  */
-const cacheVersion = 8
+const cacheVersion = 9
 
 /** Re-download roughly weekly; the source only moves when Fortnite patches. */
 const cacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000
@@ -60,6 +60,8 @@ export type ItemRecord = {
   craftingCost: Record<string, number>
   /** What evolving to the next tier costs. */
   tierUpCost: Record<string, number>
+  tierUpResult?: string | null
+  alternateTierUpResult?: string | null
   /**
    * Quests only. `backendName` is what the profile counts against, as
    * `completion_<backendName>`.
@@ -142,6 +144,7 @@ type RawNamedItem = Partial<{
   RecycleRecipe: Partial<{ Amount: number; Result: string }>
   SubType: string
   Tier: number
+  AlternateTierUpRecipe: Partial<{ Cost: Record<string, number>; Result: string }>
   TierUpRecipe: Partial<{ Cost: Record<string, number>; Result: string }>
 }>
 
@@ -157,6 +160,10 @@ function perk(
 }
 
 export class ItemDatabase {
+  static snapshot() {
+    return ItemDatabase.load(false)
+  }
+
   private static cache: ItemDatabasePayload | null = null
   private static eviction: NodeJS.Timeout | null = null
   private static loading: Promise<ItemDatabasePayload> | null = null
@@ -405,6 +412,8 @@ export class ItemDatabase {
             abilities: item.HeroAbilities ?? [],
             craftingCost: item.CraftingCost ?? {},
             tierUpCost: item.TierUpRecipe?.Cost ?? {},
+            tierUpResult: item.TierUpRecipe?.Result ?? null,
+            alternateTierUpResult: item.AlternateTierUpRecipe?.Result ?? null,
             objectives: (item.Objectives ?? [])
               .filter((objective) => objective.BackendName)
               .map((objective) => ({

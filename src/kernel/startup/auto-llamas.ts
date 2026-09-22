@@ -1,3 +1,4 @@
+import { AutomationRewards } from './automation-rewards'
 import { RuntimeLog } from '../runtime-log'
 import type { AccountDataList } from '../../types/accounts'
 import type {
@@ -288,7 +289,7 @@ export class ProcessAutoLlamas {
 
       ProcessAutoLlamas.active.add(runKey)
 
-      void Authentication.verifyAccessToken(account).then(
+      void AutomationRewards.withAccount(account.accountId, () => Authentication.verifyAccessToken(account).then(
         async (initialAccessToken) => {
           if (!initialAccessToken) {
             return
@@ -481,6 +482,8 @@ export class ProcessAutoLlamas {
                 break
               }
 
+              const latestSettings = AutoLlamas.findById(account.accountId)
+              if (!latestSettings?.actions.survivors) break
               const response = await purchaseCatalogEntry({
                 accessToken,
                 currencySubType,
@@ -488,6 +491,7 @@ export class ProcessAutoLlamas {
                 offerId: llama.offerId,
                 expectedTotalPrice: currencyTotal,
               })
+              await AutomationRewards.recordLlama({ accountId: account.accountId, accessToken, before: profileChanges.profile.items, notifications: response.data.notifications, description: 'Survivor llama' })
               sendRewardsNotification({
                 accountId: account.accountId,
                 profileChanges,
@@ -506,7 +510,7 @@ export class ProcessAutoLlamas {
         },
       ).catch(() => {}).finally(() => {
         ProcessAutoLlamas.active.delete(runKey)
-      })
+      }))
     })
   }
 
@@ -572,6 +576,11 @@ export class ProcessAutoLlamas {
         }
 
         try {
+          const latestSettings = AutoLlamas.findById(account.accountId)
+          if (!latestSettings?.actions['free-llamas']) return
+          const beforePurchase = await getQueryProfile({ accessToken, accountId: account.accountId })
+          const beforeItems = beforePurchase.data.profileChanges?.[0]?.profile?.items
+          if (!beforeItems) throw new Error('Could not verify inventory before purchase')
           const response = await purchaseCatalogEntry({
             accessToken,
             accountId: account.accountId,
@@ -579,6 +588,7 @@ export class ProcessAutoLlamas {
             expectedTotalPrice: 0,
           })
 
+          await AutomationRewards.recordLlama({ accountId: account.accountId, accessToken, before: beforeItems, notifications: response.data.notifications, description: 'Free llama' })
           sendRewardsNotification({
             accountId: account.accountId,
             profileChanges,

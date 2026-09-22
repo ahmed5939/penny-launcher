@@ -2,6 +2,7 @@ import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import type {
   TimelinePayload,
+  TimelineQuestline,
   TimelineSeason,
   TimelineSeasonExtras,
 } from '../../../kernel/core/timeline'
@@ -40,6 +41,31 @@ const elementColors: Record<string, string> = {
 }
 
 type DetailTab = 'overview' | 'quests' | 'shop'
+
+function entryName(entry: TimelineQuestline, records: ItemRecordMap) {
+  if (entry.name && !/^phase\s*\d+$/i.test(entry.name)) return entry.name
+
+  const heroNames = entry.keyItems
+    .filter((templateId) => templateId.toLowerCase().startsWith('hero:'))
+    .map((templateId) => records[templateId.toLowerCase()]?.name)
+    .filter(Boolean)
+
+  return heroNames.length > 0 ? heroNames.join(', ') : null
+}
+
+function availableSeasonItems(season: TimelineSeason) {
+  const items = season.extras?.availableItems ?? []
+
+  // The community overview has not yet listed this event-shop hero.
+  if (
+    season.name.trim().toLowerCase() === 'hexsylvania' &&
+    !items.some((item) => item.name.toLowerCase() === 'aerobic assassin')
+  ) {
+    return [...items, { name: 'Aerobic Assassin', type: 'Ninja' }]
+  }
+
+  return items
+}
 
 function seasonKey(season: TimelineSeason) {
   return `${season.name}-${season.startsAt}`
@@ -161,7 +187,7 @@ function Content() {
 
       if (
         season.questlines.some((questline) =>
-          `${questline.name ?? ''} ${questline.description ?? ''}`
+          `${entryName(questline, records) ?? ''} ${questline.description ?? ''}`
             .toLowerCase()
             .includes(needle)
         )
@@ -171,9 +197,17 @@ function Content() {
 
       if (
         season.events.some((event) =>
-          `${event.name ?? ''} ${event.description ?? ''}`
+          `${entryName(event, records) ?? ''} ${event.description ?? ''}`
             .toLowerCase()
             .includes(needle)
+        )
+      ) {
+        return true
+      }
+
+      if (
+        availableSeasonItems(season).some((item) =>
+          item.name.toLowerCase().includes(needle)
         )
       ) {
         return true
@@ -404,6 +438,7 @@ function SeasonDetail({
 
   const hasQuests = season.questlines.length > 0 || season.events.length > 0
   const hasShop = season.eventShop.length > 0
+  const availableItems = availableSeasonItems(season)
 
   // The tab choice survives switching seasons; when the new season has
   // nothing behind the chosen tab, fall back rather than show a blank pane.
@@ -481,14 +516,14 @@ function SeasonDetail({
             </p>
           )}
 
-          {(season.extras?.availableItems.length ?? 0) > 0 && (
+          {availableItems.length > 0 && (
             <div className="space-y-2">
               <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 <Sparkles className="size-3" />
                 Available this season
               </p>
               <ul className="flex flex-wrap items-center gap-1.5">
-                {season.extras?.availableItems.map((item) => {
+                {availableItems.map((item) => {
                   const match = itemsByName.get(item.name.toLowerCase())
 
                   return (
@@ -532,9 +567,7 @@ function SeasonDetail({
                     key={`${questline.eventFlag}-${index}`}
                   >
                     <p className="text-xs font-semibold text-foreground">
-                      {questline.name ??
-                        questline.eventFlag?.split('.').pop() ??
-                        'Questline'}
+                      {entryName(questline, records) ?? 'Questline'}
                       <WeekRange entry={questline} />
                     </p>
                     {questline.description && (
@@ -566,9 +599,7 @@ function SeasonDetail({
                     key={`${event.eventFlag}-${index}`}
                   >
                     <p className="text-xs font-semibold text-foreground">
-                      {event.name ??
-                        event.eventFlag?.split('.').pop() ??
-                        'Event'}
+                      {entryName(event, records) ?? 'Event'}
                       <WeekRange entry={event} />
                     </p>
                     {event.description && (

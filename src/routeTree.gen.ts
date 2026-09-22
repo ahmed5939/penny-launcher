@@ -17,10 +17,14 @@ import { Route as AccountRouteImport } from './routes/account/route'
 import { Route as IndexImport } from './routes/index'
 import { Route as StwOperationsXpboostsRouteImport } from './routes/stw-operations/xpboosts/route'
 import { Route as StwOperationsUrnsRouteImport } from './routes/stw-operations/urns/route'
+import { Route as StwOperationsVenturesRouteImport } from './routes/stw-operations/ventures/route'
 import { Route as StwOperationsTimelineRouteImport } from './routes/stw-operations/timeline/route'
 import { Route as StwOperationsTaxiServiceRouteImport } from './routes/stw-operations/taxi-service/route'
+import { Route as StwOperationsStorageRouteImport } from './routes/stw-operations/storage/route'
 import { Route as StwOperationsSquadsRouteImport } from './routes/stw-operations/squads/route'
 import { Route as StwOperationsShopRouteImport } from './routes/stw-operations/shop/route'
+import { Route as StwOperationsRecycledRewardsRouteImport } from './routes/stw-operations/recycled-rewards/route'
+import { Route as StwOperationsRareItemFinderRouteImport } from './routes/stw-operations/rare-item-finder/route'
 import { Route as StwOperationsQuestsRouteImport } from './routes/stw-operations/quests/route'
 import { Route as StwOperationsPartyRouteImport } from './routes/stw-operations/party/route'
 import { Route as StwOperationsOutpostRouteImport } from './routes/stw-operations/outpost/route'
@@ -29,9 +33,14 @@ import { Route as StwOperationsLoadoutsRouteImport } from './routes/stw-operatio
 import { Route as StwOperationsLeaderboardsRouteImport } from './routes/stw-operations/leaderboards/route'
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
 import { Route as StwOperationsExpeditionsRouteImport } from './routes/stw-operations/expeditions/route'
+import { Route as StwOperationsDefendersRouteImport } from './routes/stw-operations/defenders/route'
 import { Route as StwOperationsCompendiumRouteImport } from './routes/stw-operations/compendium/route'
+import { Route as StwOperationsCollectionBookRouteImport } from './routes/stw-operations/collection-book/route'
+import { Route as StwOperationsBackpackRouteImport } from './routes/stw-operations/backpack/route'
 import { Route as StwOperationsAutomationRouteImport } from './routes/stw-operations/automation/route'
+import { Route as StwOperationsAutoUpdateQuestsRouteImport } from './routes/stw-operations/auto-update-quests/route'
 import { Route as StwOperationsAutoLlamasRouteImport } from './routes/stw-operations/auto-llamas/route'
+import { Route as StwOperationsAutoDailyRerollRouteImport } from './routes/stw-operations/auto-daily-reroll/route'
 import { Route as SettingsTweaksRouteImport } from './routes/settings/tweaks/route'
 import { Route as PluginsEnduranceRouteImport } from './routes/plugins_/endurance/route'
 import { Route as InformationCreditsRouteImport } from './routes/information/credits/route'
@@ -80,6 +89,13 @@ const StwOperationsXpboostsRouteRoute = StwOperationsXpboostsRouteImport.update(
   } as any,
 )
 
+const StwOperationsVenturesRouteRoute = StwOperationsVenturesRouteImport.update(
+  {
+    path: '/stw-operations/ventures',
+    getParentRoute: () => rootRoute,
+  } as any,
+)
+
 const StwOperationsUrnsRouteRoute = StwOperationsUrnsRouteImport.update({
   path: '/stw-operations/urns',
   getParentRoute: () => rootRoute,
@@ -98,6 +114,11 @@ const StwOperationsTaxiServiceRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const StwOperationsStorageRouteRoute = StwOperationsStorageRouteImport.update({
+  path: '/stw-operations/storage',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const StwOperationsSquadsRouteRoute = StwOperationsSquadsRouteImport.update({
   path: '/stw-operations/squads',
   getParentRoute: () => rootRoute,
@@ -107,6 +128,18 @@ const StwOperationsShopRouteRoute = StwOperationsShopRouteImport.update({
   path: '/stw-operations/shop',
   getParentRoute: () => rootRoute,
 } as any)
+
+const StwOperationsRecycledRewardsRouteRoute =
+  StwOperationsRecycledRewardsRouteImport.update({
+    path: '/stw-operations/recycled-rewards',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const StwOperationsRareItemFinderRouteRoute =
+  StwOperationsRareItemFinderRouteImport.update({
+    path: '/stw-operations/rare-item-finder',
+    getParentRoute: () => rootRoute,
+  } as any)
 
 const StwOperationsQuestsRouteRoute = StwOperationsQuestsRouteImport.update({
   path: '/stw-operations/quests',
@@ -155,11 +188,30 @@ const StwOperationsExpeditionsRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const StwOperationsDefendersRouteRoute =
+  StwOperationsDefendersRouteImport.update({
+    path: '/stw-operations/defenders',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const StwOperationsCompendiumRouteRoute =
   StwOperationsCompendiumRouteImport.update({
     path: '/stw-operations/compendium',
     getParentRoute: () => rootRoute,
   } as any)
+
+const StwOperationsCollectionBookRouteRoute =
+  StwOperationsCollectionBookRouteImport.update({
+    path: '/stw-operations/collection-book',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const StwOperationsBackpackRouteRoute = StwOperationsBackpackRouteImport.update(
+  {
+    path: '/stw-operations/backpack',
+    getParentRoute: () => rootRoute,
+  } as any,
+)
 
 const StwOperationsAutomationRouteRoute =
   StwOperationsAutomationRouteImport.update({
@@ -167,9 +219,21 @@ const StwOperationsAutomationRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const StwOperationsAutoUpdateQuestsRouteRoute =
+  StwOperationsAutoUpdateQuestsRouteImport.update({
+    path: '/stw-operations/auto-update-quests',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const StwOperationsAutoLlamasRouteRoute =
   StwOperationsAutoLlamasRouteImport.update({
     path: '/stw-operations/auto-llamas',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const StwOperationsAutoDailyRerollRouteRoute =
+  StwOperationsAutoDailyRerollRouteImport.update({
+    path: '/stw-operations/auto-daily-reroll',
     getParentRoute: () => rootRoute,
   } as any)
 
@@ -366,16 +430,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsTweaksRouteImport
       parentRoute: typeof SettingsRouteImport
     }
+    '/stw-operations/auto-daily-reroll': {
+      preLoaderRoute: typeof StwOperationsAutoDailyRerollRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/auto-llamas': {
       preLoaderRoute: typeof StwOperationsAutoLlamasRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/stw-operations/auto-update-quests': {
+      preLoaderRoute: typeof StwOperationsAutoUpdateQuestsRouteImport
       parentRoute: typeof rootRoute
     }
     '/stw-operations/automation': {
       preLoaderRoute: typeof StwOperationsAutomationRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/backpack': {
+      preLoaderRoute: typeof StwOperationsBackpackRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/stw-operations/collection-book': {
+      preLoaderRoute: typeof StwOperationsCollectionBookRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/compendium': {
       preLoaderRoute: typeof StwOperationsCompendiumRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/stw-operations/defenders': {
+      preLoaderRoute: typeof StwOperationsDefendersRouteImport
       parentRoute: typeof rootRoute
     }
     '/stw-operations/expeditions': {
@@ -410,6 +494,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsQuestsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/rare-item-finder': {
+      preLoaderRoute: typeof StwOperationsRareItemFinderRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/stw-operations/recycled-rewards': {
+      preLoaderRoute: typeof StwOperationsRecycledRewardsRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/shop': {
       preLoaderRoute: typeof StwOperationsShopRouteImport
       parentRoute: typeof rootRoute
@@ -418,12 +510,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsSquadsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/storage': {
+      preLoaderRoute: typeof StwOperationsStorageRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/taxi-service': {
       preLoaderRoute: typeof StwOperationsTaxiServiceRouteImport
       parentRoute: typeof rootRoute
     }
     '/stw-operations/timeline': {
       preLoaderRoute: typeof StwOperationsTimelineRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/stw-operations/ventures': {
+      preLoaderRoute: typeof StwOperationsVenturesRouteImport
       parentRoute: typeof rootRoute
     }
     '/stw-operations/urns': {
@@ -464,9 +564,14 @@ export const routeTree = rootRoute.addChildren([
   AdvancedModeWorldInfoRouteRoute,
   InformationCreditsRouteRoute,
   PluginsEnduranceRouteRoute,
+  StwOperationsAutoDailyRerollRouteRoute,
   StwOperationsAutoLlamasRouteRoute,
+  StwOperationsAutoUpdateQuestsRouteRoute,
   StwOperationsAutomationRouteRoute,
+  StwOperationsBackpackRouteRoute,
+  StwOperationsCollectionBookRouteRoute,
   StwOperationsCompendiumRouteRoute,
+  StwOperationsDefendersRouteRoute,
   StwOperationsExpeditionsRouteRoute,
   StwOperationsInventoryRouteRoute,
   StwOperationsLeaderboardsRouteRoute,
@@ -475,11 +580,15 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsOutpostRouteRoute,
   StwOperationsPartyRouteRoute,
   StwOperationsQuestsRouteRoute,
+  StwOperationsRareItemFinderRouteRoute,
+  StwOperationsRecycledRewardsRouteRoute,
   StwOperationsShopRouteRoute,
   StwOperationsSquadsRouteRoute,
+  StwOperationsStorageRouteRoute,
   StwOperationsTaxiServiceRouteRoute,
   StwOperationsTimelineRouteRoute,
   StwOperationsUrnsRouteRoute,
+  StwOperationsVenturesRouteRoute,
   StwOperationsXpboostsRouteRoute,
   AccountsAddTypeRoute,
 ])

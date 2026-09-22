@@ -1,0 +1,55 @@
+{
+  "snapshotDate": "2026-09-14",
+  "apiHost": "57.128.191.110",
+  "apiRoot": "/home/penny",
+  "apiCommit": "8d12cad64b3434cc4fc4ad8ae93047e45e1f86a6",
+  "readOnly": true,
+  "files": {
+    "current-perks.json": {
+      "entries": 301,
+      "sha256": "2dc775f2b2136cf0fd5c23797788e5ecd3646550e16e5875d917602d48d347e3"
+    },
+    "item-metadata.json": {
+      "sha256": "e946715bdecef9b824fa05ae0d758eb4fb284c0d095efcca807a668e3ad9fa5a",
+      "entries": 4758
+    },
+    "item-names.json": {
+      "sha256": "8cd3dee457bf114375491c13eccf3cf80787e2cd01fc7358cb34cbb4bf7abe8d",
+      "entries": 9048
+    },
+    "legacy-perks.json": {
+      "entries": 147,
+      "sha256": "cd7fa74f7d7b47a4844c36c639fcdfb8041a74c49282cb9fecf9d54d93ecbf4b"
+    },
+    "aoe-perks.json": {
+      "sha256": "bd1a072848f9c89cd868bc5e4ee7bcdcc9059bbb9337be5faab3c8e5c3f956f2",
+      "entries": 2,
+      "source": "Exact Knockback AOE IDs from bundled Penny API legacy dictionary; excludes other AOE effects"
+    },
+    "slot-rules.json": {
+      "entries": 4136,
+      "sha256": "238d75a70053e02d5bae16526522be8e7e6e2be1e03bc850f3faa00a2a0b49f6"
+    },
+    "defender-perks.json": {
+      "entries": 24,
+      "sha256": "57384a95b529afe8ea01528973bcc13040e0aa8b4429df74a600a1a180c476f9",
+      "source": "42.10 legacy extraction defenderPerks; separate from weapon/trap legacy IDs"
+    }
+  },
+  "gameExtraction": {
+    "build": "++Fortnite+Release-42.10-CL-57819926-Windows",
+    "importedDate": "2026-09-16",
+    "mappingFile": "++Fortnite+Release-42.00-CL-56878558_zs.usmap",
+    "mappingReleaseMatchesBuild": false,
+    "serverHotfixesIncluded": false,
+    "historicalRollRulesRecovered": false,
+    "legacyDefinitions": 146,
+    "retainedApiOnlyLegacyIds": [
+      "alteration:aid_g_weapon_ondmg_afflictedenemy_knockbackaoe_v2"
+    ],
+    "sourceHashes": {
+      "weapon_trap_perk_dictionary.json": "d5b41aa647d3cf1ae9eb00e6462614f69afc7622fb24c0b328794c77609054e6",
+      "legacy_perk_dictionary.json": "1d9cacd228c1b72935eac58c63836d2f17427f949fca881e9a4e62adc094f08c"
+    }
+  }
+}

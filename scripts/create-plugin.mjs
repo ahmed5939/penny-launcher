@@ -15,7 +15,7 @@ catch (error) {
   process.exit(1)
 }
 await writeFile(path.join(directory, 'plugin.json'), JSON.stringify({
-  id, name: id, version: '1.0.0', apiVersion: 4, runtime: 'sandbox',
+  id, name: id, version: '1.0.0', apiVersion: 5, runtime: 'sandbox',
   description: 'Describe what this add-on does.', permissions: ['ui', 'notifications'],
   capabilities: ['notifications'], entry: 'main.js', readme: 'README.md',
 }, null, 2) + '\n')

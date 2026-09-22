@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PLUGIN_FORTNITE_PROFILES, PLUGIN_MCP_OPERATIONS } from '../../types/plugin-fortnite'
 import { PLUGIN_CAPABILITIES, PLUGIN_PERMISSIONS } from '../../types/plugins'
 
 const relativeFile = z.string().min(1).max(240).refine(
@@ -10,6 +11,10 @@ const relativeFile = z.string().min(1).max(240).refine(
 /** Shared by discovery and execution: metadata is untrusted input. */
 export const pluginManifestSchema = z.object({
   runtime: z.literal('sandbox').optional(),
+  fortnite: z.object({
+    profiles: z.array(z.enum(PLUGIN_FORTNITE_PROFILES)).max(7).transform((items) => [...new Set(items)]),
+    operations: z.array(z.enum(PLUGIN_MCP_OPERATIONS)).max(20).transform((items) => [...new Set(items)]),
+  }).strict().optional(),
   permissions: z.array(z.enum(PLUGIN_PERMISSIONS)).max(20).transform((items) => [...new Set(items)]).optional(),
   id: z.string().regex(/^[a-z0-9-]{1,64}$/).refine(
     (id) => !/^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/i.test(id),

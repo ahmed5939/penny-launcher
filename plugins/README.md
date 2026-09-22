@@ -1,6 +1,6 @@
 # Penny plugins
 
-Penny API v4 plugins run in **separate sandboxed Chromium renderers**, with no
+Penny API v5 plugins (including compatible v4 packages) run in **separate sandboxed Chromium renderers**, with no
 Node/Electron access, direct network, filesystem, or launcher credentials.
 All launcher operations pass through a permission-checked host bridge.
 
@@ -8,6 +8,9 @@ All launcher operations pass through a permission-checked host bridge.
 - [UI, security, and release design guide](./DESIGN.md)
 - [Typed SDK](./sdk/index.d.ts)
 - [Selected-account quest example](./examples/scoped-quests/)
+- [Confirmed inventory recycling example](./examples/inventory-review/)
+- [Fortnite profiles, MCP operations and EOS guide](./FORTNITE.md)
+- [Account showcase example](./examples/account-showcase/)
 
 Create and validate a plugin without running its code:
 

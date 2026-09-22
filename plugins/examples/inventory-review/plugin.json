@@ -1,0 +1,12 @@
+{
+  "id": "inventory-review",
+  "name": "Inventory Review",
+  "description": "Find up to 50 unlocked common items in the selected account and ask Penny to review recycling.",
+  "version": "1.0.0",
+  "runtime": "sandbox",
+  "apiVersion": 5,
+  "permissions": ["accounts:read", "inventory:read", "inventory:recycle", "ui"],
+  "capabilities": ["accounts"],
+  "entry": "main.js",
+  "readme": "README.md"
+}

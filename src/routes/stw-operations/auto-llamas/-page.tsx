@@ -1,3 +1,4 @@
+import { LlamaRecycleSetting } from '../../../features/automation-rewards/view'
 import { UpdateIcon } from '@radix-ui/react-icons'
 import { Gift, Trash2 } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
@@ -232,6 +233,7 @@ export function Content() {
                 </div>
 
                 <PanelBody className="px-4 py-2">
+                  <LlamaRecycleSetting accountId={account.accountId} />
                   <FieldGroup>
                     <FieldRow
                       className="py-2.5"

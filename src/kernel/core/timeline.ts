@@ -10,7 +10,7 @@ import { bugListTimelineCardsURL } from '../../config/constants/trello'
 import { DataDirectory } from '../startup/data-directory'
 import { MainWindow } from '../startup/windows/main'
 
-const cacheVersion = 3
+const cacheVersion = 4
 
 /** The schedule shifts when Epic re-orders a season; check weekly. */
 const cacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000
@@ -300,7 +300,18 @@ export class Timeline {
           description: event.description ?? null,
           eventFlag: event.eventFlag ?? null,
           color: event.color ?? null,
-          keyItems: event.keyItems ?? [],
+          // The feed omits Ken from both seasons that host Dungeons.
+          keyItems:
+            event.eventFlag === 'EventFlag.Starlight'
+              ? Array.from(
+                  new Map(
+                    [
+                      ...(event.keyItems ?? []),
+                      'Hero:hid_ninja_033_halloweenninja_sr_t01',
+                    ].map((templateId) => [templateId.toLowerCase(), templateId])
+                  ).values()
+                )
+              : event.keyItems ?? [],
           startWeek: event.startWeek ?? null,
           endWeek: event.endWeek ?? null,
           style: event.style ?? null,

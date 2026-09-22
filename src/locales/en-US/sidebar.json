@@ -22,6 +22,12 @@
       "expeditions": "Expeditions",
       "squad-presets": "Squads",
       "inventory": "Vault",
+      "backpack": "Backpack",
+      "storage": "Storage",
+      "defenders": "Defenders",
+      "collection-book": "Collection Book",
+      "rare-item-finder": "Rare Item Finder",
+      "ventures": "Ventures",
       "compendium": "Compendium",
       "quests": "Quests",
       "loadouts": "Loadouts",
@@ -29,7 +35,10 @@
       "shop": "Shop",
       "xp-boosts": "XP Boosts",
       "auto-pin-urns": "Auto-Pin Quests",
+      "auto-update-quests": "Auto update daily quests",
+      "auto-daily-reroll": "Auto daily reroll",
       "auto-llamas": "Auto-llamas",
+      "recycled-rewards": "Recycled Rewards",
       "endurance": "Endurance"
     },
     "auto-kick-status": {

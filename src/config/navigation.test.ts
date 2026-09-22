@@ -22,6 +22,8 @@ describe('navigation', () => {
     expect(destinations).not.toContain('/stw-operations/automation')
     expect(destinations).toContain('/stw-operations/taxi-service')
     expect(destinations).toContain('/stw-operations/auto-llamas')
+    expect(destinations).toContain('/stw-operations/auto-daily-reroll')
+    expect(destinations).toContain('/stw-operations/auto-update-quests')
     expect(destinations).toContain('/stw-operations/urns')
     expect(destinations).toContain('/stw-operations/party')
   })
@@ -29,6 +31,9 @@ describe('navigation', () => {
   it('keeps STW tools and account admin reachable', () => {
     expect(destinations).toContain('/')
     expect(destinations).toContain('/stw-operations/inventory')
+    expect(destinations).toContain('/stw-operations/defenders')
+    expect(destinations).toContain('/stw-operations/collection-book')
+    expect(destinations).toContain('/stw-operations/rare-item-finder')
     expect(destinations).toContain('/stw-operations/loadouts')
     expect(destinations).toContain('/stw-operations/squads')
     expect(destinations).toContain('/stw-operations/quests')
@@ -43,6 +48,12 @@ describe('navigation', () => {
     )
 
     expect(betaItems.map((item) => item.to)).toEqual([
+      '/stw-operations/backpack',
+      '/stw-operations/storage',
+      '/stw-operations/defenders',
+      '/stw-operations/collection-book',
+      '/stw-operations/ventures',
+      '/stw-operations/rare-item-finder',
       '/stw-operations/leaderboards',
       '/stw-operations/outpost',
       '/account-management/locker',
@@ -133,9 +144,21 @@ describe('area navigation', () => {
       visibleSectionItems(
         automate,
         (key) =>
-          !['taxiService', 'party', 'autoLlamas', 'autoPinUrns'].includes(key),
+          !['taxiService', 'party', 'autoLlamas', 'autoPinUrns', 'autoDailyReroll', 'expeditions'].includes(key),
       ),
     ).toEqual([])
+  })
+
+  it('shows Recycled Rewards while either of its source automations is visible', () => {
+    const recycled = '/stw-operations/recycled-rewards'
+    const visibleWith = (enabled: Array<string>) =>
+      visibleSectionItems(automate, (key) =>
+        ['stwOperations', ...enabled].includes(key),
+      ).map((item) => item.to)
+
+    expect(visibleWith(['autoLlamas'])).toContain(recycled)
+    expect(visibleWith(['expeditions'])).toContain(recycled)
+    expect(visibleWith(['autoDailyReroll'])).not.toContain(recycled)
   })
 
   it('respects a disabled legacy parent after the Missions hierarchy change', () => {

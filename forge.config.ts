@@ -164,7 +164,7 @@ const config: ForgeConfig = {
      * stay as real files on disk so users can inspect their README and source
      * before choosing to install them.
      */
-    extraResource: ['./plugins', './endurance-assets'],
+    extraResource: ['./plugins', './endurance-assets', './rare-item-finder-assets'],
   },
   /**
    * Both native dependencies ship Node-API prebuilds: sharp and uiohook-napi.

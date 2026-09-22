@@ -57,6 +57,7 @@ export type InventoryItem = {
    * `Alteration:` template ids the item database can name.
    */
   alterations: Array<string>
+  alterationSlots?: Array<string | null>
 }
 
 export type InventoryEntry = {
@@ -102,7 +103,7 @@ export class Inventory {
     })
   }
 
-  private static async getInventory(account: AccountData) {
+  static async getInventory(account: AccountData) {
     const entry: InventoryEntry = {
       accountId: account.accountId,
       items: [],
@@ -226,6 +227,7 @@ export class Inventory {
         personality: prettifyWorkerTrait(attributes.personality),
         setBonus: prettifyWorkerTrait(attributes.set_bonus),
         portrait: attributes.portrait ?? null,
+        alterationSlots: (attributes.alterations ?? []).map(value => typeof value === 'string' && value.length > 0 ? value : null),
         alterations: (attributes.alterations ?? []).filter(
           (alteration) =>
             typeof alteration === 'string' && alteration.length > 0

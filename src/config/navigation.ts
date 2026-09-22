@@ -20,6 +20,7 @@ import {
   Monitor,
   Pin,
   Puzzle,
+  Map,
   Radar,
   ScrollText,
   Shield,
@@ -130,10 +131,38 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/party',
       },
       {
+        can: 'expeditions',
+        icon: Compass,
+        label: 'sidebar:stw-operations.options.expeditions',
+        to: '/stw-operations/expeditions',
+      },
+      {
         can: 'autoLlamas',
         icon: Gift,
         label: 'sidebar:stw-operations.options.auto-llamas',
         to: '/stw-operations/auto-llamas',
+      },
+      {
+        // A ledger over the llama and expedition automations, so it follows
+        // their visibility rather than owning a toggle of its own.
+        canAny: ['autoLlamas', 'expeditions'],
+        icon: Trash2,
+        label: 'sidebar:stw-operations.options.recycled-rewards',
+        to: '/stw-operations/recycled-rewards',
+      },
+      {
+        can: 'autoDailyReroll',
+        icon: CalendarRange,
+        label: 'sidebar:stw-operations.options.auto-update-quests',
+        needsAccount: true,
+        to: '/stw-operations/auto-update-quests',
+      },
+      {
+        can: 'autoDailyReroll',
+        icon: CalendarRange,
+        label: 'sidebar:stw-operations.options.auto-daily-reroll',
+        needsAccount: true,
+        to: '/stw-operations/auto-daily-reroll',
       },
       {
         can: 'autoPinUrns',
@@ -163,10 +192,52 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/inventory',
       },
       {
+        beta: true,
+        icon: Boxes,
+        label: 'sidebar:stw-operations.options.backpack',
+        needsAccount: true,
+        to: '/stw-operations/backpack',
+      },
+      {
+        beta: true,
+        icon: Boxes,
+        label: 'sidebar:stw-operations.options.storage',
+        needsAccount: true,
+        to: '/stw-operations/storage',
+      },
+      {
         can: 'loadouts',
         icon: Users,
         label: 'sidebar:stw-operations.options.loadouts',
         to: '/stw-operations/loadouts',
+      },
+      {
+        icon: Shield,
+        label: 'sidebar:stw-operations.options.defenders',
+        beta: true,
+        needsAccount: true,
+        to: '/stw-operations/defenders',
+      },
+      {
+        beta: true,
+        icon: BookOpen,
+        label: 'sidebar:stw-operations.options.collection-book',
+        needsAccount: true,
+        to: '/stw-operations/collection-book',
+      },
+      {
+        beta: true,
+        icon: Map,
+        label: 'sidebar:stw-operations.options.ventures',
+        needsAccount: true,
+        to: '/stw-operations/ventures',
+      },
+      {
+        beta: true,
+        icon: Radar,
+        label: 'sidebar:stw-operations.options.rare-item-finder',
+        needsAccount: true,
+        to: '/stw-operations/rare-item-finder',
       },
       {
         can: 'squadPresets',
@@ -179,12 +250,6 @@ export const navSections: Array<NavSection> = [
         icon: ScrollText,
         label: 'sidebar:stw-operations.options.quests',
         to: '/stw-operations/quests',
-      },
-      {
-        can: 'expeditions',
-        icon: Compass,
-        label: 'sidebar:stw-operations.options.expeditions',
-        to: '/stw-operations/expeditions',
       },
       {
         can: 'shop',

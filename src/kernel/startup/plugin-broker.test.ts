@@ -25,7 +25,7 @@ beforeEach(async () => {
   vi.clearAllMocks()
 })
 afterEach(() => rm(root, { recursive: true, force: true }))
-it.each(['accounts.list', 'accounts.scope', 'accounts.quests', 'storage.get', 'storage.set', 'settings.get', 'notify', 'external', 'navigate', 'ui.register'])('enforces permission for %s', async (method) => {
+it.each(['accounts.list', 'accounts.scope', 'accounts.quests', 'storage.get', 'storage.set', 'settings.get', 'notify', 'external', 'navigate', 'ui.register', 'inventory.read', 'inventory.recycle', 'epicLauncher.close', 'desktop.system', 'desktop.displays', 'desktop.power', 'mcp.queryProfile', 'eos.locker'])('enforces permission for %s', async (method) => {
   await expect(dispatchPlugin(plugin, method, [])).rejects.toThrow('Permission required')
 })
 it('returns sanitized accounts and settings only', async () => {

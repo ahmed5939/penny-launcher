@@ -413,32 +413,10 @@ process.on('uncaughtExceptionMonitor', (error) => {
       RuntimeLog.error('startup:plugins', error)
     })
 
-    let dailyQuestsRun: Promise<void> | null = null
-    const runAutoDailyQuests = () => {
-      dailyQuestsRun ??= (async () => {
-        const [
-          { SettingsManager },
-          { AccountsManager },
-          { MCPClientQuestLogin },
-        ] = await Promise.all([
-          features.settings(),
-          features.accounts(),
-          features.mcp(),
-        ])
-        const settings = await SettingsManager.getData()
-
-        if (!settings.autoDailyQuests) return
-
-        const accounts = AccountsManager.getAccounts()
-
-        if (accounts.size > 0) {
-          await MCPClientQuestLogin.save([...accounts.values()])
-        }
-      })().finally(() => {
-        dailyQuestsRun = null
-      })
-
-      return dailyQuestsRun
+    // Both reset and startup use the per-account daily quest controls.
+    const runAutoDailyQuests = async () => {
+      const { AutoDailyReroll } = await import('./startup/auto-daily-reroll')
+      await AutoDailyReroll.tick()
     }
 
     secureIpcHandle(ElectronAPIEventKeys.PluginReview, (_, kind, id) =>
@@ -569,6 +547,10 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcOn(ElectronAPIEventKeys.RequestAccounts, async () => {
       const { AccountsManager } = await features.accounts()
       await AccountsManager.load()
+
+      void import('./startup/auto-daily-reroll').then(({ AutoDailyReroll }) =>
+        AutoDailyReroll.start()
+      ).catch(() => RuntimeLog.error('startup:auto-daily-reroll', new Error('Could not start daily rerolls.')))
 
       // Accounts are visible now. Background account services can hydrate
       // afterward instead of delaying the renderer's account list.
@@ -955,6 +937,16 @@ process.on('uncaughtExceptionMonitor', (error) => {
       const { AutoExpeditions } = await features.autoExpeditions()
       return AutoExpeditions.getData()
     })
+    secureIpcHandle('automation-rewards:status', async () => (await import('./startup/automation-rewards')).AutomationRewards.status())
+    secureIpcHandle('automation-rewards:update', async (_, accountId: string, level: unknown) => (await import('./startup/automation-rewards')).AutomationRewards.update(accountId, level))
+    secureIpcHandle('auto-daily-reroll:status', async () => {
+      const { AutoDailyReroll } = await import('./startup/auto-daily-reroll')
+      return AutoDailyReroll.status()
+    })
+    secureIpcHandle('auto-daily-reroll:update', async (_, accountId: string, settings: unknown) => {
+      const { AutoDailyReroll } = await import('./startup/auto-daily-reroll')
+      return AutoDailyReroll.update(accountId, settings)
+    })
     secureIpcHandle(
       ElectronAPIEventKeys.AutoExpeditionsUpdate,
       async (
@@ -1036,6 +1028,16 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
+    secureIpcHandle('world-inventory:query', async (_, accountId: string, location: 'backpack' | 'storage') => (await import('./core/world-inventory')).requestWorldInventory(accountId, location))
+    secureIpcHandle('ventures:query', async (_, accountId: string) => (await import('./core/ventures')).requestVentures(accountId))
+    secureIpcHandle('collection-book:query', async (_, accountId: string) => {
+      const { requestCollectionBook } = await import('./core/collection-book')
+      return requestCollectionBook(accountId)
+    })
+    secureIpcHandle('rare-item-finder:scan', async (_, accountId: string) => {
+      const { requestRareItemScan } = await import('./core/rare-item-finder')
+      return requestRareItemScan(accountId)
+    })
     secureIpcOn(
       ElectronAPIEventKeys.InventoryRequest,
       async (_, accounts: Array<AccountData>) => {

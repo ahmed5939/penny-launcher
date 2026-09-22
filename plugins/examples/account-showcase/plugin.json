@@ -1,0 +1,13 @@
+{
+  "id": "account-showcase",
+  "name": "Account Showcase",
+  "version": "1.0.0",
+  "description": "Show selected-account progression, cosmetic counts and equipped EOS locker slots.",
+  "runtime": "sandbox",
+  "apiVersion": 5,
+  "permissions": ["accounts:read", "fortnite:profiles", "eos:locker:read", "ui"],
+  "fortnite": { "profiles": ["campaign", "athena"], "operations": ["QueryProfile"] },
+  "capabilities": ["accounts"],
+  "entry": "main.js",
+  "readme": "README.md"
+}

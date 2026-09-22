@@ -37,6 +37,8 @@ import {
   levelCapForTier,
   superchargeMaxLevel,
 } from '../../../components/items/item-detail'
+import { evolutionOptions } from '../../../components/items/evolution-options'
+import { getItemRecord } from '../../../state/items/database'
 import { ItemIcon } from '../../../components/items/item-icon'
 import { ItemTile } from '../../../components/items/item-tile'
 import {
@@ -158,6 +160,7 @@ const romanTiers = ['i', 'ii', 'iii', 'iv', 'v']
  * is no longer the only route to acting.
  */
 function ItemMenu({
+  records,
   isActing,
   item,
   onAction,
@@ -166,6 +169,7 @@ function ItemMenu({
 }: {
   isActing: boolean
   item: InventoryRow
+  records: ItemRecordMap
   onAction: (request: ItemActionRequest) => void
   onInspect: () => void
   onRecycle: () => void
@@ -231,8 +235,9 @@ function ItemMenu({
         </ContextMenuItem>
       )}
 
-      {item.tier > 0 && item.tier < 5 && (
+      {item.tier > 0 && item.tier < 5 && evolutionOptions(getItemRecord(records, item.templateId), item.tier).map((option) => (
         <ContextMenuItem
+          key={option.conversionIndex}
           disabled={isActing}
           onSelect={() =>
             onAction({
@@ -240,14 +245,14 @@ function ItemMenu({
               itemId: item.itemId,
               desiredLevel: item.level,
               desiredTier: romanTiers[item.tier] ?? 'no_tier',
-              conversionIndex: 0,
+              conversionIndex: option.conversionIndex,
             })
           }
         >
           <Star className="mr-2 size-3.5" />
-          Evolve to tier {item.tier + 1}
+          {option.label}
         </ContextMenuItem>
-      )}
+      ))}
 
       <ContextMenuItem
         disabled={isActing}
@@ -1099,6 +1104,7 @@ const VaultTile = memo(function VaultTile({
       locked={locked}
       menu={
         <ItemMenu
+          records={records}
           isActing={isActing}
           item={item}
           onAction={onAction}

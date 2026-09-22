@@ -14,8 +14,10 @@ import { RuntimeLog } from '../runtime-log'
  *   2 — accounts, events, storage, settings, log, apiVersion
  *   3 — lifecycle, timers, notifications, external links
  *   4 — sandbox-only async SDK, reviewed permissions and declarative UI
+ *   5 — scoped inventory, confirmed recycling, Epic Launcher close,
+ *       read-only desktop information, declared MCP operations and EOS locker reads
  */
-export const PLUGIN_API_VERSION = 4
+export const PLUGIN_API_VERSION = 5
 
 type PluginEventListener = (payload: unknown) => unknown
 
@@ -37,6 +39,10 @@ export class PluginBridge {
     members: [],
   }
 
+  private static scopeRevision = 0
+
+  static getAccountScopeRevision() { return PluginBridge.scopeRevision }
+
   private static listeners = new Map<
     string,
     Map<PluginEventName, Set<PluginEventListener>>
@@ -57,6 +63,7 @@ export class PluginBridge {
         : [],
     }
 
+    PluginBridge.scopeRevision++
     PluginBridge.emit('account-scope-changed', {
       ...PluginBridge.accountScope,
       members: [...PluginBridge.accountScope.members],

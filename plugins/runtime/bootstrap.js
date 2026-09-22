@@ -11,13 +11,29 @@
   let controller
   const report = (error) => call('log', 'error', String(error)).catch(() => {})
   const context = {
-    apiVersion: 4,
+    apiVersion: 5,
     log: (message) => call('log', 'info', String(message)),
     accounts: {
       list: () => call('accounts.list'),
       getScoped: () => call('accounts.scope'),
       quests: (accountId) => call('accounts.quests', accountId),
     },
+    inventory: {
+      read: (accountId) => call('inventory.read', accountId),
+      recycle: (accountId, itemIds) => call('inventory.recycle', accountId, itemIds),
+    },
+    epicLauncher: { close: () => call('epicLauncher.close') },
+    desktop: {
+      system: () => call('desktop.system'),
+      displays: () => call('desktop.displays'),
+      power: () => call('desktop.power'),
+    },
+    mcp: {
+      operations: () => call('mcp.operations'),
+      queryProfile: (accountId, profileId) => call('mcp.queryProfile', accountId, profileId),
+      request: (accountId, request) => call('mcp.request', accountId, request),
+    },
+    eos: { locker: (accountId) => call('eos.locker', accountId) },
     storage: {
       get: (key, fallback) => call('storage.get', key, fallback),
       set: (key, value) => call('storage.set', key, value),

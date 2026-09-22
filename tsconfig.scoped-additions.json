@@ -1,0 +1,49 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "src/kernel/main.ts",
+    "src/kernel/preload.ts",
+    "src/kernel/core/collection-book.ts",
+    "src/kernel/core/expeditions.ts",
+    "src/kernel/core/inventory.ts",
+    "src/kernel/core/item-database.ts",
+    "src/kernel/core/world-inventory.ts",
+    "src/kernel/preload-actions/auto-daily-reroll.ts",
+    "src/kernel/preload-actions/automation-rewards.ts",
+    "src/kernel/preload-actions/collection-book.ts",
+    "src/kernel/preload-actions/world-inventory.ts",
+    "src/kernel/startup/auto-daily-reroll.ts",
+    "src/kernel/startup/auto-expeditions.ts",
+    "src/kernel/startup/auto-llamas.ts",
+    "src/kernel/startup/automation-rewards.ts",
+    "src/features/**/*.ts",
+    "src/features/**/*.tsx",
+    "src/config/navigation.ts",
+    "src/lib/validations/schemas/settings.ts",
+    "src/state/settings/customizable-menu.ts",
+    "src/routes/settings/-customizable-menu/-index.tsx",
+    "src/routes/stw-operations/auto-daily-reroll/*.tsx",
+    "src/routes/stw-operations/auto-llamas/-page.tsx",
+    "src/routes/stw-operations/auto-update-quests/route.tsx",
+    "src/routes/stw-operations/backpack/*.tsx",
+    "src/routes/stw-operations/collection-book/*.tsx",
+    "src/routes/stw-operations/defenders/*.tsx",
+    "src/routes/stw-operations/expeditions/-page.tsx",
+    "src/routes/stw-operations/recycled-rewards/*.tsx",
+    "src/routes/stw-operations/storage/*.tsx",
+    "src/routeTree.gen.ts",
+    "src/kernel/core/rare-item-finder.ts",
+    "src/kernel/preload-actions/rare-item-finder.ts",
+    "src/routes/stw-operations/rare-item-finder/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ]
+}

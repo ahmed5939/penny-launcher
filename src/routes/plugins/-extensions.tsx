@@ -68,6 +68,11 @@ export function PluginReviewDialog({ review, busy, accept, cancel }: { review: P
         <ul className="space-y-2">{(review?.manifest.permissions ?? []).map((permission) => <li key={permission} className="rounded-md border p-2">
           {permissionLabels[permission]} {review?.installed && review.addedPermissions.includes(permission) && <strong className="ml-2 text-warning">New access</strong>}
         </li>)}</ul>
+        {review?.manifest.fortnite && <div className="rounded-md border p-3">
+          <p>Fortnite profiles: {review.manifest.fortnite.profiles.join(', ') || 'None'}</p>
+          <p className="mt-2 break-words">Fortnite commands: {review.manifest.fortnite.operations.join(', ') || 'None'}</p>
+          <p className="mt-2 text-muted-foreground">Account changes require a separate, one-time confirmation in Penny.</p>
+        </div>}
         {!review?.manifest.permissions?.length && <p className="text-muted-foreground">No launcher permissions requested.</p>}
         {review?.installed && <p>The current code version is kept for rollback. Saved data is shared across versions; rollback does not undo data changes.</p>}
         <details><summary className="cursor-pointer">Package README</summary><pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap text-xs">{review?.readme}</pre></details>

@@ -1,4 +1,4 @@
-# Developing Penny plugins — API v4
+# Developing Penny plugins — API v5
 
 ## Quick start
 
@@ -26,7 +26,7 @@ See [DESIGN.md](./DESIGN.md), the [typed SDK](./sdk/index.d.ts), and the
   "version": "1.0.0",
   "author": "Your name",
   "runtime": "sandbox",
-  "apiVersion": 4,
+  "apiVersion": 5,
   "permissions": ["ui", "notifications"],
   "capabilities": ["notifications"],
   "entry": "main.js",
@@ -64,6 +64,15 @@ package's permissions. Penny refuses plugin execution under `--no-sandbox`.
 | --- | --- |
 | `accounts:read` | Account names/ids, current scope, account change events |
 | `quests:read` | Read active quests for an account in the current scope; internal authentication |
+| `inventory:read` | Read inventory DTOs for a currently selected account |
+| `inventory:recycle` | Request permanent recycling of specific items with a Penny-owned confirmation |
+| `epic-launcher:close` | Force-close only Epic Games Launcher on Windows |
+| `system:read` | Read OS release, architecture, memory totals and uptime |
+| `displays:read` | Read monitor sizes and scaling, without screenshots or hardware identifiers |
+| `power:read` | Read battery versus external-power status |
+| `fortnite:profiles` | Read declared, filtered game profiles for selected accounts |
+| `fortnite:commands` | Request declared MCP changes with one-time Penny confirmation |
+| `eos:locker:read` | Read equipped EOS locker slots for selected accounts |
 | `settings:read` | Read game path, watched process name, user agent; settings events |
 | `storage` | Per-plugin JSON storage operations |
 | `navigation` | Navigate to an existing Penny route |
@@ -76,7 +85,7 @@ permission. Capabilities (`background`, `changes-app-behavior`, `accounts`,
 `notifications`, `network`, `filesystem`, `opens-windows`) are behavior disclosures,
 not grants. Declaring `network` or `filesystem` does not unlock raw access.
 
-There is no general authenticated request API, credential API, script injection,
+There is no arbitrary authenticated URL/request API, credential API, script injection,
 or custom privileged window API. New account operations should be explicit,
 validated host methods. The quest reader returns only quest DTOs, accepts only a
 current account id, checks scope again after the service response, and permits
@@ -89,10 +98,20 @@ All host operations are asynchronous. Await them and handle failures.
 
 | Member | Contract |
 | --- | --- |
-| `apiVersion`, `manifest` | API version 4 and the approved manifest |
+| `apiVersion`, `manifest` | API version 5 and the approved manifest |
 | `accounts.list()` | Promise of `{ accountId, displayName, customDisplayName }[]` |
 | `accounts.getScoped()` | Promise of `{ primary, members }` with sanitized accounts |
 | `accounts.quests(accountId)` | Promise of `{ accountId, quests, rerolls, errorMessage? }`; read-only |
+| `inventory.read(accountId)` | Promise of `{ accountId, items }`; current scope only, 10-second cooldown |
+| `inventory.recycle(accountId, itemIds)` | Promise of `{ accountId, recycled, skipped, cancelled }`; 1–50 unique ids, 30-second cooldown |
+| `epicLauncher.close()` | Promise of `{ closed: true }`; Windows only, 10-second cooldown; rejects on command failure |
+| `desktop.system()` | Promise of `{ platform, release, architecture, totalMemoryBytes, availableMemoryBytes, uptimeSeconds }` |
+| `desktop.displays()` | Promise of up to 16 `{ index, primary, width, height, workAreaWidth, workAreaHeight, scaleFactor }` records |
+| `desktop.power()` | Promise of `{ onBattery }` |
+| `mcp.operations()` | Discover supported operations, profiles, effects, required permissions, and payload schemas |
+| `mcp.queryProfile(accountId, profileId)` | Read a filtered game profile; requires declared profile and `QueryProfile` |
+| `mcp.request(accountId, { operation, profileId, body })` | Validated operation; a game profile for reads, an applied/cancelled receipt for commands |
+| `eos.locker(accountId)` | Filtered active EOS loadouts and equipped slots, authenticated by Penny |
 | `settings.get()` | Promise of `{ gamePath, customProcess, userAgent }` |
 | `storage.get(key, fallback?)` / `set(key, value)` / `delete(key)` / `all()` | JSON storage; atomic queued writes, detached reads, explicit errors |
 | `events.on(name, listener)` | Local subscription; returns unsubscribe |
@@ -117,6 +136,87 @@ requests are limited to 128,000 serialized characters, 100 calls/second, and 16
 concurrent host operations. Use smaller records instead of large requests. Invalid
 existing JSON is preserved and reported. Saved form values use the reserved
 `ui-settings` storage key; do not overwrite it yourself.
+
+## Safe host operations (v5)
+
+API v4 packages continue to run. Declare `apiVersion: 5` for the new operations.
+The [inventory review example](./examples/inventory-review/) demonstrates an
+account-scoped workflow with host confirmation. New permissions appear in the
+existing package review and require approval when added by an update.
+
+`inventory.read` returns the same inventory item DTOs used by Penny, never a raw
+profile or access token. `inventory.recycle` takes one selected account and at
+most 50 unique item ids. Penny fetches the inventory and presents its own native
+confirmation with the plugin, account, and exact item details. Cancel is the
+default, and review expires after 60 seconds. Requests are serialized across
+plugins. Missing, favorited, and equipped items are skipped. After confirmation,
+Penny reads the inventory again and skips items whose DTO changed. Only the
+approved, unchanged ids are sent in one authenticated recycle batch.
+
+Run recycling inside `jobs.run` and return immediately from the UI action so the
+10-second action timeout does not interrupt human review. A cancelled confirmation
+returns `cancelled: true`. Authentication/service failures reject. `recycled`
+counts items in a successful service request; it is not a post-write verification.
+An already dispatched service request cannot be undone by cancellation.
+
+The new inventory operations bind to the exact plugin runtime and account-selection
+generation. Stopping/reloading the plugin, removing its permission, or changing
+selection (even away and back) prevents later dispatch and discards pending
+results. The confirmation also closes when that context becomes invalid. A scope
+change after an external request is sent cannot cancel its external effects.
+The game can still change an item after the final inventory read; these checks
+cannot provide an atomic server-side transaction.
+
+`epicLauncher.close` grants a specific system effect: force-closing the Windows
+image `EpicGamesLauncher.exe`. It accepts no arguments, exposes no process list,
+and cannot target a PID, another image, process tree, shell command, or elevated
+operation. The host uses a fixed system executable with a five-second timeout.
+The install permission authorizes repeated calls, so a plugin may use a timer
+for suppression. Calls fail on other platforms or if the command fails, including
+when no matching process exists. Stopping a plugin stops its future timer calls;
+an already dispatched close cannot be undone.
+
+This extension enables inventory tools and reviewed recycling, plus Epic launcher
+suppression. It does not enable unattended recycling: a future automatic policy
+must be configured and enforced by Penny. Transparent Autoresponder still needs
+a dedicated host implementation with constrained rules, explicit user control,
+and reliable restoration of system changes. Plugins have no certificate-store,
+elevation, raw filesystem, arbitrary network, or interception API.
+
+For future extensions, add a named operation with a dedicated permission, strict
+input/output DTOs, account/resource scope, rate and concurrency limits, lifecycle
+checks immediately before side effects, and tests for denied access and races.
+Keep credentials and privileged implementation inside Penny. Capability labels
+alone never authorize access.
+
+## Read-only desktop access (v5)
+
+Declare `apiVersion: 5` and only the permissions your add-on needs. API v4
+packages remain supported. These methods work on Windows and the other desktop
+platforms supported by Penny. Each requires its own reviewed permission and
+allows one call per second per plugin; each rejects arguments and stopped runtimes.
+
+- `desktop.system()` (`system:read`) provides basic OS and memory information
+  for compatibility messages or resource-aware scheduling. It excludes usernames,
+  hostnames, environment variables, CPU identifiers, paths, and process lists.
+- `desktop.displays()` (`displays:read`) provides sizes in device-independent
+  pixels and display scaling for UI decisions. Display indexes are temporary
+  positions in the returned list, not stable identifiers. No names, serial numbers,
+  screenshot pixels, window contents, or monitor settings controls are exposed.
+- `desktop.power()` (`power:read`) reports whether the computer is on battery,
+  so background jobs can reduce work. It does not expose idle/lock activity or
+  allow sleep, shutdown, or changes to power settings.
+
+Example: with `power:read`, use `const { onBattery } = await context.desktop.power()`
+and skip optional background work when `onBattery` is true. These permissions do
+not authorize clipboard, keyboard, registry, filesystem, shell, or elevation access.
+
+## Fortnite data and commands (v5)
+
+See the [Fortnite API guide](./FORTNITE.md) for the declaration format, operation
+catalog, raw-game-data filtering rules, input schemas, limits, and examples.
+The [account showcase example](./examples/account-showcase/) reads progression,
+cosmetics and EOS locker data without any mutation permission.
 
 ## Reusable UI
 
@@ -184,7 +284,7 @@ that launch. Turning off safe mode resumes only approved, enabled plugins.
 ## Migrating API v1–v3
 
 Legacy plugins are never executed in the main process. Set `runtime: "sandbox"`
-and `apiVersion: 4`, declare the permissions you use, and replace Node/Electron
+and `apiVersion: 5`, declare the permissions you use, and replace Node/Electron
 operations with the context API. Account getters, navigation, notifications and
 logging now return promises. Replace filesystem access with `storage`; replace
 BrowserWindows with UI contributions; remove `getMainWindow`, `storageDirectory`,

@@ -110,6 +110,7 @@ export const customizableMenuSettingsSchema = z
     xpBoosts: z.boolean().default(true),
     autoPinUrns: z.boolean().default(true),
     autoLlamas: z.boolean().default(true),
+    autoDailyReroll: z.boolean().default(true),
     outpost: z.boolean().default(true),
 
     accountManagement: z.boolean().default(true),

@@ -60,3 +60,43 @@ it('reports failed activation without signalling readiness', async () => {
   expect(host.calls.some((call) => call.method === 'failed')).toBe(true)
   expect(host.calls.some((call) => call.method === 'ready')).toBe(false)
 })
+it('exposes v5 host operations using fixed method names and serialized arguments', async () => {
+  const host = await sdk(async (context) => {
+    expect(context.apiVersion).toBe(5)
+    await context.inventory.read('selected')
+    await context.inventory.recycle('selected', ['item'])
+    await context.epicLauncher.close()
+  })
+  expect(host.calls).toEqual(expect.arrayContaining([
+    { method: 'inventory.read', args: ['selected'] },
+    { method: 'inventory.recycle', args: ['selected', ['item']] },
+    { method: 'epicLauncher.close', args: [] },
+  ]))
+})
+
+it('exposes read-only desktop methods without caller-controlled arguments', async () => {
+  const host = await sdk(async (context) => {
+    await context.desktop.system()
+    await context.desktop.displays()
+    await context.desktop.power()
+  })
+  expect(host.calls).toEqual(expect.arrayContaining([
+    { method: 'desktop.system', args: [] },
+    { method: 'desktop.displays', args: [] },
+    { method: 'desktop.power', args: [] },
+  ]))
+})
+it('routes Fortnite calls through the host without accepting credentials or URLs', async () => {
+  const host = await sdk(async (context) => {
+    await context.mcp.operations()
+    await context.mcp.queryProfile('selected', 'campaign')
+    await context.mcp.request('selected', { operation: 'SetPinnedQuests', profileId: 'campaign', body: { pinnedQuestIds: [] } })
+    await context.eos.locker('selected')
+  })
+  expect(host.calls).toEqual(expect.arrayContaining([
+    { method: 'mcp.operations', args: [] },
+    { method: 'mcp.queryProfile', args: ['selected', 'campaign'] },
+    { method: 'mcp.request', args: ['selected', { operation: 'SetPinnedQuests', profileId: 'campaign', body: { pinnedQuestIds: [] } }] },
+    { method: 'eos.locker', args: ['selected'] },
+  ]))
+})

@@ -1,3 +1,5 @@
+import type { PluginFortniteAccess } from './plugin-fortnite'
+
 /** User-visible effects an add-on declares in plugin.json. */
 export const PLUGIN_CAPABILITIES = [
   'background', 'changes-app-behavior', 'accounts', 'notifications',
@@ -9,10 +11,14 @@ export type PluginCapability = (typeof PLUGIN_CAPABILITIES)[number]
 export const PLUGIN_PERMISSIONS = [
   'accounts:read', 'quests:read', 'settings:read', 'storage', 'navigation',
   'notifications', 'external-links', 'ui',
+  'inventory:read', 'inventory:recycle', 'epic-launcher:close',
+  'system:read', 'displays:read', 'power:read',
+  'fortnite:profiles', 'fortnite:commands', 'eos:locker:read',
 ] as const
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 
 export type PluginManifest = {
+  fortnite?: PluginFortniteAccess
   runtime?: 'sandbox'
   permissions?: PluginPermission[]
   id: string

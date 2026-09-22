@@ -1,4 +1,6 @@
+import { confirmedRewards, expeditionKind, recyclableRewards, resourceGains, rewardTypes, type Reward, type Items } from '../../features/expeditions/model'
 import { RuntimeLog } from '../runtime-log'
+import { AutomationRewards } from './automation-rewards'
 import { Expeditions } from '../core/expeditions'
 import { Authentication } from '../core/authentication'
 import { AccountsManager } from './accounts'
@@ -12,14 +14,7 @@ import {
   setStartExpedition,
 } from '../../services/endpoints/mcp'
 
-export const expeditionRewardTypes = [
-  'Supply Run',
-  'Survivor Scouting',
-  'Trap Run',
-  'Crafting Run',
-  'Wood Gathering',
-  'Ore Mining',
-] as const
+export const expeditionRewardTypes = rewardTypes
 
 export type AutoExpeditionConfig = {
   enabled: boolean
@@ -40,6 +35,12 @@ export type AutoExpeditionHistoryEntry = {
   action: 'started' | 'collected' | 'start-error' | 'collect-error'
   expedition: string
   rewards?: Array<string>
+  rewardItems?: Reward[]
+  recycledItems?: Reward[]
+  recyclingGains?: Reward[]
+  recyclingError?: string
+  error?: string
+  expeditionId?: string
   success?: boolean
   timestamp: string
 }
@@ -61,37 +62,8 @@ const accountDefaults: AutoExpeditionConfig = {
 }
 const cycleInterval = 60 * 60 * 1000
 const initialDelay = 2 * 1000
-const expeditionSquads = [
-  { id: 'Squad_Expedition_ExpeditionSquadOne', capacity: 3, vehicle: 'Land' },
-  { id: 'Squad_Expedition_ExpeditionSquadTwo', capacity: 5, vehicle: 'Land' },
-  { id: 'Squad_Expedition_ExpeditionSquadThree', capacity: 4, vehicle: 'Sea' },
-  { id: 'Squad_Expedition_ExpeditionSquadFour', capacity: 5, vehicle: 'Sea' },
-  { id: 'Squad_Expedition_ExpeditionSquadFive', capacity: 3, vehicle: 'Air' },
-  { id: 'Squad_Expedition_ExpeditionSquadSix', capacity: 4, vehicle: 'Air' },
-]
-
-const strategyFragments: Record<string, Array<string>> = {
-  Survivors: ['survivorscouting', 'managers', 'peoplerun', 'rescue'],
-  Heroes: ['heroes', 'warparty'],
-  Traps: ['traprun', 'traps', 'craftingingredients'],
-  Weapons: ['weapons'],
-  Materials: ['supplyrun', 'craftingrun', 'resourcerun', 'miningore', 'choppingwood'],
-  // Migrate the original launcher controls without invalidating saved settings.
-  'Survivor Scouting': ['survivorscouting'],
-  'Supply Run': ['supplyrun'],
-  'Trap Run': ['traprun'],
-  'Crafting Run': ['craftingrun'],
-  'Wood Gathering': ['choppingwood'],
-  'Ore Mining': ['miningore'],
-}
-
 function matchesStrategy(templateId: string, strategies: Array<string>) {
-  const template = templateId.toLowerCase()
-  return strategies.some((strategy) =>
-    (strategyFragments[strategy] ?? [strategy.toLowerCase()]).some((fragment) =>
-      template.includes(fragment)
-    )
-  )
+  return strategies.includes(expeditionKind(templateId).category)
 }
 
 function notificationData(value: unknown) {
@@ -102,23 +74,7 @@ function appendHistory(
   config: AutoExpeditionConfig,
   entry: AutoExpeditionHistoryEntry
 ) {
-  config.history = [...(config.history ?? []), entry].slice(-250)
-}
-
-const recycleRarity: Record<string, number> = {
-  Common: 1,
-  Uncommon: 2,
-  Rare: 3,
-  Epic: 4,
-}
-
-function itemRarity(templateId: string) {
-  const id = templateId.toLowerCase()
-  if (id.includes('_sr_')) return 5
-  if (id.includes('_vr_')) return 4
-  if (id.includes('_r_')) return 3
-  if (id.includes('_uc_')) return 2
-  return 1
+  config.history = [...(config.history ?? []), entry]
 }
 
 export class AutoExpeditions {
@@ -148,16 +104,27 @@ export class AutoExpeditions {
     return data
   }
 
+  private static writes: Promise<unknown> = Promise.resolve()
+
+  private static save(accountId: string, partial: Partial<AutoExpeditionConfig>) {
+    const work = AutoExpeditions.writes.then(async () => {
+      const data = await AutoExpeditions.getData()
+      data[accountId] = { ...accountDefaults, ...data[accountId], ...partial }
+      await DataDirectory.updateAutoExpeditionsFile(data)
+      return data
+    })
+    AutoExpeditions.writes = work.catch(() => undefined)
+    return work
+  }
+
   static async update(accountId: string, partial: Partial<AutoExpeditionConfig>) {
-    const data = await AutoExpeditions.getData()
-    data[accountId] = {
-      ...accountDefaults,
-      // Record<> types this as always present, but a brand-new account has
-      // no entry yet — the defaults above are what fill it in.
-      ...data[accountId],
-      ...partial,
-    }
-    await DataDirectory.updateAutoExpeditionsFile(data)
+    const settings: Partial<AutoExpeditionConfig> = {}
+    if (typeof partial.enabled === 'boolean') settings.enabled = partial.enabled
+    if (typeof partial.notificationsEnabled === 'boolean') settings.notificationsEnabled = partial.notificationsEnabled
+    if (Array.isArray(partial.rewardTypes)) settings.rewardTypes = [...new Set(partial.rewardTypes.filter((type) => rewardTypes.includes(type)))]
+    if (partial.recycleBelow && ['off', 'Common', 'Uncommon', 'Rare', 'Epic'].includes(partial.recycleBelow)) settings.recycleBelow = partial.recycleBelow
+    settings.nextRunAt = new Date().toISOString()
+    const data = await AutoExpeditions.save(accountId, settings)
 
     if (data[accountId].enabled && data[accountId].rewardTypes.length > 0) {
       void AutoExpeditions.ensureStarted([accountId])
@@ -167,6 +134,10 @@ export class AutoExpeditions {
   }
 
   static async run(accountId: string): Promise<AutoExpeditionResult> {
+    return AutomationRewards.withAccount(accountId, () => AutoExpeditions.runUnlocked(accountId))
+  }
+
+  private static async runUnlocked(accountId: string): Promise<AutoExpeditionResult> {
     const result: AutoExpeditionResult = {
       success: false,
       collected: 0,
@@ -189,10 +160,13 @@ export class AutoExpeditions {
     try {
       const accessToken = await Authentication.verifyAccessToken(account)
       if (!accessToken) throw new Error('Could not authenticate this account')
+      if (!(await AutoExpeditions.getData())[accountId]?.enabled) return result
 
       let board = await Expeditions.getExpeditions(account)
+      if (board.errorMessage) throw new Error(board.errorMessage)
       const campaign = await getQueryProfile({ accessToken, accountId })
-      let currentItems = campaign.data.profileChanges[0]?.profile.items ?? {}
+      let currentItems = campaign.data.profileChanges[0]?.profile?.items
+      if (!currentItems) throw new Error('Could not verify campaign inventory')
       const collectors = Object.entries(
         currentItems
       )
@@ -212,7 +186,9 @@ export class AutoExpeditions {
       const collectedRewards: Array<string> = []
       for (const slot of board.slots.filter((item) => item.state === 'ready')) {
         try {
-          const beforeIds = new Set(Object.keys(currentItems))
+          const latest = (await AutoExpeditions.getData())[accountId]
+          if (!latest?.enabled) break
+          const beforeItems: Items = currentItems
           const response = await setCollectExpedition({
             accessToken,
             accountId,
@@ -226,65 +202,54 @@ export class AutoExpeditions {
           const confirmation = notifications.find(
             (item) => item && 'bExpeditionSucceeded' in item
           )
-          if (!confirmation) throw new Error('Epic did not confirm the expedition result')
+          if (!confirmation || typeof confirmation.bExpeditionSucceeded !== 'boolean') throw new Error('Epic did not confirm the expedition result')
           const succeeded = confirmation.bExpeditionSucceeded === true
-          const afterCollection = await getQueryProfile({ accessToken, accountId })
-          currentItems = afterCollection.data.profileChanges[0]?.profile.items ?? {}
-          const newItems = Object.entries(currentItems).filter(
-            ([itemId]) => !beforeIds.has(itemId)
-          )
-          const rewards = newItems.map(([, item]) => item.templateId)
-
-          if (succeeded && config.recycleBelow && config.recycleBelow !== 'off') {
-            const threshold = recycleRarity[config.recycleBelow]
-            const loadoutHeroes = new Set<string>()
-            Object.values(currentItems).forEach((item) => {
-              if (!item.templateId.includes('CampaignHeroLoadout')) return
-              const members = (item.attributes as {
-                crew_members?: Record<string, string>
-              }).crew_members
-              Object.values(members ?? {}).forEach((id) => loadoutHeroes.add(id))
-            })
-            const recyclable = newItems
-              .filter(([itemId, item]) => {
-                const attributes = item.attributes as {
-                  favorite?: boolean
-                  squad_id?: string
-                  squad_slot_idx?: number
-                }
-                return (
-                  /^(Hero|Schematic|Worker|Defender):/.test(item.templateId) &&
-                  itemRarity(item.templateId) <= threshold &&
-                  !attributes.favorite &&
-                  !loadoutHeroes.has(itemId) &&
-                  !attributes.squad_id &&
-                  !(typeof attributes.squad_slot_idx === 'number' && attributes.squad_slot_idx >= 0)
-                )
-              })
-              .map(([itemId]) => itemId)
-
-            if (recyclable.length > 0) {
-              await setRecycleItemBatch({ accessToken, accountId, targetItemIds: recyclable })
-              const verified = await getQueryProfile({ accessToken, accountId })
-              currentItems = verified.data.profileChanges[0]?.profile.items ?? {}
-              const recycled = recyclable.filter((itemId) => !currentItems[itemId])
-              RuntimeLog.info(
-                'auto-expeditions:recycled',
-                `${accountId}: ${recycled.length}/${recyclable.length} verified`
-              )
-            }
+          const rewardItems = confirmedRewards(confirmation.expeditionRewards)
+          const rewards = rewardItems.map((reward) => reward.quantity + ' × ' + reward.templateId)
+          const history: AutoExpeditionHistoryEntry = {
+            action: 'collected', expedition: slot.templateId, expeditionId: slot.itemId,
+            rewards, rewardItems, success: succeeded, timestamp: new Date().toISOString(),
           }
           result.collected += 1
-          collectedRewards.push(...(rewards.length > 0 ? rewards : [slot.name]))
-          appendHistory(config, {
-            action: 'collected', expedition: slot.templateId, rewards,
-            success: succeeded, timestamp: new Date().toISOString(),
-          })
+          collectedRewards.push(...rewards)
+          appendHistory(config, history)
+          // Save confirmation before optional inventory/recycling work. A secondary
+          // failure must never erase a confirmed collection or its reward ledger.
+          await AutoExpeditions.save(accountId, { history: config.history })
+          try {
+            const afterCollection = await getQueryProfile({ accessToken, accountId })
+            const inventory = afterCollection.data.profileChanges[0]?.profile?.items
+            if (!inventory) throw new Error('Could not verify inventory after collection')
+            currentItems = inventory
+            const recyclingSettings = (await AutoExpeditions.getData())[accountId]
+            if (succeeded && recyclingSettings?.enabled && recyclingSettings.recycleBelow !== 'off') {
+              const selected = recyclableRewards(rewardItems, beforeItems, currentItems, recyclingSettings.recycleBelow ?? 'off')
+              if (selected.length) {
+                const beforeRecycle = currentItems
+                const recycled = await setRecycleItemBatch({ accessToken, accountId, targetItemIds: selected.map((r) => r.itemId!) })
+                if (!recycled.data.profileChanges?.length) throw new Error('Epic did not confirm recycling')
+                const verified = await getQueryProfile({ accessToken, accountId })
+                const afterRecycle = verified.data.profileChanges[0]?.profile?.items
+                if (!afterRecycle) throw new Error('Could not verify recycling result')
+                currentItems = afterRecycle
+                history.recycledItems = selected.filter((r) => !afterRecycle[r.itemId!])
+                history.recyclingGains = resourceGains(beforeRecycle, afterRecycle)
+                if (history.recycledItems.length !== selected.length) throw new Error('Some rewards were not confirmed recycled')
+              }
+            }
+          } catch (error) {
+            history.recyclingError = error instanceof Error ? error.message : 'Reward inventory verification failed'
+            result.errors.push(history.recyclingError)
+          }
+          await AutoExpeditions.save(accountId, { history: config.history })
         } catch (error) {
           appendHistory(config, {
             action: 'collect-error', expedition: slot.templateId,
+            expeditionId: slot.itemId,
+            error: error instanceof Error ? error.message : 'Collection failed',
             timestamp: new Date().toISOString(),
           })
+          result.errors.push(error instanceof Error ? error.message : 'Collection failed')
           RuntimeLog.error('auto-expeditions:collect', error)
         }
       }
@@ -293,14 +258,18 @@ export class AutoExpeditions {
       // so reusing a board can accidentally assign the same hero twice.
       const sentRewards: Array<string> = []
       for (let attempts = 0; attempts < 6; attempts += 1) {
+        const latest = (await AutoExpeditions.getData())[accountId]
+        if (!latest?.enabled) break
         board = await Expeditions.getExpeditions(account)
+        if (board.errorMessage) throw new Error(board.errorMessage)
         const occupied = board.slots.filter((item) => item.state !== 'available').length
         if (occupied >= 6) break
 
         const slot = board.slots
           .filter((item) => item.state === 'available')
-          .filter((item) => matchesStrategy(item.templateId, config.rewardTypes))
-          .filter((item) => item.durationMinutes <= 1320)
+          .filter((item) => matchesStrategy(item.templateId, latest.rewardTypes))
+          .filter((item) => item.durationMinutes > 0 && item.durationMinutes <= 1320)
+          .filter((item) => item.suggestedSquadId && (!item.expiresAt || new Date(item.expiresAt).getTime() > Date.now()))
           .filter(
             (item) =>
               item.suggestedHeroIds.length > 0 &&
@@ -330,95 +299,40 @@ export class AutoExpeditions {
           break
         }
 
-        const usedSquads = new Set(
-          board.slots
-            .filter((item) => item.state !== 'available')
-            .map((item) => item.squadId)
-            .filter((squadId): squadId is string => Boolean(squadId))
-            .map((squadId) => squadId.toLowerCase())
-        )
-        const availableSquads = expeditionSquads.filter(
-          (squad) =>
-            squad.vehicle === slot.vehicle &&
-            !usedSquads.has(squad.id.toLowerCase())
-        )
-        let sent = false
-        let lastError: unknown
-
-        for (const squad of availableSquads) {
-          const maximumHeroes = Math.min(
-            squad.capacity,
-            slot.suggestedHeroIds.length
-          )
-
-          for (let heroCount = maximumHeroes; heroCount >= 1; heroCount -= 1) {
-            const itemIds = slot.suggestedHeroIds.slice(0, heroCount)
-            try {
-              const response = await setStartExpedition({
-                accessToken,
-                accountId,
-                expeditionId: slot.itemId,
-                squadId: squad.id,
-                itemIds,
-                slotIndices: itemIds.map((_, index) => index),
-              })
-              if ((response.data.profileChanges?.length ?? 0) === 0) {
-                throw new Error('Epic returned no profile change for StartExpedition')
-              }
-              const confirmation = await Expeditions.getExpeditions(account)
-              if (
-                !confirmation.slots.some(
-                  (item) => item.itemId === slot.itemId && item.state === 'in-flight'
-                )
-              ) {
-                throw new Error('Epic did not confirm the expedition as running')
-              }
-              sent = true
-              break
-            } catch (error) {
-              lastError = error
-              const typed = error as {
-                response?: { data?: unknown }
-                message?: string
-              }
-              RuntimeLog.info(
-                'auto-expeditions:dispatch-rejected',
-                `${accountId}: ${slot.name}, squad=${squad.id}, heroes=${heroCount}, error=${JSON.stringify(typed.response?.data ?? typed.message)}`
-              )
-            }
-          }
-
-          if (sent) break
-        }
-
-        if (!sent) {
-          appendHistory(config, {
-            action: 'start-error',
-            expedition: slot.templateId,
-            timestamp: new Date().toISOString(),
+        try {
+          const response = await setStartExpedition({
+            accessToken, accountId, expeditionId: slot.itemId,
+            squadId: slot.suggestedSquadId!, itemIds: slot.suggestedHeroIds,
+            slotIndices: slot.suggestedHeroIds.map((_, index) => index),
           })
-          throw lastError ?? new Error('No expedition squad is available')
+          if (!response.data.profileChanges?.length) throw new Error('Epic returned no start confirmation')
+          board = await Expeditions.getExpeditions(account)
+          if (!board.slots.some((item) => item.itemId === slot.itemId && item.state === 'in-flight')) throw new Error('Expedition start could not be verified')
+        } catch (error) {
+          appendHistory(config, { action: 'start-error', expedition: slot.templateId, expeditionId: slot.itemId, timestamp: new Date().toISOString(), error: error instanceof Error ? error.message : 'Start failed' })
+          throw error
         }
         result.sent += 1
         sentRewards.push(slot.name)
         appendHistory(config, {
-          action: 'started', expedition: slot.templateId,
+          action: 'started', expedition: slot.templateId, expeditionId: slot.itemId,
           timestamp: new Date().toISOString(),
         })
+        await AutoExpeditions.save(accountId, { history: config.history })
         RuntimeLog.info(
           'auto-expeditions:sent',
           `${accountId}: ${slot.name} (${slot.templateId})`
         )
       }
 
-      data[accountId] = {
-        ...config,
+      const runtime: Partial<AutoExpeditionConfig> = {
+        history: config.history,
         lastActivity: new Date().toISOString(),
         lastCollected: result.collected,
         lastSent: result.sent,
         lastCollectedRewards: collectedRewards,
         lastSentRewards: sentRewards,
-        lastError: undefined,
+        lastError: result.errors.join('; ') || undefined,
         nextRunAt: (() => {
           const earliest = board.slots
             .filter((slot) => slot.state === 'in-flight' && slot.endTime)
@@ -431,7 +345,7 @@ export class AutoExpeditions {
           ).toISOString()
         })(),
       }
-      await DataDirectory.updateAutoExpeditionsFile(data)
+      await AutoExpeditions.save(accountId, runtime)
       if (
         config.notificationsEnabled !== false &&
         (result.collected > 0 || result.sent > 0)
@@ -441,18 +355,18 @@ export class AutoExpeditions {
           body: `Collected ${result.collected}; started ${result.sent}.`,
         })
       }
-      result.success = true
+      result.success = result.errors.length === 0
     } catch (error) {
       const typed = error as { message?: string; response?: { data?: { errorMessage?: string } } }
       result.errors.push(
         typed.response?.data?.errorMessage ?? typed.message ?? 'Auto-expedition cycle failed'
       )
-      data[accountId] = {
-        ...config,
+      const runtime: Partial<AutoExpeditionConfig> = {
+        history: config.history,
         lastError: result.errors[0],
         nextRunAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       }
-      await DataDirectory.updateAutoExpeditionsFile(data)
+      await AutoExpeditions.save(accountId, runtime)
       RuntimeLog.error('caught:auto-expeditions:run', error)
     } finally {
       AutoExpeditions.runningAccounts.delete(accountId)

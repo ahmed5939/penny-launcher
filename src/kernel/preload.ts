@@ -1,3 +1,5 @@
+import * as worldInventoryActions from './preload-actions/world-inventory'
+import * as automationRewardsActions from './preload-actions/automation-rewards'
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
@@ -12,6 +14,7 @@ import * as accountsActions from './preload-actions/accounts'
 import * as alertsActions from './preload-actions/alerts'
 import * as authenticationActions from './preload-actions/authentication'
 import * as autoLlamasActions from './preload-actions/auto-llamas'
+import * as autoDailyRerollActions from './preload-actions/auto-daily-reroll'
 import * as autoPinUrnsActions from './preload-actions/auto-pin-urns'
 import * as automationsActions from './preload-actions/automation'
 import * as customizableMenuActions from './preload-actions/customizable-menu'
@@ -25,6 +28,9 @@ import * as generalActions from './preload-actions/general'
 import * as giftsInformationActions from './preload-actions/gifts-information'
 import * as shellActions from './preload-actions/shell'
 import * as inventoryActions from './preload-actions/inventory'
+import * as collectionBookActions from './preload-actions/collection-book'
+import * as rareItemFinderActions from './preload-actions/rare-item-finder'
+import * as venturesActions from './preload-actions/ventures'
 import * as itemActionsActions from './preload-actions/item-actions'
 import * as itemDatabaseActions from './preload-actions/item-database'
 import * as launcherActions from './preload-actions/launcher'
@@ -78,6 +84,8 @@ export const availableElectronAPIs = {
   ...alertsActions,
   ...authenticationActions,
   ...autoLlamasActions,
+  ...automationRewardsActions,
+  ...autoDailyRerollActions,
   ...automationsActions,
   ...customizableMenuActions,
   ...autoPinUrnsActions,
@@ -91,6 +99,10 @@ export const availableElectronAPIs = {
   ...giftsInformationActions,
   ...shellActions,
   ...inventoryActions,
+  ...worldInventoryActions,
+  ...collectionBookActions,
+  ...rareItemFinderActions,
+  ...venturesActions,
   ...itemActionsActions,
   ...itemDatabaseActions,
   ...launcherActions,

@@ -248,6 +248,14 @@ function STWOperationsSection() {
           />
         </div>
         <div className="item">
+          <Label className="title" htmlFor="auto-daily-reroll">
+            {t('stw-operations.options.auto-daily-reroll')}
+          </Label>
+          <Switch id="auto-daily-reroll"
+            checked={getMenuOptionVisibility('autoDailyReroll')}
+            onCheckedChange={updateMenuOption('autoDailyReroll')} />
+        </div>
+        <div className="item">
           <Label
             className="title"
             htmlFor="outpost"

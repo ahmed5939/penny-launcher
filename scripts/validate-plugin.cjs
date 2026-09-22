@@ -10,7 +10,7 @@ async function main() {
   if (!directory) throw new Error('Usage: npm run plugin:validate -- path/to/plugin')
   const pkg = await inspectPlugin(directory)
   if (pkg.manifest.runtime !== 'sandbox') throw new Error('Set runtime to sandbox and migrate Node/Electron APIs.')
-  if (pkg.manifest.apiVersion !== 4) throw new Error('Declare apiVersion: 4 for the sandbox SDK.')
+  if (![4, 5].includes(pkg.manifest.apiVersion)) throw new Error('Declare apiVersion: 4 or 5 for the sandbox SDK.')
   new Script(pkg.source, { filename: pkg.manifest.entry ?? 'main.js' })
   console.log(`Valid package: ${pkg.manifest.id} ${pkg.manifest.version ?? ''}\nSHA-256: ${pkg.digest}\nPermissions: ${(pkg.manifest.permissions ?? []).join(', ') || 'none'}`)
   if (!pkg.manifest.repository) console.log('Before publishing: add a public HTTPS repository URL.')

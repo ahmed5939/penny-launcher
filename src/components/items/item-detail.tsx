@@ -17,6 +17,7 @@ import {
 import { useState } from 'react'
 
 import { Button } from '../ui/button'
+import { evolutionOptions } from './evolution-options'
 
 import { ItemIcon, resolveItemArt } from './item-icon'
 import {
@@ -514,25 +515,26 @@ function UpgradeActions({
           </Button>
         )}
 
-        {canEvolve && (
+        {canEvolve && evolutionOptions(record, tier).map((option) => (
           <Button
+            key={option.conversionIndex}
             disabled={isBusy}
             onClick={() =>
-              act('evolve', {
+              act(`evolve-${option.conversionIndex}`, {
                 kind: 'evolve',
                 itemId: subject.itemId as string,
                 desiredLevel: subject.level ?? 1,
                 desiredTier: romanTiers[tier] ?? 'no_tier',
-                conversionIndex: 0,
+                conversionIndex: option.conversionIndex,
               })
             }
             size="sm"
-            variant={confirming === 'evolve' ? 'destructive' : 'secondary'}
+            variant={confirming === `evolve-${option.conversionIndex}` ? 'destructive' : 'secondary'}
           >
             <Star className="size-3.5" />
-            {label('evolve', `Evolve to tier ${tier + 1}`)}
+            {label(`evolve-${option.conversionIndex}`, option.label)}
           </Button>
-        )}
+        ))}
 
         {canUpgradeRarity && (
           <Button

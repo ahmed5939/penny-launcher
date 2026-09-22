@@ -101,7 +101,7 @@ describe('area shell rendering', () => {
     expect(markup).not.toContain('href="/stw-operations/loadouts"')
   })
   it('does not show an empty Automate area when only STW tools remain visible', () => {
-    state.hidden = ['taxiService', 'party', 'autoLlamas', 'autoPinUrns']
+    state.hidden = ['taxiService', 'party', 'autoLlamas', 'autoPinUrns', 'autoDailyReroll', 'expeditions']
     expect(render()).not.toContain('aria-label="sidebar:groups.automate"')
   })
 })

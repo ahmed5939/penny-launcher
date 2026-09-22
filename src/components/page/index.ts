@@ -6,6 +6,7 @@
  * one thing fixes it everywhere.
  */
 export { AccountToolbar } from './account-toolbar'
+export { AnimatedNumber } from './animated-number'
 export { ActionTile } from './action-tile'
 export { Callout, type CalloutTone } from './callout'
 export { Chip, type ChipTone } from './chip'

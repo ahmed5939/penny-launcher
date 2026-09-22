@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "exceptions": [
+    {
+      "id": "vindertech-five-headshots",
+      "perkId": "alteration:aid_g_ranged_headshotstreak_dmgbonus_v2",
+      "slot": 5,
+      "itemTemplateIds": [
+        "weapon:wid_assault_auto_vt_sr_crystal_t04",
+        "weapon:wid_assault_auto_vt_sr_crystal_t05",
+        "weapon:wid_assault_auto_vt_sr_ore_t01",
+        "weapon:wid_assault_auto_vt_sr_ore_t02",
+        "weapon:wid_assault_auto_vt_sr_ore_t03",
+        "weapon:wid_assault_auto_vt_sr_ore_t04",
+        "weapon:wid_assault_auto_vt_sr_ore_t05",
+        "weapon:wid_assault_auto_vt_vr_crystal_t04",
+        "weapon:wid_assault_auto_vt_vr_crystal_t05",
+        "weapon:wid_assault_auto_vt_vr_ore_t01",
+        "weapon:wid_assault_auto_vt_vr_ore_t02",
+        "weapon:wid_assault_auto_vt_vr_ore_t03",
+        "weapon:wid_assault_auto_vt_vr_ore_t04",
+        "weapon:wid_assault_auto_vt_vr_ore_t05",
+        "weapon:wid_pistol_autoheavy_vt_sr_crystal_t04",
+        "weapon:wid_pistol_autoheavy_vt_sr_crystal_t05",
+        "weapon:wid_pistol_autoheavy_vt_sr_ore_t01",
+        "weapon:wid_pistol_autoheavy_vt_sr_ore_t02",
+        "weapon:wid_pistol_autoheavy_vt_sr_ore_t03",
+        "weapon:wid_pistol_autoheavy_vt_sr_ore_t04",
+        "weapon:wid_pistol_autoheavy_vt_sr_ore_t05",
+        "weapon:wid_pistol_autoheavy_vt_vr_crystal_t04",
+        "weapon:wid_pistol_autoheavy_vt_vr_crystal_t05",
+        "weapon:wid_pistol_autoheavy_vt_vr_ore_t01",
+        "weapon:wid_pistol_autoheavy_vt_vr_ore_t02",
+        "weapon:wid_pistol_autoheavy_vt_vr_ore_t03",
+        "weapon:wid_pistol_autoheavy_vt_vr_ore_t04",
+        "weapon:wid_pistol_autoheavy_vt_vr_ore_t05",
+        "weapon:wid_pistol_handcannon_semi_vt_sr_crystal_t04",
+        "weapon:wid_pistol_handcannon_semi_vt_sr_crystal_t05",
+        "weapon:wid_pistol_handcannon_semi_vt_sr_ore_t01",
+        "weapon:wid_pistol_handcannon_semi_vt_sr_ore_t02",
+        "weapon:wid_pistol_handcannon_semi_vt_sr_ore_t03",
+        "weapon:wid_pistol_handcannon_semi_vt_sr_ore_t04",
+        "weapon:wid_pistol_handcannon_semi_vt_sr_ore_t05",
+        "weapon:wid_pistol_handcannon_semi_vt_vr_crystal_t04",
+        "weapon:wid_pistol_handcannon_semi_vt_vr_crystal_t05",
+        "weapon:wid_pistol_handcannon_semi_vt_vr_ore_t01",
+        "weapon:wid_pistol_handcannon_semi_vt_vr_ore_t02",
+        "weapon:wid_pistol_handcannon_semi_vt_vr_ore_t03",
+        "weapon:wid_pistol_handcannon_semi_vt_vr_ore_t04",
+        "weapon:wid_pistol_handcannon_semi_vt_vr_ore_t05",
+        "weapon:wid_pistol_handcannon_vt_sr_crystal_t04",
+        "weapon:wid_pistol_handcannon_vt_sr_crystal_t05",
+        "weapon:wid_pistol_handcannon_vt_sr_ore_t01",
+        "weapon:wid_pistol_handcannon_vt_sr_ore_t02",
+        "weapon:wid_pistol_handcannon_vt_sr_ore_t03",
+        "weapon:wid_pistol_handcannon_vt_sr_ore_t04",
+        "weapon:wid_pistol_handcannon_vt_sr_ore_t05",
+        "weapon:wid_shotgun_standard_vt_sr_crystal_t04",
+        "weapon:wid_shotgun_standard_vt_sr_crystal_t05",
+        "weapon:wid_shotgun_standard_vt_sr_ore_t01",
+        "weapon:wid_shotgun_standard_vt_sr_ore_t02",
+        "weapon:wid_shotgun_standard_vt_sr_ore_t03",
+        "weapon:wid_shotgun_standard_vt_sr_ore_t04",
+        "weapon:wid_shotgun_standard_vt_sr_ore_t05",
+        "weapon:wid_shotgun_standard_vt_vr_crystal_t04",
+        "weapon:wid_shotgun_standard_vt_vr_crystal_t05",
+        "weapon:wid_shotgun_standard_vt_vr_ore_t01",
+        "weapon:wid_shotgun_standard_vt_vr_ore_t02",
+        "weapon:wid_shotgun_standard_vt_vr_ore_t03",
+        "weapon:wid_shotgun_standard_vt_vr_ore_t04",
+        "weapon:wid_shotgun_standard_vt_vr_ore_t05",
+        "weapon:wid_sniper_standard_scope_vt_sr_crystal_t04",
+        "weapon:wid_sniper_standard_scope_vt_sr_crystal_t05",
+        "weapon:wid_sniper_standard_scope_vt_sr_ore_t01",
+        "weapon:wid_sniper_standard_scope_vt_sr_ore_t02",
+        "weapon:wid_sniper_standard_scope_vt_sr_ore_t03",
+        "weapon:wid_sniper_standard_scope_vt_sr_ore_t04",
+        "weapon:wid_sniper_standard_scope_vt_sr_ore_t05",
+        "weapon:wid_sniper_standard_scope_vt_vr_crystal_t04",
+        "weapon:wid_sniper_standard_scope_vt_vr_crystal_t05",
+        "weapon:wid_sniper_standard_scope_vt_vr_ore_t01",
+        "weapon:wid_sniper_standard_scope_vt_vr_ore_t02",
+        "weapon:wid_sniper_standard_scope_vt_vr_ore_t03",
+        "weapon:wid_sniper_standard_scope_vt_vr_ore_t04",
+        "weapon:wid_sniper_standard_scope_vt_vr_ore_t05"
+      ],
+      "description": "Historical perk - no longer selectable under the current rules.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-16",
+        "note": "User confirmed this was a legitimate past sixth-slot perk on Vindertech weapons. Scoped to the original VT ranged families; excludes melee, traps and the Seeker bow."
+      }
+    },
+    {
+      "id": "plasmatic-historical-reload-t01",
+      "perkId": "alteration:aid_att_reloadspeed_ranged_t01",
+      "slot": null,
+      "itemTemplateIds": [
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t01",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t02",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t03",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t04",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t05"
+      ],
+      "description": "Historical Reload Speed perk; original slot positions unverified.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-16",
+        "note": "User confirmed Reload Speed was a legitimate past Plasmatic Discharger perk. Original slot positions have not yet been confirmed. This records historical review, not a valid-roll whitelist."
+      }
+    },
+    {
+      "id": "plasmatic-historical-reload-t02",
+      "perkId": "alteration:aid_att_reloadspeed_ranged_t02",
+      "slot": null,
+      "itemTemplateIds": [
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t01",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t02",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t03",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t04",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t05"
+      ],
+      "description": "Historical Reload Speed perk; original slot positions unverified.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-16",
+        "note": "User confirmed Reload Speed was a legitimate past Plasmatic Discharger perk. Original slot positions have not yet been confirmed. This records historical review, not a valid-roll whitelist."
+      }
+    },
+    {
+      "id": "plasmatic-historical-reload-t03",
+      "perkId": "alteration:aid_att_reloadspeed_ranged_t03",
+      "slot": null,
+      "itemTemplateIds": [
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t01",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t02",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t03",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t04",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t05"
+      ],
+      "description": "Historical Reload Speed perk; original slot positions unverified.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-16",
+        "note": "User confirmed Reload Speed was a legitimate past Plasmatic Discharger perk. Original slot positions have not yet been confirmed. This records historical review, not a valid-roll whitelist."
+      }
+    },
+    {
+      "id": "plasmatic-historical-reload-t04",
+      "perkId": "alteration:aid_att_reloadspeed_ranged_t04",
+      "slot": null,
+      "itemTemplateIds": [
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t01",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t02",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t03",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t04",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t05"
+      ],
+      "description": "Historical Reload Speed perk; original slot positions unverified.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-16",
+        "note": "User confirmed Reload Speed was a legitimate past Plasmatic Discharger perk. Original slot positions have not yet been confirmed. This records historical review, not a valid-roll whitelist."
+      }
+    },
+    {
+      "id": "plasmatic-historical-reload-t05",
+      "perkId": "alteration:aid_att_reloadspeed_ranged_t05",
+      "slot": null,
+      "itemTemplateIds": [
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t01",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t02",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t03",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t04",
+        "weapon:wid_explosive_invasion_plasmacannon_sr_ore_t05"
+      ],
+      "description": "Historical Reload Speed perk; original slot positions unverified.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-16",
+        "note": "User confirmed Reload Speed was a legitimate past Plasmatic Discharger perk. Original slot positions have not yet been confirmed. This records historical review, not a valid-roll whitelist."
+      }
+    },
+    {
+      "id": "shooting-star-magazine-slot-four",
+      "perkId": "alteration:aid_att_magazinesize_t03",
+      "slot": 3,
+      "itemTemplateIds": [
+        "weapon:wid_assault_smg_invasion_raygun_sr_crystal_t04",
+        "weapon:wid_assault_smg_invasion_raygun_sr_crystal_t05",
+        "weapon:wid_assault_smg_invasion_raygun_sr_ore_t01",
+        "weapon:wid_assault_smg_invasion_raygun_sr_ore_t02",
+        "weapon:wid_assault_smg_invasion_raygun_sr_ore_t03",
+        "weapon:wid_assault_smg_invasion_raygun_sr_ore_t04",
+        "weapon:wid_assault_smg_invasion_raygun_sr_ore_t05",
+        "weapon:wid_assault_smg_invasion_raygun_vr_crystal_t04",
+        "weapon:wid_assault_smg_invasion_raygun_vr_crystal_t05",
+        "weapon:wid_assault_smg_invasion_raygun_vr_ore_t01",
+        "weapon:wid_assault_smg_invasion_raygun_vr_ore_t02",
+        "weapon:wid_assault_smg_invasion_raygun_vr_ore_t03",
+        "weapon:wid_assault_smg_invasion_raygun_vr_ore_t04",
+        "weapon:wid_assault_smg_invasion_raygun_vr_ore_t05"
+      ],
+      "description": "Historical +50% Magazine Size in slot 4; no longer selectable.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-16",
+        "note": "User confirmed Shooting Star +50% Magazine Size as a legitimate old perk and supplied a screenshot identifying slot 4. Scope is this exact perk strength and slot; other strengths are not inferred."
+      }
+    },
+    {
+      "id": "third-rail-magazine-slot-three-observed",
+      "perkId": "alteration:aid_att_magazinesize_t02",
+      "slot": 2,
+      "itemTemplateIds": [
+        "weapon:wid_sniper_invasion_railgun_vr_crystal_t05"
+      ],
+      "description": "Historical +38% Magazine Size in slot 3 on the observed Epic Third Rail variant.",
+      "evidence": {
+        "type": "user-confirmed",
+        "date": "2026-09-17",
+        "note": "User identified their Epic PL122 Collection Book Third Rail as historical. Read-only profile capture established exact variant, perk strength and slot. No other strengths, slots or variants inferred."
+      }
+    }
+  ]
+}

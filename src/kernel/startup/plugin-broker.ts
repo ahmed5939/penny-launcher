@@ -42,6 +42,10 @@ const permissionForMethod: Record<string, PluginPermission> = {
   'storage.get': 'storage', 'storage.set': 'storage', 'storage.delete': 'storage', 'storage.all': 'storage',
   navigate: 'navigation', external: 'external-links', notify: 'notifications',
   'ui.register': 'ui', 'ui.settings': 'ui',
+  'inventory.read': 'inventory:read', 'inventory.recycle': 'inventory:recycle',
+  'epicLauncher.close': 'epic-launcher:close',
+  'mcp.queryProfile': 'fortnite:profiles', 'mcp.write': 'fortnite:commands', 'eos.locker': 'eos:locker:read',
+  'desktop.system': 'system:read', 'desktop.displays': 'displays:read', 'desktop.power': 'power:read',
 }
 export function requirePluginPermission(manifest: PluginManifest, method: string) {
   const required = permissionForMethod[method]
@@ -100,6 +104,35 @@ export async function dispatchPlugin(plugin: PluginRuntimeRecord, method: string
       const result = await Quests.getQuests(account)
       if (!plugin.host || !inScope()) throw new Error('Plugin stopped or account scope changed.')
       return result
+    }
+    case 'mcp.operations':
+    case 'mcp.queryProfile':
+    case 'mcp.request':
+    case 'eos.locker': {
+      const host = plugin.host
+      const revision = PluginBridge.getAccountScopeRevision()
+      const { dispatchFortnite } = await import('./plugin-fortnite')
+      if (!host || plugin.host !== host) throw new Error('Plugin stopped or restarted.')
+      if (revision !== PluginBridge.getAccountScopeRevision()) throw new Error('Account scope changed.')
+      return dispatchFortnite(plugin, method, args)
+    }
+    case 'desktop.system':
+    case 'desktop.displays':
+    case 'desktop.power': {
+      const host = plugin.host
+      const { dispatchDesktopOperation } = await import('./plugin-desktop')
+      if (!host || plugin.host !== host) throw new Error('Plugin stopped or restarted.')
+      return dispatchDesktopOperation(plugin, method, args)
+    }
+    case 'inventory.read':
+    case 'inventory.recycle':
+    case 'epicLauncher.close': {
+      const host = plugin.host
+      const revision = PluginBridge.getAccountScopeRevision()
+      const { dispatchPluginOperation } = await import('./plugin-operations')
+      if (!host || plugin.host !== host) throw new Error('Plugin stopped or restarted.')
+      if (method.startsWith('inventory.') && revision !== PluginBridge.getAccountScopeRevision()) throw new Error('Account scope changed.')
+      return dispatchPluginOperation(plugin, method, args)
     }
     case 'settings.get': {
       const settings = await SettingsManager.getData()
