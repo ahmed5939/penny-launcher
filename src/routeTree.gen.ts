@@ -16,13 +16,15 @@ import { Route as PluginsRouteImport } from './routes/plugins/route'
 import { Route as AccountRouteImport } from './routes/account/route'
 import { Route as IndexImport } from './routes/index'
 import { Route as StwOperationsXpboostsRouteImport } from './routes/stw-operations/xpboosts/route'
-import { Route as StwOperationsUrnsRouteImport } from './routes/stw-operations/urns/route'
 import { Route as StwOperationsVenturesRouteImport } from './routes/stw-operations/ventures/route'
+import { Route as StwOperationsUrnsRouteImport } from './routes/stw-operations/urns/route'
 import { Route as StwOperationsTimelineRouteImport } from './routes/stw-operations/timeline/route'
 import { Route as StwOperationsTaxiServiceRouteImport } from './routes/stw-operations/taxi-service/route'
+import { Route as StwOperationsSurvivorsRouteImport } from './routes/stw-operations/survivors/route'
 import { Route as StwOperationsStorageRouteImport } from './routes/stw-operations/storage/route'
 import { Route as StwOperationsSquadsRouteImport } from './routes/stw-operations/squads/route'
 import { Route as StwOperationsShopRouteImport } from './routes/stw-operations/shop/route'
+import { Route as StwOperationsSchematicsRouteImport } from './routes/stw-operations/schematics/route'
 import { Route as StwOperationsRecycledRewardsRouteImport } from './routes/stw-operations/recycled-rewards/route'
 import { Route as StwOperationsRareItemFinderRouteImport } from './routes/stw-operations/rare-item-finder/route'
 import { Route as StwOperationsQuestsRouteImport } from './routes/stw-operations/quests/route'
@@ -32,6 +34,7 @@ import { Route as StwOperationsMissionsRouteImport } from './routes/stw-operatio
 import { Route as StwOperationsLoadoutsRouteImport } from './routes/stw-operations/loadouts/route'
 import { Route as StwOperationsLeaderboardsRouteImport } from './routes/stw-operations/leaderboards/route'
 import { Route as StwOperationsInventoryRouteImport } from './routes/stw-operations/inventory/route'
+import { Route as StwOperationsHeroesRouteImport } from './routes/stw-operations/heroes/route'
 import { Route as StwOperationsExpeditionsRouteImport } from './routes/stw-operations/expeditions/route'
 import { Route as StwOperationsDefendersRouteImport } from './routes/stw-operations/defenders/route'
 import { Route as StwOperationsCompendiumRouteImport } from './routes/stw-operations/compendium/route'
@@ -54,6 +57,7 @@ import { Route as AccountManagementSpritesRouteImport } from './routes/account-m
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
 import { Route as AccountManagementLockerRouteImport } from './routes/account-management/locker/route'
+import { Route as AccountManagementHistoryRouteImport } from './routes/account-management/history/route'
 import { Route as AccountManagementGiftsInformationRouteImport } from './routes/account-management/gifts-information/route'
 import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
 import { Route as AccountManagementEulaRouteImport } from './routes/account-management/eula/route'
@@ -114,6 +118,12 @@ const StwOperationsTaxiServiceRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const StwOperationsSurvivorsRouteRoute =
+  StwOperationsSurvivorsRouteImport.update({
+    path: '/stw-operations/survivors',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const StwOperationsStorageRouteRoute = StwOperationsStorageRouteImport.update({
   path: '/stw-operations/storage',
   getParentRoute: () => rootRoute,
@@ -128,6 +138,12 @@ const StwOperationsShopRouteRoute = StwOperationsShopRouteImport.update({
   path: '/stw-operations/shop',
   getParentRoute: () => rootRoute,
 } as any)
+
+const StwOperationsSchematicsRouteRoute =
+  StwOperationsSchematicsRouteImport.update({
+    path: '/stw-operations/schematics',
+    getParentRoute: () => rootRoute,
+  } as any)
 
 const StwOperationsRecycledRewardsRouteRoute =
   StwOperationsRecycledRewardsRouteImport.update({
@@ -181,6 +197,11 @@ const StwOperationsInventoryRouteRoute =
     path: '/stw-operations/inventory',
     getParentRoute: () => rootRoute,
   } as any)
+
+const StwOperationsHeroesRouteRoute = StwOperationsHeroesRouteImport.update({
+  path: '/stw-operations/heroes',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const StwOperationsExpeditionsRouteRoute =
   StwOperationsExpeditionsRouteImport.update({
@@ -312,6 +333,12 @@ const AccountManagementLockerRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AccountManagementHistoryRouteRoute =
+  AccountManagementHistoryRouteImport.update({
+    path: '/account-management/history',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountManagementGiftsInformationRouteRoute =
   AccountManagementGiftsInformationRouteImport.update({
     path: '/account-management/gifts-information',
@@ -376,6 +403,10 @@ declare module '@tanstack/react-router' {
     }
     '/account-management/gifts-information': {
       preLoaderRoute: typeof AccountManagementGiftsInformationRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/account-management/history': {
+      preLoaderRoute: typeof AccountManagementHistoryRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/locker': {
@@ -466,6 +497,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsExpeditionsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/heroes': {
+      preLoaderRoute: typeof StwOperationsHeroesRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/inventory': {
       preLoaderRoute: typeof StwOperationsInventoryRouteImport
       parentRoute: typeof rootRoute
@@ -502,6 +537,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsRecycledRewardsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/schematics': {
+      preLoaderRoute: typeof StwOperationsSchematicsRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/shop': {
       preLoaderRoute: typeof StwOperationsShopRouteImport
       parentRoute: typeof rootRoute
@@ -514,6 +553,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsStorageRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/survivors': {
+      preLoaderRoute: typeof StwOperationsSurvivorsRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/taxi-service': {
       preLoaderRoute: typeof StwOperationsTaxiServiceRouteImport
       parentRoute: typeof rootRoute
@@ -522,12 +565,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsTimelineRouteImport
       parentRoute: typeof rootRoute
     }
-    '/stw-operations/ventures': {
-      preLoaderRoute: typeof StwOperationsVenturesRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/stw-operations/urns': {
       preLoaderRoute: typeof StwOperationsUrnsRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/stw-operations/ventures': {
+      preLoaderRoute: typeof StwOperationsVenturesRouteImport
       parentRoute: typeof rootRoute
     }
     '/stw-operations/xpboosts': {
@@ -552,6 +595,7 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementEulaRouteRoute,
   AccountManagementFriendsRouteRoute,
   AccountManagementGiftsInformationRouteRoute,
+  AccountManagementHistoryRouteRoute,
   AccountManagementLockerRouteRoute,
   AccountManagementProfileRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
@@ -573,6 +617,7 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsCompendiumRouteRoute,
   StwOperationsDefendersRouteRoute,
   StwOperationsExpeditionsRouteRoute,
+  StwOperationsHeroesRouteRoute,
   StwOperationsInventoryRouteRoute,
   StwOperationsLeaderboardsRouteRoute,
   StwOperationsLoadoutsRouteRoute,
@@ -582,9 +627,11 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsQuestsRouteRoute,
   StwOperationsRareItemFinderRouteRoute,
   StwOperationsRecycledRewardsRouteRoute,
+  StwOperationsSchematicsRouteRoute,
   StwOperationsShopRouteRoute,
   StwOperationsSquadsRouteRoute,
   StwOperationsStorageRouteRoute,
+  StwOperationsSurvivorsRouteRoute,
   StwOperationsTaxiServiceRouteRoute,
   StwOperationsTimelineRouteRoute,
   StwOperationsUrnsRouteRoute,

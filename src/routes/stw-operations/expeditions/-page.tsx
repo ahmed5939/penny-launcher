@@ -1,4 +1,5 @@
 import { ExpeditionHistory } from '../../../features/expeditions/history'
+import { RecycleCeilingPicker } from '../../../features/automation-rewards/view'
 import { rewardTypes } from '../../../features/expeditions/model'
 import type {
   AutoExpeditionConfig,
@@ -19,14 +20,6 @@ import { Button } from '../../../components/ui/button'
 import { PageHeader, Panel } from '../../../components/page'
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
-
-const recycleOptions: Array<NonNullable<AutoExpeditionConfig['recycleBelow']>> = [
-  'off',
-  'Common',
-  'Uncommon',
-  'Rare',
-  'Epic',
-]
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
@@ -154,19 +147,8 @@ function AutoExpeditionSettings() {
                 <p className="text-xs text-muted-foreground">Survivors includes lead survivors and people runs. Materials includes supplies, crafting materials, wood, stone, and metal. Select every category for all expedition types.</p>
                 <Button size="sm" variant="outline" onClick={() => update(account.value, { rewardTypes: [...rewardTypes] })}>Select all expedition types</Button>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    Recycle new rewards at or below:
-                  </span>
-                  {recycleOptions.map((rarity) => (
-                    <Button
-                      key={rarity}
-                      size="sm"
-                      variant={(config.recycleBelow ?? 'off') === rarity ? 'default' : 'outline'}
-                      onClick={() => update(account.value, { recycleBelow: rarity })}
-                    >
-                      {rarity === 'off' ? 'Off' : rarity}
-                    </Button>
-                  ))}
+                  <span className="text-xs text-muted-foreground">Recycle new rewards</span>
+                  <RecycleCeilingPicker onChange={(recycleBelow) => update(account.value, { recycleBelow })} value={config.recycleBelow ?? 'off'} />
                 </div>
                 {config.nextRunAt ? (
                   <p className="text-xs text-muted-foreground">

@@ -4,7 +4,8 @@ import type { CustomizableMenuSettings } from '../types/settings'
 import {
   Activity,
   BookOpen,
-  Boxes,
+  Backpack,
+  Hammer,
   CalendarRange,
   Car,
   Cog,
@@ -15,7 +16,7 @@ import {
   Ghost,
   Gift,
   Globe,
-  HeartPulse,
+  History,
   LayoutDashboard,
   Monitor,
   Pin,
@@ -24,6 +25,7 @@ import {
   Radar,
   ScrollText,
   Shield,
+  ShieldHalf,
   Shirt,
   Store,
   Swords,
@@ -32,6 +34,7 @@ import {
   Trophy,
   UserPlus,
   Users,
+  UsersRound,
   Zap,
 } from 'lucide-react'
 
@@ -153,14 +156,7 @@ export const navSections: Array<NavSection> = [
       {
         can: 'autoDailyReroll',
         icon: CalendarRange,
-        label: 'sidebar:stw-operations.options.auto-update-quests',
-        needsAccount: true,
-        to: '/stw-operations/auto-update-quests',
-      },
-      {
-        can: 'autoDailyReroll',
-        icon: CalendarRange,
-        label: 'sidebar:stw-operations.options.auto-daily-reroll',
+        label: 'sidebar:stw-operations.options.daily-quests',
         needsAccount: true,
         to: '/stw-operations/auto-daily-reroll',
       },
@@ -185,38 +181,44 @@ export const navSections: Array<NavSection> = [
         label: 'sidebar:missions',
         to: '/stw-operations/missions',
       },
+      // Four pages rather than one vault with tabs. They share the
+      // `inventory` menu toggle so existing menu preferences still apply.
       {
         can: 'inventory',
-        icon: Boxes,
-        label: 'sidebar:stw-operations.options.inventory',
-        to: '/stw-operations/inventory',
+        icon: Hammer,
+        label: 'sidebar:stw-operations.options.schematics',
+        to: '/stw-operations/schematics',
+      },
+      {
+        can: 'inventory',
+        icon: Swords,
+        label: 'sidebar:stw-operations.options.heroes',
+        to: '/stw-operations/heroes',
+      },
+      {
+        can: 'inventory',
+        icon: ShieldHalf,
+        label: 'sidebar:stw-operations.options.defenders',
+        to: '/stw-operations/defenders',
+      },
+      {
+        can: 'inventory',
+        icon: UsersRound,
+        label: 'sidebar:stw-operations.options.survivors',
+        to: '/stw-operations/survivors',
       },
       {
         beta: true,
-        icon: Boxes,
-        label: 'sidebar:stw-operations.options.backpack',
+        icon: Backpack,
+        label: 'sidebar:stw-operations.options.backpack-storage',
         needsAccount: true,
         to: '/stw-operations/backpack',
-      },
-      {
-        beta: true,
-        icon: Boxes,
-        label: 'sidebar:stw-operations.options.storage',
-        needsAccount: true,
-        to: '/stw-operations/storage',
       },
       {
         can: 'loadouts',
         icon: Users,
         label: 'sidebar:stw-operations.options.loadouts',
         to: '/stw-operations/loadouts',
-      },
-      {
-        icon: Shield,
-        label: 'sidebar:stw-operations.options.defenders',
-        beta: true,
-        needsAccount: true,
-        to: '/stw-operations/defenders',
       },
       {
         beta: true,
@@ -329,10 +331,11 @@ export const navSections: Array<NavSection> = [
         to: '/account-management/sprites',
       },
       {
+        // Keeps the old Profile page's menu toggle.
         can: 'profile',
-        icon: HeartPulse,
-        label: 'sidebar:account-management.options.profile',
-        to: '/account-management/profile',
+        icon: History,
+        label: 'sidebar:account-management.options.history',
+        to: '/account-management/history',
       },
       {
         can: 'vbucksInformation',

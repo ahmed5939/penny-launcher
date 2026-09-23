@@ -12,6 +12,8 @@ export type StatusTone = 'idle' | 'active' | 'warning' | 'danger'
  * summary strip most of these tools were missing.
  */
 export function StatTile({
+  accent,
+  children,
   className,
   hint,
   icon: Icon,
@@ -19,6 +21,15 @@ export function StatTile({
   tone = 'default',
   value,
 }: {
+  /**
+   * A colour that belongs to the thing being counted — a rarity, a F.O.R.T.
+   * stat. Draws the left edge, top rule and wash the item cards use. Leave
+   * it off for plain counts; a row where every tile is coloured has no
+   * emphasis left.
+   */
+  accent?: string
+  /** Extra content under the figure: a progress bar, a breakdown. */
+  children?: ReactNode
   className?: string
   hint?: ReactNode
   icon?: LucideIcon
@@ -35,7 +46,24 @@ export function StatTile({
   }[tone]
 
   return (
-    <div className={cn('panel flex items-start gap-3 px-4 py-3', className)}>
+    <div
+      className={cn('panel relative flex items-start gap-3 overflow-hidden px-4 py-3', className)}
+      style={
+        accent
+          ? {
+              boxShadow: `inset 3px 0 0 ${accent}`,
+              backgroundImage: `linear-gradient(90deg, color-mix(in srgb, ${accent} 7%, transparent), transparent 45%)`,
+            }
+          : undefined
+      }
+    >
+      {accent && (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-0.5"
+          style={{ background: accent }}
+        />
+      )}
       <div className="min-w-0 flex-1">
         <p className="micro-label">{label}</p>
         <p
@@ -46,6 +74,7 @@ export function StatTile({
         >
           {value}
         </p>
+        {children}
         {hint && (
           <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
         )}

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
-  pathname: '/stw-operations/inventory',
+  pathname: '/stw-operations/schematics',
   compact: false,
   collapsed: false,
   hidden: [] as Array<string>,
@@ -70,7 +70,7 @@ const render = () =>
     createElement(TooltipProvider, { children: createElement(AreaNavigation) }),
   )
 beforeEach(() => {
-  state.pathname = '/stw-operations/inventory'
+  state.pathname = '/stw-operations/schematics'
   state.compact = false
   state.collapsed = false
   state.hidden = []
@@ -80,7 +80,7 @@ describe('area shell rendering', () => {
   it('shows only the active area in the contextual pane', () => {
     const markup = render()
     expect(markup).toContain('data-app-focus-region="pane"')
-    expect(markup).toContain('href="/stw-operations/inventory"')
+    expect(markup).toContain('href="/stw-operations/schematics"')
     expect(markup).not.toContain('href="/stw-operations/taxi-service"')
   })
   it.each(['compact', 'collapsed'] as const)(
@@ -96,7 +96,7 @@ describe('area shell rendering', () => {
   it('keeps a hidden destination identifiable when opened from the palette', () => {
     state.hidden = ['stwOperations', 'inventory']
     const markup = render()
-    expect(markup).toContain('href="/stw-operations/inventory"')
+    expect(markup).toContain('href="/stw-operations/schematics"')
     expect(markup).toContain('aria-current="page"')
     expect(markup).not.toContain('href="/stw-operations/loadouts"')
   })

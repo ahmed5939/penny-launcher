@@ -187,7 +187,8 @@ export function createTwineTerrain({
 
 
 /** Sea reaches the island from outside, not every cave or the enclosed caldera. */
-export function twineOceanGeometry(terrain: OutpostZoneTerrain) {
+/** `reach` is how far open sea extends past the terrain grid, in cells. */
+export function twineOceanGeometry(terrain: OutpostZoneTerrain, reach = 10) {
   const grid = buildZoneHeightGrid(terrain)
   const { rows, cols, minX, minY, kinds } = grid
   const reached = new Uint8Array(rows * cols)
@@ -258,10 +259,10 @@ export function twineOceanGeometry(terrain: OutpostZoneTerrain) {
   const x0 = minX - 0.5, x1 = minX + rows - 0.5
   const y0 = minY - 0.5, y1 = minY + cols - 0.5
 
-  rectangle(x0 - 10, x0, y0 - 10, y1 + 10)
-  rectangle(x1, x1 + 10, y0 - 10, y1 + 10)
-  rectangle(x0, x1, y0 - 10, y0)
-  rectangle(x0, x1, y1, y1 + 10)
+  rectangle(x0 - reach, x0, y0 - reach, y1 + reach)
+  rectangle(x1, x1 + reach, y0 - reach, y1 + reach)
+  rectangle(x0, x1, y0 - reach, y0)
+  rectangle(x0, x1, y1, y1 + reach)
   const geometry = new THREE.BufferGeometry()
 
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))

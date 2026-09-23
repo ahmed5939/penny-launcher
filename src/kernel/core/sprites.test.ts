@@ -309,4 +309,33 @@ describe('buildSpriteCollection', () => {
     expect(empty.equippedRelicId).toBeNull()
     expect(empty.totalVariants).toBe(6)
   })
+
+  it('keeps owned relics that only the inventory knows about', () => {
+    const built = buildSpriteCollection(
+      {},
+      {
+        inventory: [
+          {
+            counts: { NewSprite_Variant_Gold: 2 },
+            entitlementMetadata: {
+              NewSprite_Variant_Gold: '{"xp":25,"ml":0}',
+            },
+          },
+        ],
+      },
+      data
+    )
+    const newSprite = built.families.find(
+      (family) => family.family === 'NewSprite'
+    )?.variants[0]
+
+    expect(newSprite).toMatchObject({
+      relicId: 'NewSprite_Variant_Gold',
+      variant: 'gold',
+      status: 'owned',
+      xp: 25,
+      resolved: false,
+    })
+    expect(built.ownedVariants).toBe(1)
+  })
 })

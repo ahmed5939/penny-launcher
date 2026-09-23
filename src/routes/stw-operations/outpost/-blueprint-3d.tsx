@@ -4,7 +4,7 @@ import type {
 } from '../../../kernel/core/outpost-types'
 import type { MutableRefObject } from 'react'
 
-import { Box, Grid3x3, Layers3, Map as MapIcon, Maximize2, Trees } from 'lucide-react'
+import { Box, Grid3x3, Layers3, Map as MapIcon, Maximize2, Shield, Sparkles, Trees } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -23,9 +23,29 @@ import { renderOnDemand } from '../../../lib/render-on-demand'
 import { cn } from '../../../lib/utils'
 
 import { BlueprintCanvas3D } from './-blueprint-canvas-3d'
+import {
+  HORIZON,
+  SUN_DIRECTION,
+  addWindSway,
+  createParticles,
+  createPostProcessing,
+  createSky,
+  createStormShield,
+  createWaterMaterial,
+  worldWaterUVs,
+} from './-blueprint-atmosphere'
 import { buildPieceMesh } from './-blueprint-build-meshes'
+import {
+  type NaturePlacement,
+  buildNatureMeshes,
+  loadNatureLibrary,
+  natureArchetype,
+  scatterFlatGroundCover,
+  scatterGroundCover,
+} from './-blueprint-nature'
+import { type PropStyle, propStyle, propTint } from './-blueprint-props'
 import { archiveBuildSurface } from './-blueprint-archive-assets'
-import { createTwineTerrain, twineOceanGeometry } from './-blueprint-twine-terrain'
+import { TWINE_TERRAIN, createTwineTerrain, twineInstanceMatrix, twineOceanGeometry } from './-blueprint-twine-terrain'
 import {
   CELL_COLORS,
   CELL_GRASS,
@@ -47,8 +67,6 @@ import {
   TRAP_CEILING,
   TRAP_WALL,
   forwardVector,
-  isConifer,
-  isPlant,
   propLabel,
   trapCentre,
 } from './-blueprint-geometry'
@@ -64,9 +82,12 @@ const TRAP_COLORS = [0xed7e39, 0x51a1db, 0xd076f6, 0xbfbaba]
 const TRAP_COLOR_HEX = ['#ed7e39', '#51a1db', '#d076f6', '#bfbaba']
 const TRAP_LABEL = ['Floor', 'Wall', 'Ceiling', 'Other']
 const canvasFallbackSessionKey = 'penny:outpost:canvas-3d'
+const cinematicStorageKey = 'penny:outpost:cinematic'
 const WALL_THICKNESS = 0.1
 const FLOOR_THICKNESS = 0.06
 const THIRD = 1 / 3
+/** Open sea runs out past the fog so the island never floats in a void. */
+const OPEN_SEA_REACH = 3000
 
 type HoverInfo = {
   category: number
@@ -631,122 +652,6 @@ function tierTint(tier: number) {
   return new THREE.Color(1.04, 1.02, 0.98)
 }
 
-// ── World props ──────────────────────────────────────────────
-
-type PropStyle = {
-  color: number
-  geometry: () => THREE.BufferGeometry
-}
-
-function translated(geometry: THREE.BufferGeometry, y: number) {
-  geometry.translate(0, y, 0)
-
-  return geometry
-}
-
-/**
- * Stylised stand-ins for the map's own actors — the save only carries their
- * class names and transforms, not meshes, so silhouettes do the job: a
- * conifer or broadleaf tree, a boulder, a bush, a loot box or a slab of the
- * world's pre-built structure.
- */
-function propStyle(kind: number, className: string): Record<string, PropStyle> {
-  const lower = className.toLowerCase()
-
-  if (kind === PROP_TREE) {
-    const canopy: PropStyle = isConifer(className)
-      ? {
-          color: 0x2f6b3a,
-          geometry: () => translated(new THREE.ConeGeometry(0.42, 1.25, 7), 1.05),
-        }
-      : {
-          color: 0x4f8a3c,
-          geometry: () => {
-            const ball = new THREE.IcosahedronGeometry(0.5, 1)
-
-            ball.scale(1, 0.85, 1)
-
-            return translated(ball, 1.02)
-          },
-        }
-
-    return {
-      trunk: {
-        color: 0x6b4a2e,
-        geometry: () => translated(new THREE.CylinderGeometry(0.05, 0.08, 0.7, 6), 0.35),
-      },
-      [isConifer(className) ? 'conifer' : 'broadleaf']: canopy,
-    }
-  }
-
-  if (kind === PROP_ROCK) {
-    return {
-      rock: {
-        color: 0x7a7f86,
-        geometry: () => {
-          const rock = new THREE.DodecahedronGeometry(0.36, 0)
-
-          rock.scale(1, 0.6, 1)
-
-          return translated(rock, 0.18)
-        },
-      },
-    }
-  }
-
-  if (kind === PROP_CONTAINER) {
-    return isPlant(className)
-      ? {
-          bush: {
-            color: 0x5a8f3f,
-            geometry: () => {
-              const bush = new THREE.IcosahedronGeometry(0.3, 1)
-
-              bush.scale(1, 0.7, 1)
-
-              return translated(bush, 0.18)
-            },
-          },
-        }
-      : {
-          container: {
-            color: 0xa3803f,
-            geometry: () => translated(new THREE.BoxGeometry(0.5, 0.34, 0.34), 0.17),
-          },
-        }
-  }
-
-  if (kind === PROP_STRUCTURE) {
-    const color = 0x8a7f72
-
-    if (/stair/.test(lower)) return { 'world-stair': { color, geometry: () => rampGeometry(0.75, 0.08) } }
-    if (/fence/.test(lower)) {
-      return { 'world-fence': { color, geometry: () => translated(new THREE.BoxGeometry(0.06, 0.3, 1), 0.15) } }
-    }
-    if (/pole/.test(lower)) {
-      return { 'world-pole': { color: 0x5b4636, geometry: () => translated(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 6), 1.2) } }
-    }
-    if (/tower/.test(lower)) {
-      return { 'world-tower': { color, geometry: () => translated(new THREE.CylinderGeometry(0.45, 0.5, 2.2, 10), 1.1) } }
-    }
-    if (/floor/.test(lower)) {
-      return { 'world-floor': { color, geometry: () => translated(new THREE.BoxGeometry(1, 0.06, 1), 0.03) } }
-    }
-    if (/wall|solid|door|arch/.test(lower)) {
-      return { 'world-wall': { color, geometry: () => translated(new THREE.BoxGeometry(0.12, STOREY_HEIGHT, 1), STOREY_HEIGHT / 2) } }
-    }
-
-    return { 'world-block': { color, geometry: () => translated(new THREE.BoxGeometry(0.8, 0.6, 0.8), 0.3) } }
-  }
-
-  return {
-    prop: {
-      color: 0x8d86a0,
-      geometry: () => translated(new THREE.BoxGeometry(0.45, 0.45, 0.45), 0.225),
-    },
-  }
-}
-
 // ── Trap art ─────────────────────────────────────────────────
 
 /** A flat square outline assembled from four strips, centred on the origin. */
@@ -814,6 +719,7 @@ function trapPlacement(
 // ── Scene ────────────────────────────────────────────────────
 
 function BlueprintScene({
+  cinematic,
   iconByTrapName,
   layout,
   maxVisibleZ,
@@ -825,10 +731,13 @@ function BlueprintScene({
   selectedTrap,
   showGrid,
   showProps,
+  showShield,
   showTerrain,
   topViewRef,
   zoneId,
 }: {
+  /** Post-processing and ambient animation; off keeps render-on-demand. */
+  cinematic: boolean
   iconByTrapName: Map<string, string | undefined>
   layout: OutpostLayout
   maxVisibleZ: number
@@ -840,6 +749,7 @@ function BlueprintScene({
   selectedTrap: string | null
   showGrid: boolean
   showProps: boolean
+  showShield: boolean
   showTerrain: boolean
   topViewRef: MutableRefObject<(() => void) | null>
   zoneId?: string
@@ -891,10 +801,11 @@ function BlueprintScene({
     onRendererMode(
       renderer.capabilities.isWebGL2 ? 'WebGL 2' : 'WebGL 1 compatibility'
     )
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Multisampling already smooths edges; AO and bloom cost scales with pixels.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, cinematic ? 1.5 : 2))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.08
+    renderer.toneMappingExposure = 0.72
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.domElement.className = 'block size-full touch-none'
@@ -912,12 +823,54 @@ function BlueprintScene({
     controls.screenSpacePanning = true
 
     let disposed = false
+    let post: ReturnType<typeof createPostProcessing> | null = null
+    let onScreen = true
+    let ambientTimer = 0
+    let intro: { end: THREE.Spherical; start: number } | null = null
+    const clock = new THREE.Clock()
+    /** Per-frame updates for water, lava, wind, the shield and particles. */
+    const animated: Array<(time: number) => void> = []
+    const stepIntro = (now: number) => {
+      if (!intro) return
+
+      const progress = Math.min(1, (now - intro.start) / 2400)
+      const remaining = Math.pow(1 - progress, 3)
+      const { phi, radius, theta } = intro.end
+
+      camera.position
+        .setFromSpherical(new THREE.Spherical(
+          radius * (1 + 1.6 * remaining),
+          phi * (1 - 0.5 * remaining),
+          theta - 1.2 * remaining
+        ))
+        .add(controls.target)
+      if (progress >= 1) intro = null
+    }
     const frames = renderOnDemand(() => {
+      stepIntro(performance.now())
       // OrbitControls emits change while damping is still settling.
       controls.update()
-      renderer.render(scene, camera)
+      if (cinematic) {
+        const time = clock.getElapsedTime()
+
+        animated.forEach((update) => update(time))
+      }
+      if (post) post.render()
+      else renderer.render(scene, camera)
+
+      if (intro) requestDraw()
+      else if (cinematic && onScreen && !ambientTimer && animated.length > 0) {
+        // Ambient motion runs at 30 fps; orbiting still redraws immediately.
+        ambientTimer = window.setTimeout(() => {
+          ambientTimer = 0
+          requestDraw()
+        }, 1000 / 30)
+      }
     })
     const requestDraw = frames.request
+    const cancelIntro = () => {
+      intro = null
+    }
     controls.addEventListener('change', requestDraw)
 
     const resources: Array<{ dispose: () => void }> = []
@@ -955,16 +908,14 @@ function BlueprintScene({
     const toScene = (x: number, y: number, z: number) =>
       new THREE.Vector3(y - centerY, z - floorZ, -(x - centerX))
 
-    // Lighting: a soft sky plus one shadow-casting sun over the base.
-    scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x3a4030, 1.6))
+    // Lighting: an HDRI sky (which also bakes the ambient environment)
+    // plus one warm, shadow-casting sun matching the sky's own sun.
+    createSky(renderer, scene, track, requestDraw)
+    scene.fog = new THREE.Fog(HORIZON, distance * 3, distance * 11)
+    scene.add(new THREE.HemisphereLight(0xd6e4ff, 0x4a3d2c, 0.3))
 
-    const sun = new THREE.DirectionalLight(0xfff2dc, 2.4)
+    const sun = new THREE.DirectionalLight(0xffe1bd, 3.1)
     const terrain = zoneId ? OUTPOST_ZONE_TERRAIN[zoneId] : undefined
-
-    if (terrain) {
-      scene.background = new THREE.Color(0x17232b)
-      scene.fog = new THREE.Fog(0x17232b, distance * 2.2, distance * 7)
-    }
 
     const groundMargin = 5
     const propReach = 25
@@ -1010,11 +961,14 @@ function BlueprintScene({
     )
     const shadowReach = Math.max(groundWidth, groundDepth) * 0.6
 
-    sun.position.set(sceneWidth * 0.55, sceneWidth * 0.9 + 12, sceneWidth * 0.4)
+    const sunDistance = Math.max(groundWidth, groundDepth) + 40
+
+    sun.position.copy(groundCentre).addScaledVector(SUN_DIRECTION, sunDistance)
+    sun.target.position.copy(groundCentre)
     sun.castShadow = true
-    sun.shadow.mapSize.set(2048, 2048)
+    sun.shadow.mapSize.setScalar(terrain ? 4096 : 2048)
     sun.shadow.camera.near = 0.5
-    sun.shadow.camera.far = sceneWidth * 4 + 60
+    sun.shadow.camera.far = sunDistance * 2 + shadowReach
     sun.shadow.camera.left = -shadowReach
     sun.shadow.camera.right = shadowReach
     sun.shadow.camera.top = shadowReach
@@ -1035,6 +989,7 @@ function BlueprintScene({
     controls.maxDistance = Math.max(220, distance * 4)
 
     const resetCamera = (wholeMap = false) => {
+      cancelIntro()
       if (wholeMap && terrain) {
         const mapCentre = toScene(
           (terrain.bounds.minX + terrain.bounds.maxX) / 2,
@@ -1058,8 +1013,8 @@ function BlueprintScene({
         return
       }
       if (scene.fog instanceof THREE.Fog) {
-        scene.fog.near = distance * 2.2
-        scene.fog.far = distance * 7
+        scene.fog.near = distance * 3
+        scene.fog.far = distance * 11
       }
       controls.target.set(0, spanZ * 0.35, 0)
       camera.position.set(distance * 0.7, Math.max(9, spanZ + distance * 0.45), distance * 0.72)
@@ -1075,9 +1030,20 @@ function BlueprintScene({
       controls.update()
     } else {
       resetCamera()
+      // First visit: swoop down from high above onto the base.
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        intro = {
+          end: new THREE.Spherical().setFromVector3(
+            camera.position.clone().sub(controls.target)
+          ),
+          start: performance.now(),
+        }
+        stepIntro(performance.now())
+      }
     }
     resetRef.current = resetCamera
     topViewRef.current = () => {
+      cancelIntro()
       controls.target.set(0, spanZ * 0.5, 0)
       const halfFov = THREE.MathUtils.degToRad(camera.fov / 2)
       const fitDistance = Math.max(spanX, spanY / camera.aspect) / (2 * Math.tan(halfFov))
@@ -1094,20 +1060,50 @@ function BlueprintScene({
     groundObjects.visible = showTerrain
     scene.add(groundObjects)
 
+    const water = createWaterMaterial(track)
+    /** Scene-space points where lava embers rise from. */
+    const lavaVents: Array<THREE.Vector3> = []
+    /** Extracted terrain meshes whose first material group is grass. */
+    const terrainSurfaces: Array<THREE.InstancedMesh> = []
+
+    animated.push(water.update)
+
     if (terrain && zoneId === 'pve_04') {
       const recoveredTerrain = createTwineTerrain({ onLoad: requestDraw, track })
 
       recoveredTerrain.position.set(-centerY, -floorZ, centerX)
       groundObjects.add(recoveredTerrain)
-      const water = new THREE.Mesh(
-        track(twineOceanGeometry(terrain)),
-        track(new THREE.MeshStandardMaterial({
-          color: 0x285f73, metalness: 0.08, opacity: 0.96, roughness: 0.2, transparent: true,
-        }))
-      )
+      recoveredTerrain.traverse((object) => {
+        if (object instanceof THREE.InstancedMesh) terrainSurfaces.push(object)
+      })
+      const sea = new THREE.Mesh(track(worldWaterUVs(twineOceanGeometry(terrain, OPEN_SEA_REACH))), water.material)
 
-      water.position.set(-centerY, -floorZ, centerX)
-      groundObjects.add(water)
+      sea.position.set(-centerY, -floorZ, centerX)
+      groundObjects.add(sea)
+      const seabed = water.seabed(OPEN_SEA_REACH * 2)
+
+      seabed.position.copy(groundCentre).setY(terrain.waterZ - floorZ - 2.5)
+      groundObjects.add(seabed)
+
+      // Molten rock slowly creeps and breathes.
+      recoveredTerrain.traverse((object) => {
+        if (!(object instanceof THREE.Mesh)) return
+        for (const material of [object.material].flat()) {
+          if (!(material instanceof THREE.MeshStandardMaterial) || material.emissiveIntensity <= 0) continue
+          const map = material.map
+
+          animated.push((time) => {
+            if (map) map.offset.set(time * 0.006, time * 0.011)
+            material.emissiveIntensity = 1.35 + Math.sin(time * 0.9) * 0.25
+          })
+        }
+      })
+      for (const instance of TWINE_TERRAIN.instances) {
+        if (TWINE_TERRAIN.models[instance[0]]?.kind !== 'lava') continue
+        lavaVents.push(
+          new THREE.Vector3().setFromMatrixPosition(twineInstanceMatrix(instance)).add(recoveredTerrain.position)
+        )
+      }
     } else if (terrain) {
       const heightGrid = buildZoneHeightGrid(terrain)
       const { cols, heights, kinds, minX, minY, rows } = heightGrid
@@ -1207,24 +1203,19 @@ function BlueprintScene({
       groundObjects.add(terrainMesh)
 
       /* The sea around the island, just above the seabed cells. */
-      const water = new THREE.Mesh(
-        track(new THREE.PlaneGeometry(groundWidth + 20, groundDepth + 20)),
-        track(
-          new THREE.MeshStandardMaterial({
-            color: 0x285f73,
-            metalness: 0.08,
-            opacity: 0.7,
-            roughness: 0.18,
-            transparent: true,
-          })
-        )
-      )
+      const seaGeometry = new THREE.PlaneGeometry(groundWidth + OPEN_SEA_REACH * 2, groundDepth + OPEN_SEA_REACH * 2)
 
-      water.rotation.x = -Math.PI / 2
-      water.position
+      seaGeometry.rotateX(-Math.PI / 2)
+      const sea = new THREE.Mesh(track(worldWaterUVs(seaGeometry)), water.material)
+
+      sea.position
         .copy(groundCentre)
         .setY(terrain.waterZ - floorZ + 0.02)
-      groundObjects.add(water)
+      groundObjects.add(sea)
+      const seabed = water.seabed(OPEN_SEA_REACH * 2)
+
+      seabed.position.copy(groundCentre).setY(terrain.waterZ - floorZ - 2.5)
+      groundObjects.add(seabed)
 
       /* Lava pools glow on their own, unlit. */
       if (terrain.lava.length > 0) {
@@ -1247,8 +1238,10 @@ function BlueprintScene({
           terrain.lava.length
         )
 
+        animated.push((time) => magmaMap.offset.set(time * 0.012, time * 0.02))
         terrain.lava.forEach(
           ([x, y, z, halfX = 1.5, halfY = 1.5], index) => {
+            lavaVents.push(toScene(x, y, z + 0.08))
             dummy.position.copy(toScene(x, y, z + 0.08))
             dummy.rotation.set(-Math.PI / 2, 0, 0)
             dummy.scale.set(halfY * 2, halfX * 2, 1)
@@ -1262,10 +1255,14 @@ function BlueprintScene({
     } else {
       const groundMap = track(groundTexture())
 
-      groundMap.repeat.set(groundWidth / 4, groundDepth / 4)
+      // Run the meadow out to the fog so there is no visible edge.
+      const horizonWidth = groundWidth + distance * 14
+      const horizonDepth = groundDepth + distance * 14
+
+      groundMap.repeat.set(horizonWidth / 4, horizonDepth / 4)
 
       const ground = new THREE.Mesh(
-        track(new THREE.PlaneGeometry(groundWidth, groundDepth)),
+        track(new THREE.PlaneGeometry(horizonWidth, horizonDepth)),
         track(
           new THREE.MeshStandardMaterial({
             color: 0xffffff,
@@ -1586,6 +1583,8 @@ function BlueprintScene({
       namesByMesh.set(frame.uuid, names)
     }
 
+    let selectionRing: THREE.InstancedMesh | null = null
+
     if (selectedPlacements.length > 0) {
       const ring = new THREE.InstancedMesh(
         selectionGeometry,
@@ -1612,6 +1611,7 @@ function BlueprintScene({
       ring.renderOrder = 3
       ring.computeBoundingSphere()
       scene.add(ring)
+      selectionRing = ring
     }
 
     // World props, instanced per silhouette. The zone's own vegetation and
@@ -1635,7 +1635,13 @@ function BlueprintScene({
       { pieces: Array<OutpostLayout['props'][number]>; style: PropStyle }
     >()
 
-    for (const { className, prop } of propEntries) {
+    const windTime = { value: 0 }
+
+    animated.push((time) => {
+      windTime.value = time
+    })
+
+    const addProceduralProp = (className: string, prop: OutpostLayout['props'][number]) => {
       for (const [key, style] of Object.entries(propStyle(prop[3], className))) {
         const group = propGroups.get(key)
 
@@ -1643,31 +1649,167 @@ function BlueprintScene({
         else propGroups.set(key, { pieces: [prop], style })
       }
     }
-
-    for (const { pieces, style } of propGroups.values()) {
-      const mesh = new THREE.InstancedMesh(
-        track(style.geometry()),
-        track(
+    const addProceduralGroups = () => {
+      for (const { pieces, style } of propGroups.values()) {
+        const material = track(
           new THREE.MeshStandardMaterial({
             color: style.color,
+            flatShading: style.faceted ?? false,
             roughness: 0.95,
           })
-        ),
-        pieces.length
-      )
+        )
 
-      pieces.forEach(([x, y, z, , yawDegrees, scale], index) => {
-        dummy.position.copy(toScene(x, y, z))
-        dummy.rotation.set(0, -(yawDegrees * Math.PI) / 180, 0)
-        dummy.scale.setScalar(Math.min(2.2, Math.max(0.5, scale || 1)))
-        dummy.updateMatrix()
-        mesh.setMatrixAt(index, dummy.matrix)
-      })
-      mesh.castShadow = true
-      mesh.receiveShadow = true
-      mesh.computeBoundingSphere()
-      scene.add(mesh)
+        if (style.sway) addWindSway(material, windTime, style.sway)
+
+        const mesh = new THREE.InstancedMesh(track(style.geometry()), material, pieces.length)
+
+        pieces.forEach(([x, y, z, , yawDegrees, scale], index) => {
+          dummy.position.copy(toScene(x, y, z))
+          dummy.rotation.set(0, -(yawDegrees * Math.PI) / 180, 0)
+          dummy.scale.setScalar(Math.min(2.2, Math.max(0.5, scale || 1)))
+          dummy.updateMatrix()
+          mesh.setMatrixAt(index, dummy.matrix)
+          mesh.setColorAt(index, propTint(style, x, y))
+        })
+        mesh.castShadow = true
+        mesh.receiveShadow = true
+        mesh.computeBoundingSphere()
+        scene.add(mesh)
+      }
     }
+    /** Foliage and boulders wait for the painted model library. */
+    const naturalProps: Array<{
+      className: string
+      placement: NaturePlacement
+      prop: OutpostLayout['props'][number]
+    }> = []
+
+    for (const { className, prop } of propEntries) {
+      const [x, y, z, kind, yawDegrees, scale] = prop
+      const archetype = natureArchetype(kind, className, x, y)
+
+      if (!archetype) {
+        addProceduralProp(className, prop)
+        continue
+      }
+      naturalProps.push({
+        className,
+        placement: {
+          archetype,
+          position: toScene(x, y, z),
+          scale: Math.min(2.2, Math.max(0.5, scale || 1)),
+          yaw: -(yawDegrees * Math.PI) / 180,
+        },
+        prop,
+      })
+    }
+    addProceduralGroups()
+
+    // Grass and flowers carpet the ground around the base, but not under it.
+    const coverAvoid = {
+      maxX: layout.bounds.maxY - centerY + 0.5,
+      maxZ: -(layout.bounds.minX - centerX) + 0.5,
+      minX: layout.bounds.minY - centerY - 0.5,
+      minZ: -(layout.bounds.maxX - centerX) - 0.5,
+    }
+    const coverPlacements = (): Array<NaturePlacement> => {
+      // Ground cover is detail, so it belongs to the cinematic quality mode.
+      if (!cinematic || !showProps || !showTerrain) return []
+      if (terrainSurfaces.length > 0) {
+        return scatterGroundCover({
+          avoid: coverAvoid,
+          centre: new THREE.Vector3(0, 0, 0),
+          count: 1200,
+          radius: Math.max(22, sceneWidth * 1.4),
+          surfaces: terrainSurfaces,
+        })
+      }
+      if (terrain) return []
+      const reach = Math.max(18, sceneWidth * 1.3)
+
+      return scatterFlatGroundCover({
+        avoid: coverAvoid,
+        bounds: { maxX: reach, maxZ: reach, minX: -reach, minZ: -reach },
+        count: 1000,
+        y: -FLOOR_THICKNESS - 0.02,
+      })
+    }
+
+    loadNatureLibrary().then(
+      (library) => {
+        if (disposed) return
+        const foliage = buildNatureMeshes(library, naturalProps.map((entry) => entry.placement), windTime, track)
+        const cover = buildNatureMeshes(library, coverPlacements(), windTime, track)
+
+        if (foliage.length > 0) scene.add(...foliage)
+        if (cover.length > 0) groundObjects.add(...cover)
+        renderer.shadowMap.needsUpdate = true
+        requestDraw()
+      },
+      () => {
+        if (disposed) return
+        // Without the model library, fall back to the procedural stand-ins.
+        propGroups.clear()
+        naturalProps.forEach(({ className, prop }) => addProceduralProp(className, prop))
+        addProceduralGroups()
+        renderer.shadowMap.needsUpdate = true
+        requestDraw()
+      }
+    )
+
+    // The Storm Shield bubble over the base, with drifting energy motes.
+    if (showShield) {
+      const radius = Math.max(8, Math.hypot(spanX, spanY) / 2 + 3)
+      const shield = createStormShield(radius, track)
+      const motes = createParticles({
+        cool: 0x7c5cff,
+        count: 260,
+        emitters: [new THREE.Vector3(0, 0, 0)],
+        hot: 0x9fdcff,
+        pixelRatio: renderer.getPixelRatio(),
+        rise: spanZ + 5,
+        size: 55,
+        spread: radius * 0.85,
+        track,
+      })
+
+      scene.add(shield.mesh, motes.points)
+      animated.push(shield.update, motes.update)
+    }
+
+    // Embers boiling off the lava.
+    if (showTerrain && lavaVents.length > 0) {
+      const embers = createParticles({
+        cool: 0xff3a12,
+        count: Math.min(1400, lavaVents.length * 60),
+        emitters: lavaVents,
+        hot: 0xffc15a,
+        pixelRatio: renderer.getPixelRatio(),
+        rise: 4,
+        size: 70,
+        spread: 1.6,
+        track,
+      })
+
+      groundObjects.add(embers.points)
+      animated.push(embers.update)
+    }
+
+    // Selected traps pulse so they are easy to spot from afar.
+    if (selectionRing) {
+      const ringMaterial = selectionRing.material as THREE.MeshBasicMaterial
+
+      animated.push((time) => {
+        ringMaterial.color.setScalar(1.2 + Math.sin(time * 4) * 0.8)
+      })
+    }
+
+    if (cinematic && renderer.capabilities.isWebGL2) {
+      post = createPostProcessing(renderer, scene, camera)
+    }
+    // Nothing in the scene moves relative to the sun, so shadows are drawn once.
+    renderer.shadowMap.autoUpdate = false
+    renderer.shadowMap.needsUpdate = true
 
     // Picking and hover.
     const raycaster = new THREE.Raycaster()
@@ -1705,6 +1847,7 @@ function BlueprintScene({
       }
     }
     const onPointerDown = (event: PointerEvent) => {
+      cancelIntro()
       pointerDown = { x: event.clientX, y: event.clientY }
     }
     const onPointerMove = (event: PointerEvent) => {
@@ -1740,6 +1883,7 @@ function BlueprintScene({
     renderer.domElement.addEventListener('pointermove', onPointerMove)
     renderer.domElement.addEventListener('pointerleave', onPointerLeave)
     renderer.domElement.addEventListener('pointerup', onPointerUp)
+    renderer.domElement.addEventListener('wheel', cancelIntro, { passive: true })
     const onContextLost = (event: Event) => {
       event.preventDefault()
       onUnavailable()
@@ -1752,6 +1896,7 @@ function BlueprintScene({
       const height = Math.max(1, host.clientHeight)
 
       renderer.setSize(width, height, false)
+      post?.setSize(width, height)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
       requestDraw()
@@ -1761,18 +1906,30 @@ function BlueprintScene({
     observer.observe(host)
     resize()
 
+    // Ambient motion pauses while the explorer is scrolled out of view.
+    const visibility = new IntersectionObserver(([entry]) => {
+      onScreen = entry?.isIntersecting ?? true
+      if (onScreen) requestDraw()
+    })
+
+    visibility.observe(host)
+
     requestDraw()
 
     return () => {
       disposed = true
       frames.dispose()
+      window.clearTimeout(ambientTimer)
       controls.removeEventListener('change', requestDraw)
       observer.disconnect()
+      visibility.disconnect()
+      post?.dispose()
       rememberCamera()
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
       renderer.domElement.removeEventListener('pointermove', onPointerMove)
       renderer.domElement.removeEventListener('pointerleave', onPointerLeave)
       renderer.domElement.removeEventListener('pointerup', onPointerUp)
+      renderer.domElement.removeEventListener('wheel', cancelIntro)
       renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
       controls.dispose()
       sun.shadow.dispose()
@@ -1797,9 +1954,11 @@ function BlueprintScene({
     selectedTrap,
     showGrid,
     showProps,
+    showShield,
     showTerrain,
     topViewRef,
     zoneId,
+    cinematic,
   ])
 
   return <div className="absolute inset-0" ref={hostRef} />
@@ -1848,6 +2007,10 @@ export function Blueprint3D({
   const [showProps, setShowProps] = useState(true)
   const [showGrid, setShowGrid] = useState(false)
   const [showTerrain, setShowTerrain] = useState(true)
+  const [showShield, setShowShield] = useState(true)
+  const [cinematic, setCinematic] = useState(
+    () => localStorage.getItem(cinematicStorageKey) !== '0'
+  )
   const [hovered, setHovered] = useState<HoverInfo | null>(null)
   const [canvasFallback, setCanvasFallback] = useState(
     () => sessionStorage.getItem(canvasFallbackSessionKey) === '1'
@@ -1946,6 +2109,40 @@ export function Blueprint3D({
           >
             <MapIcon className="size-3.5" />
           </Button>
+          <Button
+            aria-pressed={showShield}
+            className="size-7"
+            disabled={canvasFallback}
+            onClick={() => setShowShield((value) => !value)}
+            size="icon"
+            title={showShield ? 'Hide Storm Shield' : 'Show Storm Shield'}
+            type="button"
+            variant={showShield ? 'secondary' : 'outline'}
+          >
+            <Shield className="size-3.5" />
+          </Button>
+          <Button
+            aria-pressed={cinematic}
+            className="size-7"
+            disabled={canvasFallback}
+            onClick={() =>
+              setCinematic((value) => {
+                localStorage.setItem(cinematicStorageKey, value ? '0' : '1')
+
+                return !value
+              })
+            }
+            size="icon"
+            title={
+              cinematic
+                ? 'Cinematic mode on: ambient occlusion, bloom and ambient motion. Turn off for faster rendering.'
+                : 'Turn on cinematic mode: ambient occlusion, bloom and ambient motion'
+            }
+            type="button"
+            variant={cinematic ? 'secondary' : 'outline'}
+          >
+            <Sparkles className="size-3.5" />
+          </Button>
           {zoneTerrain && (
             <Button
               disabled={canvasFallback}
@@ -1979,7 +2176,7 @@ export function Blueprint3D({
         </div>
       </div>
 
-      <div className="relative h-[32rem] overflow-hidden rounded-lg border border-border/60 bg-gradient-to-b from-sky-950/40 via-background/30 to-muted/30">
+      <div className="relative h-[36rem] overflow-hidden rounded-lg border border-border/60 bg-gradient-to-b from-sky-950/40 via-background/30 to-muted/30">
         {canvasFallback ? (
           <BlueprintCanvas3D
             layout={layout}
@@ -1991,6 +2188,7 @@ export function Blueprint3D({
           />
         ) : (
           <BlueprintScene
+            cinematic={cinematic}
             iconByTrapName={iconByTrapName}
             layout={layout}
             maxVisibleZ={maxVisibleZ}
@@ -2002,6 +2200,7 @@ export function Blueprint3D({
             selectedTrap={selectedTrap}
             showGrid={showGrid}
             showProps={showProps}
+            showShield={showShield}
             showTerrain={showTerrain}
             topViewRef={topViewRef}
             zoneId={zoneId}
@@ -2032,7 +2231,7 @@ export function Blueprint3D({
       <p className="micro-label text-muted-foreground">
         {canvasFallback
           ? 'Saved build positions · simplified models'
-          : 'Game wood/stone textures · recovered shapes where available · simplified scenery'}
+          : 'Game wood/stone textures · recovered shapes where available · stylised CC0 foliage and sky'}
         {canvasFallback && ' · compatibility view uses basic shapes and flat ground'}
       </p>
 

@@ -22,7 +22,11 @@
       "expeditions": "Expeditions",
       "squad-presets": "Squads",
       "inventory": "Vault",
+      "schematics": "Schematics",
+      "heroes": "Heroes",
+      "survivors": "Survivors",
       "backpack": "Backpack",
+      "backpack-storage": "Backpack & Storage",
       "storage": "Storage",
       "defenders": "Defenders",
       "collection-book": "Collection Book",
@@ -37,6 +41,7 @@
       "auto-pin-urns": "Auto-Pin Quests",
       "auto-update-quests": "Auto update daily quests",
       "auto-daily-reroll": "Auto daily reroll",
+      "daily-quests": "Daily quests",
       "auto-llamas": "Auto-llamas",
       "recycled-rewards": "Recycled Rewards",
       "endurance": "Endurance"
@@ -53,6 +58,7 @@
       "vbucks-information": "V-Bucks",
       "gifts-information": "Gifts",
       "profile": "Profile",
+      "history": "History",
       "redeem-codes": "Redeem",
       "epic-settings": "Epic settings"
     }

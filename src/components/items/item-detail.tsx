@@ -447,7 +447,15 @@ function UpgradeActions({
   const level = subject.level ?? 1
   const cap = levelCapForTier(tier)
   const supercharging = tier >= 5 && level >= 50
-  const canLevel = !supercharging || level < superchargeMaxLevel
+  /*
+   * At its tier cap an item cannot take another level — Epic rejects the
+   * `UpgradeItem` as "in an overflow state" — so the only way on is to
+   * evolve. Only past tier 5 does levelling continue, as supercharging.
+   */
+  const atTierCap = cap !== null && !supercharging && level >= cap
+  const canLevel = supercharging
+    ? level < superchargeMaxLevel
+    : !atTierCap
   const bulkTarget =
     cap !== null && !supercharging ? Math.min(level + 10, cap) : null
   const canBulkLevel = bulkTarget !== null && bulkTarget - level >= 2
@@ -550,6 +558,13 @@ function UpgradeActions({
           </Button>
         )}
       </div>
+
+      {atTierCap && canEvolve && (
+        <p className="text-xs text-muted-foreground">
+          Level {cap} is the most tier {tier} allows. Evolve it to keep
+          levelling.
+        </p>
+      )}
 
       {!canLevel && !canEvolve && !canUpgradeRarity && (
         <p className="text-xs text-muted-foreground">

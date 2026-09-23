@@ -1,0 +1,17 @@
+{
+  "source": "sky4k.hdr",
+  "licence": "CC0 1.0 \u2014 Poly Haven (Greg Zaal, Jarod Guest)",
+  "belowHorizonDegrees": 8,
+  "skyScale": 2.36252,
+  "horizon": [
+    0.4252,
+    0.45782,
+    0.55356
+  ],
+  "sun": [
+    0.55474,
+    0.74147,
+    0.37748
+  ],
+  "sunElevationDegrees": 47.86
+}

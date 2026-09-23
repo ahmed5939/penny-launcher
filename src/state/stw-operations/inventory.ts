@@ -13,6 +13,12 @@ export type InventoryFilters = {
   /** 0 means "any tier". */
   maxTier: number
   search: string
+  /**
+   * The Defender tab has two views of the same items: the shelves, and the
+   * weapon-fit helper that ranks each defender's rolls against your
+   * schematics. Kept here so the old /defenders link can open it directly.
+   */
+  defenderView: 'browse' | 'fit'
 }
 
 /** The vault opens on the schematics tab; the strip switches kinds. */
@@ -21,6 +27,7 @@ export const defaultInventoryFilters: InventoryFilters = {
   maxRarity: 'mythic',
   maxTier: 0,
   search: '',
+  defenderView: 'browse',
 }
 
 /**

@@ -48,7 +48,7 @@ export function useSpritesPage() {
     }
 
     if (loadedFor !== selected.accountId) {
-      setLoading(true)
+      setLoading(selected.accountId)
       window.electronAPI.requestSprites(selected)
     }
     /* Keyed on the account id alone — `selected` is a new object each render. */
@@ -59,14 +59,14 @@ export function useSpritesPage() {
       return
     }
 
-    setLoading(true)
+    setLoading(selected.accountId)
     window.electronAPI.requestSprites(selected, true)
   }
 
   return {
     account: selected,
-    collection,
-    errorMessage,
+    collection: loadedFor === accountId ? collection : null,
+    errorMessage: loadedFor === accountId ? errorMessage : null,
     handleReload,
     isLoading,
   }

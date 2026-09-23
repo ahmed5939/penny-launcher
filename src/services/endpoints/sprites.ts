@@ -45,6 +45,7 @@ export function getSpriteInventory({
     {
       params: {
         moduleFilters: spriteModuleFilter,
+        includeMetadata: true,
       },
       headers: {
         Authorization: `Bearer ${accessToken}`,

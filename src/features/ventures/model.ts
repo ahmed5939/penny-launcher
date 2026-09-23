@@ -6,7 +6,7 @@ import questRewards from '../../data/quest-rewards.json'
  * Everything here is read straight off `campaign`: the season's XP is the
  * `AccountResource:phoenixxp` stack, the Ventures F.O.R.T. stats are the
  * `Stat:*_phoenix` items, and the seasonal quest chains are the
- * `Quest:adventure_seasonal_*` items with their `completion_*` counters.
+ * seasonal quest items with their `completion_*` counters, across all five seasons.
  *
  * What the profile does NOT carry is the level curve. Epic keeps that in a
  * game DataTable, and the profile only reports the level when a stats
@@ -33,6 +33,7 @@ export type VentureQuest = {
 
 export type VenturesProgress = {
   accountId: string
+  season: string | null
   fetchedAt: string
   /** Season Ventures XP. `null` when the profile has no phoenixxp stack. */
   xp: number | null
@@ -72,19 +73,28 @@ export const chainNames: Record<string, string> = {
   weapon: 'Weapons',
 }
 
-const chainPattern = /^Quest:adventure_seasonal_([a-z]+)_(\d+)$/i
+// Summer uses three different naming conventions; the other seasons share one.
+const chainPattern = /^Quest:(adventure|beginnings|fall|winter|phoenix)_?seasonal_(destroy|locating|mission|monster|weapon)_(?:summer_)?(\d+)$/i
+
+export const ventureSeasonNames: Record<string, string> = {
+  adventure: 'Scurvy Shoals',
+  beginnings: 'Mild Meadows',
+  fall: 'Hexsylvania',
+  winter: 'Frozen Fjords',
+  phoenix: 'Blasted Badlands',
+}
 
 type RewardRow = { quantity: number; questTemplateId: string; templateId: string }
 
 /** Every seasonal Ventures quest the bundled reward table knows, with its XP. */
-export const seasonalQuests: ReadonlyArray<{ templateId: string; chain: string; step: number; xp: number }> = Object.entries(
+export const seasonalQuests: ReadonlyArray<{ templateId: string; season: string; chain: string; step: number; xp: number }> = Object.entries(
   questRewards as Record<string, Array<RewardRow>>
 )
   .flatMap(([templateId, rewards]) => {
     const match = chainPattern.exec(templateId)
     if (!match) return []
     const xp = rewards.find((r) => r.templateId.toLowerCase() === 'accountresource:phoenixxp_reward')?.quantity ?? 0
-    return [{ templateId, chain: match[1].toLowerCase(), step: Number(match[2]), xp }]
+    return [{ templateId, season: match[1].toLowerCase(), chain: match[2].toLowerCase(), step: Number(match[3]), xp }]
   })
   .sort((a, b) => a.chain.localeCompare(b.chain) || a.step - b.step)
 
@@ -103,6 +113,16 @@ export function levelFloor(xp: number | null) {
   if (xp === null) return null
   const reached = ventureZones.filter((z) => xp >= z.totalXp)
   return reached.length ? reached[reached.length - 1].level : xp > 0 ? 1 : 0
+}
+
+/** Claimed campaign quests are the completed history used by PennyDB. */
+export function isVentureQuestFinished(quest: Pick<VentureQuest, 'state'>) {
+  return quest.state === 'claimed' || quest.state === 'completed'
+}
+
+export function ventureObjectiveProgress(quest: VentureQuest, backendName: string, required: number) {
+  if (isVentureQuestFinished(quest)) return required
+  return Math.min(required, Math.max(0, quest.objectives.find((objective) => objective.backendName === backendName)?.completed ?? 0))
 }
 
 export function parseVenturesProfile(body: unknown, accountId: string): VenturesProgress {
@@ -136,7 +156,24 @@ export function parseVenturesProfile(body: unknown, accountId: string): Ventures
   const statedLevel = attributes.phoenix_level ?? attributes.ventures_level
   const level = typeof statedLevel === 'number' && Number.isFinite(statedLevel) ? statedLevel : null
 
-  const quests: Array<VentureQuest> = seasonalQuests.map((known) => {
+  // Claimed quests may remain from older seasons. Prefer the most recently
+  // changed season; use live quests and item counts when timestamps are absent.
+  const seasons = new Map<string, { latest: number; live: number; count: number }>()
+  for (const [templateId, { item }] of owned) {
+    const season = chainPattern.exec(templateId)![1].toLowerCase()
+    const score = seasons.get(season) ?? { latest: 0, live: 0, count: 0 }
+    const attrs = item.attributes ?? {}
+    const date = typeof attrs.last_state_change_time === 'string' ? Date.parse(attrs.last_state_change_time) : NaN
+    if (Number.isFinite(date)) score.latest = Math.max(score.latest, date)
+    if (attrs.quest_state !== 'Claimed') score.live++
+    score.count++
+    seasons.set(season, score)
+  }
+  const season = [...seasons].sort(([a, x], [b, y]) =>
+    y.latest - x.latest || y.live - x.live || y.count - x.count || a.localeCompare(b)
+  )[0]?.[0] ?? null
+
+  const quests: Array<VentureQuest> = seasonalQuests.filter((quest) => quest.season === season).map((known) => {
     const hit = owned.get(known.templateId.toLowerCase())
     const attrs = (hit?.item.attributes ?? {}) as Record<string, unknown>
     const raw = typeof attrs.quest_state === 'string' ? attrs.quest_state : hit ? 'Active' : null
@@ -152,5 +189,5 @@ export function parseVenturesProfile(body: unknown, accountId: string): Ventures
     }
   })
 
-  return { accountId, fetchedAt: new Date().toISOString(), xp, level, fort: sawFort ? fort : null, quests }
+  return { accountId, season, fetchedAt: new Date().toISOString(), xp, level, fort: sawFort ? fort : null, quests }
 }

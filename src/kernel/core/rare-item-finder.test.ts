@@ -36,6 +36,17 @@ describe('rare item finder main-process scan', () => {
     expect(Object.keys(rules.items).length).toBe(Object.keys((rulesData as { items: object }).items).length)
   })
 
+  it('reuses parsed rules after strong-cache eviction while memory retains them', async () => {
+    vi.useFakeTimers()
+    try {
+      const rules = await loadSlotRules()
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(await loadSlotRules()).toBe(rules)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('reads all four profiles with the host token and returns token-free, classified results', async () => {
     const calls: Array<{ url: string; init: RequestInit }> = []
     vi.stubGlobal('fetch', (async (url, init) => { calls.push({ url, init }); return ok(fullProfile(profileOf(url), itemsFor(profileOf(url)))) }) as Fetcher)

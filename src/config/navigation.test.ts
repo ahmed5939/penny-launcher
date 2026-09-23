@@ -14,6 +14,27 @@ import {
 } from '../state/settings/customizable-menu'
 
 describe('navigation', () => {
+  /*
+   * One destination per thing. The sidebar used to carry Defenders twice
+   * (its own page and a vault tab), Backpack and Storage as two entries, and
+   * the daily-quest update and reroll as two pages over one component. A second entry for the same thing belongs as a tab, switch or
+   * view on the first.
+   */
+  it('lists every destination and every label once', () => {
+    const items = navSections.flatMap((section) => section.items)
+    const paths = items.map((item) => item.to)
+    const labels = items.map((item) => item.label)
+    expect(paths.filter((path, index) => paths.indexOf(path) !== index)).toEqual([])
+    expect(labels.filter((label, index) => labels.indexOf(label) !== index)).toEqual([])
+  })
+
+  it('keeps merged pages out of the sidebar', () => {
+    const paths = navSections.flatMap((section) => section.items.map((item) => item.to))
+    for (const merged of ['/stw-operations/inventory', '/stw-operations/storage', '/stw-operations/auto-update-quests']) {
+      expect(paths).not.toContain(merged)
+    }
+  })
+
   const destinations = navDestinations()
 
   it('keeps every automation reachable from the rail', () => {
@@ -23,15 +44,16 @@ describe('navigation', () => {
     expect(destinations).toContain('/stw-operations/taxi-service')
     expect(destinations).toContain('/stw-operations/auto-llamas')
     expect(destinations).toContain('/stw-operations/auto-daily-reroll')
-    expect(destinations).toContain('/stw-operations/auto-update-quests')
+    expect(destinations).not.toContain('/stw-operations/auto-update-quests')
     expect(destinations).toContain('/stw-operations/urns')
     expect(destinations).toContain('/stw-operations/party')
   })
 
   it('keeps STW tools and account admin reachable', () => {
     expect(destinations).toContain('/')
-    expect(destinations).toContain('/stw-operations/inventory')
-    expect(destinations).toContain('/stw-operations/defenders')
+    for (const kind of ['schematics', 'heroes', 'defenders', 'survivors']) {
+      expect(destinations).toContain(`/stw-operations/${kind}`)
+    }
     expect(destinations).toContain('/stw-operations/collection-book')
     expect(destinations).toContain('/stw-operations/rare-item-finder')
     expect(destinations).toContain('/stw-operations/loadouts')
@@ -49,8 +71,6 @@ describe('navigation', () => {
 
     expect(betaItems.map((item) => item.to)).toEqual([
       '/stw-operations/backpack',
-      '/stw-operations/storage',
-      '/stw-operations/defenders',
       '/stw-operations/collection-book',
       '/stw-operations/ventures',
       '/stw-operations/rare-item-finder',
@@ -112,7 +132,7 @@ describe('area navigation', () => {
     ['/stw-operations/endurance', undefined],
     ['/stw-operations/taxi-service', 'automate'],
     ['/accounts/add/device-auth', 'accounts'],
-    ['/account-management/profile', 'accounts'],
+    ['/account-management/history', 'accounts'],
     ['/account', 'accounts'],
     ['/settings', undefined],
     ['/unrecognized', undefined],
@@ -121,7 +141,7 @@ describe('area navigation', () => {
   })
 
   it('matches whole path segments', () => {
-    expect(matchesNavPath('/account-management/profile', '/account')).toBe(
+    expect(matchesNavPath('/account-management/history', '/account')).toBe(
       false,
     )
     expect(matchesNavPath('/settings/tweaks', '/settings')).toBe(true)
@@ -169,18 +189,18 @@ describe('area navigation', () => {
 
   it('restores the previous page only while it remains visible', () => {
     expect(
-      sectionLanding(stw, stw.items, true, '/stw-operations/inventory')?.to,
-    ).toBe('/stw-operations/inventory')
+      sectionLanding(stw, stw.items, true, '/stw-operations/heroes')?.to,
+    ).toBe('/stw-operations/heroes')
     const visible = stw.items.filter((item) => item.can !== 'inventory')
     expect(
-      sectionLanding(stw, visible, true, '/stw-operations/inventory')?.to,
+      sectionLanding(stw, visible, true, '/stw-operations/heroes')?.to,
     ).toBe('/stw-operations/missions')
   })
 
   it('does not route to a hidden Missions landing', () => {
     const visible = stw.items.filter((item) => item.can !== 'currentAlerts')
     expect(sectionLanding(stw, visible, true)?.to).toBe(
-      '/stw-operations/inventory',
+      '/stw-operations/schematics',
     )
     expect(sectionLanding(stw, [], true)).toBeUndefined()
   })

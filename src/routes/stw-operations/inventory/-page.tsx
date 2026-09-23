@@ -21,11 +21,11 @@ import {
   Star,
   Swords,
   Trash2,
-  Users,
+  UsersRound,
   UserX,
   Zap,
 } from 'lucide-react'
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../../components/ui/button'
@@ -69,12 +69,15 @@ import {
   Panel,
   PanelBody,
   PanelHeader,
+  Segmented,
   StatRow,
   StatTile,
   vaultRarityColors,
 } from '../../../components/page'
 
-import { itemKinds, useInventoryData } from './-hooks'
+import { useInventoryData } from './-hooks'
+import { useInventoryStore } from '../../../state/stw-operations/inventory'
+import { DefendersView } from '../defenders/-view'
 
 import { useColumnCount } from '../../../hooks/ui/virtual'
 import { useStableCallback } from '../../../hooks/ui/stable-callback'
@@ -85,7 +88,7 @@ import {
   rarityOrder,
 } from '../../../config/constants/fortnite/items'
 
-import { cn, parseCustomDisplayName } from '../../../lib/utils'
+import { parseCustomDisplayName } from '../../../lib/utils'
 
 /**
  * Kind is a tab, not a filter.
@@ -95,14 +98,14 @@ import { cn, parseCustomDisplayName } from '../../../lib/utils'
  * screen of chrome before the first item, and a set of switches you could
  * turn all the way off until the vault looked broken. Kinds are mutually
  * exclusive in every way that matters: nobody compares a survivor against a
- * sniper rifle. So they are tabs, they carry their own counts, and the
- * narrowing controls that remain are two dropdowns on one line.
+ * sniper rifle. So each kind is its own page, and the narrowing controls
+ * that remain are two dropdowns on one line.
  */
 const kindIcons: Record<ItemKind, LucideIcon> = {
   defender: ShieldHalf,
   hero: Swords,
   schematic: Hammer,
-  survivor: Users,
+  survivor: UsersRound,
 }
 
 /** `itemKindLabels` is plural — a shelf of one still has to read right. */
@@ -112,12 +115,6 @@ const kindNouns: Record<ItemKind, [string, string]> = {
   schematic: ['schematic', 'schematics'],
   survivor: ['survivor', 'survivors'],
 }
-
-const tabs = itemKinds.map((kind) => ({
-  icon: kindIcons[kind],
-  label: itemKindLabels[kind],
-  value: kind,
-}))
 
 /** Strongest first — the order a vault is worth reading in. */
 const raritySections = [...rarityOrder].reverse()
@@ -276,21 +273,51 @@ function ItemMenu({
   )
 }
 
-export function RouteComponent() {
+/**
+ * Schematics, heroes, defenders and survivors are four pages, not four tabs
+ * of one vault. Each is read on its own — you go looking for a hero, not for
+ * "the inventory" — so each gets its own sidebar entry and header. They share
+ * everything below the header: the same shelves, inspect dialog, upgrades
+ * and recycling.
+ */
+const kindPages: Record<ItemKind, { description: string }> = {
+  schematic: { description: 'Every weapon and trap schematic the account owns. Click to inspect, tick to select, right-click for quick actions.' },
+  hero: { description: 'Every hero the account owns, with their perks and loadout status. Click to inspect, tick to select, right-click for quick actions.' },
+  defender: { description: 'Every defender the account owns. Switch to Weapon fit to match their rolls with the schematics you have.' },
+  survivor: { description: 'Every survivor and lead the account owns, with personality and set bonus. Click to inspect, tick to select, right-click for quick actions.' },
+}
+
+function KindPage({ kind }: { kind: ItemKind }) {
   const { t } = useTranslation(['sidebar'])
+  const current = useInventoryStore((state) => state.filters.kinds[0])
+  const updateFilters = useInventoryStore((state) => state.updateFilters)
+  const clearSelection = useInventoryStore((state) => state.clearSelection)
+
+  /* The route sets this before render; this covers arriving by any other way. */
+  useLayoutEffect(() => {
+    if (current !== kind) {
+      updateFilters({ kinds: [kind] })
+      clearSelection()
+    }
+  }, [kind, current, updateFilters, clearSelection])
 
   return (
     <>
       <PageHeader
-        icon={Boxes}
+        icon={kindIcons[kind]}
         section={t('stw-operations.title')}
-        title={t('stw-operations.options.inventory')}
-        description="Every hero, schematic, defender and survivor the account owns. Click to inspect, tick to select, right-click for quick actions."
+        title={itemKindLabels[kind]}
+        description={kindPages[kind].description}
       />
-      <Content />
+      {current === kind && <Content />}
     </>
   )
 }
+
+export const SchematicsPage = () => <KindPage kind="schematic" />
+export const HeroesPage = () => <KindPage kind="hero" />
+export const DefendersPage = () => <KindPage kind="defender" />
+export const SurvivorsPage = () => <KindPage kind="survivor" />
 
 function Content() {
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -303,13 +330,11 @@ function Content() {
     alterationPools,
     clearSelection,
     confirmOpen,
-    countsByKind,
     errorMessage,
     filters,
     handleItemAction,
     handleLoad,
     handleRecycle,
-    handleSelectKind,
     handleToggleAll,
     handleToggleItem,
     handleToggleMany,
@@ -332,6 +357,8 @@ function Content() {
     totalSelected,
     updateFilters,
   } = useInventoryData()
+
+  const defenderFit = activeKind === 'defender' && filters.defenderView === 'fit'
 
   /**
    * One section per rarity, strongest first. A vault is read top-down for the
@@ -472,51 +499,25 @@ function Content() {
 
       </Panel>
       <div className="chrome-surface sticky top-0 z-10 space-y-3 rounded-xl border border-border/60 p-3">
-          {/*
-            A hand-rolled strip rather than the Radix `Tabs`, for the same
-            reason `Segmented` is: there are no tab *panels* here. The tab
-            picks what the page below is about, and Radix triggers would
-            point `aria-controls` at content that does not exist.
-          */}
-          <div
-            className="flex flex-wrap items-center gap-1 rounded-xl border border-border/60 bg-surface/60 p-1"
-            role="tablist"
-          >
-            {tabs.map((tab) => {
-              const active = activeKind === tab.value
-              const count = countsByKind[tab.value]
+          {activeKind === 'defender' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Segmented
+                onChange={(defenderView) => updateFilters({ defenderView })}
+                options={[
+                  { label: 'Browse', value: 'browse' },
+                  { label: 'Weapon fit', value: 'fit' },
+                ]}
+                value={filters.defenderView}
+              />
+              <span className="text-xs text-muted-foreground">
+                {defenderFit
+                  ? 'Ranks each defender’s rolls and suggests schematics you own that suit them.'
+                  : 'Switch to Weapon fit to match defenders with your weapon schematics.'}
+              </span>
+            </div>
+          )}
 
-              return (
-                <button
-                  aria-selected={active}
-                  className={cn(
-                    'flex h-8 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition-colors',
-                    active
-                      ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/25'
-                      : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground'
-                  )}
-                  key={tab.value}
-                  onClick={() => handleSelectKind(tab.value)}
-                  role="tab"
-                  type="button"
-                >
-                  <tab.icon className="size-3.5" />
-                  {tab.label}
-                  <span
-                    className={cn(
-                      'figure rounded-md px-1.5 py-px text-[0.625rem]',
-                      active
-                        ? 'bg-primary/20 text-primary'
-                        : 'bg-background/50 text-muted-foreground'
-                    )}
-                  >
-                    {count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
+          {!defenderFit && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="relative min-w-52 flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -603,6 +604,7 @@ function Content() {
               </SelectContent>
             </Select>
           </div>
+          )}
       </div>
 
       {errorMessage && (
@@ -614,7 +616,20 @@ function Content() {
         </Callout>
       )}
 
-      {hasLoaded && !errorMessage && (
+      {defenderFit && hasLoaded && !errorMessage && (
+        <DefendersView
+          accountSelected={Boolean(account)}
+          embedded
+          error={null}
+          items={allRows}
+          loading={isLoading}
+          onRefresh={handleLoad}
+          ratings={ratings}
+          records={records}
+        />
+      )}
+
+      {hasLoaded && !errorMessage && !defenderFit && (
         <>
           <StatRow>
             <StatTile

@@ -1,29 +1,23 @@
 import type { BookSlot } from '../../../features/collection-book/match'
 import type { BookItem, CollectionBookData } from '../../../features/collection-book/types'
 
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpCircle, BookOpen, CheckCircle2, Layers, RefreshCw, Search, Sparkles, Zap } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowUpCircle, BookOpen, CheckCircle2, Layers, Search, Sparkles, Zap } from 'lucide-react'
 
 import { Resources } from './-resources'
-import { useGetSelectedAccount } from '../../../hooks/accounts'
 import { useItemDatabaseStore, getItemRecord } from '../../../state/items/database'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 import { computeItemPower } from '../../../config/constants/fortnite/power'
 import { prettifyWorkerTrait } from '../../../config/constants/fortnite/items'
 import catalog from '../../../features/collection-book/catalog.json'
 import { bookCosts } from '../../../features/collection-book/costs'
-import { matchesSlot } from '../../../features/collection-book/match'
+import { indexBookSlots } from '../../../features/collection-book/match'
 
 import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
+import { Dialog, DialogContent } from '../../../components/ui/dialog'
 import { ItemCard, ItemCardGrid } from '../../../components/items/item-card'
-import { resolveItemArt } from '../../../components/items/item-icon'
-import { Callout, Chip, EmptyState, KeyValue, PageHeader, PageTabPanel, PageTabs, Panel, PanelBody, PanelHeader, StatRow, StatTile, rarityStyle, rarityTypeFromName } from '../../../components/page'
-
-import { raritiesColor } from '../../../config/constants/resources'
-import { cn } from '../../../lib/utils'
+import { DetailHeader, DetailSection, PerkSlotRow } from '../../../components/items/detail-parts'
+import { AccountResourceGate, Callout, Chip, EmptyState, FilterBar, KeyValue, PageHeader, PageTabPanel, PageTabs, Pager, Panel, PanelBody, PanelHeader, Picker, RefreshButton, SearchField, StatRow, StatTile, ToolBadges, paginate, useAccountResource } from '../../../components/page'
 
 type Detail = { slot: BookSlot; items: BookItem[]; owned: BookItem[]; location?: Location }
 type Location = { category: (typeof catalog)[number]; page: (typeof catalog)[number]['pages'][number]; section: (typeof catalog)[number]['pages'][number]['sections'][number]; slot: BookSlot }
@@ -35,73 +29,74 @@ const statusOptions = [
   { value: 'ready', label: 'Missing · copy owned' },
 ]
 const rarityOptions = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic']
+const upgradePageSize = 60
 
-function locate(item: BookItem): Location | undefined {
-  for (const category of catalog)
-    for (const page of category.pages)
-      for (const section of page.sections)
-        for (const slot of section.slots) if (matchesSlot(item, slot)) return { category, page, section, slot }
-  return undefined
-}
+const locations: Location[] = catalog.flatMap((category) =>
+  category.pages.flatMap((page) =>
+    page.sections.flatMap((section) =>
+      section.slots.map((slot) => ({ category, page, section, slot })))))
+const allSlots = locations.map(({ slot }) => slot)
+const locationBySlot = new Map(locations.map((location) => [location.slot, location]))
+const totalSlots = allSlots.length
+const emptyItems: BookItem[] = []
 
 export function RouteComponent() {
   useRequestItemDatabase()
-  const { selected } = useGetSelectedAccount()
-  const accountId = selected?.accountId ?? null
+  const resource = useAccountResource((accountId) => window.electronAPI.requestCollectionBook(accountId), {
+    fallbackError: 'Could not load the Collection Book. Refresh to retry.',
+    owner: (result) => result.accountId,
+  })
+
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        actions={<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />}
+        description="The live Epic Collection Book for the selected account. Browse slotted items, find empty slots you already own a copy for, and see what it would cost to finish the book."
+        icon={BookOpen}
+        section="Save the World"
+        status={<ToolBadges beta readOnly />}
+        title="Collection Book"
+      />
+      <AccountResourceGate
+        icon={BookOpen}
+        loading={{ title: 'Loading the Collection Book…', description: 'Reading the campaign profile and both book profiles from Epic.' }}
+        resource={resource}
+        what="the Collection Book"
+      >
+        {(data) => <Book current={data} key={data.accountId} />}
+      </AccountResourceGate>
+    </div>
+  )
+}
+
+function Book({ current }: { current: CollectionBookData }) {
   const records = useItemDatabaseStore((s) => s.records)
   const ratings = useItemDatabaseStore((s) => s.ratings)
-
-  const [data, setData] = useState<CollectionBookData | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [attempt, refresh] = useState(0)
   const [categoryId, setCategory] = useState(catalog[0].id)
   const [pageId, setPage] = useState(catalog[0].pages[0].id)
   const [status, setStatus] = useState('all')
   const [rarity, setRarity] = useState('all')
   const [needsUpgrading, setNeedsUpgrading] = useState(false)
+  const [upgradePage, setUpgradePage] = useState(0)
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<'collection' | 'resources'>('collection')
   const [detail, setDetail] = useState<Detail | null>(null)
 
-  useEffect(() => {
-    let active = true
-    setData(null)
-    setError('')
-    setDetail(null)
-    if (!selected) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    window.electronAPI
-      .requestCollectionBook(selected.accountId)
-      .then((result) => {
-        if (active && result.accountId === accountId) setData(result)
-      })
-      .catch((cause) => {
-        if (active) setError(cause instanceof Error ? cause.message : 'Could not load the Collection Book. Refresh to retry.')
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [accountId, attempt])
-
-  const current = data?.accountId === accountId ? data : null
-  const upgradeTotals = useMemo(() => bookCosts(current?.slotted ?? [], 'ore'), [current])
+  const upgradeTotals = useMemo(() => bookCosts(current.slotted, 'ore'), [current])
   const upgradeItems = useMemo(() => {
     const ids = new Set(upgradeTotals.upgradeIds)
-    return current?.slotted.filter((item) => ids.has(item.id)) ?? []
+    return current.slotted.filter((item) => ids.has(item.id))
   }, [current, upgradeTotals])
-  const totalSlots = useMemo(() => catalog.reduce((n, c) => n + c.pages.reduce((m, p) => m + p.sections.reduce((k, s) => k + s.slots.length, 0), 0), 0), [])
+  const shownUpgrades = paginate(upgradeItems, upgradePage, upgradePageSize)
+  const slotIndex = useMemo(() => ({
+    slotted: indexBookSlots(allSlots, current.slotted),
+    owned: indexBookSlots(allSlots, current.inventory),
+  }), [current])
 
   const category = catalog.find((c) => c.id === categoryId) ?? catalog[0]
   const page = category.pages.find((p) => p.id === pageId) ?? category.pages[0]
-  const slotted = (slot: BookSlot) => current?.slotted.filter((i) => matchesSlot(i, slot)) ?? []
-  const owned = (slot: BookSlot) => current?.inventory.filter((i) => matchesSlot(i, slot)) ?? []
+  const slotted = (slot: BookSlot) => slotIndex.slotted.bySlot.get(slot) ?? emptyItems
+  const owned = (slot: BookSlot) => slotIndex.owned.bySlot.get(slot) ?? emptyItems
   const power = (i: BookItem) => computeItemPower({ templateId: i.templateId, level: i.level, tables: ratings })
   const label = (tid: string) => getItemRecord(records, tid)?.name ?? tid
   const trait = (s: string | null) => (s ? prettifyWorkerTrait(s) : null)
@@ -123,38 +118,7 @@ export function RouteComponent() {
   const pageFilled = page.sections.reduce((n, s) => n + s.slots.filter((slot) => slotted(slot).length > 0).length, 0)
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        actions={
-          <Button disabled={!accountId || loading} onClick={() => refresh((n) => n + 1)} variant="outline">
-            <RefreshCw className={cn('mr-2 size-4', loading && 'animate-spin')} />
-            {loading ? 'Loading…' : 'Refresh'}
-          </Button>
-        }
-        description="The live Epic Collection Book for the selected account. Browse slotted items, find empty slots you already own a copy for, and see what it would cost to finish the book."
-        icon={BookOpen}
-        section="Save the World"
-        status={
-          <>
-            <Chip tone="accent">Beta</Chip>
-            <Chip>Read-only</Chip>
-          </>
-        }
-        title="Collection Book"
-      />
-
-      {!accountId ? (
-        <EmptyState description="Select an account in the title bar to load its Collection Book." icon={BookOpen} title="Choose an account" />
-      ) : error ? (
-        <div role="alert">
-          <Callout title="Could not load the Collection Book" tone="danger">{error}</Callout>
-        </div>
-      ) : !current ? (
-        <div role="status">
-          <EmptyState description="Reading the campaign profile and both book profiles from Epic." icon={BookOpen} title="Loading the Collection Book…" />
-        </div>
-      ) : (
-        <>
+    <>
           <StatRow>
             <StatTile hint={`of ${totalSlots.toLocaleString()} slots`} icon={Layers} label="Slotted" tone="primary" value={current.slotted.length.toLocaleString()} />
             <StatTile hint="known cost · max level at current rarity" icon={ArrowUpCircle} label="Needs upgrading" tone={upgradeTotals.upgrades ? 'warning' : 'default'} value={upgradeTotals.upgrades.toLocaleString()} />
@@ -186,8 +150,9 @@ export function RouteComponent() {
                         <EmptyState className="border-0 bg-transparent py-8" description="Every slotted item with a known cost is already at its maximum." icon={CheckCircle2} title="Nothing to upgrade" />
                       ) : (
                         <ItemCardGrid>
-                          {upgradeItems.map((item) => {
-                            const location = locate(item)
+                          {shownUpgrades.items.map((item) => {
+                            const matchedSlot = slotIndex.slotted.firstSlotByItemId.get(item.id)
+                            const location = matchedSlot ? locationBySlot.get(matchedSlot) : undefined
                             const slot: BookSlot = location?.slot ?? { id: item.id, name: label(item.templateId), rarity: '', templateId: item.templateId, allowed: [], personalities: [] }
                             return (
                               <ItemCard
@@ -207,6 +172,7 @@ export function RouteComponent() {
                         </ItemCardGrid>
                       )}
                     </PanelBody>
+                    <Pager onPageChange={setUpgradePage} page={shownUpgrades.page} pageSize={upgradePageSize} total={upgradeItems.length} />
                   </>
                 ) : (
                   <>
@@ -220,16 +186,13 @@ export function RouteComponent() {
                       description={<><span className="figure">{pageFilled}</span> of <span className="figure">{pageSlots}</span> slots filled on this page.</>}
                       title={page.name}
                     />
-                    <div className="flex flex-wrap items-center gap-2 border-b border-border/60 px-5 py-3">
+                    <FilterBar>
                       <Picker label="Category" onChange={(v) => { setCategory(v); setPage(catalog.find((c) => c.id === v)!.pages[0].id) }} options={catalog.map((c) => ({ value: c.id, label: c.name }))} value={category.id} />
                       <Picker label="Page" onChange={setPage} options={category.pages.map((p) => ({ value: p.id, label: p.name }))} value={page.id} />
-                      <span className="relative min-w-48 flex-1">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input aria-label="Find a slot" className="pl-9" onChange={(e) => setQuery(e.target.value)} placeholder="Slot or section name" value={query} />
-                      </span>
+                      <SearchField label="Find a slot" onChange={setQuery} placeholder="Slot or section name" value={query} />
                       <Picker label="Slot status" onChange={setStatus} options={statusOptions} value={status} />
                       <Picker label="Rarity" onChange={setRarity} options={[{ value: 'all', label: 'All rarities' }, ...rarityOptions.map((r) => ({ value: r, label: r }))]} value={rarity} />
-                    </div>
+                    </FilterBar>
                     <PanelBody className="space-y-6">
                       {sections.length === 0 ? (
                         <EmptyState className="border-0 bg-transparent py-8" description="No slots on this page match the current filters." icon={Search} title="No matches" />
@@ -283,24 +246,13 @@ export function RouteComponent() {
               </Panel>
             </PageTabPanel>
           </PageTabs>
-        </>
-      )}
 
       <Dialog onOpenChange={(open) => { if (!open) setDetail(null) }} open={detail !== null}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
           {detail && <SlotDetail detail={detail} label={label} power={power} records={records} trait={trait} />}
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function Picker({ label, onChange, options, value }: { label: string; onChange: (value: string) => void; options: Array<{ value: string; label: string }>; value: string }) {
-  return (
-    <Select onValueChange={onChange} value={value}>
-      <SelectTrigger aria-label={label} className="w-auto min-w-36 gap-2"><SelectValue /></SelectTrigger>
-      <SelectContent>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-    </Select>
+    </>
   )
 }
 
@@ -313,61 +265,40 @@ function SlotDetail({ detail, label, power, records, trait }: {
 }) {
   const { slot, items, owned } = detail
   const item = items[0]
-  const art = resolveItemArt(item?.templateId ?? slot.templateId, records, item?.portrait)
-  const rarityType = rarityTypeFromName(slot.rarity)
-  const accent = rarityType ? raritiesColor[rarityType] : null
   const record = item ? getItemRecord(records, item.templateId) : null
   const pl = item ? power(item) : null
 
   return (
     <>
-      <DialogHeader>
-        <div className="flex items-start gap-4">
-          <span className={cn('relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-xl border-2', accent ? 'border-[color:var(--rarity)]' : 'border-border/60')} style={rarityStyle(accent)}>
-            {art.frame && <img alt="" aria-hidden className="absolute inset-0 size-full object-cover" decoding="async" src={art.frame} />}
-            {art.imgUrl && <img alt="" className={cn('relative size-full object-contain', !item && 'opacity-50 grayscale')} decoding="async" src={art.largeImgUrl ?? art.imgUrl} />}
-          </span>
-          <div className="min-w-0 flex-1 text-left">
-            <DialogTitle className="text-left text-lg leading-tight">{slot.name}</DialogTitle>
-            <p className={cn('micro-label mt-1.5', accent && 'text-[color:var(--rarity)]')} style={rarityStyle(accent)}>
-              {[slot.rarity, record?.subType, record?.displayTier].filter(Boolean).join(' · ')}
-            </p>
-            {pl !== null && (
-              <p className="mt-2 flex items-center gap-1.5 leading-none">
-                <Zap className="size-4 text-muted-foreground" />
-                <span className="figure text-base font-bold">{pl}</span>
-                <span className="micro-label">Power</span>
-              </p>
-            )}
-            <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-              {item ? <span>Level <span className="figure">{item.level}</span></span> : <span>Empty slot</span>}
-              {item?.personality && <span>{slot.rarity === 'Mythic' ? 'Fixed personality' : 'Personality'}: {trait(item.personality)}</span>}
-              {item?.teamBonus && <span>Team bonus: {trait(item.teamBonus)}</span>}
-            </p>
-            {detail.location && <p className="mt-1 text-xs text-muted-foreground">{detail.location.category.name} · {detail.location.page.name} · {detail.location.section.name}</p>}
-          </div>
-        </div>
-      </DialogHeader>
+      <DetailHeader
+        dimmed={!item}
+        facts={
+          <>
+            {item ? <span>Level <span className="figure">{item.level}</span></span> : <span>Empty slot</span>}
+            {item?.personality && <span>{slot.rarity === 'Mythic' ? 'Fixed personality' : 'Personality'}: {trait(item.personality)}</span>}
+            {item?.teamBonus && <span>Team bonus: {trait(item.teamBonus)}</span>}
+            {detail.location && <span>{detail.location.category.name} · {detail.location.page.name} · {detail.location.section.name}</span>}
+          </>
+        }
+        meta={[record?.subType, record?.displayTier]}
+        name={slot.name}
+        portrait={item?.portrait}
+        power={pl}
+        rarity={slot.rarity || null}
+        records={records}
+        templateId={item?.templateId ?? slot.templateId}
+      />
 
       {item ? (
         <>
           {item.alterations.length > 0 && (
-            <section className="space-y-2">
-              <p className="section-label flex items-center gap-1.5"><Sparkles className="size-3 text-muted-foreground" />Perks on this copy</p>
+            <DetailSection icon={Sparkles} title="Perks on this copy">
               <ul className="space-y-1.5">
                 {item.alterations.map((a, n) => (
-                  <li className="panel px-3 py-2" key={n}>
-                    <div className="flex items-start gap-2">
-                      <span className="micro-label mt-0.5 w-10 shrink-0">Slot {n + 1}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold">{getItemRecord(records, a)?.description?.replace(/<[^>]+>/g, '') || label(a)}</p>
-                        <p className="mt-1 break-all text-[0.6875rem] text-muted-foreground">{a}</p>
-                      </div>
-                    </div>
-                  </li>
+                  <PerkSlotRow id={a} index={n} key={n} title={getItemRecord(records, a)?.description?.replace(/<[^>]+>/g, '') || label(a)} />
                 ))}
               </ul>
-            </section>
+            </DetailSection>
           )}
           <div className="grid gap-2 sm:grid-cols-2">
             <KeyValue copyable label="Template" value={item.templateId} />

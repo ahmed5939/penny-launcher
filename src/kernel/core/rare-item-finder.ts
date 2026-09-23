@@ -36,22 +36,26 @@ const profileURL = (accountId: string, profileId: FinderSourceId) =>
 
 /**
  * The extracted slot rules are ~20MB, so they live beside the app as an extra
- * resource rather than in the bundle, and are dropped a minute after the last
- * scan rather than held for the whole session.
+ * resource rather than in the bundle. Keep a strong reference for a minute
+ * after a scan, then a weak reference so rescans can reuse the parsed rules
+ * when memory is available without preventing garbage collection.
  */
 const rulesDirectory = () =>
   path.join(app.isPackaged ? process.resourcesPath : app.getAppPath(), 'rare-item-finder-assets')
 
 let rulesCache: Promise<SlotRules> | null = null
+let rulesWeakCache: WeakRef<SlotRules> | null = null
 let rulesEviction: NodeJS.Timeout | null = null
 
 export function loadSlotRules(): Promise<SlotRules> {
-  rulesCache ??= readFile(path.join(rulesDirectory(), 'slot-rules.json'), 'utf8')
+  const retained = rulesWeakCache?.deref()
+  rulesCache ??= retained ? Promise.resolve(retained) : readFile(path.join(rulesDirectory(), 'slot-rules.json'), 'utf8')
     .then((raw) => {
       const parsed = JSON.parse(raw) as SlotRules
       if (!parsed || typeof parsed.items !== 'object' || !Array.isArray(parsed.knownPerks)) {
         throw new FinderFailure('The bundled slot rules are unreadable. Reinstall Penny.', 'RULES_UNAVAILABLE')
       }
+      rulesWeakCache = new WeakRef(parsed)
       return parsed
     })
     .catch((error) => {

@@ -21,3 +21,9 @@ declare module '*.webp' {
   const src: string
   export default src
 }
+
+/** Any file imported with Vite's `?url` suffix (models, HDR images …). */
+declare module '*?url' {
+  const src: string
+  export default src
+}

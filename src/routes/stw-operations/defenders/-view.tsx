@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { RefreshCw, ShieldHalf, Star, Swords, Search } from 'lucide-react'
+import { ShieldHalf, Star, Swords } from 'lucide-react'
 import type { InventoryItem } from '../../../kernel/core/inventory'
 import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import type { RatingTables } from '../../../config/constants/fortnite/power'
@@ -10,18 +10,18 @@ import { matchWeapons } from '../../../features/defenders/weapons'
 import { computeItemPower } from '../../../config/constants/fortnite/power'
 import { rarityLabels } from '../../../config/constants/fortnite/items'
 import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
 import { ItemIcon } from '../../../components/items/item-icon'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
-import { StatRow, StatTile, Chip, vaultRarityColors, PageHeader, Panel, PanelHeader, PanelBody, EmptyState, Callout } from '../../../components/page'
+import { StatRow, StatTile, Chip, vaultRarityColors, PageHeader, Panel, PanelHeader, PanelBody, EmptyState, Callout, FilterBar, Picker, RefreshButton, SearchField, ToolBadges } from '../../../components/page'
 
 const catalog = catalogData as DefenderCatalog
 
 export type DefendersViewProps = {
   accountSelected: boolean; loading: boolean; error: string | null; items: InventoryItem[]
   records: ItemRecordMap; ratings: RatingTables; onRefresh: () => void
+  /** Rendered inside the vault's Defender tab, which owns the header and Refresh. */
+  embedded?: boolean
 }
-export function DefendersView({ accountSelected, loading, error, items, records, ratings, onRefresh }: DefendersViewProps) {
+export function DefendersView({ accountSelected, loading, error, items, records, ratings, onRefresh, embedded }: DefendersViewProps) {
   const [classFilter, setClassFilter] = useState('All')
   const [rarityFilter, setRarityFilter] = useState('All')
   const [search, setSearch] = useState('')
@@ -41,9 +41,10 @@ export function DefendersView({ accountSelected, loading, error, items, records,
   const knownSchematics = items.filter(i => i.kind === 'schematic' && catalog.schematics[i.templateId.toLowerCase()]).length
   const power = (item: InventoryItem) => computeItemPower({ tables: ratings, templateId: item.templateId, level: item.level })
   return <div id="penny-defenders" className="space-y-5">
-    <PageHeader section="Save the World" title="Defenders" icon={ShieldHalf}
+    {!embedded && <PageHeader section="Save the World" title="Defenders" icon={ShieldHalf}
       description="Find strong weapon rolls, then choose weapons that make the most of them."
-      actions={<Button onClick={onRefresh} disabled={!accountSelected || loading} variant="outline"><RefreshCw className="mr-2 h-4 w-4" />{loading ? 'Refreshing…' : 'Refresh'}</Button>} />
+      status={<ToolBadges beta />}
+      actions={<RefreshButton disabled={!accountSelected} loading={loading} onClick={onRefresh} />} />}
     {!accountSelected ? <EmptyState title="Choose an account" description="Select an account in Penny’s title bar to compare its defenders and weapon schematics." />
       : loading ? <div role="status"><EmptyState title="Loading your defenders…" description="Reading the selected account’s inventory." /></div>
       : error ? <div role="alert"><Callout tone="danger" title="Could not load defenders">{error}</Callout></div>
@@ -57,12 +58,12 @@ export function DefendersView({ accountSelected, loading, error, items, records,
           <p>Defender mechanics used here: sixth-perk cooldowns are ignored; Dragon’s Roar supplies 3-second innate affliction. These are player-reported rules. Trigger conditions and target immunity still matter. Legacy effects outside slot six may need separate verification.</p>
           <p>Game definitions: {catalog.build}. New or unrecognised items need review. Owned schematics do not guarantee a crafted weapon is in your backpack.</p>
         </div></details>
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-card/40 p-3">
-          <span className="relative min-w-48 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Find a defender" className="pl-9" value={search} placeholder="Name, perk or item ID" onChange={e => setSearch(e.target.value)} /></span>
-          <LauncherSelect label="Class" value={classFilter} onChange={setClassFilter} options={['All','Assault','Pistol','Sniper','Shotgun','Melee'].map(v => ({value:v,label:v === 'All' ? 'All classes' : v}))} />
-          <LauncherSelect label="Rarity" value={rarityFilter} onChange={setRarityFilter} options={[{value:'All',label:'All rarities'}, ...Object.entries(rarityLabels).filter(([value]) => value !== 'mythic').map(([value,label]) => ({value,label}))]} />
-          <LauncherSelect label="Sort" value={sort} onChange={setSort} options={[{value:'usefulness',label:'Weapon-roll usefulness'},{value:'level',label:'Current level'}]} />
-        </div>
+        <Panel><FilterBar className="border-b-0">
+          <SearchField label="Find a defender" onChange={setSearch} placeholder="Name, perk or item ID" value={search} />
+          <Picker label="Class" value={classFilter} onChange={setClassFilter} options={['All','Assault','Pistol','Sniper','Shotgun','Melee'].map(v => ({value:v,label:v === 'All' ? 'All classes' : v}))} />
+          <Picker label="Rarity" value={rarityFilter} onChange={setRarityFilter} options={[{value:'All',label:'All rarities'}, ...Object.entries(rarityLabels).filter(([value]) => value !== 'mythic').map(([value,label]) => ({value,label}))]} />
+          <Picker label="Sort" value={sort} onChange={setSort} options={[{value:'usefulness',label:'Weapon-roll usefulness'},{value:'level',label:'Current level'}]} />
+        </FilterBar></Panel>
         {!active ? <EmptyState title="No matching defenders" description="Try a different class, rarity or search." /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(240px,0.9fr)_minmax(0,1.6fr)]">
           <Panel><PanelHeader title={`${visible.length} defender${visible.length === 1 ? '' : 's'}`} description="Select a defender to compare weapon matches." /><PanelBody className="max-h-[700px] divide-y divide-border/50 overflow-y-auto p-0">
             {visible.map(d => <button key={d.item.itemId} type="button" aria-pressed={active.item.itemId === d.item.itemId} onClick={() => { setSelection(d.item.itemId); setLimit(6) }} className={`flex w-full items-center gap-3 border-l-2 px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${active.item.itemId === d.item.itemId ? 'border-l-primary bg-primary/5' : 'border-l-transparent'}`}>
@@ -84,8 +85,8 @@ export function DefendersView({ accountSelected, loading, error, items, records,
             </PanelBody></Panel>
             <h2 className="text-sm font-semibold">Weapons that suit this defender</h2>
             <div className="flex flex-wrap items-center gap-2">
-              <LauncherSelect label="Role" value={role} onChange={v => { setRole(v); setLimit(6) }} options={['All','Crowd damage','Crowd control','Body-hit damage'].map(v => ({value:v,label:v === 'All' ? 'All roles' : v}))} />
-              <LauncherSelect label="Weapon order" value={weaponOrder} onChange={v => { setWeaponOrder(v); setLimit(6) }} options={[{value:'fit',label:'Best perk fit'},{value:'level',label:'Highest current level'}]} />
+              <Picker label="Role" value={role} onChange={v => { setRole(v); setLimit(6) }} options={['All','Crowd damage','Crowd control','Body-hit damage'].map(v => ({value:v,label:v === 'All' ? 'All roles' : v}))} />
+              <Picker label="Weapon order" value={weaponOrder} onChange={v => { setWeaponOrder(v); setLimit(6) }} options={[{value:'fit',label:'Best perk fit'},{value:'level',label:'Highest current level'}]} />
             </div>
             <p className="text-xs text-muted-foreground">{filteredMatches.length} matching owned rolls. Perk fit describes the fully unlocked roll; check level before investing. These are not measured DPS rankings.</p>
             {filteredMatches.length === 0 ? <EmptyState title="No checked weapon matches" description="Try another role. Unsupported or unknown weapons are not guessed; this does not mean the defender is useless." /> : filteredMatches.slice(0,limit).map(w => <WeaponCard key={w.item.itemId} match={w} power={power(w.item)} records={records} />)}
@@ -106,10 +107,6 @@ function WeaponCard({ match: w, power, records }: { match: WeaponMatch; power: n
   </PanelBody></Panel>
 }
 
-function LauncherSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: Array<{value: string; label: string}> }) {
-  return <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label} className="w-auto min-w-36 gap-2"><SelectValue /></SelectTrigger><SelectContent>{options.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select>
-}
-
 function PowerItemIcon({ item, records, power, size = 'large' }: { item: InventoryItem; records: ItemRecordMap; power: number | null; size?: 'large' | 'xl' }) {
-  return <span className="flex shrink-0 flex-col items-start gap-1">{power !== null && <span aria-label={`Power level ${power}`} className="figure text-[10px] font-bold leading-none text-foreground"><span className="mr-1 font-medium text-muted-foreground">PL</span>{power}</span>}<ItemIcon templateId={item.templateId} records={records} size={size} /></span>
+  return <span className="flex shrink-0 flex-col items-start gap-1">{power !== null && <span aria-label={`Power level ${power}`} className="figure text-[0.625rem] font-bold leading-none text-foreground"><span className="mr-1 font-medium text-muted-foreground">PL</span>{power}</span>}<ItemIcon templateId={item.templateId} records={records} size={size} /></span>
 }

@@ -259,6 +259,7 @@ export function buildSpriteCollection(
 ): SpriteCollection {
   const counts = new Map<string, number>()
   const entitlements = new Map<string, SpriteEntitlement>()
+  const inventoryRelicIds = new Map<string, string>()
   let equippedRelicId: string | null = null
   let extractionPoints: number | null = null
 
@@ -273,6 +274,7 @@ export function buildSpriteCollection(
       const key = stateKey(relicId)
 
       counts.set(key, Math.max(counts.get(key) ?? 0, count ?? 0))
+      inventoryRelicIds.set(key, relicId)
     })
 
     Object.entries(module.entitlementMetadata ?? {}).forEach(
@@ -280,7 +282,9 @@ export function buildSpriteCollection(
         const parsed = parseJson<SpriteEntitlement>(raw)
 
         if (parsed) {
-          entitlements.set(stateKey(relicId), parsed)
+          const key = stateKey(relicId)
+          entitlements.set(key, parsed)
+          inventoryRelicIds.set(key, relicId)
         }
       }
     )
@@ -338,6 +342,21 @@ export function buildSpriteCollection(
       }
     })
   })
+
+  // A newly released relic can reach an account before either catalogue or
+  // bundled art knows about it. Keep it visible instead of dropping ownership.
+  for (const key of new Set([...counts.keys(), ...entitlements.keys()])) {
+    if (spine.has(key)) continue
+
+    const [family, variant] = key.split('::')
+    spine.set(key, {
+      relicId: inventoryRelicIds.get(key) ?? syntheticRelicId(family, variant),
+      family,
+      variant,
+      summonCost: null,
+      starter: false,
+    })
+  }
 
   const byFamily = new Map<string, Array<SpriteEntry>>()
 

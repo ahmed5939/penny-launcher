@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
-import { PageHeader, Panel } from '../../../components/page'
+import { PageHeader, Panel, SearchField } from '../../../components/page'
+import { Checkbox } from '../../../components/ui/checkbox'
 import { Switch } from '../../../components/ui/switch'
 import { Button } from '../../../components/ui/button'
 import {
@@ -15,13 +16,12 @@ import type {
   DailyRerollStatus,
 } from '../../../features/daily-reroll/policy'
 
-export function UpdateRouteComponent() {
-  return <RouteComponent updatesOnly />
-}
-
-export function RouteComponent({
-  updatesOnly = false,
-}: { updatesOnly?: boolean } = {}) {
+/**
+ * Daily quests: the automatic quest update at reset and the optional reroll
+ * that depends on it. One page for both — they are one setting with a
+ * dependency, and splitting them made people hunt for the other half.
+ */
+export function RouteComponent() {
   const { parsedSelectedAccounts } = useAccountSelectorData()
   const [status, setStatus] = useState<DailyRerollStatus | null>(null)
   const [error, setError] = useState('')
@@ -79,8 +79,8 @@ export function RouteComponent({
     <>
       <PageHeader
         icon={RefreshCw}
-        section="Automations"
-        title={updatesOnly ? 'Auto update daily quests' : 'Auto daily reroll'}
+        section="Automate"
+        title="Daily quests"
         description="Update daily quests at reset, with an optional automatic reroll."
       />
       <TooltipProvider delayDuration={250}>
@@ -104,18 +104,15 @@ export function RouteComponent({
           {parsedSelectedAccounts.length === 0 && (
             <p>Select an account to configure daily quest automations.</p>
           )}
-          {status && !updatesOnly && (
-            <label className="block text-sm">
-              Find quests
-              <input
-                className="mt-1 block w-full rounded-md border border-border bg-background p-2"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search daily quests…"
-              />
-            </label>
+          {status && (
+            <SearchField
+              label="Find quests"
+              onChange={setSearch}
+              placeholder="Search daily quests…"
+              value={search}
+            />
           )}
-          {status?.questDataUnavailable && !updatesOnly && (
+          {status?.questDataUnavailable && (
             <p role="status" className="text-sm text-muted-foreground">
               Quest choices are unavailable. Daily quest updates can still run;
               rerolls wait for quest data.
@@ -165,8 +162,7 @@ export function RouteComponent({
                     {config.lastUpdateActivity &&
                       ` · ${new Date(config.lastUpdateActivity).toLocaleString()}`}
                   </p>
-                  {!updatesOnly && (
-                    <>
+                  <>
                       <div className="flex items-center gap-3">
                         <Switch
                           aria-label={`Auto daily reroll for ${account.label}`}
@@ -235,16 +231,16 @@ export function RouteComponent({
                                 key={quest.templateId}
                                 className="flex items-start gap-2 text-sm"
                               >
-                                <input
-                                  type="checkbox"
-                                  className="mt-1"
+                                <Checkbox
+                                  aria-label={`Keep ${quest.name}`}
+                                  className="mt-0.5"
                                   checked={config.keep.includes(
                                     quest.templateId,
                                   )}
                                   disabled={busy}
-                                  onChange={(event) =>
+                                  onCheckedChange={(checked) =>
                                     void save({
-                                      keep: event.target.checked
+                                      keep: checked === true
                                         ? [...config.keep, quest.templateId]
                                         : config.keep.filter(
                                             (id) => id !== quest.templateId,
@@ -301,14 +297,7 @@ export function RouteComponent({
                             ))}
                         </div>
                       </details>
-                    </>
-                  )}
-                  {updatesOnly && config.enabled && (
-                    <p className="text-sm text-muted-foreground">
-                      Turn off Auto daily reroll on its page before disabling
-                      daily quest updates.
-                    </p>
-                  )}
+                  </>
                 </section>
               )
             })}

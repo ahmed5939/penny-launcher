@@ -1029,6 +1029,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     secureIpcHandle('world-inventory:query', async (_, accountId: string, location: 'backpack' | 'storage') => (await import('./core/world-inventory')).requestWorldInventory(accountId, location))
+    secureIpcHandle('quest-history:query', async (_, accountId: string) => (await import('./core/quest-history')).requestQuestHistory(accountId))
     secureIpcHandle('ventures:query', async (_, accountId: string) => (await import('./core/ventures')).requestVentures(accountId))
     secureIpcHandle('collection-book:query', async (_, accountId: string) => {
       const { requestCollectionBook } = await import('./core/collection-book')

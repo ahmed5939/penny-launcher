@@ -327,7 +327,7 @@ function AccountManagementSection() {
             className="title"
             htmlFor="profile"
           >
-            {t('account-management.options.profile')}
+            {t('account-management.options.history')}
           </Label>
           <Switch
             id="profile"

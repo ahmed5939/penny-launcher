@@ -100,3 +100,30 @@ instead of closing their openings with bounds boxes. The five bounds fallbacks
 are a slope and shoreline corner models. This is a collision-based reconstruction,
 not the original render mesh or Unreal terrain shader. Decorative details,
 vegetation, original UVs and cave-entrance geometry remain incomplete.
+
+
+## Sky and foliage (CC0, not from the game archive)
+
+The game packages expose no render meshes for foliage either, so the 3D
+explorer's sky and vegetation come from public-domain packs instead:
+
+- **Sky** — Poly Haven's "Kloofendal 48d Partly Cloudy (Pure Sky)" HDRI.
+  `prepare_sky.py` (numpy + Pillow) writes the upper-hemisphere backdrop
+  (`sky.jpg`, radiance divided by `skyScale`), a 512×256 flat-RGBE lighting map
+  (`sky-env.hdr`) and `sky.json` with the sun direction and horizon radiance the
+  renderer uses for the directional light and fog.
+
+  ```sh
+  curl -o sky4k.hdr https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/4k/kloofendal_48d_partly_cloudy_puresky_4k.hdr
+  python prepare_sky.py sky4k.hdr ../../assets/outpost-game/sky
+  ```
+
+- **Foliage** — Quaternius' Stylized Nature MegaKit, fetched per model from
+  its Poly Pizza bundle (each model's `.glb` sits at
+  `https://static.poly.pizza/<preview-id>.glb`; a browser user agent is
+  required). `prepare_nature.mjs` merges the 24 used models into
+  `nature/nature.glb` (one scene per model), bleeds cut-out colours so distant
+  mipmaps do not darken canopies, simplifies trunks/rocks/grass and applies
+  WebP + meshopt compression.
+
+Licences are recorded next to the assets in `LICENSE.md`.

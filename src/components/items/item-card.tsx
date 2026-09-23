@@ -3,7 +3,7 @@ import type { ItemRecordMap } from '../../kernel/core/item-database'
 
 import { ImageOff, Star, Zap } from 'lucide-react'
 
-import { resolveItemArt } from './item-icon'
+import { itemBadge, resolveItemArt } from './item-icon'
 
 import { rarities, raritiesColor, RarityType } from '../../config/constants/resources'
 
@@ -130,23 +130,23 @@ export function ItemCard({
         )}
 
         {typeof power === 'number' && power > 0 && (
-          <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-0.5 rounded-md border border-border/60 bg-background/80 px-1.5 py-0.5 text-[10px] font-bold leading-none backdrop-blur-sm">
+          <span className={cn(itemBadge, 'bottom-1.5 right-1.5 backdrop-blur-sm')}>
             <Zap className="size-2.5 text-muted-foreground" />
             <span className="figure">{power}</span>
           </span>
         )}
         {typeof power !== 'number' && typeof tier === 'number' && tier > 0 && (
-          <span className="figure absolute bottom-1.5 right-1.5 rounded-md border border-border/60 bg-background/80 px-1.5 py-0.5 text-[10px] font-bold leading-none backdrop-blur-sm">
+          <span className={cn(itemBadge, 'figure bottom-1.5 right-1.5 backdrop-blur-sm')}>
             T{tier}
           </span>
         )}
         {favorite && (
-          <span className="absolute bottom-1.5 left-1.5 grid size-5 place-items-center rounded-full bg-background/80 backdrop-blur-sm" title="Favourited">
+          <span className={cn(itemBadge, 'bottom-1.5 left-1.5 px-0.5 py-0.5 backdrop-blur-sm')} title="Favourited">
             <Star className="size-3 fill-current text-warning drop-shadow-[0_0_5px_rgba(255,200,80,0.7)]" />
           </span>
         )}
         {typeof quantity === 'number' && quantity > 1 && (
-          <span className="figure absolute right-1.5 top-1.5 rounded-md border border-border/60 bg-background/80 px-1.5 py-0.5 text-[10px] font-bold leading-none backdrop-blur-sm" title={quantity.toLocaleString()}>
+          <span className={cn(itemBadge, 'figure right-1.5 top-1.5 backdrop-blur-sm')} title={quantity.toLocaleString()}>
             ×{compact(quantity)}
           </span>
         )}

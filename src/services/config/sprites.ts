@@ -21,10 +21,10 @@ import { eosDeploymentId } from './locker'
 
 export const spriteModuleId = '70329e8f-f377-4a73-90cf-76b7ace87a07'
 
-export const spriteModuleVersion = '8'
+export const spriteModuleVersion = '13'
 
-/** The magpie inventory's relic filter: `moduleId:version`. */
-export const spriteModuleFilter = `${spriteModuleId}:${spriteModuleVersion}`
+/** Read ownership across schema versions so older and newer relics appear. */
+export const spriteModuleFilter = `${spriteModuleId}:*`
 
 export const spriteInventoryService = createAxios({
   timeout: 20_000,

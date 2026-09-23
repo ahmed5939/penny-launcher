@@ -341,16 +341,16 @@ function CalibrationPanel({
                     <p className="flex items-center gap-1.5 text-xs font-semibold">
                       {definition.name}
                       {definition.perZone && (
-                        <span className="rounded bg-primary/10 px-1 py-px text-[10px] font-medium text-primary">
+                        <span className="rounded bg-primary/10 px-1 py-px text-[0.625rem] font-medium text-primary">
                           {zoneName}
                         </span>
                       )}
                     </p>
-                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                    <p className="mt-0.5 text-[0.6875rem] leading-snug text-muted-foreground">
                       {definition.description}
                     </p>
                   </div>
-                  <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                  <span className="shrink-0 text-[0.6875rem] tabular-nums text-muted-foreground">
                     {point
                       ? `${Math.round(point.x * 100)}%, ${Math.round(point.y * 100)}%`
                       : '—'}

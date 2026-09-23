@@ -233,8 +233,8 @@ export function Content() {
                 </div>
 
                 <PanelBody className="px-4 py-2">
-                  <LlamaRecycleSetting accountId={account.accountId} />
                   <FieldGroup>
+                    <LlamaRecycleSetting accountId={account.accountId} />
                     <FieldRow
                       className="py-2.5"
                       label={

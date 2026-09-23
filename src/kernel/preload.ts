@@ -31,6 +31,7 @@ import * as inventoryActions from './preload-actions/inventory'
 import * as collectionBookActions from './preload-actions/collection-book'
 import * as rareItemFinderActions from './preload-actions/rare-item-finder'
 import * as venturesActions from './preload-actions/ventures'
+import * as questHistoryActions from './preload-actions/quest-history'
 import * as itemActionsActions from './preload-actions/item-actions'
 import * as itemDatabaseActions from './preload-actions/item-database'
 import * as launcherActions from './preload-actions/launcher'
@@ -103,6 +104,7 @@ export const availableElectronAPIs = {
   ...collectionBookActions,
   ...rareItemFinderActions,
   ...venturesActions,
+  ...questHistoryActions,
   ...itemActionsActions,
   ...itemDatabaseActions,
   ...launcherActions,
