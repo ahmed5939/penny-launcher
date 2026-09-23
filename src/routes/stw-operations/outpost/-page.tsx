@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import type { AccountData } from '../../../types/accounts'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -74,6 +75,7 @@ import { Route } from './route'
 import { resolveCollectionSelection } from '../../../lib/navigation/page-tabs'
 
 import { useOutpostData } from './-hooks'
+import { savePointsByYear } from './-save-history'
 import { Blueprint3D } from './-blueprint-3d'
 import {
   PROP_ROCK,
@@ -350,8 +352,9 @@ function Content() {
           }
         }}>
         {zones.map((zone) => (
-          <TabsContent key={zone.zoneId} value={zone.zoneId}>
+          <TabsContent key={`${primaryAccount.accountId}:${zone.zoneId}`} value={zone.zoneId}>
         <ZoneCard
+          account={primaryAccount}
           baseData={baseData[zone.zoneId]}
           displayName={primaryAccount.displayName || primaryAccount.accountId}
           isLoadingBase={loadingZone === zone.zoneId}
@@ -369,6 +372,7 @@ function Content() {
 }
 
 function ZoneCard({
+  account,
   baseData,
   displayName,
   isLoadingBase,
@@ -377,6 +381,7 @@ function ZoneCard({
   records,
   zone,
 }: {
+  account: AccountData
   baseData?: OutpostBaseData
   displayName: string
   isLoadingBase: boolean
@@ -385,19 +390,64 @@ function ZoneCard({
   records: ItemRecordMap
   zone: OutpostZoneInfo
 }) {
-  const canScan = Boolean(zone.saveFile) && !isLoadingBase
+  const [selectedSaveFile, setSelectedSaveFile] = useState(zone.saveFile)
+  const [activeYear, setActiveYear] = useState<number | null>(null)
+  const [historyData, setHistoryData] = useState<Record<string, OutpostBaseData>>({})
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  useEffect(() => {
+    setSelectedSaveFile(zone.saveFile)
+    setActiveYear(null)
+    setHistoryData({})
+  }, [zone.saveFile])
+  const history = useMemo(() => {
+    const records = zone.savedRecords ?? []
+    const latest = zone.saveFile && zone.lastSavedAt
+      ? [{ recordFilename: zone.saveFile, lastModified: zone.lastSavedAt }]
+      : []
+
+    return savePointsByYear(records.length > 0 ? records : latest)
+  }, [zone.savedRecords, zone.saveFile, zone.lastSavedAt])
+  const selectedRecord = history
+    .flatMap(({ points }) => points)
+    .find((record) => record.recordFilename === selectedSaveFile)
+  const visibleYear = activeYear ?? history[0]?.year ?? null
+  const showingLatest = selectedSaveFile === zone.saveFile
+  const visibleData = showingLatest ? baseData : historyData[selectedSaveFile]
+  const busy = isLoadingBase || loadingHistory
+  const canScan = Boolean(selectedSaveFile) && !busy
   const badge = assets(ZONE_BADGES[zone.zoneId] ?? '')
   const enduranceComplete = zone.highestEnduranceWave >= MAX_ENDURANCE_WAVE
-  const scanned = Boolean(baseData?.success)
-  const powerStats = baseData?.success
-    ? trapPowerStats(baseData.trapItems, ratings)
+  const scanned = Boolean(visibleData?.success)
+  const powerStats = visibleData?.success
+    ? trapPowerStats(visibleData.trapItems, ratings)
     : null
   /**
    * The trap highlighted across the card — set by clicking a dot on the
    * blueprint or a tile in the trap list, cleared by clicking it again.
    */
   const [selectedTrap, setSelectedTrap] = useState<string | null>(null)
-  const hasLayout = Boolean(baseData?.success && baseData.layout)
+  const hasLayout = Boolean(visibleData?.success && visibleData.layout)
+
+  const scanSelected = async (saveFile: string, force = false) => {
+    setSelectedTrap(null)
+    setSelectedSaveFile(saveFile)
+    if (saveFile === zone.saveFile) {
+      if (force || !baseData) onScanBase(zone.zoneId, saveFile)
+      return
+    }
+    if (!force && historyData[saveFile]) return
+
+    setLoadingHistory(true)
+    try {
+      const result = await window.electronAPI.requestOutpostBaseData(account, saveFile)
+
+      setHistoryData((previous) => ({ ...previous, [saveFile]: result }))
+    } catch {
+      toast('Could not load this historical save.')
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
 
   return (
     <Panel>
@@ -415,6 +465,8 @@ function ZoneCard({
           </h2>
           <p className="micro-label text-muted-foreground">
             Storm Shield · Level {zone.level} of {MAX_SHIELD_LEVEL}
+            {!showingLatest && selectedRecord &&
+              ` · Viewing ${new Date(selectedRecord.lastModified).toLocaleDateString(undefined, { timeZone: 'UTC' })}`}
           </p>
         </div>
         <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
@@ -432,24 +484,26 @@ function ZoneCard({
           )}
           <Button
             disabled={!canScan}
-            onClick={() => onScanBase(zone.zoneId, zone.saveFile)}
+            onClick={() => void scanSelected(selectedSaveFile, true)}
             size="sm"
             variant="outline"
           >
-            {isLoadingBase ? (
+            {busy ? (
               <LoaderCircle className="size-3.5 animate-spin" />
             ) : (
               <ScanSearch className="size-3.5" />
             )}
             {scanned ? 'Rescan base' : 'Scan base'}
           </Button>
-          {baseData?.success && (
+          {visibleData?.success && (
             <Button
               onClick={async () => {
                 const result = await window.electronAPI.exportOutpostReport(
                   displayName,
-                  zone,
-                  baseData
+                  selectedRecord
+                    ? { ...zone, lastSavedAt: selectedRecord.lastModified, saveFile: selectedSaveFile }
+                    : zone,
+                  visibleData
                 )
 
                 if (result.status === 'saved') {
@@ -467,6 +521,73 @@ function ZoneCard({
           )}
         </div>
       </header>
+
+      <div className="flex flex-col gap-2 border-b border-border/60 bg-muted/15 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold">Base history</span>
+            <span className="micro-label text-muted-foreground">
+              Available cloud saves · up to four points per year
+            </span>
+          </div>
+          {history.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              No dated cloud save records are available for this outpost.
+            </p>
+          )}
+          {zone.savedRecords === undefined && history.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Only the newest save is loaded. Restart the app to load older save points.
+            </p>
+          )}
+          {zone.savedRecords?.length === 0 && history.length === 1 && (
+            <p className="text-xs text-muted-foreground">
+              Only the newest dated save is available for this outpost.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1.5" aria-label="Save years">
+            {history.map(({ year, points }) => (
+              <Button
+                aria-pressed={visibleYear === year}
+                disabled={busy}
+                key={year}
+                onClick={() => {
+                  setActiveYear(year)
+                  const latestPoint = points.at(-1)
+
+                  if (latestPoint) void scanSelected(latestPoint.recordFilename)
+                }}
+                size="sm"
+                type="button"
+                variant={visibleYear === year ? 'secondary' : 'outline'}
+              >
+                {year}
+              </Button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5" aria-label={`${visibleYear} save points`}>
+            {history.find(({ year }) => year === visibleYear)?.points.map((record, index) => (
+              <Button
+                aria-pressed={selectedSaveFile === record.recordFilename}
+                disabled={busy}
+                key={record.recordFilename}
+                onClick={() => void scanSelected(record.recordFilename)}
+                size="sm"
+                title={new Date(record.lastModified).toLocaleString(undefined, { timeZone: 'UTC' })}
+                type="button"
+                variant={selectedSaveFile === record.recordFilename ? 'secondary' : 'outline'}
+              >
+                Point {index + 1} · {new Date(record.lastModified).toLocaleDateString(undefined, {
+                  month: 'short', day: 'numeric', timeZone: 'UTC',
+                })}
+              </Button>
+            ))}
+          </div>
+          {!showingLatest && (
+            <p className="micro-label text-muted-foreground">
+              The blueprint and build counts show this save. Shield level, defenses and access above reflect the current account.
+            </p>
+          )}
+      </div>
 
       {/*
         The status rail keeps a fixed width so every zone's blueprint area
@@ -531,19 +652,20 @@ function ZoneCard({
         </div>
 
         <BlueprintShowcase
-          baseData={baseData}
+          baseData={visibleData}
           canScan={canScan}
-          isLoadingBase={isLoadingBase}
-          onScan={() => onScanBase(zone.zoneId, zone.saveFile)}
+          isLoadingBase={busy}
+          amplifierSlots={showingLatest ? zone.amplifierSlots : undefined}
+          onScan={() => void scanSelected(selectedSaveFile)}
           onSelectTrap={setSelectedTrap}
           zoneId={zone.zoneId}
           selectedTrap={selectedTrap}
         />
       </div>
 
-      {baseData?.success && !baseData.warning && (
+      {visibleData?.success && !visibleData.warning && (
         <BaseDetails
-          baseData={baseData}
+          baseData={visibleData}
           onSelectTrap={hasLayout ? setSelectedTrap : undefined}
           powerStats={powerStats}
           ratings={ratings}
@@ -598,6 +720,7 @@ function ChipList({ items, label }: { items: Array<string>; label: string }) {
  * card keeps its shape through every state.
  */
 function BlueprintShowcase({
+  amplifierSlots,
   baseData,
   canScan,
   isLoadingBase,
@@ -606,6 +729,8 @@ function BlueprintShowcase({
   selectedTrap,
   zoneId,
 }: {
+  /** Occupied amplifier slots for this zone (`"00"`, `"01"` …). */
+  amplifierSlots?: Array<string>
   baseData?: OutpostBaseData
   canScan: boolean
   isLoadingBase: boolean
@@ -634,6 +759,7 @@ function BlueprintShowcase({
         </TabsList>
         <TabsContent value="3d">
           <Blueprint3D
+            amplifierSlots={amplifierSlots}
             layout={baseData.layout}
             onSelectTrap={onSelectTrap}
             selectedTrap={selectedTrap}

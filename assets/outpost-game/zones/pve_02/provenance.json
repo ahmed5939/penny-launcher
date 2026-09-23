@@ -1,0 +1,49 @@
+{
+  "source": "Zone_Outpost_Plankerton_AD.umap",
+  "cacheRoot": "penny-fn-assets-42",
+  "collisionModels": 82,
+  "boundsModels": 8,
+  "instances": 2256,
+  "textures": {
+    "grass": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Grasslands_AD_D.uasset",
+      "format": "PF_DXT5",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "grass-normal": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Grasslands_N.uasset",
+      "format": "PF_BC5",
+      "size": [
+        64,
+        64
+      ]
+    },
+    "rock": {
+      "package": "assets/FortniteGame/Content/Environments/Homebase/Textures/T_HB_Rock_Cliff_D.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "rock-normal": {
+      "package": "assets/FortniteGame/Content/Environments/Homebase/Textures/T_HB_Rock_Cliff_N.uasset",
+      "format": "PF_BC5",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "ground": {
+      "package": "assets/FortniteGame/Content/Environments/Homebase/Textures/T_HB_Soil_D.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        256,
+        256
+      ]
+    }
+  }
+}

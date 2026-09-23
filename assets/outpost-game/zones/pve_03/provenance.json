@@ -1,0 +1,49 @@
+{
+  "source": "Zone_Outpost_CannyValley.umap",
+  "cacheRoot": "penny-fn-assets-42",
+  "collisionModels": 88,
+  "boundsModels": 11,
+  "instances": 3732,
+  "textures": {
+    "grass": {
+      "package": "assets/FortniteGame/Content/Environments/Sets/Arid/Textures/DesertSand_basecolor.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "grass-normal": {
+      "package": "assets/FortniteGame/Content/Environments/Sets/Arid/Textures/DesertSand_normal.uasset",
+      "format": "PF_BC5",
+      "size": [
+        64,
+        64
+      ]
+    },
+    "rock": {
+      "package": "assets/FortniteGame/Content/Environments/Sets/Arid/Textures/RockCliff_basecolor.uasset",
+      "format": "PF_DXT1",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "rock-normal": {
+      "package": "assets/FortniteGame/Content/Environments/Sets/Arid/Textures/RockCliff_normal.uasset",
+      "format": "PF_BC5",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "ground": {
+      "package": "assets/FortniteGame/Content/Environments/Sets/Arid/Textures/pebblesDesert.uasset",
+      "format": "PF_DXT5",
+      "size": [
+        512,
+        512
+      ]
+    }
+  }
+}

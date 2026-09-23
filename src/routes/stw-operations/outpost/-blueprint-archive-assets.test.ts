@@ -62,18 +62,23 @@ describe('archive collision geometry', () => {
     balcony.dispose()
   })
 
+  // Saves put floors and edge-pivoted traps on half-cell edge midpoints.
   it.each([0, 1, 2, 3])('aligns a generated floor and floor trap at yaw %i', (yaw) => {
     const geometry = buildPieceMesh('Floor', 0, 1, () => new THREE.BoxGeometry())
-    const expected = structureCentre([0, 0, 0, 0, 0, yaw, 0, 1])
+    const expected = structureCentre([0.5, 0.5, 0, 0, 0, yaw, 0, 1])
 
-    expect(expected).toEqual(trapCentre([0, 0, 0, 0, 0, yaw]))
+    expect(expected).toEqual(trapCentre([0.5, 0.5, 0, 0, 0, yaw]))
     geometry.rotateY(-yaw * Math.PI / 2)
     geometry.computeBoundingBox()
     const centre = geometry.boundingBox!.getCenter(new THREE.Vector3())
 
-    expect(centre.x).toBeCloseTo(expected.y)
-    expect(centre.z).toBeCloseTo(-expected.x)
+    expect(centre.x).toBeCloseTo(expected.y - 0.5)
+    expect(centre.z).toBeCloseTo(-(expected.x - 0.5))
     geometry.dispose()
+  })
+
+  it('keeps centre-saved floor traps (anti-air) on their tile centre', () => {
+    expect(trapCentre([3, -2, 1, 0, 0, 1])).toEqual({ x: 3, y: -2, z: 1 })
   })
 })
 

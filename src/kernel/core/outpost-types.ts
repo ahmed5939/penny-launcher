@@ -27,6 +27,8 @@ export type OutpostZoneInfo = {
   level: number
   /** How many times this zone's base has been saved to cloud storage. */
   saveCount: number
+  /** Cloud records still available to inspect, oldest first. */
+  savedRecords: Array<{ lastModified: string; recordFilename: string }>
   saveFile: string
   zoneId: string
   zoneName: string

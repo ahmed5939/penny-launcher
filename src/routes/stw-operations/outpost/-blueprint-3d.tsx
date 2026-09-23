@@ -34,6 +34,14 @@ import {
   createWaterMaterial,
   worldWaterUVs,
 } from './-blueprint-atmosphere'
+import { addZoneBackdrops, addZoneScenery, hasZoneScenery } from './-blueprint-backdrops'
+import {
+  buildPieceKey,
+  loadBuildLibrary,
+  loadOutpostModels,
+  loadTrapModels,
+  trapModelKey,
+} from './-blueprint-build-library'
 import { buildPieceMesh } from './-blueprint-build-meshes'
 import {
   type NaturePlacement,
@@ -45,7 +53,13 @@ import {
 } from './-blueprint-nature'
 import { type PropStyle, propStyle, propTint } from './-blueprint-props'
 import { archiveBuildSurface } from './-blueprint-archive-assets'
-import { TWINE_TERRAIN, createTwineTerrain, twineInstanceMatrix, twineOceanGeometry } from './-blueprint-twine-terrain'
+import {
+  TWINE_TERRAIN,
+  ZONE_TERRAIN_ASSETS,
+  createZoneTerrain,
+  twineInstanceMatrix,
+  twineOceanGeometry,
+} from './-blueprint-twine-terrain'
 import {
   CELL_COLORS,
   CELL_GRASS,
@@ -719,6 +733,7 @@ function trapPlacement(
 // ── Scene ────────────────────────────────────────────────────
 
 function BlueprintScene({
+  amplifierSlots,
   cinematic,
   iconByTrapName,
   layout,
@@ -736,6 +751,8 @@ function BlueprintScene({
   topViewRef,
   zoneId,
 }: {
+  /** Occupied amplifier slots; each is drawn at the map's matching spot. */
+  amplifierSlots?: Array<string>
   /** Post-processing and ambient animation; off keeps render-on-demand. */
   cinematic: boolean
   iconByTrapName: Map<string, string | undefined>
@@ -1066,39 +1083,77 @@ function BlueprintScene({
     /** Extracted terrain meshes whose first material group is grass. */
     const terrainSurfaces: Array<THREE.InstancedMesh> = []
 
+    /** Settles once recovered terrain meshes are in the scene. */
+    let terrainReady: Promise<void> = Promise.resolve()
+
     animated.push(water.update)
 
-    if (terrain && zoneId === 'pve_04') {
-      const recoveredTerrain = createTwineTerrain({ onLoad: requestDraw, track })
+    if (terrain && zoneId && ZONE_TERRAIN_ASSETS[zoneId]) {
+      const recovered = createZoneTerrain({ onLoad: requestDraw, track, water: water.material, zoneId })
+      const recoveredTerrain = recovered.group
+      const backdrop = new THREE.Group()
 
       recoveredTerrain.position.set(-centerY, -floorZ, centerX)
       groundObjects.add(recoveredTerrain)
-      recoveredTerrain.traverse((object) => {
-        if (object instanceof THREE.InstancedMesh) terrainSurfaces.push(object)
+      // The game's distant scenery shares the zone's world frame.
+      backdrop.position.copy(recoveredTerrain.position)
+      groundObjects.add(backdrop)
+      addZoneBackdrops(zoneId, backdrop, () => disposed).then(() => {
+        if (!disposed) requestDraw()
       })
-      const sea = new THREE.Mesh(track(worldWaterUVs(twineOceanGeometry(terrain, OPEN_SEA_REACH))), water.material)
+      if (showProps) {
+        // The map's own trees, rocks and plants, as the game places them.
+        const scenery = new THREE.Group()
 
-      sea.position.set(-centerY, -floorZ, centerX)
-      groundObjects.add(sea)
-      const seabed = water.seabed(OPEN_SEA_REACH * 2)
+        scenery.position.copy(recoveredTerrain.position)
+        scene.add(scenery)
+        addZoneScenery(zoneId, scenery, () => disposed).then(() => {
+          if (disposed) return
+          renderer.shadowMap.needsUpdate = true
+          requestDraw()
+        })
+      }
+      terrainReady = recovered.ready.then(() => {
+        if (disposed) return
+        recoveredTerrain.traverse((object) => {
+          if (object instanceof THREE.InstancedMesh) terrainSurfaces.push(object)
+        })
+        // Molten rock slowly creeps and breathes.
+        const lavaMaterials = new Set<THREE.MeshStandardMaterial>()
 
-      seabed.position.copy(groundCentre).setY(terrain.waterZ - floorZ - 2.5)
-      groundObjects.add(seabed)
-
-      // Molten rock slowly creeps and breathes.
-      recoveredTerrain.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return
-        for (const material of [object.material].flat()) {
-          if (!(material instanceof THREE.MeshStandardMaterial) || material.emissiveIntensity <= 0) continue
+        recoveredTerrain.traverse((object) => {
+          if (!(object instanceof THREE.Mesh)) return
+          for (const material of [object.material].flat()) {
+            if (material instanceof THREE.MeshStandardMaterial && material.emissiveIntensity > 0) lavaMaterials.add(material)
+          }
+        })
+        lavaMaterials.forEach((material) => {
           const map = material.map
 
           animated.push((time) => {
             if (map) map.offset.set(time * 0.006, time * 0.011)
             material.emissiveIntensity = 1.35 + Math.sin(time * 0.9) * 0.25
           })
-        }
+        })
+        renderer.shadowMap.needsUpdate = true
+        requestDraw()
       })
-      for (const instance of TWINE_TERRAIN.instances) {
+      // Only zones with shoreline sit in water; Stonewood floats above its
+      // badlands like in the game.
+      // Only Twine sits in the sea (its map streams OutpostTwineWater); the
+      // other outposts float above their backdrop ground like in the game.
+      if (zoneId === 'pve_04') {
+        const sea = new THREE.Mesh(track(worldWaterUVs(twineOceanGeometry(terrain, OPEN_SEA_REACH))), water.material)
+
+        sea.position.set(-centerY, -floorZ, centerX)
+        groundObjects.add(sea)
+        const seabed = water.seabed(OPEN_SEA_REACH * 2)
+
+        seabed.position.copy(groundCentre).setY(terrain.waterZ - floorZ - 2.5)
+        groundObjects.add(seabed)
+      }
+
+      for (const instance of zoneId === 'pve_04' ? TWINE_TERRAIN.instances : []) {
         if (TWINE_TERRAIN.models[instance[0]]?.kind !== 'lava') continue
         lavaVents.push(
           new THREE.Vector3().setFromMatrixPosition(twineInstanceMatrix(instance)).add(recoveredTerrain.position)
@@ -1406,9 +1461,13 @@ function BlueprintScene({
       else groups.set(key, [piece])
     }
 
+    /** Procedural stand-ins waiting to be swapped for the game's own pieces. */
+    const standIns: Array<{ key: string; mesh: THREE.InstancedMesh }> = []
+
     for (const pieces of groups.values()) {
       const [, , , materialCode, kind, , shapeIndex, upgradeTier] = pieces[0]
       const shape = layout.shapes[shapeIndex] ?? ''
+      const pieceKey = buildPieceKey(materialCode, upgradeTier, shape)
       const mesh = new THREE.InstancedMesh(
         geometryFor(shape, kind, materialCode, upgradeTier),
         materialFor(materialCode, upgradeTier, kind),
@@ -1428,6 +1487,76 @@ function BlueprintScene({
       mesh.receiveShadow = true
       mesh.computeBoundingSphere()
       scene.add(mesh)
+      if (pieceKey) standIns.push({ key: pieceKey, mesh })
+    }
+
+    // Swap in the real build pieces once their library has streamed in.
+    loadBuildLibrary().then(
+      (library) => {
+        if (disposed) return
+        const white = new THREE.Color(1, 1, 1)
+
+        for (const { key, mesh } of standIns) {
+          const parts = library.get(key)
+
+          if (!parts?.length) continue
+          for (const part of parts) {
+            const real = new THREE.InstancedMesh(part.geometry, part.material, mesh.count)
+
+            real.instanceMatrix.copy(mesh.instanceMatrix)
+            for (let index = 0; index < mesh.count; index++) real.setColorAt(index, white)
+            real.castShadow = true
+            real.receiveShadow = true
+            real.computeBoundingSphere()
+            scene.add(real)
+          }
+          scene.remove(mesh)
+          mesh.dispose()
+        }
+        renderer.shadowMap.needsUpdate = true
+        requestDraw()
+      },
+      () => {
+        // Keep the procedural pieces when the library cannot load.
+      }
+    )
+
+    // The Storm Shield device and any placed amplifiers, as the game models.
+    const amplifierSpots = (amplifierSlots ?? [])
+      .filter((slot) => /^\d+$/.test(slot))
+      .map((slot) => terrain?.amplifiers?.[Number(slot)])
+      .filter((spot): spot is Array<number> => Boolean(spot))
+    const outpostPlacements: Array<{ models: Array<string>; spot: Array<number> }> = [
+      ...(terrain?.stormShield ? [{ models: ['stormshield', 'stormshieldtop'], spot: terrain.stormShield }] : []),
+      ...amplifierSpots.map((spot) => ({ models: ['amplifier', 'amplifierfloor'], spot })),
+    ]
+
+    if (outpostPlacements.length > 0) {
+      loadOutpostModels().then(
+        (models) => {
+          if (disposed) return
+          for (const { models: names, spot } of outpostPlacements) {
+            const [x, y, z, yawDegrees = 0] = spot
+
+            for (const name of names) {
+              for (const part of models.get(name) ?? []) {
+                const mesh = new THREE.Mesh(part.geometry, part.material)
+
+                mesh.position.copy(toScene(x, y, z))
+                mesh.rotation.set(0, -(yawDegrees * Math.PI) / 180, 0)
+                mesh.castShadow = true
+                mesh.receiveShadow = true
+                scene.add(mesh)
+              }
+            }
+          }
+          renderer.shadowMap.needsUpdate = true
+          requestDraw()
+        },
+        () => {
+          // The shield bubble still marks the spot without the models.
+        }
+      )
     }
 
     // Traps: surface-mounted plates with the real inventory art kept legible.
@@ -1459,6 +1588,8 @@ function BlueprintScene({
     const selectedPlacements: Array<ReturnType<typeof trapPlacement>> = []
     const disposeTrapMaterial = (material: THREE.Material) => track(material)
     const mountsByCategory = new Map<number, Array<OutpostLayout['traps'][number]>>()
+    /** Icon art and backing plates, hidden where the real trap model stands. */
+    const artMeshes: Array<{ mesh: THREE.InstancedMesh; names: Array<string> }> = []
 
     for (const [url, traps] of iconGroups) {
       const material = disposeTrapMaterial(
@@ -1516,6 +1647,7 @@ function BlueprintScene({
       scene.add(mesh)
       pickables.push(mesh)
       namesByMesh.set(mesh.uuid, names)
+      artMeshes.push({ mesh, names })
     }
 
     for (const [category, traps] of mountsByCategory) {
@@ -1578,12 +1710,60 @@ function BlueprintScene({
       mount.computeBoundingSphere()
       frame.computeBoundingSphere()
       scene.add(mount, frame)
+      artMeshes.push({ mesh: mount, names })
       pickables.push(mount, frame)
       namesByMesh.set(mount.uuid, names)
       namesByMesh.set(frame.uuid, names)
     }
 
     let selectionRing: THREE.InstancedMesh | null = null
+
+    // The game's own trap models on every trap that has one. Icon plates
+    // stay pickable (hidden meshes still raycast) and the category frames
+    // and selection ring stay visible on top.
+    loadTrapModels().then(
+      (models) => {
+        if (disposed) return
+        const placed = new Map<string, Array<OutpostLayout['traps'][number]>>()
+
+        for (const trap of visibleTraps) {
+          const key = trapModelKey(layout.trapNames[trap[4]] ?? '')
+
+          if (!models.has(key)) continue
+          placed.set(key, [...(placed.get(key) ?? []), trap])
+        }
+        for (const [key, traps] of placed) {
+          for (const part of models.get(key) ?? []) {
+            const mesh = new THREE.InstancedMesh(part.geometry, part.material, traps.length)
+
+            traps.forEach((trap, index) => {
+              const [x, y, z, category, , yaw = 0] = trap
+              // Floor/ceiling models are centred on their tile (see
+              // extract_blueprint_models.py), like the icon frames.
+              const at = category === TRAP_WALL ? { x, y, z } : trapCentre(trap)
+
+              dummy.position.copy(toScene(at.x, at.y, at.z))
+              dummy.rotation.set(0, -(yaw * Math.PI) / 2, 0)
+              dummy.scale.setScalar(1)
+              dummy.updateMatrix()
+              mesh.setMatrixAt(index, dummy.matrix)
+            })
+            mesh.castShadow = true
+            mesh.receiveShadow = true
+            mesh.computeBoundingSphere()
+            scene.add(mesh)
+          }
+        }
+        for (const { mesh, names } of artMeshes) {
+          if (names.every((name) => models.has(trapModelKey(name)))) mesh.visible = false
+        }
+        renderer.shadowMap.needsUpdate = true
+        requestDraw()
+      },
+      () => {
+        // Icon plates remain the trap markers without the models.
+      }
+    )
 
     if (selectedPlacements.length > 0) {
       const ring = new THREE.InstancedMesh(
@@ -1616,8 +1796,11 @@ function BlueprintScene({
 
     // World props, instanced per silhouette. The zone's own vegetation and
     // boulders (from the extracted terrain) join the save's recorded actors.
+    // With the real zone scenery loaded, stand-ins are only for props it
+    // does not cover (containers, world structures).
+    const realScenery = hasZoneScenery(zoneId)
     const zoneExtra =
-      terrain && showProps ? zonePropsAsLayout(terrain, layout.props) : null
+      terrain && showProps && !realScenery ? zonePropsAsLayout(terrain, layout.props) : null
     const propEntries = [
       ...visibleProps.map((prop) => ({
         className: layout.propNames[prop[6]] ?? '',
@@ -1688,6 +1871,7 @@ function BlueprintScene({
       const [x, y, z, kind, yawDegrees, scale] = prop
       const archetype = natureArchetype(kind, className, x, y)
 
+      if (archetype && realScenery) continue
       if (!archetype) {
         addProceduralProp(className, prop)
         continue
@@ -1714,7 +1898,7 @@ function BlueprintScene({
     }
     const coverPlacements = (): Array<NaturePlacement> => {
       // Ground cover is detail, so it belongs to the cinematic quality mode.
-      if (!cinematic || !showProps || !showTerrain) return []
+      if (!cinematic || !showProps || !showTerrain || realScenery) return []
       if (terrainSurfaces.length > 0) {
         return scatterGroundCover({
           avoid: coverAvoid,
@@ -1735,8 +1919,8 @@ function BlueprintScene({
       })
     }
 
-    loadNatureLibrary().then(
-      (library) => {
+    Promise.all([loadNatureLibrary(), terrainReady]).then(
+      ([library]) => {
         if (disposed) return
         const foliage = buildNatureMeshes(library, naturalProps.map((entry) => entry.placement), windTime, track)
         const cover = buildNatureMeshes(library, coverPlacements(), windTime, track)
@@ -1758,13 +1942,25 @@ function BlueprintScene({
     )
 
     // The Storm Shield bubble over the base, with drifting energy motes.
+    // The game centres the bubble on the Storm Shield device itself.
+    const device = terrain?.stormShield
+    const shieldCentre = device ? toScene(device[0], device[1], device[2]) : new THREE.Vector3()
+
     if (showShield) {
-      const radius = Math.max(8, Math.hypot(spanX, spanY) / 2 + 3)
+      let reach = Math.hypot(spanX, spanY) / 2
+
+      if (device) {
+        reach = 0
+        for (const [x, y, z] of layout.structures) {
+          reach = Math.max(reach, toScene(x, y, z).setY(shieldCentre.y).distanceTo(shieldCentre))
+        }
+      }
+      const radius = Math.max(8, reach + 3)
       const shield = createStormShield(radius, track)
       const motes = createParticles({
         cool: 0x7c5cff,
         count: 260,
-        emitters: [new THREE.Vector3(0, 0, 0)],
+        emitters: [shieldCentre.clone()],
         hot: 0x9fdcff,
         pixelRatio: renderer.getPixelRatio(),
         rise: spanZ + 5,
@@ -1773,6 +1969,7 @@ function BlueprintScene({
         track,
       })
 
+      shield.mesh.position.copy(shieldCentre)
       scene.add(shield.mesh, motes.points)
       animated.push(shield.update, motes.update)
     }
@@ -1959,6 +2156,7 @@ function BlueprintScene({
     topViewRef,
     zoneId,
     cinematic,
+    amplifierSlots,
   ])
 
   return <div className="absolute inset-0" ref={hostRef} />
@@ -1985,12 +2183,15 @@ function LegendSwatch({
 }
 
 export function Blueprint3D({
+  amplifierSlots,
   layout,
   onSelectTrap,
   selectedTrap,
   traps,
   zoneId,
 }: {
+  /** Occupied amplifier slots for the zone (`"00"`, `"01"` …). */
+  amplifierSlots?: Array<string>
   layout: OutpostLayout
   onSelectTrap: (name: string | null) => void
   selectedTrap: string | null
@@ -2188,6 +2389,7 @@ export function Blueprint3D({
           />
         ) : (
           <BlueprintScene
+            amplifierSlots={amplifierSlots}
             cinematic={cinematic}
             iconByTrapName={iconByTrapName}
             layout={layout}
@@ -2247,7 +2449,7 @@ export function Blueprint3D({
           <>
             <span className="text-border">|</span>
             <span title={`Terrain layout extracted from ${zoneTerrain.source}`}>
-              {zoneId === 'pve_04' ? 'Recovered Twine terrain' : 'Reconstructed zone terrain'}
+              {zoneId && ZONE_TERRAIN_ASSETS[zoneId] ? 'Recovered zone terrain' : 'Reconstructed zone terrain'}
             </span>
           </>
         )}

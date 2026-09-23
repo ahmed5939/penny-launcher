@@ -23,6 +23,7 @@ import { dialog } from 'electron'
 import { RuntimeLog } from '../runtime-log'
 
 import { Authentication } from './authentication'
+import { availableOutpostSaves, type CloudSaveFile } from './outpost-history'
 import {
   readableOutpostFileName,
   serializeReadableOutpostReport,
@@ -901,7 +902,7 @@ export class Outpost {
        * carries the defense quest ledger. The latter is a bonus — if it
        * fails, the page still renders without the defense dates.
        */
-      const [metadataResult, campaignResult] = await Promise.allSettled([
+      const [metadataResult, campaignResult, cloudFilesResult] = await Promise.allSettled([
         getQueryProfileMetadata({
           accessToken,
           accountId: account.accountId,
@@ -910,6 +911,10 @@ export class Outpost {
           accessToken,
           accountId: account.accountId,
         }),
+        axios.get<Array<CloudSaveFile>>(
+          `${CLOUD_STORAGE_USER}/${account.accountId}`,
+          { headers: { Authorization: `bearer ${accessToken}` }, timeout: 20_000 }
+        ),
       ])
 
       if (metadataResult.status === 'rejected') {
@@ -923,6 +928,12 @@ export class Outpost {
       )
 
       const profile = metadataResult.value.data?.profileChanges?.[0]?.profile
+      const cloudFiles = cloudFilesResult.status === 'fulfilled'
+        ? cloudFilesResult.value.data
+        : []
+      const cloudFileByName = new Map(
+        cloudFiles.map((file) => [file.filename, file])
+      )
 
       if (!profile) {
         return { error: 'Failed to read the metadata profile', success: false, zones: [] }
@@ -939,6 +950,7 @@ export class Outpost {
           level: number
           permissions: Array<string>
           saveCount: number
+          savedRecords: Array<{ lastModified: string; recordFilename: string }>
           saveFile: string
           wave: number
         }
@@ -980,29 +992,32 @@ export class Outpost {
           .filter(Boolean)
 
         /**
-         * Epic keeps several rolling cloud records per zone and does not
-         * promise an order. Take the newest by timestamp — the first entry
-         * can be a years-old backup, and scanning that shows a historical
-         * base full of pieces the player has long since replaced.
+         * Metadata record order is not guaranteed. Cloud upload time fills
+         * the date omitted by some records, and the cloud file listing may
+         * also expose the adjacent archive slot for this outpost.
          */
         const newestRecord = records.reduce<
           { lastModified?: string; recordFilename?: string } | null
         >(
           (best, record) =>
             !best ||
-            (record.lastModified ?? '') > (best.lastModified ?? '')
+            (cloudFileByName.get(record.recordFilename ?? '')?.uploaded ?? record.lastModified ?? '') >
+              (cloudFileByName.get(best.recordFilename ?? '')?.uploaded ?? best.lastModified ?? '')
               ? record
               : best,
           null
         )
+        const savedRecords = availableOutpostSaves(records, cloudFiles)
+        const currentCloudFile = cloudFileByName.get(newestRecord?.recordFilename ?? '')
 
         zoneData.set(zoneKey, {
           amplifiers: placedBuildings.length,
           amplifierSlots,
-          lastSavedAt: newestRecord?.lastModified ?? null,
+          lastSavedAt: currentCloudFile?.uploaded ?? newestRecord?.lastModified ?? null,
           level: attributes.level ?? 0,
           permissions,
           saveCount: cloudInfo.saveCount ?? 0,
+          savedRecords,
           saveFile: newestRecord?.recordFilename ?? '',
           wave: coreInfo.highestEnduranceWaveReached ?? 0,
         })
@@ -1029,6 +1044,7 @@ export class Outpost {
           lastSavedAt: data?.lastSavedAt ?? null,
           level: data?.level ?? 0,
           saveCount: data?.saveCount ?? 0,
+          savedRecords: data?.savedRecords ?? [],
           saveFile: data?.saveFile ?? '',
           zoneId,
           zoneName: ZONE_MAP[zoneKey],

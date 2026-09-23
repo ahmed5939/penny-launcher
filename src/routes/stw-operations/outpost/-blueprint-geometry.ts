@@ -68,12 +68,23 @@ export function structureCentre(
  * Floor and ceiling trap actors use a tile-edge origin; wall traps already
  * sit at the centre of their supporting wall plane.
  */
+function isWholeCell(value: number) {
+  const fraction = ((value % 1) + 1) % 1
+
+  return fraction < 0.15 || fraction > 0.85
+}
+
 export function trapCentre(
   trap: TrapTuple
 ): { x: number; y: number; z: number } {
   const [x, y, z, category, , yaw = 0] = trap
 
   if (category === TRAP_WALL) return { x, y, z }
+  // Tile centres fall on whole cells and edges on halves. Most floor and
+  // ceiling traps are saved on a tile-edge midpoint (one whole, one half
+  // coordinate). Centre-pivoted ones such as the anti-air turret are saved
+  // on the tile centre (both whole) and must not move again.
+  if (isWholeCell(x) && isWholeCell(y)) return { x, y, z }
 
   const [dx, dy] = forwardVector(yaw)
 

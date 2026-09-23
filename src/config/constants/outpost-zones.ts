@@ -1,8 +1,11 @@
+import pve01 from './outpost-zones/pve_01.json'
+import pve02 from './outpost-zones/pve_02.json'
+import pve03 from './outpost-zones/pve_03.json'
 import pve04 from './outpost-zones/pve_04.json'
 
 /**
  * Terrain layouts for Storm Shield zones, extracted from the game's level
- * packages by `scripts/extract-outpost-zone.mjs`. Coordinates are build
+ * packages by `scripts/outpost-asset-recovery/recover_zone.py`. Coordinates are build
  * cells in the same world space the zone's `.sav` uses, so a scanned base
  * lands on this terrain with no calibration. Only positions and kind codes
  * are stored — the explorer builds its own geometry from them.
@@ -31,11 +34,18 @@ export type OutpostZoneTerrain = {
   source: string
   /** The player spawn point next to the storm shield, when found. */
   spawn: Array<number> | null
+  /** Where the game places the Storm Shield: `[x, y, z, yawDegrees]`. */
+  stormShield?: Array<number> | null
+  /** Amplifier placement spots in the game's order, same tuple shape. */
+  amplifiers?: Array<Array<number>>
   /** Sea level in cells — shoreline tiles sit at this height. */
   waterZ: number
   zoneId: string
 }
 
 export const OUTPOST_ZONE_TERRAIN: Record<string, OutpostZoneTerrain> = {
+  pve_01: pve01 as OutpostZoneTerrain,
+  pve_02: pve02 as OutpostZoneTerrain,
+  pve_03: pve03 as OutpostZoneTerrain,
   pve_04: pve04 as OutpostZoneTerrain,
 }

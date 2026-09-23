@@ -1,5 +1,7 @@
 import type { OutpostZoneTerrain } from '../../../config/constants/outpost-zones'
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 
 import { buildZoneHeightGrid, CELL_LAVA, CELL_SEA } from './-blueprint-terrain'
 
@@ -10,26 +12,105 @@ import rockUrl from '../../../../assets/outpost-game/twine/rock.png'
 import groundUrl from '../../../../assets/outpost-game/twine/ground.png'
 import lavaUrl from '../../../../assets/outpost-game/twine/lava.png'
 import lavaNormalUrl from '../../../../assets/outpost-game/twine/lava-normal.png'
+import twineMeshesUrl from '../../../../assets/outpost-game/twine/terrain-meshes.glb?url'
+import stonewoodMeshesUrl from '../../../../assets/outpost-game/zones/pve_01/terrain-meshes.glb?url'
+import plankertonMeshesUrl from '../../../../assets/outpost-game/zones/pve_02/terrain-meshes.glb?url'
+import cannyMeshesUrl from '../../../../assets/outpost-game/zones/pve_03/terrain-meshes.glb?url'
+import stonewoodGrass from '../../../../assets/outpost-game/zones/pve_01/grass.png'
+import stonewoodGrassNormal from '../../../../assets/outpost-game/zones/pve_01/grass-normal.png'
+import stonewoodGround from '../../../../assets/outpost-game/zones/pve_01/ground.png'
+import stonewoodRock from '../../../../assets/outpost-game/zones/pve_01/rock.png'
+import stonewoodRockNormal from '../../../../assets/outpost-game/zones/pve_01/rock-normal.png'
+import plankertonGrass from '../../../../assets/outpost-game/zones/pve_02/grass.png'
+import plankertonGrassNormal from '../../../../assets/outpost-game/zones/pve_02/grass-normal.png'
+import plankertonGround from '../../../../assets/outpost-game/zones/pve_02/ground.png'
+import plankertonRock from '../../../../assets/outpost-game/zones/pve_02/rock.png'
+import plankertonRockNormal from '../../../../assets/outpost-game/zones/pve_02/rock-normal.png'
+import cannyGrass from '../../../../assets/outpost-game/zones/pve_03/grass.png'
+import cannyGrassNormal from '../../../../assets/outpost-game/zones/pve_03/grass-normal.png'
+import cannyGround from '../../../../assets/outpost-game/zones/pve_03/ground.png'
+import cannyRock from '../../../../assets/outpost-game/zones/pve_03/rock.png'
+import cannyRockNormal from '../../../../assets/outpost-game/zones/pve_03/rock-normal.png'
 
 export type TwineTerrainModel = {
   name: string
-  kind: 'ground' | 'rock' | 'shore' | 'lava'
+  kind: 'ground' | 'rock' | 'shore' | 'lava' | 'structure' | 'water'
   source: 'collision' | 'bounds'
   positions?: number[]
   indices?: number[]
   bounds?: number[]
 }
-export const TWINE_TERRAIN = terrain as {
+export type RecoveredTerrain = {
   models: TwineTerrainModel[]
   /** model index, scene XYZ, quaternion XYZW, scale XYZ */
   instances: number[][]
 }
+export const TWINE_TERRAIN = terrain as RecoveredTerrain
 
-/** Keeps separate cliff faces, ramps and ceilings; no heightfield infill. */
-export function twineTerrainGeometry(model: TwineTerrainModel) {
+/** Material slots, in geometry-group order. */
+const SURFACE_GRASS = 0
+const SURFACE_ROCK = 1
+const SURFACE_SHORE = 2
+const SURFACE_LAVA = 3
+const SURFACE_STRUCTURE = 4
+const SURFACE_WATER = 5
+
+type ZoneSurfaces = {
+  grass: string
+  grassNormal: string
+  ground: string
+  lava?: string
+  lavaNormal?: string
+  rock: string
+  rockNormal?: string
+  /** Multipliers that pull each biome's photo textures into one palette. */
+  tint: { grass: number; ground: number; rock: number }
+}
+
+/**
+ * Every zone with collision-hull terrain recovered from its level package
+ * (see scripts/outpost-asset-recovery). Twine ships inline; the others are
+ * split into their own chunks and only load when their outpost is viewed.
+ */
+export const ZONE_TERRAIN_ASSETS: Record<string, {
+  load: () => Promise<RecoveredTerrain>
+  /** The game's own render meshes for this zone's terrain models. */
+  meshes: string
+  surfaces: ZoneSurfaces
+}> = {
+  pve_01: {
+    meshes: stonewoodMeshesUrl,
+    load: () => import('../../../../assets/outpost-game/zones/pve_01/terrain.json').then((m) => m.default as RecoveredTerrain),
+    surfaces: { grass: stonewoodGrass, grassNormal: stonewoodGrassNormal, ground: stonewoodGround, rock: stonewoodRock, rockNormal: stonewoodRockNormal, tint: { grass: 0x8aa866, ground: 0xb8a58a, rock: 0xb4aba0 } },
+  },
+  pve_02: {
+    meshes: plankertonMeshesUrl,
+    load: () => import('../../../../assets/outpost-game/zones/pve_02/terrain.json').then((m) => m.default as RecoveredTerrain),
+    surfaces: { grass: plankertonGrass, grassNormal: plankertonGrassNormal, ground: plankertonGround, rock: plankertonRock, rockNormal: plankertonRockNormal, tint: { grass: 0xd8ccb2, ground: 0xb6a386, rock: 0xb8b0a6 } },
+  },
+  pve_03: {
+    meshes: cannyMeshesUrl,
+    load: () => import('../../../../assets/outpost-game/zones/pve_03/terrain.json').then((m) => m.default as RecoveredTerrain),
+    surfaces: { grass: cannyGrass, grassNormal: cannyGrassNormal, ground: cannyGround, rock: cannyRock, rockNormal: cannyRockNormal, tint: { grass: 0xe0c8a0, ground: 0xd2b894, rock: 0xd4a888 } },
+  },
+  pve_04: {
+    meshes: twineMeshesUrl,
+    load: () => Promise.resolve(TWINE_TERRAIN),
+    surfaces: { grass: grassUrl, grassNormal: grassNormalUrl, ground: groundUrl, lava: lavaUrl, lavaNormal: lavaNormalUrl, rock: rockUrl, tint: { grass: 0x82965e, ground: 0xb6a381, rock: 0xb7ada2 } },
+  },
+}
+
+/**
+ * Keeps separate cliff faces, ramps and ceilings; no heightfield infill.
+ * With `render` (the game's own mesh) the real surface and its smooth
+ * normals are used; otherwise the recovered collision hull stands in.
+ */
+export function twineTerrainGeometry(model: TwineTerrainModel, render?: THREE.BufferGeometry) {
   let base: THREE.BufferGeometry
 
-  if (model.positions && model.indices) {
+  if (render) {
+    base = render.index ? render.toNonIndexed() : render.clone()
+  } else if (model.positions && model.indices) {
     const indexed = new THREE.BufferGeometry()
 
     indexed.setAttribute('position', new THREE.Float32BufferAttribute(model.positions, 3))
@@ -46,30 +127,47 @@ export function twineTerrainGeometry(model: TwineTerrainModel) {
   } else {
     throw new Error(`Missing terrain geometry: ${model.name}`)
   }
-  base.computeVertexNormals()
+  const smooth = Boolean(render?.getAttribute('normal'))
+
+  if (!smooth) base.computeVertexNormals()
   const positions = base.getAttribute('position')
   const normals = base.getAttribute('normal')
-  const buckets: number[][] = [[], [], [], []]
+  const buckets: number[][] = [[], [], [], [], [], []]
+  const normalBuckets: number[][] = [[], [], [], [], [], []]
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3()
 
   for (let i = 0; i < positions.count; i += 3) {
-    const upward = normals.getY(i) > 0.65
+    // Classify by the true face direction, whatever the shading normals say.
+    a.fromBufferAttribute(positions, i)
+    b.fromBufferAttribute(positions, i + 1).sub(a)
+    c.fromBufferAttribute(positions, i + 2).sub(a)
+    const face = b.cross(c).normalize()
+    const upward = Math.abs(face.y) > 0.65 && (smooth ? normals.getY(i) > 0 : face.y > 0)
     const grassy = upward && (model.kind === 'ground' || /^S_(Cliff|Elevation)/.test(model.name))
-    const material = model.kind === 'lava' ? 3 : model.kind === 'shore' ? 2 : grassy ? 0 : 1
+    const material = model.kind === 'lava' ? SURFACE_LAVA
+      : model.kind === 'shore' ? SURFACE_SHORE
+        : model.kind === 'water' ? SURFACE_WATER
+          : model.kind === 'structure' ? SURFACE_STRUCTURE
+            : grassy ? SURFACE_GRASS : SURFACE_ROCK
 
     for (let v = i; v < i + 3; v++) {
       buckets[material].push(positions.getX(v), positions.getY(v), positions.getZ(v))
+      normalBuckets[material].push(normals.getX(v), normals.getY(v), normals.getZ(v))
     }
   }
   base.dispose()
   const geometry = new THREE.BufferGeometry()
   const merged: number[] = []
+  const mergedNormals: number[] = []
 
   buckets.forEach((bucket, index) => {
     if (bucket.length) geometry.addGroup(merged.length / 3, bucket.length / 3, index)
     merged.push(...bucket)
+    mergedNormals.push(...normalBuckets[index])
   })
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(merged, 3))
-  geometry.computeVertexNormals()
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(mergedNormals, 3))
+  geometry.userData.smooth = smooth
   const p = geometry.getAttribute('position')
   const n = geometry.getAttribute('normal')
   const uv: number[] = []
@@ -93,8 +191,8 @@ export function twineInstanceMatrix(instance: number[]) {
   )
 }
 
-export function twinePlacementGeometry(model: TwineTerrainModel, instance: number[]) {
-  const geometry = twineTerrainGeometry(model)
+export function twinePlacementGeometry(model: TwineTerrainModel, instance: number[], render?: THREE.BufferGeometry) {
+  const geometry = twineTerrainGeometry(model, render)
   const signs = instance.slice(8).map((scale) => Math.sign(scale) || 1)
 
   // InstancedMesh cannot render negative-determinant instance transforms.
@@ -115,22 +213,89 @@ export function twinePlacementGeometry(model: TwineTerrainModel, instance: numbe
         }
       }
     }
-    geometry.computeVertexNormals()
+    // Hull normals are rebuilt; mesh normals were already mirrored by scale().
+    if (!geometry.userData.smooth) geometry.computeVertexNormals()
   }
 
   return geometry
 }
 
-export function createTwineTerrain({
+const renderMeshCache = new Map<string, Promise<Map<string, THREE.BufferGeometry>>>()
+
+/**
+ * The zone's full-detail terrain meshes by model name, decoded once per
+ * session by `scripts/outpost-asset-recovery/ue_mesh.py` output. Failures
+ * resolve empty so the collision hulls still render.
+ */
+function loadRenderMeshes(url: string) {
+  let pending = renderMeshCache.get(url)
+
+  if (!pending) {
+    pending = new GLTFLoader()
+      .setMeshoptDecoder(MeshoptDecoder)
+      .loadAsync(url)
+      .then((gltf) => {
+        const meshes = new Map<string, THREE.BufferGeometry>()
+
+        // Quantized meshes carry their scale/offset in the node transform.
+        gltf.scene.updateMatrixWorld(true)
+        gltf.scene.traverse((object) => {
+          if (!(object instanceof THREE.Mesh) || meshes.has(object.name)) return
+          const source = object.geometry as THREE.BufferGeometry
+          const geometry = new THREE.BufferGeometry()
+
+          // Meshopt quantizes attributes; expand them before any transform.
+          for (const name of ['position', 'normal']) {
+            const attribute = source.getAttribute(name)
+
+            if (!attribute) continue
+            const values = new Float32Array(attribute.count * 3)
+
+            for (let i = 0; i < attribute.count; i++) {
+              values[i * 3] = attribute.getX(i)
+              values[i * 3 + 1] = attribute.getY(i)
+              values[i * 3 + 2] = attribute.getZ(i)
+            }
+            geometry.setAttribute(name, new THREE.BufferAttribute(values, 3))
+          }
+          geometry.setIndex(source.index ? source.index.clone() : null)
+          geometry.applyMatrix4(object.matrixWorld)
+          meshes.set(object.name, geometry)
+        })
+
+        return meshes
+      })
+      .catch(() => new Map<string, THREE.BufferGeometry>())
+    renderMeshCache.set(url, pending)
+  }
+
+  return pending
+}
+
+/**
+ * Builds a zone's recovered terrain. Returns the (initially empty) group at
+ * once plus a promise that settles when the placements have been added, so
+ * callers can scatter ground cover or animate lava afterwards.
+ */
+export function createZoneTerrain({
   onLoad,
   track,
+  water,
+  zoneId,
 }: {
   onLoad: () => void
   track: <T extends { dispose: () => void }>(resource: T) => T
+  /** Shared sea material for recovered ponds and streams. */
+  water: THREE.Material
+  zoneId: string
 }) {
+  const assets = ZONE_TERRAIN_ASSETS[zoneId]
+  const group = new THREE.Group()
   let disposed = false
 
   track({ dispose: () => { disposed = true } })
+  if (!assets) return { group, ready: Promise.resolve() }
+
   const texture = (url: string, normal = false) => {
     const map = track(new THREE.TextureLoader().load(url, () => {
       if (disposed) { map.dispose(); return }
@@ -143,46 +308,61 @@ export function createTwineTerrain({
 
     return map
   }
-  const grass = texture(grassUrl)
-  const rock = texture(rockUrl)
-  const ground = texture(groundUrl)
-  const lava = texture(lavaUrl)
-  const materials = [
-    new THREE.MeshStandardMaterial({ color: 0x82965e, map: grass, normalMap: texture(grassNormalUrl, true), normalScale: new THREE.Vector2(0.25, 0.25), roughness: 1 }),
-    new THREE.MeshStandardMaterial({ color: 0xb7ada2, map: rock, bumpMap: rock, bumpScale: 0.008, roughness: 1 }),
-    new THREE.MeshStandardMaterial({ color: 0xb6a381, map: ground, bumpMap: ground, bumpScale: 0.006, roughness: 1 }),
-    new THREE.MeshStandardMaterial({ color: 0xff9b36, map: lava, normalMap: texture(lavaNormalUrl, true), emissive: 0xff4a12, emissiveIntensity: 1.2, roughness: 0.6 }),
+  const { surfaces } = assets
+  const rock = texture(surfaces.rock)
+  const ground = texture(surfaces.ground)
+  const materials: Array<THREE.Material> = [
+    new THREE.MeshStandardMaterial({ color: surfaces.tint.grass, map: texture(surfaces.grass), normalMap: texture(surfaces.grassNormal, true), normalScale: new THREE.Vector2(0.25, 0.25), roughness: 1 }),
+    new THREE.MeshStandardMaterial({
+      color: surfaces.tint.rock,
+      map: rock,
+      ...(surfaces.rockNormal
+        ? { normalMap: texture(surfaces.rockNormal, true), normalScale: new THREE.Vector2(0.6, 0.6) }
+        : { bumpMap: rock, bumpScale: 0.008 }),
+      roughness: 1,
+    }),
+    new THREE.MeshStandardMaterial({ color: surfaces.tint.ground, map: ground, bumpMap: ground, bumpScale: 0.006, roughness: 1 }),
+    surfaces.lava
+      ? new THREE.MeshStandardMaterial({ color: 0xff9b36, map: texture(surfaces.lava), normalMap: surfaces.lavaNormal ? texture(surfaces.lavaNormal, true) : null, emissive: 0xff4a12, emissiveIntensity: 1.2, roughness: 0.6 })
+      : new THREE.MeshStandardMaterial({ color: 0xff7b2d, emissive: 0xff4a12, emissiveIntensity: 1.2 }),
+    new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 0.85 }),
   ].map((material) => {
     // Mirrored terrain instances and cave interiors must remain visible.
     material.side = THREE.DoubleSide
     return track(material)
   })
-  const group = new THREE.Group()
-  const instances = new Map<string, number[][]>()
 
-  for (const instance of TWINE_TERRAIN.instances) {
-    const key = `${instance[0]}:${instance.slice(8).map((scale) => Math.sign(scale)).join(',')}`
-    const entries = instances.get(key) ?? []
+  materials.push(water)
 
-    entries.push(instance)
-    instances.set(key, entries)
-  }
-  for (const placements of instances.values()) {
-    const model = TWINE_TERRAIN.models[placements[0][0]]
-    const geometry = twinePlacementGeometry(model, placements[0])
-    const mesh = new THREE.InstancedMesh(track(geometry), materials, placements.length)
+  const ready = Promise.all([assets.load(), loadRenderMeshes(assets.meshes)]).then(([data, renderMeshes]) => {
+    if (disposed) return
+    const instances = new Map<string, number[][]>()
 
-    placements.forEach((instance, i) => mesh.setMatrixAt(i,
-      twineInstanceMatrix([...instance.slice(0, 8), ...instance.slice(8).map(Math.abs)])))
-    mesh.name = model.name
-    mesh.castShadow = model.kind !== 'lava'
-    mesh.receiveShadow = true
-    mesh.computeBoundingBox()
-    mesh.computeBoundingSphere()
-    group.add(mesh)
-  }
+    for (const instance of data.instances) {
+      const key = `${instance[0]}:${instance.slice(8).map((scale) => Math.sign(scale)).join(',')}`
+      const entries = instances.get(key) ?? []
 
-  return group
+      entries.push(instance)
+      instances.set(key, entries)
+    }
+    for (const placements of instances.values()) {
+      const model = data.models[placements[0][0]]
+      const geometry = twinePlacementGeometry(model, placements[0], renderMeshes.get(model.name))
+      const mesh = new THREE.InstancedMesh(track(geometry), materials, placements.length)
+
+      placements.forEach((instance, i) => mesh.setMatrixAt(i,
+        twineInstanceMatrix([...instance.slice(0, 8), ...instance.slice(8).map(Math.abs)])))
+      mesh.name = model.name
+      mesh.castShadow = model.kind !== 'lava' && model.kind !== 'water'
+      mesh.receiveShadow = true
+      mesh.computeBoundingBox()
+      mesh.computeBoundingSphere()
+      group.add(mesh)
+    }
+    onLoad()
+  })
+
+  return { group, ready }
 }
 
 

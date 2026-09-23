@@ -1,0 +1,49 @@
+{
+  "source": "Zone_Outpost_Stonewood.umap",
+  "cacheRoot": "penny-fn-assets-42",
+  "collisionModels": 95,
+  "boundsModels": 9,
+  "instances": 2356,
+  "textures": {
+    "grass": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Grasslands_D.uasset",
+      "format": "PF_DXT5",
+      "size": [
+        64,
+        64
+      ]
+    },
+    "grass-normal": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnite_Terrain_NoLOD/Textures/T_Grasslands_N.uasset",
+      "format": "PF_BC5",
+      "size": [
+        64,
+        64
+      ]
+    },
+    "rock": {
+      "package": "assets/FortniteGame/Content/Environments/Asteria/Terrain/Textures/T_Asteria_RockCliff_04_D.uasset",
+      "format": "PF_DXT5",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "rock-normal": {
+      "package": "assets/FortniteGame/Content/Environments/Asteria/Terrain/Textures/T_Asteria_RockCliff_04_N.uasset",
+      "format": "PF_BC5",
+      "size": [
+        512,
+        512
+      ]
+    },
+    "ground": {
+      "package": "assets/FortniteGame/Content/Packages/DS_Fortnight/SM/Textures/T_FORT_ForestFloor01.uasset",
+      "format": "PF_DXT5",
+      "size": [
+        512,
+        512
+      ]
+    }
+  }
+}

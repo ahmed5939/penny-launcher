@@ -79,7 +79,7 @@ def make_provider(cache):
     return provider
 
 
-def decode_texture(texture, normal):
+def decode_texture(texture, normal, keep_alpha=False):
     from PIL import Image
     modes = {'PF_DXT1': ('RGBA', 1, 'DXT1'), 'PF_DXT5': ('RGBA', 3, 'DXT5'),
              'PF_BC5': ('RGB', 5, 'BC5')}
@@ -88,7 +88,8 @@ def decode_texture(texture, normal):
                if m.SizeX <= 512 and m.SizeY <= 512
                and m.BulkData is not None and m.BulkData.Data is not None)
     image = Image.frombytes(mode, (mip.SizeX, mip.SizeY), bytes(mip.BulkData.Data),
-                            'bcn', (code, label)).convert('RGB')
+                            'bcn', (code, label))
+    image = image if keep_alpha and mode == 'RGBA' and not normal else image.convert('RGB')
     if normal:
         # BC5 stores only X/Y. Reconstruct positive Z and convert DirectX's
         # downward green channel to the renderer's OpenGL tangent convention.
