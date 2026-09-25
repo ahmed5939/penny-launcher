@@ -14,6 +14,8 @@ import { ItemIcon } from '../../components/items/item-icon'
 import { AccountResourceGate, AnimatedNumber, Chip, EmptyState, FilterBar, PageHeader, Panel, PanelBody, PanelHeader, ProgressBar, RefreshButton, Segmented, ToolBadges, useAccountResource } from '../../components/page'
 
 import { cn } from '../../lib/utils'
+import { usePageBackdrop } from '../../components/page/page-backdrop'
+import { seasonBackdrop } from '../../config/backdrops'
 
 const stateTone = { claimed: 'success', completed: 'accent', active: 'warning', 'not-started': 'neutral' } as const
 const stateLabel = { claimed: 'Completed', completed: 'Ready to claim', active: 'In progress', 'not-started': 'Not started' } as const
@@ -47,6 +49,7 @@ function Progress({ current }: { current: VenturesProgress }) {
   const records = useItemDatabaseStore((s) => s.records)
   const [chain, setChain] = useState<'all' | keyof typeof chainNames>('all')
   const [showDone, setShowDone] = useState(false)
+  usePageBackdrop(seasonBackdrop(current.season ? ventureSeasonNames[current.season] : null))
   const xp = current.xp
   const unlocked = zonesUnlocked(xp)
   const next = nextZone(xp)

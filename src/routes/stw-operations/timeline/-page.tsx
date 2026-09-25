@@ -29,6 +29,8 @@ import {
 } from '../../../components/page'
 
 import { useItemDatabaseStore } from '../../../state/items/database'
+import { usePageBackdrop } from '../../../components/page/page-backdrop'
+import { eventBackdrop, seasonBackdrop } from '../../../config/backdrops'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { cn } from '../../../lib/utils'
@@ -104,6 +106,47 @@ export function RouteComponent() {
   )
 }
 
+/** Template id prefixes (record keys are lower-case) an event shop sells. */
+const shopItemFamilies = new Set(['hero', 'schematic', 'defender', 'worker'])
+
+const topRarities = new Set(['Legendary', 'Mythic'])
+
+/**
+ * Lookup key for matching Bug List names against the item database: case
+ * and a leading "The" are ignored ("Ice King" is "The Ice King" in-game).
+ */
+function itemNameKey(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/^the\s+/, '')
+}
+
+/**
+ * The Bug List sometimes tacks the item type onto the name ("Chaos Exploder
+ * Rifle" for the assault rifle the game calls "Chaos Exploder"). On a miss,
+ * trailing words that repeat the type are dropped one at a time and retried.
+ */
+function findItemByName<T>(
+  itemsByName: Map<string, T>,
+  item: { name: string; type: string | null }
+) {
+  const words = itemNameKey(item.name).split(/\s+/)
+  const typeWords = new Set(itemNameKey(item.type ?? '').split(/\s+/))
+
+  while (words.length > 0) {
+    const match = itemsByName.get(words.join(' '))
+
+    if (match || words.length <= 1 || !typeWords.has(words.at(-1) ?? '')) {
+      return match
+    }
+
+    words.pop()
+  }
+
+  return undefined
+}
+
 function Content() {
   useRequestItemDatabase()
 
@@ -123,23 +166,26 @@ function Content() {
    * The Trello cards name items in plain English ("Grave Digger") while the
    * shop and the detail dialog speak template ids. Matching display names
    * back against the item database turns those entries into real, clickable
-   * items. Where several template ids share a name, the Legendary one wins —
-   * that is the version an event shop actually stocks.
+   * items. Where several template ids share a name, the Legendary (or
+   * Mythic) one wins — that is the version an event shop actually stocks.
+   * Only the families an event shop sells are indexed: quests and card packs
+   * reuse item names ("The Dire", "Frostbite") and would steal the match.
    */
   const itemsByName = useMemo(() => {
     const map = new Map<string, { rarity: string | null; templateId: string }>()
 
     for (const [templateId, record] of Object.entries(records)) {
-      if (!record.name) {
+      if (!record.name || !shopItemFamilies.has(templateId.split(':')[0])) {
         continue
       }
 
-      const key = record.name.toLowerCase()
+      const key = itemNameKey(record.name)
       const current = map.get(key)
 
       if (
         !current ||
-        (current.rarity !== 'Legendary' && record.rarity === 'Legendary')
+        (!topRarities.has(current.rarity ?? '') &&
+          topRarities.has(record.rarity ?? ''))
       ) {
         map.set(key, { rarity: record.rarity, templateId })
       }
@@ -246,6 +292,9 @@ function Content() {
 
   const selected =
     seasons.find((season) => seasonKey(season) === selectedKey) ?? null
+
+  // The season's event mode (Dungeons, Frostnite…), else its Ventures zone.
+  usePageBackdrop(eventBackdrop(selected?.extras?.eventMode, selected?.name) ?? seasonBackdrop(selected?.name))
 
   if (errorMessage) {
     return (
@@ -535,7 +584,7 @@ function SeasonDetail({
               </p>
               <ul className="flex flex-wrap items-center gap-1.5">
                 {availableItems.map((item) => {
-                  const match = itemsByName.get(item.name.toLowerCase())
+                  const match = findItemByName(itemsByName, item)
 
                   return (
                     <li key={`${item.name}-${item.type}`}>
@@ -794,11 +843,14 @@ function KeyItems({
   onInspect: (subject: ItemDetailSubject) => void
   records: ItemRecordMap
 }) {
-  if (items.length <= 0) return null
+  // Placeholder ids like `Weapon:peglegweapon_t01` have no art or record.
+  const known = items.filter((templateId) => records[templateId.toLowerCase()])
+
+  if (known.length <= 0) return null
 
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {items.map((templateId) => (
+      {known.map((templateId) => (
         <ItemTile
           key={templateId}
           onClick={() => onInspect({ templateId })}

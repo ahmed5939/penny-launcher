@@ -6,7 +6,9 @@ import { useTranslation } from 'react-i18next'
 import { useEffect, useRef, useState } from 'react'
 import { useDocumentVisible } from '../../hooks/ui/document-visibility'
 
-import { zoneArt } from '../../components/page/page-header'
+import { homeBackdrop } from '../../config/backdrops'
+import { useBackdropStore } from '../../state/ui/backdrop'
+import { useTheme } from '../../components/theme-provider'
 import { Button } from '../../components/ui/button'
 
 import { useGetAccounts, useGetSelectedAccount } from '../../hooks/accounts'
@@ -31,6 +33,9 @@ export type HeroToday = {
  */
 export function HomeHero({ today }: { today?: HeroToday }) {
   const { t } = useTranslation(['general'])
+  const { colorTheme } = useTheme()
+  const homeArt = useBackdropStore((state) => state.homeArt)
+  const backdrop = homeBackdrop(colorTheme, homeArt)
 
   const { accountsArray } = useGetAccounts()
   const { selected } = useGetSelectedAccount()
@@ -55,18 +60,22 @@ export function HomeHero({ today }: { today?: HeroToday }) {
         a game client's library page. It replaces a brand-gradient wash, two
         blurred light orbs and a faded mascot watermark, which together were
         the generated-landing-page look this screen was meant not to have.
+        The art follows the colour theme, so a Canny Valley theme opens on
+        Canny Valley, unless a picture is chosen in Settings → Appearance.
       */}
       <img
         alt=""
         aria-hidden
-        className="absolute inset-0 size-full object-cover object-[center_35%] opacity-80 dark:opacity-75"
+        className="absolute inset-0 size-full object-cover opacity-85 dark:opacity-80"
         decoding="async"
-        src={zoneArt['twine-peaks']}
+        key={backdrop.src}
+        src={backdrop.src}
+        style={{ objectPosition: backdrop.position }}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-background/0" />
       <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/20 to-transparent" />
 
-      <div className="relative flex min-h-60 flex-col justify-end gap-5 px-6 pb-6 pt-14 sm:flex-row sm:items-end sm:justify-between">
+      <div className="relative flex min-h-72 flex-col justify-end gap-5 px-6 pb-6 pt-14 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground/70">
             {customProcessIsRunning && (

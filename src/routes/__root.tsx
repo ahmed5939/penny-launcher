@@ -6,6 +6,7 @@ import {
 import { useEffect, useRef } from 'react'
 
 import { MainLayout } from '../layouts/main'
+import { PageBackdrop } from '../components/page/page-backdrop'
 
 export const Route = createRootRoute({
   component: () => {
@@ -19,8 +20,10 @@ export const Route = createRootRoute({
             `globals.css` (`.page-enter`) once, the way a Windows app fades a
             new page in rather than swapping it under the cursor.
           */}
-          <div className="page-enter flex flex-col gap-4 lg:gap-6" key={pathname}>
+          <div className="page-enter relative isolate flex flex-col gap-4 lg:gap-6" key={pathname}>
             <Outlet />
+            {/* After the page, so it never becomes the flow's first child. */}
+            <PageBackdrop pathname={pathname} />
           </div>
         </MainLayout>
       </>

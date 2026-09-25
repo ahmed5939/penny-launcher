@@ -6,7 +6,7 @@ import plankertonArt from '../../../assets/images/zones/plankerton.webp'
 import stonewoodArt from '../../../assets/images/zones/stonewood.webp'
 import twinePeaksArt from '../../../assets/images/zones/twine-peaks.webp'
 
-/** The game's own zone key art, for Home's launcher banner. */
+/** The game's own zone art, for zone thumbnails, filters and mission cards. */
 export const zoneArt = {
   stonewood: stonewoodArt,
   plankerton: plankertonArt,
@@ -22,8 +22,9 @@ export type ZoneArt = keyof typeof zoneArt
  * Compact on purpose. A full-bleed art banner on every page spent a third
  * of a short window on a dark smear before any content; a game client's
  * inner pages open on their content, with the title, status and actions on
- * one line and a single line of description under it. Key art is kept for
- * Home, where it is the point.
+ * one line and a single line of description under it. Art sits behind it
+ * instead, as a faded strip that takes no space (`PageBackdrop`, chosen by
+ * route in `config/backdrops.ts`); Home keeps the full hero.
  *
  * `icon`, `section` and `art` are accepted for the call sites that pass
  * them; the nav already shows the icon and section.
