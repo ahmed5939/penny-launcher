@@ -420,14 +420,17 @@ export class Loadouts {
     if (teamPerkId) await setAssignTeamPerkToLoadout({ accessToken, accountId, loadoutId, teamPerkId })
 
     for (const [slotIndex, gadgetId] of copy.gadgets.entries()) {
-      /* Gadgets are assigned by template id and only need to be unlocked. */
+      /*
+       * Gadgets are assigned by template id and only need to be unlocked.
+       * Unlocks are not profile items, so there is nothing to check first:
+       * Epic refusing the assignment is what marks one as not owned.
+       */
       if (!gadgetId) continue
-      const owned = Object.values(items).some((item) => item.templateId.toLowerCase() === gadgetId.toLowerCase())
-      if (!owned) {
+      try {
+        await setAssignGadgetToLoadout({ accessToken, accountId, gadgetId, loadoutId, slotIndex })
+      } catch {
         missing.push(gadgetId)
-        continue
       }
-      await setAssignGadgetToLoadout({ accessToken, accountId, gadgetId, loadoutId, slotIndex })
     }
 
     for (const [index, defender] of copy.defenders.entries()) {

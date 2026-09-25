@@ -34,6 +34,9 @@ async function captureCard(card: ReactElement) {
 
     const images = [...host.querySelectorAll('img')]
 
+    /* Lazy art never loads this far off-screen, so ask for all of it now. */
+    for (const image of images) image.loading = 'eager'
+
     /* Art that is slow to arrive is left out rather than holding the image up. */
     await Promise.race([
       Promise.all(
