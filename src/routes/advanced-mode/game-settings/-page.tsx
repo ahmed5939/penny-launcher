@@ -32,7 +32,7 @@ import {
   PanelBody,
   PanelSectionHeader,
   Segmented,
-  StatusPill,
+  StatusDot,
 } from '../../../components/page'
 
 import { useDisplayResolution, useGameUserSettings } from './-hooks'
@@ -85,10 +85,10 @@ function PresetButton({
   return (
     <button
       className={cn(
-        'h-7 rounded-lg border px-2.5 text-xs font-medium transition-colors',
+        'figure h-7 rounded-lg px-2.5 text-xs font-medium transition-colors',
         active
-          ? 'border-primary/25 bg-primary/10 text-primary'
-          : 'border-border/70 text-muted-foreground hover:text-foreground'
+          ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/25'
+          : 'bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground'
       )}
       onClick={onClick}
       type="button"
@@ -366,7 +366,8 @@ function Content() {
                             <FormControl>
                               <Input
                                 {...field}
-                                className="w-24"
+                                aria-label={t('form.frame-rate-limit.label')}
+                                className="figure w-24"
                                 inputMode="numeric"
                                 onChange={(event) =>
                                   field.onChange(digitsOnly(event.target.value))
@@ -414,7 +415,7 @@ function Content() {
                           <div className="flex items-center gap-3">
                             <FormControl>
                               <input
-                                className="flex-1 cursor-pointer accent-primary"
+                                className="flex-1 accent-primary"
                                 max={resolutionQualityRange.max}
                                 min={resolutionQualityRange.min}
                                 onChange={(event) =>
@@ -480,12 +481,29 @@ function Content() {
           </Panel>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-surface/60 px-5 py-3.5">
-          <Button
-            disabled={saving || !isDirty}
-            type="submit"
+        {/*
+          The one commit for the whole file, pinned to the foot of the pane so
+          it is in reach from any row, saying whether there is anything to
+          commit before offering to.
+        */}
+        <div className="sticky bottom-4 z-10 mt-5 flex flex-wrap items-center gap-2 rounded-lg bg-card/95 px-5 py-3 shadow-lg backdrop-blur-sm">
+          <p
+            className={cn(
+              'flex flex-1 items-center gap-2 text-ui',
+              isDirty ? 'text-warning' : 'text-muted-foreground'
+            )}
+            role="status"
           >
-            {t('actions.save')}
+            <StatusDot tone={isDirty ? 'warning' : 'idle'} />
+            {isDirty ? t('dirty') : t('clean')}
+          </p>
+          <Button
+            disabled={saving}
+            onClick={() => void reload()}
+            type="button"
+            variant="ghost"
+          >
+            {t('actions.reload')}
           </Button>
           <Button
             disabled={saving || !isDirty}
@@ -495,17 +513,11 @@ function Content() {
           >
             {t('actions.discard')}
           </Button>
-          {isDirty && (
-            <StatusPill tone="warning">{t('dirty')}</StatusPill>
-          )}
           <Button
-            className="ml-auto"
-            disabled={saving}
-            onClick={() => void reload()}
-            type="button"
-            variant="ghost"
+            disabled={saving || !isDirty}
+            type="submit"
           >
-            {t('actions.reload')}
+            {t('actions.save')}
           </Button>
         </div>
       </form>

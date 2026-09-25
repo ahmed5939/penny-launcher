@@ -5,7 +5,7 @@
 - Overlay settings register the shortcut without creating a window. First use creates it; toggling it off destroys it. Disabling during loading and retrying after failure are covered by tests.
 - The WebGL viewer renders on demand, including texture loads and camera damping, and suspends frames while hidden. Scene teardown now releases icon textures and the shadow target.
 - Main-process item data expires after 60 seconds without requests. Concurrent requests share one load. Renderer data expires after 60 seconds without consumers or while hidden, reloads when needed, and ignores late responses after leaving.
-- Custom-process monitoring checks every ten seconds while the game is absent and every two seconds while present. Active endurance monitoring retains its two-second cadence. Status IPC is sent initially and on change.
+- Custom-process monitoring checks every ten seconds while the game is absent and every two seconds while present. Status IPC is sent initially and on change.
 - Runtime logging retains at most two 2 MB files for newly written logs, limits pending writes to 100, and suppresses consecutive duplicate messages for a minute. Oversized legacy current logs are discarded on rotation.
 
 The main shell remains available in the tray to preserve background bridges. Selection/display changes can still reconstruct the 3D scene; this patch removes its continuous idle rendering and retained textures. Actual Windows resource savings still require a packaged-app measurement. The findings below describe the original audit snapshot.
@@ -21,7 +21,6 @@ Penny is not running on this machine. RAM, CPU, GPU memory, startup latency, ins
 | `node_modules` | 1.1 GB | Development dependencies and runtime dependencies combined; not the installed client size |
 | `src` | 6.9 MB | Source, translations, and source assets; not runtime RAM |
 | `assets` | 14 MB | Assets at inspection time; recovery work is ongoing |
-| `endurance-assets` | 11 MB | Explicitly included as an extra packaged resource |
 | `plugins` | 36 KB | Explicitly included as an extra packaged resource |
 | `.vite` | 2.2 MB | Existing intermediate output; not a complete/current release measurement |
 
@@ -65,7 +64,7 @@ Three.js handles the 3D viewer; sharp and a utility process handle locker image 
 
 `src/kernel/process-watcher.ts:33` calls ps-list every 2,000 ms while at least one listener exists: approximately 30 scans/minute. It prevents overlapping polls and stops when all listeners leave. `src/kernel/core/custom-process.ts` sends status over IPC on every poll, including unchanged status.
 
-**Impact:** repeated system process enumeration and redundant IPC. This is conditional on custom-process/endurance monitoring being active, not an unconditional claim about every session.
+**Impact:** repeated system process enumeration and redundant IPC. This is conditional on custom-process monitoring being active, not an unconditional claim about every session.
 
 **Recommended change:** emit only changed status; use slower checks while no game is running and faster checks around launches or active automation.
 

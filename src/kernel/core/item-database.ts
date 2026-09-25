@@ -20,7 +20,7 @@ import { MainWindow } from '../startup/windows/main'
  * Bump when the narrowed shape changes — an older cache is then discarded
  * rather than being read back into a record the renderer cannot use.
  */
-const cacheVersion = 9
+const cacheVersion = 10
 
 /** Re-download roughly weekly; the source only moves when Fortnite patches. */
 const cacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000
@@ -382,7 +382,8 @@ export class ItemDatabase {
           }
 
           records[templateId.toLowerCase()] = {
-            name: item.DisplayName,
+            /* PegLeg's ammo rows read "Ammo: Heavy Bullets"; the game's backpack says "Heavy Bullets". */
+            name: templateId.startsWith('Ammo:') ? item.DisplayName.replace(/^Ammo\s*:\s*/, '') : item.DisplayName,
             subType: item.SubType ?? null,
             description: item.Description ?? null,
             rarity: item.Rarity ?? null,

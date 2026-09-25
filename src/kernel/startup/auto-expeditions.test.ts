@@ -1,5 +1,7 @@
+import { recordAutomationHistory } from './automation-history'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AutoExpeditionsData } from './auto-expeditions'
+vi.mock('./automation-history', () => ({ recordAutomationHistory: vi.fn() }))
 vi.mock('./automation-rewards', () => ({ AutomationRewards: { withAccount: (_id: string, work: () => Promise<unknown>) => work() } }))
 const mock = vi.hoisted(() => ({ data: {} as AutoExpeditionsData, board: vi.fn(), query: vi.fn(), collect: vi.fn(), recycle: vi.fn(), start: vi.fn() }))
 vi.mock('../runtime-log', () => ({ RuntimeLog: { info: vi.fn(), error: vi.fn() } }))
@@ -27,6 +29,7 @@ describe('automatic expedition lifecycle', () => {
   })
   it('retains confirmed collection and quantities when recycling fails', async () => {
     const result = await AutoExpeditions.run('a')
+    expect(recordAutomationHistory).toHaveBeenLastCalledWith(expect.objectContaining({ accountId: 'a', source: 'Auto-expeditions', outcome: 'error', rewards: { 'Worker:worker_r_t01': 1 } }))
     expect(result.collected).toBe(1)
     expect(result.success).toBe(false)
     expect(mock.data.a.history).toHaveLength(1)

@@ -1,24 +1,15 @@
 import {
-  Building2,
   FileJson2,
-  Gauge,
   LoaderCircle,
   Map as MapIcon,
   Maximize2,
-  RadioTower,
-  RefreshCw,
-  Save,
   ScanSearch,
   Shield,
-  Users,
-  Waves,
   X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { AccountData } from '../../../types/accounts'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -33,29 +24,28 @@ import type {
 import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import type { RatingTables } from '../../../config/constants/fortnite/power'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../../../components/ui/tabs'
+import { TabsContent } from '../../../components/ui/tabs'
 import {
   Callout,
   Chip,
   EmptyState,
+  KeyValue,
   PageHeader,
   PageTabs,
   Panel,
+  PanelHeader,
   ProgressBar,
+  RefreshButton,
+  Segmented,
   StatRow,
   StatTile,
+  ToolBadges,
 } from '../../../components/page'
+import { ItemCard, ItemCardGrid } from '../../../components/items/item-card'
 
 import { computeItemPower } from '../../../config/constants/fortnite/power'
-import { peglegImageURL } from '../../../config/constants/pegleg'
-import { RarityColor, RarityType } from '../../../config/constants/resources'
+import { RarityColor } from '../../../config/constants/resources'
 
 import { useItemDatabaseStore, getItemRecord } from '../../../state/items/database'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
@@ -75,7 +65,6 @@ import { Route } from './route'
 import { resolveCollectionSelection } from '../../../lib/navigation/page-tabs'
 
 import { useOutpostData } from './-hooks'
-import { savePointsByYear } from './-save-history'
 import { Blueprint3D } from './-blueprint-3d'
 import {
   PROP_ROCK,
@@ -95,28 +84,15 @@ const TRAP_CATEGORIES: Array<{ key: OutpostTrapCategory; label: string }> = [
   { key: 'other', label: 'Other' },
 ]
 
-/** TID rarity codes are exactly the `RarityType` enum values. */
-const RARITY_HEX: Record<string, string> = {
-  [RarityType.Common]: RarityColor.Common,
-  [RarityType.Uncommon]: RarityColor.Uncommon,
-  [RarityType.Rare]: RarityColor.Rare,
-  [RarityType.Epic]: RarityColor.Epic,
-  [RarityType.Legendary]: RarityColor.Legendary,
-  [RarityType.Mythic]: RarityColor.Mythic,
-}
-
-const RARITY_LABEL: Record<string, string> = {
-  [RarityType.Common]: 'Common',
-  [RarityType.Uncommon]: 'Uncommon',
-  [RarityType.Rare]: 'Rare',
-  [RarityType.Epic]: 'Epic',
-  [RarityType.Legendary]: 'Legendary',
-  [RarityType.Mythic]: 'Mythic',
-}
-
 /** Minimap colours by layout code — structures by material, traps by slot. */
 const MATERIAL_HEX = ['#c9a06a', '#9aa4ad', '#6fd3e0'] // wood, stone, metal
-const TRAP_SLOT_HEX = ['#ed7e39', '#51a1db', '#d076f6', '#bfbaba'] // floor/wall/ceiling/other
+// floor/wall/ceiling/other
+const TRAP_SLOT_HEX = [
+  RarityColor.Legendary,
+  RarityColor.Rare,
+  RarityColor.Epic,
+  RarityColor.Common,
+]
 
 /** Trap categories index straight into the slot palette, in declared order. */
 const TRAP_CATEGORY_HEX: Record<OutpostTrapCategory, string> = {
@@ -197,23 +173,21 @@ const ZONE_BADGES: Record<string, string> = {
 }
 
 export function RouteComponent() {
+  return <Content />
+}
+
+function OutpostHeader({ actions }: { actions?: ReactNode }) {
   const { t } = useTranslation(['sidebar'])
 
   return (
-    <>
-      <PageHeader
-        icon={Shield}
-        section={t('stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            Outpost
-            <BetaBadge />
-          </span>
-        }
-        description="Storm Shield state for the selected account — zone levels, endurance records, amplifiers, and a full scan of the base built in each zone."
-      />
-      <Content />
-    </>
+    <PageHeader
+      actions={actions}
+      icon={Shield}
+      section={t('stw-operations.title')}
+      status={<ToolBadges beta />}
+      title="Outpost"
+      description="Storm Shield progress for each zone, and the base you built there: scan it to walk it in 3D or read it as a blueprint."
+    />
   )
 }
 
@@ -239,11 +213,14 @@ function Content() {
 
   if (!primaryAccount) {
     return (
-      <EmptyState
-        icon={Shield}
-        title="No account selected"
-        description="Pick an account in the titlebar to inspect its outpost."
-      />
+      <>
+        <OutpostHeader />
+        <EmptyState
+          icon={Shield}
+          title="No account selected"
+          description="Pick an account in the titlebar to inspect its outpost."
+        />
+      </>
     )
   }
 
@@ -268,32 +245,28 @@ function Content() {
 
   return (
     <>
-      <div className="flex items-center justify-end gap-2 border-b border-border/60 pb-3">
-        <Button
-          disabled={!scannable || loadingZone !== null}
-          onClick={handleScanAll}
-          variant="outline"
-        >
-          {loadingZone !== null ? (
-            <LoaderCircle className="animate-spin" />
-          ) : (
-            <ScanSearch className="size-4" />
-          )}
-          Scan all bases
-        </Button>
-        <Button
-          className="min-w-32"
-          disabled={infoLoading}
-          onClick={handleRefresh}
-        >
-          {infoLoading ? (
-            <LoaderCircle className="animate-spin" />
-          ) : (
-            <RefreshCw className="size-4" />
-          )}
-          Refresh
-        </Button>
-      </div>
+      <OutpostHeader
+        actions={
+          <>
+            <Button
+              disabled={!scannable || loadingZone !== null}
+              onClick={handleScanAll}
+              variant="outline"
+            >
+              {loadingZone !== null ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
+                <ScanSearch className="size-4" />
+              )}
+              Scan all bases
+            </Button>
+            <RefreshButton
+              loading={infoLoading}
+              onClick={handleRefresh}
+            />
+          </>
+        }
+      />
 
       {errorMessage && (
         <Callout title="Outpost unavailable" tone="warning">
@@ -312,15 +285,12 @@ function Content() {
       {zones.length > 0 && (
         <StatRow>
           <StatTile
-            hint={`across ${zones.length} zones, of ${zones.length * MAX_SHIELD_LEVEL}`}
-            icon={Shield}
+            hint={`of ${zones.length * MAX_SHIELD_LEVEL} across ${zones.length} zones`}
             label="Shield levels"
-            tone="primary"
             value={totalLevels}
           />
           <StatTile
-            hint={bestZone ? bestZone.zoneName : 'no endurance runs yet'}
-            icon={Waves}
+            hint={bestZone ? bestZone.zoneName : 'No endurance runs yet'}
             label="Best endurance wave"
             tone={
               (bestZone?.highestEnduranceWave ?? 0) >= MAX_ENDURANCE_WAVE
@@ -329,14 +299,9 @@ function Content() {
             }
             value={bestZone?.highestEnduranceWave ?? 0}
           />
+          <StatTile label="Amplifiers placed" value={totalAmplifiers} />
           <StatTile
-            icon={RadioTower}
-            label="Amplifiers placed"
-            value={totalAmplifiers}
-          />
-          <StatTile
-            hint="accounts with edit access"
-            icon={Users}
+            hint="Accounts with edit access"
             label="Builders"
             value={uniqueBuilders}
           />
@@ -354,7 +319,6 @@ function Content() {
         {zones.map((zone) => (
           <TabsContent key={`${primaryAccount.accountId}:${zone.zoneId}`} value={zone.zoneId}>
         <ZoneCard
-          account={primaryAccount}
           baseData={baseData[zone.zoneId]}
           displayName={primaryAccount.displayName || primaryAccount.accountId}
           isLoadingBase={loadingZone === zone.zoneId}
@@ -372,7 +336,6 @@ function Content() {
 }
 
 function ZoneCard({
-  account,
   baseData,
   displayName,
   isLoadingBase,
@@ -381,7 +344,6 @@ function ZoneCard({
   records,
   zone,
 }: {
-  account: AccountData
   baseData?: OutpostBaseData
   displayName: string
   isLoadingBase: boolean
@@ -390,31 +352,8 @@ function ZoneCard({
   records: ItemRecordMap
   zone: OutpostZoneInfo
 }) {
-  const [selectedSaveFile, setSelectedSaveFile] = useState(zone.saveFile)
-  const [activeYear, setActiveYear] = useState<number | null>(null)
-  const [historyData, setHistoryData] = useState<Record<string, OutpostBaseData>>({})
-  const [loadingHistory, setLoadingHistory] = useState(false)
-  useEffect(() => {
-    setSelectedSaveFile(zone.saveFile)
-    setActiveYear(null)
-    setHistoryData({})
-  }, [zone.saveFile])
-  const history = useMemo(() => {
-    const records = zone.savedRecords ?? []
-    const latest = zone.saveFile && zone.lastSavedAt
-      ? [{ recordFilename: zone.saveFile, lastModified: zone.lastSavedAt }]
-      : []
-
-    return savePointsByYear(records.length > 0 ? records : latest)
-  }, [zone.savedRecords, zone.saveFile, zone.lastSavedAt])
-  const selectedRecord = history
-    .flatMap(({ points }) => points)
-    .find((record) => record.recordFilename === selectedSaveFile)
-  const visibleYear = activeYear ?? history[0]?.year ?? null
-  const showingLatest = selectedSaveFile === zone.saveFile
-  const visibleData = showingLatest ? baseData : historyData[selectedSaveFile]
-  const busy = isLoadingBase || loadingHistory
-  const canScan = Boolean(selectedSaveFile) && !busy
+  const visibleData = baseData
+  const canScan = Boolean(zone.saveFile) && !isLoadingBase
   const badge = assets(ZONE_BADGES[zone.zoneId] ?? '')
   const enduranceComplete = zone.highestEnduranceWave >= MAX_ENDURANCE_WAVE
   const scanned = Boolean(visibleData?.success)
@@ -428,173 +367,75 @@ function ZoneCard({
   const [selectedTrap, setSelectedTrap] = useState<string | null>(null)
   const hasLayout = Boolean(visibleData?.success && visibleData.layout)
 
-  const scanSelected = async (saveFile: string, force = false) => {
-    setSelectedTrap(null)
-    setSelectedSaveFile(saveFile)
-    if (saveFile === zone.saveFile) {
-      if (force || !baseData) onScanBase(zone.zoneId, saveFile)
-      return
-    }
-    if (!force && historyData[saveFile]) return
-
-    setLoadingHistory(true)
-    try {
-      const result = await window.electronAPI.requestOutpostBaseData(account, saveFile)
-
-      setHistoryData((previous) => ({ ...previous, [saveFile]: result }))
-    } catch {
-      toast('Could not load this historical save.')
-    } finally {
-      setLoadingHistory(false)
-    }
-  }
-
   return (
     <Panel>
-      <header className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3">
-        {badge && (
-          <img
-            alt=""
-            className="size-10 shrink-0 object-contain"
-            src={badge}
-          />
-        )}
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold leading-tight">
-            {zone.zoneName}
-          </h2>
-          <p className="micro-label text-muted-foreground">
-            Storm Shield · Level {zone.level} of {MAX_SHIELD_LEVEL}
-            {!showingLatest && selectedRecord &&
-              ` · Viewing ${new Date(selectedRecord.lastModified).toLocaleDateString(undefined, { timeZone: 'UTC' })}`}
-          </p>
-        </div>
-        <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
-          <Chip tone={enduranceComplete ? 'success' : 'neutral'}>
-            <Waves className="size-3" />
-            {enduranceComplete
-              ? 'Endurance complete'
-              : `Wave ${zone.highestEnduranceWave}`}
-          </Chip>
-          {zone.saveCount > 0 && zone.lastSavedAt && (
-            <Chip>
-              <Save className="size-3" />
-              saved {relativeTime(zone.lastSavedAt)}
-            </Chip>
-          )}
-          <Button
-            disabled={!canScan}
-            onClick={() => void scanSelected(selectedSaveFile, true)}
-            size="sm"
-            variant="outline"
-          >
-            {busy ? (
-              <LoaderCircle className="size-3.5 animate-spin" />
-            ) : (
-              <ScanSearch className="size-3.5" />
-            )}
-            {scanned ? 'Rescan base' : 'Scan base'}
-          </Button>
-          {visibleData?.success && (
-            <Button
-              onClick={async () => {
-                const result = await window.electronAPI.exportOutpostReport(
-                  displayName,
-                  selectedRecord
-                    ? { ...zone, lastSavedAt: selectedRecord.lastModified, saveFile: selectedSaveFile }
-                    : zone,
-                  visibleData
-                )
-
-                if (result.status === 'saved') {
-                  toast('Readable outpost report saved.')
-                } else if (result.status === 'error') {
-                  toast(result.error ?? 'Could not save the outpost report.')
-                }
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <FileJson2 className="size-3.5" />
-              Save readable report
-            </Button>
-          )}
-        </div>
-      </header>
-
-      <div className="flex flex-col gap-2 border-b border-border/60 bg-muted/15 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">Base history</span>
-            <span className="micro-label text-muted-foreground">
-              Available cloud saves · up to four points per year
-            </span>
-          </div>
-          {history.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No dated cloud save records are available for this outpost.
-            </p>
-          )}
-          {zone.savedRecords === undefined && history.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Only the newest save is loaded. Restart the app to load older save points.
-            </p>
-          )}
-          {zone.savedRecords?.length === 0 && history.length === 1 && (
-            <p className="text-xs text-muted-foreground">
-              Only the newest dated save is available for this outpost.
-            </p>
-          )}
-          <div className="flex flex-wrap gap-1.5" aria-label="Save years">
-            {history.map(({ year, points }) => (
+      <PanelHeader
+        actions={
+          <>
+            {visibleData?.success && (
               <Button
-                aria-pressed={visibleYear === year}
-                disabled={busy}
-                key={year}
-                onClick={() => {
-                  setActiveYear(year)
-                  const latestPoint = points.at(-1)
+                onClick={async () => {
+                  const result = await window.electronAPI.exportOutpostReport(
+                    displayName,
+                    zone,
+                    visibleData
+                  )
 
-                  if (latestPoint) void scanSelected(latestPoint.recordFilename)
+                  if (result.status === 'saved') {
+                    toast.success('Outpost report saved.')
+                  } else if (result.status === 'error') {
+                    toast.error(result.error ?? 'Could not save the outpost report.')
+                  }
                 }}
                 size="sm"
-                type="button"
-                variant={visibleYear === year ? 'secondary' : 'outline'}
+                variant="ghost"
               >
-                {year}
+                <FileJson2 className="size-3.5" />
+                Export report
               </Button>
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-1.5" aria-label={`${visibleYear} save points`}>
-            {history.find(({ year }) => year === visibleYear)?.points.map((record, index) => (
+            )}
+            {/* Before the first scan the empty blueprint offers the button. */}
+            {(scanned || isLoadingBase) && (
               <Button
-                aria-pressed={selectedSaveFile === record.recordFilename}
-                disabled={busy}
-                key={record.recordFilename}
-                onClick={() => void scanSelected(record.recordFilename)}
+                disabled={!canScan}
+                onClick={() => {
+                  setSelectedTrap(null)
+                  onScanBase(zone.zoneId, zone.saveFile)
+                }}
                 size="sm"
-                title={new Date(record.lastModified).toLocaleString(undefined, { timeZone: 'UTC' })}
-                type="button"
-                variant={selectedSaveFile === record.recordFilename ? 'secondary' : 'outline'}
+                variant="outline"
               >
-                Point {index + 1} · {new Date(record.lastModified).toLocaleDateString(undefined, {
-                  month: 'short', day: 'numeric', timeZone: 'UTC',
-                })}
+                {isLoadingBase ? (
+                  <LoaderCircle className="size-3.5 animate-spin" />
+                ) : (
+                  <ScanSearch className="size-3.5" />
+                )}
+                Rescan base
               </Button>
-            ))}
-          </div>
-          {!showingLatest && (
-            <p className="micro-label text-muted-foreground">
-              The blueprint and build counts show this save. Shield level, defenses and access above reflect the current account.
-            </p>
-          )}
-      </div>
+            )}
+          </>
+        }
+        description={
+          zone.saveCount > 0 && zone.lastSavedAt
+            ? `Base last saved ${relativeTime(zone.lastSavedAt)}`
+            : undefined
+        }
+        title={
+          <span className="flex items-center gap-2.5">
+            {badge && (
+              <img alt="" className="size-7 shrink-0 object-contain" src={badge} />
+            )}
+            {zone.zoneName}
+          </span>
+        }
+      />
 
       {/*
         The status rail keeps a fixed width so every zone's blueprint area
         starts on the same vertical line down the page.
       */}
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-4">
+      <div className="grid gap-6 px-5 py-4 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-5">
           <MeterRow
             label="Shield level"
             total={MAX_SHIELD_LEVEL}
@@ -608,28 +449,28 @@ function ZoneCard({
 
           <DefenseTimeline defenses={zone.defenses} />
 
-          <div className="grid grid-cols-2 gap-2">
-            <FactBox
-              icon={RadioTower}
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <KeyValue
               label="Amplifiers"
-              value={zone.amplifierCount}
+              value={<span className="figure">{zone.amplifierCount}</span>}
             />
-            <FactBox
-              icon={Users}
+            <KeyValue
               label="Builders"
-              value={zone.editPermissions.length}
+              value={<span className="figure">{zone.editPermissions.length}</span>}
             />
             {powerStats && (
-              <FactBox
-                icon={Gauge}
-                label="Avg trap PL"
-                value={powerStats.average}
+              <KeyValue
+                label="Average trap power"
+                value={<span className="figure">{powerStats.average}</span>}
               />
             )}
             {zone.saveCount > 0 && (
-              <FactBox icon={Save} label="Cloud saves" value={zone.saveCount} />
+              <KeyValue
+                label="Cloud saves"
+                value={<span className="figure">{zone.saveCount}</span>}
+              />
             )}
-          </div>
+          </dl>
 
           {/* Purely numeric slot tags ("00"…"08") say nothing beyond the count. */}
           {zone.amplifierSlots.some((slot) => !/^\d+$/.test(slot)) && (
@@ -654,9 +495,9 @@ function ZoneCard({
         <BlueprintShowcase
           baseData={visibleData}
           canScan={canScan}
-          isLoadingBase={busy}
-          amplifierSlots={showingLatest ? zone.amplifierSlots : undefined}
-          onScan={() => void scanSelected(selectedSaveFile)}
+          isLoadingBase={isLoadingBase}
+          amplifierSlots={zone.amplifierSlots}
+          onScan={() => onScanBase(zone.zoneId, zone.saveFile)}
           onSelectTrap={setSelectedTrap}
           zoneId={zone.zoneId}
           selectedTrap={selectedTrap}
@@ -674,29 +515,6 @@ function ZoneCard({
         />
       )}
     </Panel>
-  )
-}
-
-/** One small labelled number in the zone's status rail. */
-function FactBox({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: LucideIcon
-  label: string
-  value: ReactNode
-}) {
-  return (
-    <div className="flex items-center gap-2.5 rounded-lg border border-border/60 px-2.5 py-2">
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <p className="micro-label text-muted-foreground">{label}</p>
-        <p className="text-sm font-semibold tabular-nums leading-tight">
-          {value}
-        </p>
-      </div>
-    </div>
   )
 }
 
@@ -739,9 +557,14 @@ function BlueprintShowcase({
   selectedTrap: string | null
   zoneId: string
 }) {
+  const [view, setView] = useState<'3d' | 'plan'>('3d')
+
   if (isLoadingBase) {
     return (
-      <div className="flex min-h-56 flex-col items-center justify-center gap-2 rounded-lg border border-border/60 bg-background/40 p-6 text-center">
+      <div
+        className="flex min-h-56 flex-col items-center justify-center gap-2 rounded-lg bg-muted/20 p-6 text-center"
+        role="status"
+      >
         <LoaderCircle className="size-5 animate-spin text-muted-foreground" />
         <p className="text-xs text-muted-foreground">
           Downloading and scanning the base save…
@@ -752,12 +575,18 @@ function BlueprintShowcase({
 
   if (baseData?.success && baseData.layout) {
     return (
-      <Tabs defaultValue="3d">
-        <TabsList>
-          <TabsTrigger value="3d">3D explorer</TabsTrigger>
-          <TabsTrigger value="blueprint">2D blueprint</TabsTrigger>
-        </TabsList>
-        <TabsContent value="3d">
+      <div className="flex min-w-0 flex-col gap-3">
+        <Segmented
+          className="self-start"
+          onChange={setView}
+          options={[
+            { label: '3D', value: '3d' },
+            { label: 'Blueprint', value: 'plan' },
+          ]}
+          value={view}
+        />
+        {/* Only the chosen view is mounted, so the 3D scene costs nothing while the plan is open. */}
+        {view === '3d' ? (
           <Blueprint3D
             amplifierSlots={amplifierSlots}
             layout={baseData.layout}
@@ -766,8 +595,7 @@ function BlueprintShowcase({
             traps={baseData.traps}
             zoneId={zoneId}
           />
-        </TabsContent>
-        <TabsContent value="blueprint">
+        ) : (
           <Blueprint
             baseData={baseData}
             layout={baseData.layout}
@@ -775,8 +603,8 @@ function BlueprintShowcase({
             selectedTrap={selectedTrap}
             zoneId={zoneId}
           />
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     )
   }
 
@@ -789,33 +617,28 @@ function BlueprintShowcase({
         'The save was scanned but nothing in it had a position to draw.')
       : baseData.error
 
+  if (baseData && !baseData.success) {
+    return (
+      <Callout title="Base scan failed" tone="danger">
+        {message}
+      </Callout>
+    )
+  }
+
   return (
-    <div className="flex min-h-56 flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border/60 p-6 text-center">
-      <MapIcon className="size-6 text-muted-foreground" />
-      <div>
-        <p className="text-sm font-medium">
-          {baseData && !baseData.success
-            ? 'Base scan failed'
-            : 'No blueprint yet'}
-        </p>
-        <p
-          className={cn(
-            'mx-auto mt-1 max-w-sm text-xs leading-relaxed',
-            baseData && !baseData.success
-              ? 'text-destructive'
-              : 'text-muted-foreground'
-          )}
-        >
-          {message}
-        </p>
-      </div>
-      {!baseData && canScan && (
-        <Button onClick={onScan} size="sm" variant="outline">
-          <ScanSearch className="size-3.5" />
-          Scan base
-        </Button>
-      )}
-    </div>
+    <EmptyState
+      action={
+        !baseData && canScan ? (
+          <Button onClick={onScan} size="sm" variant="outline">
+            <ScanSearch className="size-3.5" />
+            Scan base
+          </Button>
+        ) : undefined
+      }
+      description={message}
+      icon={MapIcon}
+      title="No blueprint yet"
+    />
   )
 }
 
@@ -1024,10 +847,9 @@ function Blueprint({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="flex items-center gap-1.5 micro-label text-muted-foreground">
-          <MapIcon className="size-3" />
-          Blueprint · {bounds.maxX - bounds.minX + 1}×
-          {bounds.maxY - bounds.minY + 1} tiles
+        <p className="text-xs text-muted-foreground">
+          {bounds.maxX - bounds.minX + 1} × {bounds.maxY - bounds.minY + 1}{' '}
+          tiles, north up
         </p>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
           {selectedTrap && (
@@ -1041,15 +863,10 @@ function Blueprint({
               <X className="size-3" />
             </button>
           )}
-          <Chip tone="accent">
-            <Building2 className="size-3" />
-            {baseData.structures.total} structures
-          </Chip>
-          <Chip>{baseData.totalTraps} traps</Chip>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border/60 bg-background/40 p-3">
+      <div className="overflow-hidden rounded-lg bg-muted/20 p-3">
         {/*
           The wrapper carries the viewBox's exact aspect ratio so the svg
           fills it edge to edge — that is what lets the hover tooltip be
@@ -1347,7 +1164,6 @@ function Blueprint({
 
               return (
                 <circle
-                  className={name ? 'cursor-pointer' : undefined}
                   cx={x}
                   cy={y}
                   fill={TRAP_SLOT_HEX[cat] ?? TRAP_SLOT_HEX[3]}
@@ -1404,11 +1220,8 @@ function Blueprint({
         <LegendSwatch color={TRAP_SLOT_HEX[1]} label="Wall trap" round />
         <LegendSwatch color={TRAP_SLOT_HEX[2]} label="Ceiling trap" round />
       </div>
-      <p className="text-[0.6875rem] leading-relaxed text-muted-foreground/80">
-        Oriented to match the in-game compass. Scroll or use the buttons to
-        zoom and drag to pan. Hover a trap dot to identify it; click it (or a
-        trap in the list below) to highlight that trap everywhere it is
-        placed.
+      <p className="text-caption text-muted-foreground">
+        Scroll to zoom, drag to pan, click a trap to highlight every copy.
       </p>
     </div>
   )
@@ -1456,126 +1269,112 @@ function BaseDetails({
   return (
     <>
       {structures.total > 0 && (
-        <div className="flex flex-col gap-3 border-t border-border/60 px-4 py-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-3 border-t border-border/30 px-5 py-4">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="section-label">Structures</h3>
-            <Chip tone="accent">
-              <Building2 className="size-3" />
-              {structures.total} total
-            </Chip>
-            <Chip>
-              T1 {structures.tiers.tier1} · T2 {structures.tiers.tier2} · T3{' '}
-              {structures.tiers.tier3}
-            </Chip>
-            {baseData.saveSizeBytes > 0 && (
-              <Chip>{formatBytes(baseData.saveSizeBytes)} save</Chip>
-            )}
+            <p className="text-xs text-muted-foreground">
+              <span className="figure text-foreground">{structures.total}</span>{' '}
+              pieces · T1 {structures.tiers.tier1} · T2 {structures.tiers.tier2}{' '}
+              · T3 {structures.tiers.tier3}
+              {baseData.saveSizeBytes > 0 &&
+                ` · ${formatBytes(baseData.saveSizeBytes)} save`}
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+          <dl className="flex flex-wrap gap-x-8 gap-y-3">
             {materials.map((material) => (
-              <div
-                className="flex items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2"
+              <KeyValue
                 key={material.name}
-              >
-                <img
-                  alt={material.name}
-                  className="size-6 shrink-0 object-contain"
-                  src={assets(material.key)}
-                />
-                <div className="min-w-0">
-                  <p className="micro-label text-muted-foreground">
+                label={
+                  <span className="flex items-center gap-1.5">
+                    <img
+                      alt=""
+                      className="size-4 object-contain"
+                      src={assets(material.key)}
+                    />
                     {material.name}
-                  </p>
-                  <p className="text-sm font-semibold tabular-nums leading-tight">
-                    {material.count}
-                  </p>
-                </div>
-              </div>
+                  </span>
+                }
+                value={<span className="figure">{material.count}</span>}
+              />
             ))}
             {pieces.map((piece) => (
-              <div
-                className="rounded-lg border border-border/60 px-2.5 py-2"
+              <KeyValue
                 key={piece.name}
-                title={piece.hint}
-              >
-                <p className="micro-label text-muted-foreground">
-                  {piece.name}
-                </p>
-                <p className="text-sm font-semibold tabular-nums leading-tight">
-                  {piece.count}
-                </p>
-              </div>
+                label={<span title={piece.hint}>{piece.name}</span>}
+                value={<span className="figure">{piece.count}</span>}
+              />
             ))}
-          </div>
+          </dl>
         </div>
       )}
 
       {baseData.traps.length > 0 && (
-        <div className="flex flex-col gap-4 border-t border-border/60 px-4 py-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-4 border-t border-border/30 px-5 py-4">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h3 className="section-label">Traps</h3>
-            <Chip tone="accent">{baseData.totalTraps} placed</Chip>
-            {powerStats && (
-              <Chip>
-                <Gauge className="size-3" />
-                {powerStats.min === powerStats.max
-                  ? `PL ${powerStats.max}`
-                  : `PL ${powerStats.min}–${powerStats.max}`}
-              </Chip>
-            )}
+            <p className="text-xs text-muted-foreground">
+              <span className="figure text-foreground">{baseData.totalTraps}</span>{' '}
+              placed
+              {powerStats &&
+                (powerStats.min === powerStats.max
+                  ? ` · power ${powerStats.max}`
+                  : ` · power ${powerStats.min}–${powerStats.max}`)}
+              {onSelectTrap && ' · click one to find it in the base'}
+            </p>
           </div>
 
-          {TRAP_CATEGORIES.map(({ key, label }) => {
-            const traps = baseData.traps
-              .filter((trap) => trap.category === key)
-              .sort((a, b) => b.count - a.count)
-
-            if (traps.length === 0) {
-              return null
-            }
-
-            const categoryTotal = traps.reduce(
-              (total, trap) => total + trap.count,
-              0
-            )
-
-            return (
-              <div className="flex flex-col gap-2" key={key}>
-                <p className="flex items-center gap-1.5 micro-label text-muted-foreground">
-                  <span
-                    aria-hidden
-                    className="size-2 rounded-full"
-                    style={{ backgroundColor: TRAP_CATEGORY_HEX[key] }}
+          {/* One grid in slot order; the dot matches the trap's frame in the 3D view. */}
+          <ItemCardGrid>
+            {TRAP_CATEGORIES.flatMap(({ key, label }) =>
+              baseData.traps
+                .filter((trap) => trap.category === key)
+                .sort((a, b) => b.count - a.count)
+                .map((trap) => (
+                  <TrapCard
+                    key={trap.displayName}
+                    onSelect={onSelectTrap}
+                    ratings={ratings}
+                    records={records}
+                    selected={selectedTrap === trap.displayName}
+                    slot={
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          aria-hidden
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: TRAP_CATEGORY_HEX[key] }}
+                        />
+                        {label} trap
+                      </span>
+                    }
+                    trap={trap}
                   />
-                  {label} · {categoryTotal}
-                </p>
-                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {traps.map((trap) => (
-                    <TrapTile
-                      key={trap.displayName}
-                      onSelect={onSelectTrap}
-                      ratings={ratings}
-                      records={records}
-                      selected={selectedTrap === trap.displayName}
-                      trap={trap}
-                    />
-                  ))}
-                </ul>
-              </div>
-            )
-          })}
+                ))
+            )}
+          </ItemCardGrid>
         </div>
       )}
     </>
   )
 }
 
-function TrapTile({
+/** The scan's TID rarity codes, for traps the database can't name. */
+const RARITY_NAMES: Record<string, string> = {
+  c: 'Common',
+  uc: 'Uncommon',
+  r: 'Rare',
+  vr: 'Epic',
+  sr: 'Legendary',
+  ur: 'Mythic',
+}
+
+/** A trap group as the game shows items: its art, rarity, power and perks. */
+function TrapCard({
   onSelect,
   ratings,
   records,
   selected,
+  slot,
   trap,
 }: {
   /** Present only when a blueprint exists to highlight the trap on. */
@@ -1583,16 +1382,17 @@ function TrapTile({
   ratings: RatingTables
   records: ItemRecordMap
   selected?: boolean
+  /** Which surface it mounts on. */
+  slot: ReactNode
   trap: OutpostTrap
 }) {
-  const fallbackTrapIcon = assets('voucher_generic_trap')
-  const accent = trap.rarity ? RARITY_HEX[trap.rarity] : undefined
   const record = trap.templateId
     ? getItemRecord(records, trap.templateId)
     : null
-  const art = record?.image
-    ? peglegImageURL(record.image)
-    : (assets(trap.iconKey ?? '') ?? fallbackTrapIcon)
+  // Without a database record the card has no art of its own; use the icon.
+  const fallbackArt = record?.image
+    ? null
+    : (assets(trap.iconKey ?? '') ?? assets('voucher_generic_trap'))
   const power =
     trap.templateId && trap.level !== null
       ? computeItemPower({
@@ -1602,109 +1402,43 @@ function TrapTile({
         })
       : null
 
-  const toggle = onSelect
-    ? () => onSelect(selected ? null : trap.displayName)
-    : undefined
-
   return (
-    <li
-      className={cn(
-        'relative flex gap-2.5 overflow-hidden rounded-lg border border-border/60 p-2.5 text-xs',
-        onSelect &&
-          'cursor-pointer transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60',
-        selected && 'bg-primary/5 ring-2 ring-primary/60'
-      )}
-      onClick={toggle}
-      onKeyDown={
-        toggle
-          ? (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                toggle()
-              }
-            }
-          : undefined
-      }
-      role={onSelect ? 'button' : undefined}
-      style={accent ? { borderColor: `${accent}55` } : undefined}
-      tabIndex={onSelect ? 0 : undefined}
-      title={
-        onSelect
-          ? 'Click to highlight this trap on the blueprint'
-          : undefined
-      }
-    >
-      {accent && (
-        <span
-          aria-hidden
-          className="absolute inset-y-0 left-0 w-0.5"
-          style={{ backgroundColor: accent }}
-        />
-      )}
-
-      <img
-        alt=""
-        className="size-11 shrink-0 rounded-md object-contain"
-        src={art}
-        style={accent ? { backgroundColor: `${accent}1a` } : undefined}
-      />
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <span
-            className="min-w-0 truncate font-medium"
-            title={trap.displayName}
-          >
-            {trap.displayName}
-          </span>
-          <span className="shrink-0 text-sm font-semibold tabular-nums">
-            ×{trap.count}
-          </span>
-        </div>
-
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          {trap.rarity && RARITY_LABEL[trap.rarity] && (
-            <span
-              className="rounded px-1 py-px micro-label"
-              style={{ backgroundColor: `${accent}22`, color: accent }}
-            >
-              {RARITY_LABEL[trap.rarity]}
-              {trap.tier ? ` · T${trap.tier}` : ''}
-            </span>
-          )}
-          {power !== null ? (
-            <span className="rounded bg-muted/60 px-1 py-px micro-label tabular-nums">
-              PL {power}
-            </span>
-          ) : (
-            trap.level !== null && (
-              <span className="rounded bg-muted/60 px-1 py-px micro-label tabular-nums">
-                Lv {trap.level}
-              </span>
-            )
-          )}
-        </div>
-
-        {trap.perks.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1 text-[0.6875rem] text-muted-foreground">
-            {trap.perks.map((perk) => (
-              <span
-                className="truncate rounded border border-border/50 px-1 py-px"
-                key={perk.templateId}
-                title={perkName(records, perk.templateId)}
-              >
+    <ItemCard
+      badges={
+        trap.perks.length > 0
+          ? trap.perks.map((perk) => (
+              <Chip key={perk.templateId}>
                 {perkName(records, perk.templateId)}
-                {perk.count > 1 && (
-                  <span className="ml-0.5 font-semibold tabular-nums">
-                    ×{perk.count}
-                  </span>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-    </li>
+                {perk.count > 1 && ` ×${perk.count}`}
+              </Chip>
+            ))
+          : undefined
+      }
+      className={cn(selected && 'ring-2 ring-primary/70')}
+      eyebrow={trap.templateId ? undefined : RARITY_NAMES[trap.rarity ?? '']}
+      level={power === null ? trap.level : undefined}
+      name={trap.displayName}
+      onClick={
+        onSelect
+          ? () => onSelect(selected ? null : trap.displayName)
+          : undefined
+      }
+      overlay={
+        fallbackArt ? (
+          <img
+            alt=""
+            className="absolute inset-0 size-full bg-card object-contain p-3"
+            src={fallbackArt}
+          />
+        ) : undefined
+      }
+      power={power}
+      quantity={trap.count}
+      records={records}
+      subtitle={slot}
+      templateId={trap.templateId ?? ''}
+      tier={trap.tier ?? undefined}
+    />
   )
 }
 

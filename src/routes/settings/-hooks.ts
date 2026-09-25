@@ -75,7 +75,7 @@ export function useSetupForm() {
     }
 
     if (!result.ok || !result.path) {
-      toast(t('app-settings.form.path.invalid'))
+      toast.error(t('app-settings.form.path.invalid'))
       return
     }
 
@@ -96,7 +96,7 @@ export function useSetupForm() {
       ...values,
     })
 
-    toast(t('form.submit.status.success'))
+    toast.success(t('form.submit.status.success'))
   }
 
   return {

@@ -8,8 +8,8 @@
   },
   "tabs": {
     "home": "Home",
-    "overview": "Alerts Overview",
-    "done": "Alerts Done"
+    "overview": "Alerts overview",
+    "done": "Alerts done"
   },
   "sections": {
     "vbucks": {
@@ -23,7 +23,7 @@
       "title-endgame": "Ventures ⚡140"
     },
     "survivors": {
-      "title": "Legendary/Mythic Survivors",
+      "title": "Legendary/Mythic survivors",
       "empty": "No survivors to rescue"
     },
     "uc-perk": {
@@ -32,24 +32,24 @@
   },
   "information": {
     "missions": "{{total}} mission/s",
-    "tile-index": "Tile Index:",
-    "alert-guid": "Mission Alert Guid:",
-    "mission-guid": "Mission Guid:",
-    "alert-rewards": "Alert Rewards:",
-    "base-rewards": "Base Rewards:",
+    "tile-index": "Tile index:",
+    "alert-guid": "Mission alert GUID:",
+    "mission-guid": "Mission GUID:",
+    "alert-rewards": "Alert rewards:",
+    "base-rewards": "Base rewards:",
     "modifiers": "Modifiers:",
-    "first-claim": "First Claim:",
-    "last-played": "Last Played At:",
-    "alerts-completed": "Alerts Completed",
-    "rewards-summary": "Rewards Summary",
+    "first-claim": "First claim:",
+    "last-played": "Last played at:",
+    "alerts-completed": "Alerts completed",
+    "rewards-summary": "Rewards summary",
     "completed-from-account": "Completed — from your account",
     "not-completed-yet": "Not completed yet"
   },
   "pagination": {
     "results": "Results",
     "actions": {
-      "previous": "Show Less",
-      "next": "Show More"
+      "previous": "Show less",
+      "next": "Show more"
     }
   },
   "filters": {
@@ -57,25 +57,25 @@
       "input": {
         "placeholder": "Search: mission/alert guid, tileIndex or reward ID"
       },
-      "submit-button": "Show Filters"
+      "submit-button": "Show filters"
     },
     "sections": {
-      "zones": "Select Zones",
-      "types": "Select Mission Types",
-      "rarities": "Select Rarities",
-      "rewards": "Select Rewards"
+      "zones": "Select zones",
+      "types": "Select mission types",
+      "rarities": "Select rarities",
+      "rewards": "Select rewards"
     },
     "actions": {
-      "back": "Back To Alerts",
-      "clear": "Clear Selections"
+      "back": "Back to alerts",
+      "clear": "Clear selections"
     }
   },
   "world-info": {
     "dnd": {
-      "title": "Drop .json File"
+      "title": "Drop .json file"
     },
     "notifications": {
-      "error": "Unable to load World Info file, please check if it's the correct file and doesn't have missing data"
+      "error": "Could not load the World Info file. Check that it is the right file and has no missing data."
     }
   },
   "results": {

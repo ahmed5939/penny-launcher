@@ -39,7 +39,7 @@ export function AuthorizationCodePage() {
         className="w-full max-w-md"
       >
         <Panel>
-          <div className="space-y-2 border-b border-border/60 px-5 py-4 text-[0.8125rem] leading-relaxed text-muted-foreground">
+          <div className="space-y-2 border-b border-border/60 px-5 py-4 text-ui leading-relaxed text-muted-foreground">
             <p>
               <Trans
                 ns="accounts"

@@ -55,9 +55,6 @@ vi.mock('../../hooks/settings', () => ({
     updateMenuOption: () => vi.fn(),
   }),
 }))
-vi.mock('../../hooks/stw-operations/taxi-service', () => ({
-  useGetTaxiServiceDataStatus: () => ({ status: null }),
-}))
 vi.mock('../../hooks/stw-operations/automation', () => ({
   useGetAutomationDataStatus: () => ({ status: null }),
 }))
@@ -101,7 +98,7 @@ describe('area shell rendering', () => {
     expect(markup).not.toContain('href="/stw-operations/loadouts"')
   })
   it('does not show an empty Automate area when only STW tools remain visible', () => {
-    state.hidden = ['taxiService', 'party', 'autoLlamas', 'autoPinUrns', 'autoDailyReroll', 'expeditions']
+    state.hidden = ['autoLlamas', 'autoPinUrns', 'autoDailyReroll', 'expeditions']
     expect(render()).not.toContain('aria-label="sidebar:groups.automate"')
   })
 })

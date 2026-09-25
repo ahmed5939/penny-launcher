@@ -2,15 +2,16 @@ import type { CompanionCollectionEntry } from '../../../kernel/core/locker-compa
 import type { SegmentedOption } from '../../../components/page'
 
 import { useMemo, useState } from 'react'
-import { Cat, PawPrint, Search } from 'lucide-react'
+import { Cat, PawPrint } from 'lucide-react'
 
-import { Input } from '../../../components/ui/input'
 import {
   Callout,
   EmptyState,
+  FilterBar,
   Panel,
   PanelBody,
   PanelHeader,
+  SearchField,
   Segmented,
   StatRow,
   StatTile,
@@ -115,23 +116,20 @@ export function Sidekicks({
           description="Every sidekick in the game. Greyed-out ones are not on this account yet."
           title="Sidekicks"
         />
+        <FilterBar>
+          <Segmented
+            onChange={setOwnership}
+            options={ownershipOptions}
+            value={ownership}
+          />
+          <SearchField
+            label="Search sidekicks"
+            onChange={setQuery}
+            placeholder="Search by name"
+            value={query}
+          />
+        </FilterBar>
         <PanelBody className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Segmented
-              onChange={setOwnership}
-              options={ownershipOptions}
-              value={ownership}
-            />
-            <div className="relative min-w-52 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by name"
-                value={query}
-              />
-            </div>
-          </div>
 
           <p className="text-xs text-muted-foreground">
             Showing {visible.length.toLocaleString()} of{' '}

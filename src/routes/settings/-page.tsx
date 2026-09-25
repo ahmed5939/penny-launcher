@@ -90,7 +90,7 @@ function HiddenTweaksTrigger() {
 
   return (
     <>
-      <div className="mx-auto max-w-3xl pb-6 pt-2">
+      <div className="max-w-4xl pb-6 pt-4">
         <button
           className="micro-label select-none text-muted-foreground/50 hover:text-muted-foreground"
           onClick={handleClick}
@@ -165,23 +165,23 @@ function Content() {
       }}
     >
       <PageTabPanel value="app" activeValue={tab}>
-        <div className="max-w-3xl">
+        <div className="max-w-4xl">
           <AppSettings />
         </div>
       </PageTabPanel>
       <PageTabPanel value="overlay" activeValue={tab}>
-        <div className="max-w-3xl">
+        <div className="max-w-4xl">
           <OverlaySettingsForm />
         </div>
       </PageTabPanel>
       <PageTabPanel value="menu" activeValue={tab}>
-        <div className="max-w-3xl">
+        <div className="max-w-4xl">
           <CustomizableMenu />
         </div>
       </PageTabPanel>
       <PageTabPanel value="accounts" activeValue={tab}>
         {accountsArray.length > 0 ? (
-          <div className="max-w-3xl">
+          <div className="max-w-4xl">
             <AccountCustomization />
           </div>
         ) : (

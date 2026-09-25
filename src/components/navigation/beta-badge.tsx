@@ -1,8 +1,7 @@
 import { Chip } from '../page'
 
 /**
- * Marks a tool that is still settling — currently Endurance, whose
- * vision-driven menu walker is usable but experimental.
+ * Marks a tool that is usable but still experimental.
  *
  * Beta tools sit in their natural section rather than a quarantine menu.
  *

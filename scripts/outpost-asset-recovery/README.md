@@ -262,3 +262,20 @@ colour comes from the `Color1_Base`/`Color2_Lit` vector params multiplied over
 the greyscale atlas; impostor cards and unassigned slots are dropped.
 Plankerton's grass is `T_Grasslands_AD_D` (autumn). Only Twine gets open sea;
 the other outposts float above their backdrop ground as in-game.
+
+
+## Walk-mode hero
+
+- `extract_character.py` — Power B.A.S.E. Penny (body, head and backpack) as
+  one skinned GLB at real scale (`character/penny.glb`). `ue_skeletal.py`
+  reads skeletal LOD0 (positions, tangents, UVs, skin weights) and the render
+  sections the same way `ue_mesh.py` does for static meshes.
+- Heroes ship without animations, so walk mode retargets the CC0 clips in
+  `character/character.glb` onto her rig at load (`-blueprint-retarget.ts`).
+- Compress skinned GLBs with `--skinned`: three.js ignores the dequantizing
+  node transform on skinned meshes, so positions must stay float.
+
+```sh
+$PY extract_character.py --cache-root ~/.cache/penny-fn-assets-42 --output /tmp/penny.glb
+node compress_glb.mjs /tmp/penny.glb ../../assets/outpost-game/character/penny.glb --skinned
+```

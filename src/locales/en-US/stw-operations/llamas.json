@@ -2,23 +2,23 @@
   "description": "Auto-llamas will claim the free upgradable llamas or purchase llama if there is at least one legendary/mythic survivor on the selected accounts.",
   "note1": "<0>1</0> If there's at least one free upgrade llama available it will be claimed.",
   "note2": "<0>2</0> You can also enable the purchase of an upgrade llama (50 V-Bucks) if you want. This purchase will only be made if there's at least one legendary or mythic survivor.",
-  "note3": "<0>3</0> You can choose whether to use an X-Ray Tickets or a llama token (Default: X-Ray).",
+  "note3": "<0>3</0> You can choose whether to use X-Ray Tickets or a llama token (default: X-Ray).",
   "form": {
     "actions": {
       "buttons": {
         "add": {
-          "accounts": "Add All Accounts"
+          "accounts": "Add all accounts"
         },
         "remove": {
-          "accounts": "Remove All Accounts"
+          "accounts": "Remove all accounts"
         },
         "enable": {
-          "buy": "Enable Free Purchases"
+          "buy": "Enable free purchases"
         },
         "disable": {
-          "buy": "Disable Free Purchases"
+          "buy": "Disable free purchases"
         },
-        "check": "Check Manually"
+        "check": "Check manually"
       }
     }
   },

@@ -77,7 +77,7 @@ export function useVBucksInformationData() {
     const selectedAccounts = getAccounts()
 
     if (selectedAccounts.length <= 0) {
-      toast(t('form.accounts.no-linked'))
+      toast.warning(t('form.accounts.no-linked'))
 
       return
     }

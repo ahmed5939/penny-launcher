@@ -4,6 +4,7 @@ export type AddAccountsLoadingsState = {
   authorizationCode: boolean
   deviceAuth: boolean
   exchangeCode: boolean
+  quickLogin: boolean
 }
 
 export type AddAccountsState = AddAccountsLoadingsState & {
@@ -17,6 +18,7 @@ export const useAddAccountsStore = create<AddAccountsState>()((set) => ({
   authorizationCode: false,
   deviceAuth: false,
   exchangeCode: false,
+  quickLogin: false,
 
   updateLoadingStatus: (type, value) => {
     set({

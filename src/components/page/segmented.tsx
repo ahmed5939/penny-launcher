@@ -1,7 +1,11 @@
+import type { LucideIcon } from 'lucide-react'
+
 import { cn } from '../../lib/utils'
 
 export type SegmentedOption<T extends string> = {
   disabled?: boolean
+  /** Draws the option as an icon; the label becomes its tooltip and accessible name. */
+  icon?: LucideIcon
   label: string
   value: T
 }
@@ -39,24 +43,28 @@ export function Segmented<T extends string>({
       */}
       {options.map((option) => {
         const active = option.value === value
+        const Icon = option.icon
 
         return (
           <button
             key={option.value}
             type="button"
             role="tab"
+            aria-label={Icon ? option.label : undefined}
             aria-selected={active}
             disabled={option.disabled}
             className={cn(
-              'h-7 rounded-lg px-3 text-xs font-semibold transition-colors',
+              'h-7 rounded-lg text-xs font-semibold transition-colors',
+              Icon ? 'grid w-8 place-items-center' : 'px-3',
               'disabled:opacity-40',
               active
                 ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/25'
                 : 'text-muted-foreground hover:text-foreground'
             )}
             onClick={() => onChange(option.value)}
+            title={Icon ? option.label : undefined}
           >
-            {option.label}
+            {Icon ? <Icon className="size-4" /> : option.label}
           </button>
         )
       })}

@@ -11,14 +11,17 @@
     "automate": "Automate",
     "stw": "Save the World",
     "account": "Account",
-    "tools": "Tools"
+    "tools": "Tools",
+    "stw-overview": "Overview",
+    "stw-roster": "Roster",
+    "stw-inventory": "Inventory",
+    "stw-activity": "Activity"
   },
   "stw-operations": {
     "title": "Save the World",
     "options": {
+      "profile": "Profile",
       "auto-kick": "Auto-kick",
-      "taxi-service": "Taxi",
-      "party": "Party",
       "expeditions": "Expeditions",
       "squad-presets": "Squads",
       "inventory": "Vault",
@@ -26,25 +29,24 @@
       "heroes": "Heroes",
       "survivors": "Survivors",
       "backpack": "Backpack",
-      "backpack-storage": "Backpack & Storage",
+      "backpack-storage": "Backpack & storage",
       "storage": "Storage",
       "defenders": "Defenders",
       "collection-book": "Collection Book",
-      "rare-item-finder": "Rare Item Finder",
+      "rare-item-finder": "Rare item finder",
       "ventures": "Ventures",
-      "compendium": "Compendium",
+      "codex": "Codex",
       "quests": "Quests",
       "loadouts": "Loadouts",
       "timeline": "Timeline",
       "shop": "Shop",
       "xp-boosts": "XP Boosts",
-      "auto-pin-urns": "Auto-Pin Quests",
+      "auto-pin-urns": "Auto-pin quests",
       "auto-update-quests": "Auto update daily quests",
       "auto-daily-reroll": "Auto daily reroll",
       "daily-quests": "Daily quests",
       "auto-llamas": "Auto-llamas",
-      "recycled-rewards": "Recycled Rewards",
-      "endurance": "Endurance"
+      "recycled-rewards": "Recycled rewards"
     },
     "auto-kick-status": {
       "issue": "Issue",
@@ -73,9 +75,10 @@
     }
   },
   "accounts": {
-    "title": "My Accounts",
+    "title": "My accounts",
     "options": {
-      "show-total-accounts": "Show Total Accounts",
+      "show-total-accounts": "Show total accounts",
+      "quick": "Quick login",
       "auth": "Authorization code",
       "exchange": "Exchange code",
       "device": "Device auth",
@@ -83,16 +86,15 @@
     }
   },
   "links": {
-    "discord": "Discord Server",
+    "discord": "Discord server",
     "github": "View on GitHub",
     "credits": "Credits"
   },
   "version": {
     "release": "Release v{{version}}",
-    "all-releases": "All Releases"
+    "all-releases": "All releases"
   },
   "missions": "Missions",
-  "endurance": "Endurance",
   "outpost": "Outpost",
   "br-locker": "BR Locker",
   "sprites": "Sprites",
@@ -107,7 +109,7 @@
   "search-accounts": "Search accounts",
   "all-accounts": "All eligible accounts",
   "only-primary": "Only primary",
-  "open-missions": "Open Missions",
+  "open-missions": "Open missions",
   "no-tools": "No available tools. Customize the menu or add an account.",
   "your-accounts": "Your accounts",
   "look-up-player": "Look up player",

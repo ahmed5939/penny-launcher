@@ -1,3 +1,4 @@
+import { recordAutomationHistory } from './automation-history'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { z } from 'zod'
@@ -200,6 +201,7 @@ export class AutoDailyReroll {
       ) {
         throw new Error('Quest update not confirmed')
       }
+      recordAutomationHistory({ accountId, source: 'Daily quest update', description: 'Daily quests updated', outcome: 'success' })
       await this.change((data) => {
         if (!data[accountId]) return
         Object.assign(data[accountId], {
@@ -210,6 +212,7 @@ export class AutoDailyReroll {
         })
       })
     } catch {
+      recordAutomationHistory({ accountId, source: 'Daily quest update', description: 'Could not update daily quests. Retrying in 15 minutes.', outcome: 'error' })
       await this.change((data) => {
         if (!data[accountId]) return
         Object.assign(data[accountId], {
@@ -224,8 +227,9 @@ export class AutoDailyReroll {
 
   private static async run(accountId: string, day: string) {
     let attempted = false
-    const record = (message: string, done: boolean) =>
-      this.change((data) => {
+    const record = (message: string, done: boolean) => {
+      recordAutomationHistory({ accountId, source: 'Auto daily reroll', description: message, outcome: message.startsWith('Rerolled ') ? 'success' : 'info' })
+      return this.change((data) => {
         if (!data[accountId]) return
         Object.assign(data[accountId], {
           lastResult: message,
@@ -235,6 +239,7 @@ export class AutoDailyReroll {
             : { retryAt: Date.now() + 15 * 60_000 }),
         })
       })
+    }
     try {
       await this.writes
       const initial = (await this.read())[accountId]

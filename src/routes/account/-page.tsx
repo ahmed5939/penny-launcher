@@ -16,7 +16,7 @@ export function AccountRoute() {
       <PageHeader
         icon={Users}
         title="Epic account"
-        description="Everything tied to your Epic accounts — linking, devices, V-Bucks, codes and settings."
+        description="Your wallet, locker, sprites and friends — and the settings for every linked account."
       />
 
       <AccountHub />

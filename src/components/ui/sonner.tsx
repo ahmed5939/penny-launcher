@@ -19,7 +19,17 @@ const Toaster = ({ ...props }: ToasterProps) => {
            * the only surface in it that never went dark.
            */
           toast:
-            'w-auto rounded-xl border border-border bg-popover px-3 py-2 text-popover-foreground shadow-lg max-[600px]:!left-auto max-[600px]:!right-auto max-[600px]:!w-auto',
+            'flex w-auto items-center gap-2 rounded-xl border border-border bg-popover px-3 py-2 text-popover-foreground shadow-lg max-[600px]:!left-auto max-[600px]:!right-auto max-[600px]:!w-auto',
+          /*
+           * Tone is carried by an accent edge and the icon, both from theme
+           * tokens, so a failure never reads the same as a success. Plain
+           * `toast()` stays neutral for purely informational notices.
+           */
+          success: 'border-l-4 border-l-success [&_[data-icon]]:text-success',
+          error:
+            'border-l-4 border-l-destructive [&_[data-icon]]:text-destructive',
+          warning: 'border-l-4 border-l-warning [&_[data-icon]]:text-warning',
+          icon: 'flex shrink-0 items-center',
         },
         duration: 2700,
         unstyled: true,

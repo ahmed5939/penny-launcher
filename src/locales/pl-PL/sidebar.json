@@ -3,20 +3,17 @@
     "title": "Operacje w RŚ",
     "options": {
       "auto-kick": "Auto-wyrzucanie",
-      "taxi-service": "Serwis Taksówkowy",
-      "party": "Ekipa",
       "expeditions": "Ekspedycje",
       "squad-presets": "Oddziały Ocalałych",
       "inventory": "Skarbiec",
-      "compendium": "Kompendium",
+      "codex": "Kodeks",
       "quests": "Dziennik Zadań",
       "loadouts": "Zestawy Bohaterów",
       "timeline": "Oś Czasu Wydarzeń",
       "shop": "Sklep STW",
       "xp-boosts": "Wzmocnienia PD",
       "auto-pin-urns": "Automatyczne przypinanie zadań",
-      "auto-llamas": "Auto-llamy",
-      "endurance": "Endurance"
+      "auto-llamas": "Auto-llamy"
     },
     "auto-kick-status": {
       "issue": "Problem",

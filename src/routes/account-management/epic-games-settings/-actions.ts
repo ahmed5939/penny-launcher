@@ -25,7 +25,7 @@ export function useHandlers() {
         setIsLoading(false)
         setCurrentCode(code)
 
-        toast(
+        toast[status ? 'success' : 'error'](
           status
             ? t('notifications.success', {
                 name: parseCustomDisplayName(account),
@@ -72,7 +72,7 @@ export function useHandlers() {
     window.navigator.clipboard
       .writeText(epicGamesAccountSettingsURL(currentCode))
       .then(() => {
-        toast(t('notifications.clipboard'))
+        toast.success(t('notifications.clipboard'))
       })
       .catch(() => {})
   }

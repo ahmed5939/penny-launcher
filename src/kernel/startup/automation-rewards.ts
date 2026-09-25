@@ -1,3 +1,4 @@
+import { recordAutomationHistory } from './automation-history'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -72,7 +73,10 @@ export class AutomationRewards {
     // Persist the receipt first. A subsequent recycle failure cannot discard it.
     if (!event.received.length) { event.status = 'error'; event.error = 'Purchase returned no recognized reward details. Nothing was recycled.' }
     await this.change((s) => { s.events.push(event) })
-    if (!event.received.length) return
+    if (!event.received.length) {
+      recordAutomationHistory({ accountId, source: 'Auto-llamas', description: event.error, outcome: 'error' })
+      return
+    }
     try {
       const level = (await this.read()).llamaRecycling[accountId] ?? 'off'
       if (level !== 'off') {
@@ -104,5 +108,11 @@ export class AutomationRewards {
       event.error = error instanceof Error ? error.message : 'Recycling failed'
     }
     await this.change((s) => { s.events[s.events.findIndex((e) => e.id === event.id)] = event })
+    if (event.recycled.length || event.error) {
+      const rewards: Record<string, number> = {}
+      for (const reward of event.resources) rewards[reward.templateId] = (rewards[reward.templateId] ?? 0) + reward.quantity
+      recordAutomationHistory({ accountId, source: 'Auto-llama recycling', rewards,
+        description: event.error ?? `Recycled ${event.recycled.length} items`, outcome: event.error ? 'error' : 'success' })
+    }
   }
 }

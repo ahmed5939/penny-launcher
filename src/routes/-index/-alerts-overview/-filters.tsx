@@ -21,6 +21,8 @@ import {
 
 import { cn } from '../../../lib/utils'
 
+import { zoneArtForTheater } from '../-components/-zone-art'
+
 export function AlertFilters() {
   const { t } = useTranslation(['alerts'], {
     keyPrefix: 'filters',
@@ -48,10 +50,10 @@ export function AlertFilters() {
          * Tailwind arbitrary variant can only prefix a utility. Keep the two
          * in step.
          */
-        '[&_.label]:text-[0.625rem] [&_.label]:font-semibold [&_.label]:uppercase [&_.label]:leading-none [&_.label]:tracking-[0.12em] [&_.label]:text-muted-foreground/55',
+        '[&_.label]:text-2xs [&_.label]:font-semibold [&_.label]:leading-none [&_.label]:text-muted-foreground/55',
         '[&_.label-block]:mb-2.5 [&_.label-block]:inline-flex',
         '[&_.toggle-group]:flex-wrap [&_.toggle-group]:gap-2 [&_.toggle-group]:justify-start',
-        '[&_.toggle-item]:size-14 [&_.toggle-item]:rounded-xl [&_.toggle-item]:border-border/70 [&_.toggle-item]:bg-muted/20 [&_.toggle-item]:px-0 [&_.toggle-item]:py-0',
+        '[&_.toggle-item]:size-14 [&_.toggle-item]:overflow-hidden [&_.toggle-item]:rounded-xl [&_.toggle-item]:border-border/70 [&_.toggle-item]:bg-muted/20 [&_.toggle-item]:px-0 [&_.toggle-item]:py-0',
         '[&_.toggle-item[data-state="on"]]:border-primary/50 [&_.toggle-item[data-state="on"]]:bg-primary/10',
         '[&_.toggle-icon]:size-8'
       )}
@@ -72,7 +74,16 @@ export function AlertFilters() {
                 value={option.value}
                 key={option.value}
               >
-                {option.icon ? (
+                {zoneArtForTheater(option.value) ? (
+                  /* The zone's own key art rather than its initial. */
+                  <img
+                    alt={option.label}
+                    className="size-full rounded-[inherit] object-cover"
+                    decoding="async"
+                    loading="lazy"
+                    src={zoneArtForTheater(option.value) ?? undefined}
+                  />
+                ) : option.icon ? (
                   <img decoding="async" loading="lazy"
                     src={option.icon}
                     className="toggle-icon"
@@ -100,10 +111,10 @@ export function AlertFilters() {
                 className="text-xs text-muted-foreground"
                 htmlFor="group-missions"
               >
-                Group Missions
+                Group missions only
               </Label>
               <Switch
-                className="cursor-pointer"
+
                 id="group-missions"
                 onCheckedChange={toggleGroup}
                 checked={group}

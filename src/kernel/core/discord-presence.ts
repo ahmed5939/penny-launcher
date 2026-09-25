@@ -3,7 +3,7 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 
 import { discordApplicationId } from '../../config/discord'
-import { LogWatcher } from './endurance/log-watcher'
+import { LogWatcher } from './fortnite-log-watcher'
 import { RuntimeLog } from '../runtime-log'
 
 // Use byte views to bridge the Node 20 Buffer types and newer TS typed arrays.

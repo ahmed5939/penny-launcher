@@ -10,9 +10,8 @@ import { cn } from '../../../lib/utils'
 /**
  * Nothing survived the filters, or nobody is logged in.
  *
- * A deliberately unfilled brief card: same radius and border weight as a row,
- * dashed so the edge says "nothing here" instead of reading as a row that
- * failed to render.
+ * A quiet fill with the reason in it — no outline, no icon well — so an
+ * empty zone reads as a pause in the list rather than a broken card.
  */
 export function EmptyResults({
   children,
@@ -36,13 +35,11 @@ export function EmptyResults({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-border/70 bg-card/40 px-6 py-10 text-center',
+        'flex flex-col items-center justify-center gap-2 rounded-xl bg-muted/20 px-6 py-8 text-center',
         className
       )}
     >
-      <span className="grid size-10 place-items-center rounded-full bg-muted/40 ring-1 ring-inset ring-border/60">
-        <SearchX className="size-4 text-muted-foreground/60" />
-      </span>
+      <SearchX className="size-5 text-muted-foreground/60" />
       <p className="max-w-[26rem] text-sm text-muted-foreground">
         {messageText}
       </p>
@@ -82,23 +79,21 @@ export function EmptySection({
       : title ?? t(defaultEmptyMessage.text)
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-border/70 bg-card/40 px-6 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-2 rounded-xl bg-muted/20 px-6 py-8 text-center">
       {/*
-        The joke's image sits in the well above the text rather than trailing
-        it inline, so a long quote wraps without dragging the icon around.
+        The joke's image sits above the text rather than trailing it inline,
+        so a long quote wraps without dragging the icon around.
       */}
-      <span className="grid size-10 place-items-center rounded-full bg-muted/40 ring-1 ring-inset ring-border/60">
-        {message?.icon ? (
-          <img
-            src={message.icon}
-            alt=""
-            className="size-5 object-contain"
-            loading="lazy"
-          />
-        ) : (
-          <Inbox className="size-4 text-muted-foreground/60" />
-        )}
-      </span>
+      {message?.icon ? (
+        <img
+          src={message.icon}
+          alt=""
+          className="size-7 object-contain"
+          loading="lazy"
+        />
+      ) : (
+        <Inbox className="size-5 text-muted-foreground/60" />
+      )}
       <p className="max-w-[26rem] text-sm text-muted-foreground">
         {messageText}
       </p>

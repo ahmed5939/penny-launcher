@@ -17,7 +17,6 @@ const zone: OutpostZoneInfo = {
   lastSavedAt: '2026-01-02T00:00:00.000Z',
   level: 7,
   saveCount: 3,
-  savedRecords: [],
   saveFile: 'pve01.sav',
   zoneId: 'pve_01',
   zoneName: 'Stonewood',

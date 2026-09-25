@@ -220,7 +220,7 @@ export function useData() {
             total.xpBoosts.expected
           )
 
-          toast(
+          toast.success(
             t('xpboosts.notifications.success.personal', {
               count: total.xpBoosts.current,
               current: currentTotalXPBoosts,
@@ -250,7 +250,7 @@ export function useData() {
             total.xpBoosts.expected
           )
 
-          toast(
+          toast.success(
             t('xpboosts.notifications.success.teammate', {
               count: total.xpBoosts.current,
               current: currentTotalXPBoosts,
@@ -295,7 +295,7 @@ export function useData() {
     const parsedAccounts = getAccounts()
 
     if (parsedAccounts.length <= 0) {
-      toast(
+      toast.warning(
         t('form.accounts.no-linked', {
           ns: 'general',
         })
@@ -308,10 +308,8 @@ export function useData() {
     window.electronAPI.requestXPBoostsAccounts(parsedAccounts)
   }
 
-  const onChangeSearchValue: ChangeEventHandler<HTMLInputElement> = (
-    event
-  ) => {
-    setSearchValue(event.target.value.replace(/\s+/g, ' '))
+  const onChangeSearchValue = (value: string) => {
+    setSearchValue(value.replace(/\s+/g, ' '))
   }
 
   return {

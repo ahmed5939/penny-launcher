@@ -1,11 +1,10 @@
-import type { MouseEvent } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 
 import { ExternalLink, Heart } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { PageHeader, Panel } from '../../../components/page'
+import { PageHeader, Panel, PanelHeader } from '../../../components/page'
 
-import { cn } from '../../../lib/utils'
 
 const links = {
   kuda: 'https://www.youtube.com/@kuda9098',
@@ -17,194 +16,154 @@ const links = {
   eric_guest1: '',
 }
 
-export function ComponentRoute() {
-  const { t } = useTranslation(['general'])
-
-  const openURL = (url: string) => (event: MouseEvent) => {
+function openURL(url: string) {
+  return (event: MouseEvent) => {
     event.preventDefault()
     window.electronAPI.openExternalURL(url)
   }
+}
+
+/** A name that goes somewhere: the person's page, opened in the browser. */
+function Person({ href, name }: { href?: string; name: string }) {
+  if (!href) {
+    return <span className="font-semibold text-foreground">{name}</span>
+  }
+
+  return (
+    <a
+      className="inline-flex items-center gap-1 font-semibold text-foreground hover:text-primary"
+      href={href}
+      onClick={openURL(href)}
+    >
+      {name}
+      <ExternalLink className="size-3 text-muted-foreground" />
+    </a>
+  )
+}
+
+/** One credit: who, then what they did, as a roll reads. */
+function Credit({ children, people }: { children: ReactNode; people: ReactNode }) {
+  return (
+    <li className="py-3.5">
+      <p className="text-ui">{people}</p>
+      <p className="mt-1 text-ui leading-relaxed text-muted-foreground">
+        {children}
+      </p>
+    </li>
+  )
+}
+
+export function ComponentRoute() {
+  const { t } = useTranslation(['general'])
 
   return (
     <>
       <PageHeader
+        description="The people Penny Launcher is built on."
         icon={Heart}
         title={t('credits')}
       />
-      {/*
-        Three flat lists of names under 3xl headings. Sectioned into panels
-        with the names as links and the blurbs as secondary text, so it
-        scans as credits rather than a wall of prose.
-      */}
-      <div
-        className={cn(
-          'max-w-3xl space-y-4',
-          '[&_.list]:divide-y [&_.list]:divide-border/50',
-          '[&_.item]:space-y-1 [&_.item]:px-5 [&_.item]:py-3.5',
-          '[&_.item>div]:text-[0.8125rem] [&_.item>div]:leading-relaxed [&_.item>div]:text-muted-foreground',
-          '[&_.link]:gap-1 [&_.link]:inline-flex [&_.link]:items-center [&_.link]:font-medium [&_.link]:text-foreground [&_.link:hover]:text-primary'
-        )}
-      >
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <Panel>
-          <h2 className="border-b border-border/60 px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Credits
-          </h2>
-          <ul className="list">
-              <li className="item">
-                <a
-                  href="https://github.com/ahmed5939"
-                  className="link"
-                  onClick={openURL('https://github.com/ahmed5939')}
-                >
-                  Ahmed (ahmed5939) <ExternalLink className="h-3 w-3" />
-                </a>
-                <div>
-                  Current maintainer of Penny Launcher.
-                </div>
-              </li>
-              <li className="item">
-                <a
-                  href="https://github.com/Ciensprog/Aerial-Launcher"
-                  className="link"
-                  onClick={openURL('https://github.com/Ciensprog/Aerial-Launcher')}
-                >
-                  Ciensprog <ExternalLink className="h-3 w-3" />
-                </a>
-                <div>
-                  Original developer of Aerial Launcher, the project Penny
-                  Launcher is based on.
-                </div>
-              </li>
-              <li className="item">
-                <a
-                  href={links.kuda}
-                  className="link"
-                  onClick={openURL(links.kuda)}
-                >
-                  Kuda <ExternalLink className="h-3 w-3" />
-                </a>
-                <div>
-                  Helped with the logos, design and suggested many cool
-                  features along the way.
-                </div>
-              </li>
-              <li className="item">
-                <a
-                  href={links.LeleDerGrasshalmi}
-                  className="link"
-                  onClick={openURL(links.LeleDerGrasshalmi)}
-                >
-                  LeleDerGrasshalmi <ExternalLink className="h-3 w-3" />
-                </a>{' '}
-                and{' '}
-                <a
-                  href={links.HyperionCSharp}
-                  className="link"
-                  onClick={openURL(links.HyperionCSharp)}
-                >
-                  HyperionCSharp <ExternalLink className="h-3 w-3" />
-                </a>
-                <div>
-                  Their endpoint list helped me a lot during the
-                  development.
-                </div>
-              </li>
-              <li className="item">
-                <div>
-                  <span className="text-muted-foreground">
-                    MyNameIsPako
-                  </span>{' '}
-                  and{' '}
-                  <span className="text-muted-foreground">Espiroaka</span>
-                </div>
-                <div>
-                  Both helped me to test some things, fix some features and
-                  share some assets, also they have a great community{' '}
-                  <a
-                    href="https://discord.gg/vphWQWFNf9"
-                    className="link font-bold italic text-muted-foreground underline"
-                    onClick={openURL('https://discord.gg/vphWQWFNf9')}
-                  >
-                    Mia <ExternalLink className="h-3 w-3" />
-                  </a>{' '}
-                  a dedicated Discord bot for Fortnite with many cool
-                  features.
-                </div>
-              </li>
-              <li className="item">
-                <a
-                  href={links.SaseQ}
-                  className="link"
-                  onClick={openURL(links.SaseQ)}
-                >
-                  SaseQ <ExternalLink className="h-3 w-3" />
-                </a>{' '}
-                and{' '}
-                <a
-                  href={links.PRO100KatYT}
-                  className="link"
-                  onClick={openURL(links.PRO100KatYT)}
-                >
-                  PRO100KatYT <ExternalLink className="h-3 w-3" />
-                </a>
-                <div>
-                  Daily quests were implemented by SaseQ using research
-                  done by PRO100KatYT.
-                </div>
-              </li>
+          <PanelHeader
+            compact
+            title="Made by"
+          />
+          <ul className="divide-y divide-border/30 px-5">
+            <Credit people={<Person href="https://github.com/ahmed5939" name="Ahmed (ahmed5939)" />}>
+              Current maintainer of Penny Launcher.
+            </Credit>
+            <Credit people={<Person href="https://github.com/Ciensprog/Aerial-Launcher" name="Ciensprog" />}>
+              Original developer of Aerial Launcher, the project Penny Launcher
+              is based on.
+            </Credit>
+            <Credit people={<Person href={links.kuda} name="Kuda" />}>
+              Helped with the logos and design, and suggested many cool
+              features along the way.
+            </Credit>
+            <Credit
+              people={
+                <>
+                  <Person href={links.LeleDerGrasshalmi} name="LeleDerGrasshalmi" />
+                  <span className="text-muted-foreground"> and </span>
+                  <Person href={links.HyperionCSharp} name="HyperionCSharp" />
+                </>
+              }
+            >
+              Their endpoint documentation helped a lot during development.
+            </Credit>
+            <Credit
+              people={
+                <>
+                  <Person name="MyNameIsPako" />
+                  <span className="text-muted-foreground"> and </span>
+                  <Person name="Espiroaka" />
+                </>
+              }
+            >
+              Tested, fixed features and shared assets. They also run a great
+              community around{' '}
+              <a
+                className="font-medium text-primary underline-offset-4 hover:underline"
+                href="https://discord.gg/vphWQWFNf9"
+                onClick={openURL('https://discord.gg/vphWQWFNf9')}
+              >
+                Mia
+              </a>
+              , a Discord bot for Fortnite.
+            </Credit>
+            <Credit
+              people={
+                <>
+                  <Person href={links.SaseQ} name="SaseQ" />
+                  <span className="text-muted-foreground"> and </span>
+                  <Person href={links.PRO100KatYT} name="PRO100KatYT" />
+                </>
+              }
+            >
+              Daily quests were implemented by SaseQ using research by
+              PRO100KatYT.
+            </Credit>
           </ul>
         </Panel>
 
-        <Panel>
-          <h2 className="border-b border-border/60 px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Greetings
-          </h2>
-          <ul className="list">
-              <li className="item">
-                <span className="text-muted-foreground">
-                  Fresh
-                </span>
-                <div>
-                  I'd like to also thank Fresh for backing me with his
-                  point of view through Aerial's development. He's been a
-                  day1 supporter and helped me test features anytime I
-                  needed. #Fresh4President
-                </div>
-              </li>
-              <li className="item">
-                <span className="text-muted-foreground">
-                  eric_guest1
-                </span>
-                <div>
-                  Eric helped me test some of the first versions of Aerial,
-                  aswell as being many hours in voice chat sharing his
-                  opinions and ideas about the project.
-                </div>
-              </li>
-          </ul>
-        </Panel>
+        <div className="min-w-0 space-y-6">
+          <Panel>
+            <PanelHeader
+              compact
+              title="Special thanks"
+            />
+            <ul className="divide-y divide-border/30 px-5">
+              <Credit people={<Person name="Fresh" />}>
+                Backed Aerial's development with his point of view from day
+                one and tested features whenever needed. #Fresh4President
+              </Credit>
+              <Credit people={<Person name="eric_guest1" />}>
+                Tested the first versions of Aerial and spent many hours in
+                voice chat sharing ideas about the project.
+              </Credit>
+            </ul>
+          </Panel>
 
-        <Panel>
-          <h2 className="border-b border-border/60 px-5 py-3 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Translations
-          </h2>
-          <p className="px-5 pt-3.5 text-[0.8125rem] leading-relaxed text-muted-foreground">
-            Thank you for dedicating part of your time to translate Aerial
-            to different languages 💖
-          </p>
-          <ul className="px-5 py-3.5">
-            <li className="flex items-center gap-2 py-1 text-[0.8125rem]">
-              <span className="font-medium">SayaGoodBye</span>
-              <span className="text-muted-foreground">
-                — Chinese (Simplified)
-              </span>
-            </li>
-            <li className="flex items-center gap-2 py-1 text-[0.8125rem]">
-              <span className="font-medium">stxfano</span>
-              <span className="text-muted-foreground">— Italian</span>
-            </li>
-          </ul>
-        </Panel>
+          <Panel>
+            <PanelHeader
+              compact
+              description="Thank you for translating Aerial into other languages."
+              title="Translations"
+            />
+            <ul className="divide-y divide-border/30 px-5">
+              <li className="flex items-center justify-between gap-3 py-3 text-ui">
+                <span className="font-semibold">SayaGoodBye</span>
+                <span className="text-muted-foreground">Chinese (Simplified)</span>
+              </li>
+              <li className="flex items-center justify-between gap-3 py-3 text-ui">
+                <span className="font-semibold">stxfano</span>
+                <span className="text-muted-foreground">Italian</span>
+              </li>
+            </ul>
+          </Panel>
+        </div>
       </div>
     </>
   )

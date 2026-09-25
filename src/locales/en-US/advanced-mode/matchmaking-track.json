@@ -8,7 +8,7 @@
     "exact-match": "Exact match",
     "player-result": "{{mutual}} mutual friends",
     "recently": {
-      "label": "Note: These players are stored temporarily",
+      "label": "Note: these players are stored temporarily",
       "placeholder": "Recent players and friends"
     }
   },
@@ -16,7 +16,7 @@
     "eyebrow": "Active deployment",
     "loading": "Checking player session...",
     "unknown-mission": "Unknown mission",
-    "hestia-lobby": "Hestia Lobby",
+    "hestia-lobby": "Hestia lobby",
     "zone": "Zone",
     "difficulty": "Difficulty",
     "region": "Region",

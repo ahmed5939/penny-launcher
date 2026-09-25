@@ -4,7 +4,7 @@ import type {
 } from '../../../kernel/core/outpost-types'
 import type { MutableRefObject } from 'react'
 
-import { Box, Grid3x3, Layers3, Map as MapIcon, Maximize2, Shield, Sparkles, Trees } from 'lucide-react'
+import { Expand, Footprints, Grid3x3, Map as MapIcon, Shield, Shrink, Sparkles, Trees } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
@@ -26,7 +26,6 @@ import { BlueprintCanvas3D } from './-blueprint-canvas-3d'
 import {
   HORIZON,
   SUN_DIRECTION,
-  addWindSway,
   createParticles,
   createPostProcessing,
   createSky,
@@ -43,6 +42,7 @@ import {
   trapModelKey,
 } from './-blueprint-build-library'
 import { buildPieceMesh } from './-blueprint-build-meshes'
+import { WALKABLE, createWalker } from './-blueprint-walk'
 import {
   type NaturePlacement,
   buildNatureMeshes,
@@ -72,16 +72,10 @@ import {
   KIND_ROOF,
   KIND_STAIR,
   KIND_WALL,
-  PROP_CONTAINER,
-  PROP_KIND_LABEL,
-  PROP_ROCK,
-  PROP_STRUCTURE,
-  PROP_TREE,
   STOREY_HEIGHT,
   TRAP_CEILING,
   TRAP_WALL,
   forwardVector,
-  propLabel,
   trapCentre,
 } from './-blueprint-geometry'
 
@@ -732,6 +726,41 @@ function trapPlacement(
 
 // ── Scene ────────────────────────────────────────────────────
 
+/** A WebGL renderer on its own canvas, or null when WebGL is unavailable. */
+function createRenderer() {
+  try {
+    const canvas = document.createElement('canvas')
+    const contextAttributes: WebGLContextAttributes = {
+      alpha: true,
+      antialias: true,
+      depth: true,
+      failIfMajorPerformanceCaveat: false,
+      powerPreference: 'high-performance',
+    }
+    const context =
+      canvas.getContext('webgl2', contextAttributes) ??
+      canvas.getContext('webgl', contextAttributes) ??
+      canvas.getContext('experimental-webgl', contextAttributes)
+
+    if (!context || !('getShaderPrecisionFormat' in context)) return null
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: true,
+      canvas,
+      context,
+      powerPreference: 'high-performance',
+    })
+
+    renderer.domElement.className = 'block size-full touch-none outline-none'
+    // Focusable, so walk mode's keys stop reaching the toolbar buttons.
+    renderer.domElement.tabIndex = -1
+
+    return renderer
+  } catch {
+    return null
+  }
+}
+
 function BlueprintScene({
   amplifierSlots,
   cinematic,
@@ -739,6 +768,7 @@ function BlueprintScene({
   layout,
   maxVisibleZ,
   onHover,
+  onMouseLook,
   onRendererMode,
   onSelectTrap,
   onUnavailable,
@@ -749,16 +779,20 @@ function BlueprintScene({
   showShield,
   showTerrain,
   topViewRef,
+  walkRef,
+  walkingRef,
   zoneId,
 }: {
   /** Occupied amplifier slots; each is drawn at the map's matching spot. */
   amplifierSlots?: Array<string>
-  /** Post-processing and ambient animation; off keeps render-on-demand. */
+  /** Post-processing (ambient occlusion, bloom) and water/particle motion while drawing. */
   cinematic: boolean
   iconByTrapName: Map<string, string | undefined>
   layout: OutpostLayout
   maxVisibleZ: number
   onHover: (info: HoverInfo | null) => void
+  /** Walk mode captured (or released) the mouse. */
+  onMouseLook: (captured: boolean) => void
   onRendererMode: (mode: string | null) => void
   onSelectTrap: (name: string | null) => void
   onUnavailable: () => void
@@ -769,6 +803,10 @@ function BlueprintScene({
   showShield: boolean
   showTerrain: boolean
   topViewRef: MutableRefObject<(() => void) | null>
+  /** Turns third-person walk mode on or off without rebuilding the scene. */
+  walkRef: MutableRefObject<((on: boolean) => void) | null>
+  /** Whether walk mode should be on when the scene (re)builds. */
+  walkingRef: MutableRefObject<boolean>
   zoneId?: string
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -776,44 +814,37 @@ function BlueprintScene({
     position: [number, number, number]
     target: [number, number, number]
   } | null>(null)
+  /** Swaps the trap highlight in place (set by the scene effect). */
+  const selectRef = useRef<((name: string | null) => void) | null>(null)
+  const selectedTrapRef = useRef(selectedTrap)
+  /** Shows or hides the grid and Storm Shield without a rebuild. */
+  const layersRef = useRef<((layers: { grid: boolean; shield: boolean }) => void) | null>(null)
+  const layersStateRef = useRef({ grid: showGrid, shield: showShield })
+  const amplifierKey = (amplifierSlots ?? []).join('|')
+
+  useEffect(() => {
+    selectedTrapRef.current = selectedTrap
+    selectRef.current?.(selectedTrap)
+  }, [selectedTrap])
+
+  useEffect(() => {
+    layersStateRef.current = { grid: showGrid, shield: showShield }
+    layersRef.current?.(layersStateRef.current)
+  }, [showGrid, showShield])
 
   useEffect(() => {
     const host = hostRef.current
 
     if (!host) return
 
-    let renderer: THREE.WebGLRenderer
+    const renderer = createRenderer()
 
-    try {
-      const canvas = document.createElement('canvas')
-      const contextAttributes: WebGLContextAttributes = {
-        alpha: true,
-        antialias: true,
-        depth: true,
-        failIfMajorPerformanceCaveat: false,
-        powerPreference: 'high-performance',
-      }
-      const context =
-        canvas.getContext('webgl2', contextAttributes) ??
-        canvas.getContext('webgl', contextAttributes) ??
-        canvas.getContext('experimental-webgl', contextAttributes)
-
-      if (!context || !('getShaderPrecisionFormat' in context)) {
-        onUnavailable()
-        return
-      }
-
-      renderer = new THREE.WebGLRenderer({
-        alpha: true,
-        antialias: true,
-        canvas,
-        context,
-        powerPreference: 'high-performance',
-      })
-    } catch {
+    if (!renderer) {
       onUnavailable()
       return
     }
+    const selectedTrap = selectedTrapRef.current
+    const amplifierSlots = amplifierKey ? amplifierKey.split('|') : []
 
     onRendererMode(
       renderer.capabilities.isWebGL2 ? 'WebGL 2' : 'WebGL 1 compatibility'
@@ -825,7 +856,6 @@ function BlueprintScene({
     renderer.toneMappingExposure = 0.72
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    renderer.domElement.className = 'block size-full touch-none'
     host.replaceChildren(renderer.domElement)
 
     const scene = new THREE.Scene()
@@ -841,10 +871,8 @@ function BlueprintScene({
 
     let disposed = false
     let post: ReturnType<typeof createPostProcessing> | null = null
-    let onScreen = true
-    let ambientTimer = 0
     let intro: { end: THREE.Spherical; start: number } | null = null
-    const clock = new THREE.Clock()
+    let animationTime = 0
     /** Per-frame updates for water, lava, wind, the shield and particles. */
     const animated: Array<(time: number) => void> = []
     const stepIntro = (now: number) => {
@@ -863,26 +891,34 @@ function BlueprintScene({
         .add(controls.target)
       if (progress >= 1) intro = null
     }
+    let walker: ReturnType<typeof createWalker> | null = null
+    let lastFrame = performance.now()
+    /**
+     * Continuous drawing (the intro, walk mode) only runs while
+     * the launcher window has focus; an unfocused window keeps its last frame.
+     */
+    let focused = document.hasFocus()
     const frames = renderOnDemand(() => {
-      stepIntro(performance.now())
-      // OrbitControls emits change while damping is still settling.
-      controls.update()
-      if (cinematic) {
-        const time = clock.getElapsedTime()
+      const now = performance.now()
 
-        animated.forEach((update) => update(time))
+      const delta = (now - lastFrame) / 1000
+
+      walker?.update(delta)
+      // Water, lava and particles only advance on frames drawn anyway
+      // (orbiting, walking); an idle view is one still frame.
+      animationTime += Math.min(delta, 0.05)
+      lastFrame = now
+      stepIntro(now)
+      // OrbitControls emits change while damping is still settling; walk
+      // mode drives the camera itself.
+      if (!walker) controls.update()
+      if (cinematic) {
+        animated.forEach((update) => update(animationTime))
       }
       if (post) post.render()
       else renderer.render(scene, camera)
 
-      if (intro) requestDraw()
-      else if (cinematic && onScreen && !ambientTimer && animated.length > 0) {
-        // Ambient motion runs at 30 fps; orbiting still redraws immediately.
-        ambientTimer = window.setTimeout(() => {
-          ambientTimer = 0
-          requestDraw()
-        }, 1000 / 30)
-      }
+      if (intro || (walker && focused)) requestDraw()
     })
     const requestDraw = frames.request
     const cancelIntro = () => {
@@ -1059,6 +1095,32 @@ function BlueprintScene({
       }
     }
     resetRef.current = resetCamera
+    const spawnPoint = () => {
+      const spot = terrain?.spawn
+
+      return spot ? toScene(spot[0], spot[1], spot[2] + 2) : new THREE.Vector3(0, spanZ + 2, 0)
+    }
+    const setWalking = (on: boolean) => {
+      walker?.dispose()
+      walker = null
+      if (on) {
+        cancelIntro()
+        onHover(null)
+        walker = createWalker({
+          camera,
+          controls,
+          element: renderer.domElement,
+          onPointerLock: onMouseLook,
+          onReady: requestDraw,
+          scene,
+          spawn: spawnPoint(),
+        })
+        renderer.domElement.focus()
+      }
+      requestDraw()
+    }
+
+    walkRef.current = setWalking
     topViewRef.current = () => {
       cancelIntro()
       controls.target.set(0, spanZ * 0.5, 0)
@@ -1116,7 +1178,10 @@ function BlueprintScene({
       terrainReady = recovered.ready.then(() => {
         if (disposed) return
         recoveredTerrain.traverse((object) => {
-          if (object instanceof THREE.InstancedMesh) terrainSurfaces.push(object)
+          if (object instanceof THREE.InstancedMesh) {
+            terrainSurfaces.push(object)
+            object.userData[WALKABLE] = true
+          }
         })
         // Molten rock slowly creeps and breathes.
         const lavaMaterials = new Set<THREE.MeshStandardMaterial>()
@@ -1255,6 +1320,7 @@ function BlueprintScene({
       )
 
       terrainMesh.receiveShadow = true
+      terrainMesh.userData[WALKABLE] = true
       groundObjects.add(terrainMesh)
 
       /* The sea around the island, just above the seabed cells. */
@@ -1330,6 +1396,7 @@ function BlueprintScene({
       ground.rotation.x = -Math.PI / 2
       ground.position.copy(groundCentre).setY(-FLOOR_THICKNESS - 0.02)
       ground.receiveShadow = true
+      ground.userData[WALKABLE] = true
       groundObjects.add(ground)
     }
 
@@ -1371,9 +1438,11 @@ function BlueprintScene({
       groundObjects.add(plane)
     }
 
-    if (showGrid) {
+    let grid: THREE.GridHelper | null = null
+
+    {
       const gridSize = Math.ceil(Math.max(groundWidth, groundDepth))
-      const grid = new THREE.GridHelper(
+      grid = new THREE.GridHelper(
         gridSize,
         Math.min(160, Math.max(4, gridSize)),
         0x9aa4b8,
@@ -1386,6 +1455,7 @@ function BlueprintScene({
       ;(grid.material as THREE.Material).opacity = 0.45
       track(grid.geometry)
       track(grid.material as THREE.Material)
+      grid.visible = layersStateRef.current.grid
       scene.add(grid)
     }
 
@@ -1486,6 +1556,7 @@ function BlueprintScene({
       mesh.castShadow = true
       mesh.receiveShadow = true
       mesh.computeBoundingSphere()
+      mesh.userData[WALKABLE] = true
       scene.add(mesh)
       if (pieceKey) standIns.push({ key: pieceKey, mesh })
     }
@@ -1508,6 +1579,7 @@ function BlueprintScene({
             real.castShadow = true
             real.receiveShadow = true
             real.computeBoundingSphere()
+            real.userData[WALKABLE] = true
             scene.add(real)
           }
           scene.remove(mesh)
@@ -1546,6 +1618,7 @@ function BlueprintScene({
                 mesh.rotation.set(0, -(yawDegrees * Math.PI) / 180, 0)
                 mesh.castShadow = true
                 mesh.receiveShadow = true
+                mesh.userData[WALKABLE] = true
                 scene.add(mesh)
               }
             }
@@ -1580,12 +1653,10 @@ function BlueprintScene({
     const mountGeometry = track(new THREE.PlaneGeometry(0.58, 0.58))
     const frameGeometry = track(squareFrameGeometry(0.62, 0.035))
     const selectionGeometry = track(squareFrameGeometry(0.72, 0.035))
-    const selectionOnMap = visibleTraps.some(
-      (trap) => layout.trapNames[trap[4]] === selectedTrap
-    )
     const dimmed = new THREE.Color(0.45, 0.45, 0.45)
     const bright = new THREE.Color(1, 1, 1)
-    const selectedPlacements: Array<ReturnType<typeof trapPlacement>> = []
+    /** Icon plates, recoloured in place when the selection changes. */
+    const iconMeshes: Array<{ mesh: THREE.InstancedMesh; names: Array<string> }> = []
     const disposeTrapMaterial = (material: THREE.Material) => track(material)
     const mountsByCategory = new Map<number, Array<OutpostLayout['traps'][number]>>()
     /** Icon art and backing plates, hidden where the real trap model stands. */
@@ -1618,7 +1689,6 @@ function BlueprintScene({
 
       traps.forEach((trap, index) => {
         const name = layout.trapNames[trap[4]] ?? 'Unknown trap'
-        const selected = selectedTrap === name
         const placement = trapPlacement(
           trap,
           toScene,
@@ -1631,11 +1701,7 @@ function BlueprintScene({
         dummy.scale.setScalar(1)
         dummy.updateMatrix()
         mesh.setMatrixAt(index, dummy.matrix)
-        mesh.setColorAt(index, selectionOnMap && !selected ? dimmed : bright)
-
-        if (selected) {
-          selectedPlacements.push(trapPlacement(trap, toScene, 0.036))
-        }
+        mesh.setColorAt(index, bright)
 
         const mounts = mountsByCategory.get(trap[3])
 
@@ -1648,6 +1714,7 @@ function BlueprintScene({
       pickables.push(mesh)
       namesByMesh.set(mesh.uuid, names)
       artMeshes.push({ mesh, names })
+      iconMeshes.push({ mesh, names })
     }
 
     for (const [category, traps] of mountsByCategory) {
@@ -1717,6 +1784,54 @@ function BlueprintScene({
     }
 
     let selectionRing: THREE.InstancedMesh | null = null
+    const ringMaterial = disposeTrapMaterial(
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      })
+    ) as THREE.MeshBasicMaterial
+    let currentSelection = selectedTrap
+    const applySelection = (name: string | null) => {
+      currentSelection = name
+      const selected = visibleTraps.filter((trap) => layout.trapNames[trap[4]] === name)
+
+      for (const { mesh, names } of iconMeshes) {
+        names.forEach((trapName, index) => {
+          mesh.setColorAt(index, selected.length > 0 && trapName !== name ? dimmed : bright)
+        })
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+      }
+      if (selectionRing) {
+        scene.remove(selectionRing)
+        selectionRing.dispose()
+        selectionRing = null
+      }
+      if (selected.length > 0) {
+        const ring = new THREE.InstancedMesh(selectionGeometry, ringMaterial, selected.length)
+
+        selected.forEach((trap, index) => {
+          const placement = trapPlacement(trap, toScene, 0.036)
+
+          dummy.position.copy(placement.position)
+          dummy.quaternion.copy(placement.quaternion)
+          dummy.scale.setScalar(1)
+          dummy.updateMatrix()
+          ring.setMatrixAt(index, dummy.matrix)
+        })
+        ring.renderOrder = 3
+        ring.computeBoundingSphere()
+        scene.add(ring)
+        selectionRing = ring
+      }
+      requestDraw()
+    }
+
+    applySelection(selectedTrap)
+    selectRef.current = applySelection
 
     // The game's own trap models on every trap that has one. Icon plates
     // stay pickable (hidden meshes still raycast) and the category frames
@@ -1765,35 +1880,6 @@ function BlueprintScene({
       }
     )
 
-    if (selectedPlacements.length > 0) {
-      const ring = new THREE.InstancedMesh(
-        selectionGeometry,
-        disposeTrapMaterial(
-          new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            depthWrite: false,
-            polygonOffset: true,
-            polygonOffsetFactor: -3,
-            side: THREE.DoubleSide,
-            toneMapped: false,
-          })
-        ),
-        selectedPlacements.length
-      )
-
-      selectedPlacements.forEach((placement, index) => {
-        dummy.position.copy(placement.position)
-        dummy.quaternion.copy(placement.quaternion)
-        dummy.scale.setScalar(1)
-        dummy.updateMatrix()
-        ring.setMatrixAt(index, dummy.matrix)
-      })
-      ring.renderOrder = 3
-      ring.computeBoundingSphere()
-      scene.add(ring)
-      selectionRing = ring
-    }
-
     // World props, instanced per silhouette. The zone's own vegetation and
     // boulders (from the extracted terrain) join the save's recorded actors.
     // With the real zone scenery loaded, stand-ins are only for props it
@@ -1818,12 +1904,6 @@ function BlueprintScene({
       { pieces: Array<OutpostLayout['props'][number]>; style: PropStyle }
     >()
 
-    const windTime = { value: 0 }
-
-    animated.push((time) => {
-      windTime.value = time
-    })
-
     const addProceduralProp = (className: string, prop: OutpostLayout['props'][number]) => {
       for (const [key, style] of Object.entries(propStyle(prop[3], className))) {
         const group = propGroups.get(key)
@@ -1841,8 +1921,6 @@ function BlueprintScene({
             roughness: 0.95,
           })
         )
-
-        if (style.sway) addWindSway(material, windTime, style.sway)
 
         const mesh = new THREE.InstancedMesh(track(style.geometry()), material, pieces.length)
 
@@ -1922,8 +2000,8 @@ function BlueprintScene({
     Promise.all([loadNatureLibrary(), terrainReady]).then(
       ([library]) => {
         if (disposed) return
-        const foliage = buildNatureMeshes(library, naturalProps.map((entry) => entry.placement), windTime, track)
-        const cover = buildNatureMeshes(library, coverPlacements(), windTime, track)
+        const foliage = buildNatureMeshes(library, naturalProps.map((entry) => entry.placement), track)
+        const cover = buildNatureMeshes(library, coverPlacements(), track)
 
         if (foliage.length > 0) scene.add(...foliage)
         if (cover.length > 0) groundObjects.add(...cover)
@@ -1946,7 +2024,9 @@ function BlueprintScene({
     const device = terrain?.stormShield
     const shieldCentre = device ? toScene(device[0], device[1], device[2]) : new THREE.Vector3()
 
-    if (showShield) {
+    let shieldObjects: Array<THREE.Object3D> = []
+
+    {
       let reach = Math.hypot(spanX, spanY) / 2
 
       if (device) {
@@ -1970,8 +2050,23 @@ function BlueprintScene({
       })
 
       shield.mesh.position.copy(shieldCentre)
+      shieldObjects = [shield.mesh, motes.points]
+      shieldObjects.forEach((object) => {
+        object.visible = layersStateRef.current.shield
+      })
       scene.add(shield.mesh, motes.points)
-      animated.push(shield.update, motes.update)
+      animated.push((time) => {
+        if (!shield.mesh.visible) return
+        shield.update(time)
+        motes.update(time)
+      })
+    }
+    layersRef.current = ({ grid: showGridNow, shield: showShieldNow }) => {
+      if (grid) grid.visible = showGridNow
+      shieldObjects.forEach((object) => {
+        object.visible = showShieldNow
+      })
+      requestDraw()
     }
 
     // Embers boiling off the lava.
@@ -1993,13 +2088,9 @@ function BlueprintScene({
     }
 
     // Selected traps pulse so they are easy to spot from afar.
-    if (selectionRing) {
-      const ringMaterial = selectionRing.material as THREE.MeshBasicMaterial
-
-      animated.push((time) => {
-        ringMaterial.color.setScalar(1.2 + Math.sin(time * 4) * 0.8)
-      })
-    }
+    animated.push((time) => {
+      if (selectionRing) ringMaterial.color.setScalar(1.2 + Math.sin(time * 4) * 0.8)
+    })
 
     if (cinematic && renderer.capabilities.isWebGL2) {
       post = createPostProcessing(renderer, scene, camera)
@@ -2048,6 +2139,7 @@ function BlueprintScene({
       pointerDown = { x: event.clientX, y: event.clientY }
     }
     const onPointerMove = (event: PointerEvent) => {
+      if (walker) return
       const hit = pickTrap(event)
 
       renderer.domElement.style.cursor = hit ? 'pointer' : 'grab'
@@ -2069,11 +2161,11 @@ function BlueprintScene({
         Math.abs(event.clientX - pointerDown.x) +
         Math.abs(event.clientY - pointerDown.y)
 
-      if (moved > 5) return
+      if (moved > 5 || walker) return
 
       const hit = pickTrap(event)
 
-      if (hit) onSelectTrap(hit.name === selectedTrap ? null : hit.name)
+      if (hit) onSelectTrap(hit.name === currentSelection ? null : hit.name)
     }
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown)
@@ -2103,23 +2195,28 @@ function BlueprintScene({
     observer.observe(host)
     resize()
 
-    // Ambient motion pauses while the explorer is scrolled out of view.
-    const visibility = new IntersectionObserver(([entry]) => {
-      onScreen = entry?.isIntersecting ?? true
-      if (onScreen) requestDraw()
-    })
+    const onFocus = () => {
+      focused = true
+      requestDraw()
+    }
+    const onBlur = () => {
+      focused = false
+    }
 
-    visibility.observe(host)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('blur', onBlur)
+    // Rebuilt scenes (toggles, selection) keep an active walk going.
+    if (walkingRef.current) setWalking(true)
 
     requestDraw()
 
     return () => {
       disposed = true
       frames.dispose()
-      window.clearTimeout(ambientTimer)
       controls.removeEventListener('change', requestDraw)
       observer.disconnect()
-      visibility.disconnect()
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('blur', onBlur)
       post?.dispose()
       rememberCamera()
       renderer.domElement.removeEventListener('pointerdown', onPointerDown)
@@ -2135,9 +2232,15 @@ function BlueprintScene({
       })
       resources.forEach((resource) => resource.dispose())
       renderer.dispose()
+      // Free the GPU context now rather than whenever the canvas is collected.
+      renderer.forceContextLoss()
       renderer.domElement.remove()
       resetRef.current = null
       topViewRef.current = null
+      walkRef.current = null
+      selectRef.current = null
+      layersRef.current = null
+      walker?.dispose()
     }
   }, [
     iconByTrapName,
@@ -2148,15 +2251,12 @@ function BlueprintScene({
     onSelectTrap,
     onUnavailable,
     resetRef,
-    selectedTrap,
-    showGrid,
     showProps,
-    showShield,
     showTerrain,
     topViewRef,
     zoneId,
     cinematic,
-    amplifierSlots,
+    amplifierKey,
   ])
 
   return <div className="absolute inset-0" ref={hostRef} />
@@ -2181,6 +2281,9 @@ function LegendSwatch({
     </span>
   )
 }
+
+/** The page does not show which WebGL version rendered the scene. */
+const ignoreRendererMode = () => {}
 
 export function Blueprint3D({
   amplifierSlots,
@@ -2216,18 +2319,39 @@ export function Blueprint3D({
   const [canvasFallback, setCanvasFallback] = useState(
     () => sessionStorage.getItem(canvasFallbackSessionKey) === '1'
   )
-  const [rendererMode, setRendererMode] = useState<string | null>(() =>
-    sessionStorage.getItem(canvasFallbackSessionKey) === '1'
-      ? 'Canvas 2D compatibility'
-      : null
-  )
   const resetRef = useRef<((wholeMap?: boolean) => void) | null>(null)
   const topViewRef = useRef<(() => void) | null>(null)
+  const walkRef = useRef<((on: boolean) => void) | null>(null)
+  const walkingRef = useRef(false)
+  const [walking, setWalking] = useState(false)
+  const [mouseLook, setMouseLook] = useState(false)
+  const frameRef = useRef<HTMLDivElement | null>(null)
+  const [fullscreen, setFullscreen] = useState(false)
+  const toggleWalking = useCallback(() => {
+    const next = !walkingRef.current
+
+    walkingRef.current = next
+    setWalking(next)
+    walkRef.current?.(next)
+  }, [])
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) void document.exitFullscreen()
+    else void frameRef.current?.requestFullscreen()
+  }, [])
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement === frameRef.current)
+
+    document.addEventListener('fullscreenchange', onChange)
+
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  // Leaving the page (or the zone) also leaves walk mode.
+  useEffect(() => () => {
+    walkingRef.current = false
+  }, [])
   const maxVisibleZ = heights[levelIndex] ?? layout.bounds.maxZ
-  const visibleStructures = layout.structures.filter(
-    (piece) => piece[2] <= maxVisibleZ
-  ).length
-  const visibleTraps = layout.traps.filter((trap) => trap[2] <= maxVisibleZ).length
   const worldAssets = layout.props.length
   const iconByTrapName = useMemo(
     () => new Map(traps.map((trap) => [trap.displayName, trap.iconKey])),
@@ -2240,7 +2364,6 @@ export function Blueprint3D({
   const hoveredGroup = hovered ? trapsByName.get(hovered.name) : undefined
   const useCanvasFallback = useCallback(() => {
     sessionStorage.setItem(canvasFallbackSessionKey, '1')
-    setRendererMode('Canvas 2D compatibility')
     setCanvasFallback(true)
   }, [])
 
@@ -2248,69 +2371,75 @@ export function Blueprint3D({
     setLevelIndex(Math.max(0, heights.length - 1))
   }, [heights])
 
+  const lastLevel = heights.length - 1
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="flex items-center gap-1.5 micro-label text-muted-foreground">
-          <Box className="size-3" />
-          3D explorer · {visibleStructures} structures · {visibleTraps} traps
-          {worldAssets > 0 && ` · ${worldAssets} world assets`}
-          {rendererMode && ` · ${rendererMode}`}
-        </p>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Layers3 className="size-3.5 text-muted-foreground" />
-          <label className="micro-label text-muted-foreground" htmlFor="outpost-height-layer">
-            {levelIndex === heights.length - 1
-              ? `All ${heights.length} heights`
-              : `Through height ${maxVisibleZ.toFixed(2)}`}
-          </label>
+    <div
+      className={cn('flex flex-col gap-2', fullscreen && 'h-full bg-background p-3')}
+      ref={frameRef}
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <label
+          className="flex items-center gap-2 text-xs text-muted-foreground"
+          htmlFor="outpost-height-layer"
+        >
+          Floors
           <input
-            className="w-28 accent-primary"
+            className="w-24 accent-primary"
             disabled={heights.length <= 1}
             id="outpost-height-layer"
-            max={Math.max(0, heights.length - 1)}
+            max={Math.max(0, lastLevel)}
             min={0}
             onChange={(event) => setLevelIndex(Number(event.target.value))}
             type="range"
             value={levelIndex}
           />
+          <span className="figure w-10 text-foreground">
+            {levelIndex >= lastLevel ? 'All' : `1–${levelIndex + 1}`}
+          </span>
+        </label>
+        <div className="ml-auto flex flex-wrap items-center gap-1">
           <Button
+            aria-label={showProps ? 'Hide trees and rocks' : 'Show trees and rocks'}
             aria-pressed={showProps}
             className="size-7"
             disabled={worldAssets === 0 && (canvasFallback || !zoneTerrain)}
             onClick={() => setShowProps((value) => !value)}
             size="icon"
-            title={showProps ? 'Hide world assets' : 'Show world assets'}
+            title={showProps ? 'Hide trees and rocks' : 'Show trees and rocks'}
             type="button"
-            variant={showProps ? 'secondary' : 'outline'}
+            variant={showProps ? 'secondary' : 'ghost'}
           >
             <Trees className="size-3.5" />
           </Button>
           <Button
-            aria-pressed={showGrid}
-            className="size-7"
-            onClick={() => setShowGrid((value) => !value)}
-            size="icon"
-            title={showGrid ? 'Hide build grid' : 'Show build grid'}
-            disabled={canvasFallback}
-            type="button"
-            variant={showGrid ? 'secondary' : 'outline'}
-          >
-            <Grid3x3 className="size-3.5" />
-          </Button>
-          <Button
+            aria-label={showTerrain ? 'Hide terrain' : 'Show terrain'}
             aria-pressed={showTerrain}
             className="size-7"
             disabled={canvasFallback}
             onClick={() => setShowTerrain((value) => !value)}
             size="icon"
-            title={showTerrain ? 'Hide terrain to inspect builds' : 'Show terrain'}
+            title={showTerrain ? 'Hide terrain' : 'Show terrain'}
             type="button"
-            variant={showTerrain ? 'secondary' : 'outline'}
+            variant={showTerrain ? 'secondary' : 'ghost'}
           >
             <MapIcon className="size-3.5" />
           </Button>
           <Button
+            aria-label={showGrid ? 'Hide build grid' : 'Show build grid'}
+            aria-pressed={showGrid}
+            className="size-7"
+            disabled={canvasFallback}
+            onClick={() => setShowGrid((value) => !value)}
+            size="icon"
+            title={showGrid ? 'Hide build grid' : 'Show build grid'}
+            type="button"
+            variant={showGrid ? 'secondary' : 'ghost'}
+          >
+            <Grid3x3 className="size-3.5" />
+          </Button>
+          <Button
+            aria-label={showShield ? 'Hide Storm Shield' : 'Show Storm Shield'}
             aria-pressed={showShield}
             className="size-7"
             disabled={canvasFallback}
@@ -2318,11 +2447,12 @@ export function Blueprint3D({
             size="icon"
             title={showShield ? 'Hide Storm Shield' : 'Show Storm Shield'}
             type="button"
-            variant={showShield ? 'secondary' : 'outline'}
+            variant={showShield ? 'secondary' : 'ghost'}
           >
             <Shield className="size-3.5" />
           </Button>
           <Button
+            aria-label="Effects"
             aria-pressed={cinematic}
             className="size-7"
             disabled={canvasFallback}
@@ -2334,15 +2464,21 @@ export function Blueprint3D({
               })
             }
             size="icon"
-            title={
-              cinematic
-                ? 'Cinematic mode on: ambient occlusion, bloom and ambient motion. Turn off for faster rendering.'
-                : 'Turn on cinematic mode: ambient occlusion, bloom and ambient motion'
-            }
+            title={cinematic ? 'Effects on: soft shadows and glow' : 'Effects off: fastest rendering'}
             type="button"
-            variant={cinematic ? 'secondary' : 'outline'}
+            variant={cinematic ? 'secondary' : 'ghost'}
           >
             <Sparkles className="size-3.5" />
+          </Button>
+          <span aria-hidden className="mx-1 h-4 w-px bg-border" />
+          <Button
+            onClick={() => resetRef.current?.()}
+            size="sm"
+            title="Frame the base"
+            type="button"
+            variant="ghost"
+          >
+            Base
           </Button>
           {zoneTerrain && (
             <Button
@@ -2350,9 +2486,9 @@ export function Blueprint3D({
               onClick={() => resetRef.current?.(true)}
               size="sm"
               type="button"
-              variant="outline"
+              variant="ghost"
             >
-              Whole map
+              Map
             </Button>
           )}
           <Button
@@ -2360,24 +2496,43 @@ export function Blueprint3D({
             onClick={() => topViewRef.current?.()}
             size="sm"
             type="button"
-            variant="outline"
+            variant="ghost"
           >
-            Top view
+            Top
+          </Button>
+          <span aria-hidden className="mx-1 h-4 w-px bg-border" />
+          <Button
+            aria-pressed={walking}
+            disabled={canvasFallback}
+            onClick={toggleWalking}
+            size="sm"
+            type="button"
+            variant={walking ? 'secondary' : 'outline'}
+          >
+            <Footprints className="size-3.5" />
+            {walking ? 'Stop walking' : 'Walk'}
           </Button>
           <Button
+            aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+            aria-pressed={fullscreen}
             className="size-7"
-            onClick={() => resetRef.current?.()}
+            onClick={toggleFullscreen}
             size="icon"
-            title="Reset 3D camera"
+            title={fullscreen ? 'Exit full screen (Esc)' : 'Full screen'}
             type="button"
-            variant="outline"
+            variant="ghost"
           >
-            <Maximize2 className="size-3.5" />
+            {fullscreen ? <Shrink className="size-3.5" /> : <Expand className="size-3.5" />}
           </Button>
         </div>
       </div>
 
-      <div className="relative h-[36rem] overflow-hidden rounded-lg border border-border/60 bg-gradient-to-b from-sky-950/40 via-background/30 to-muted/30">
+      <div
+        className={cn(
+          'relative overflow-hidden rounded-lg bg-muted/30',
+          fullscreen ? 'min-h-0 flex-1' : 'h-[36rem]'
+        )}
+      >
         {canvasFallback ? (
           <BlueprintCanvas3D
             layout={layout}
@@ -2395,7 +2550,7 @@ export function Blueprint3D({
             layout={layout}
             maxVisibleZ={maxVisibleZ}
             onHover={setHovered}
-            onRendererMode={setRendererMode}
+            onRendererMode={ignoreRendererMode}
             onSelectTrap={onSelectTrap}
             onUnavailable={useCanvasFallback}
             resetRef={resetRef}
@@ -2405,6 +2560,9 @@ export function Blueprint3D({
             showShield={showShield}
             showTerrain={showTerrain}
             topViewRef={topViewRef}
+            onMouseLook={setMouseLook}
+            walkRef={walkRef}
+            walkingRef={walkingRef}
             zoneId={zoneId}
           />
         )}
@@ -2425,50 +2583,26 @@ export function Blueprint3D({
             </p>
           </div>
         )}
-        <div className="pointer-events-none absolute bottom-2 left-2 rounded-md border border-border/60 bg-background/80 px-2 py-1 micro-label text-muted-foreground backdrop-blur">
-          Drag to orbit · right-drag to pan · scroll to zoom · click a trap to select
-        </div>
+        <p className="pointer-events-none absolute bottom-2 left-2 rounded bg-background/75 px-2 py-1 text-caption text-muted-foreground">
+          {walking
+            ? mouseLook
+              ? 'WASD move · Shift sprint · Ctrl walk · Space jump · Esc frees the mouse'
+              : 'Click the view to take control'
+            : 'Drag to orbit · right-drag to pan · scroll to zoom'}
+        </p>
       </div>
 
-      <p className="micro-label text-muted-foreground">
-        {canvasFallback
-          ? 'Saved build positions · simplified models'
-          : 'Game wood/stone textures · recovered shapes where available · stylised CC0 foliage and sky'}
-        {canvasFallback && ' · compatibility view uses basic shapes and flat ground'}
-      </p>
-
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 micro-label text-muted-foreground">
-        <LegendSwatch color={MATERIAL_COLORS[0]} label="Wood" />
-        <LegendSwatch color={MATERIAL_COLORS[1]} label="Stone" />
-        <LegendSwatch color={MATERIAL_COLORS[2]} label="Metal" />
-        <span className="text-border">|</span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
         <LegendSwatch color={TRAP_COLOR_HEX[0]} label="Floor trap" round />
         <LegendSwatch color={TRAP_COLOR_HEX[1]} label="Wall trap" round />
         <LegendSwatch color={TRAP_COLOR_HEX[2]} label="Ceiling trap" round />
-        {zoneTerrain && (
-          <>
-            <span className="text-border">|</span>
-            <span title={`Terrain layout extracted from ${zoneTerrain.source}`}>
-              {zoneId && ZONE_TERRAIN_ASSETS[zoneId] ? 'Recovered zone terrain' : 'Reconstructed zone terrain'}
-            </span>
-          </>
+        {canvasFallback && (
+          <span className="ml-auto">Compatibility view: simple shapes on flat ground</span>
         )}
         {underlay?.credit && (
           <>
             <span className="text-border">|</span>
             <span>Map: {underlay.credit}</span>
-          </>
-        )}
-        {worldAssets > 0 && (
-          <>
-            <span className="text-border">|</span>
-            <LegendSwatch color="#4f8a3c" label={PROP_KIND_LABEL[PROP_TREE]} />
-            <LegendSwatch color="#7a7f86" label={PROP_KIND_LABEL[PROP_ROCK]} />
-            <LegendSwatch color="#a3803f" label={PROP_KIND_LABEL[PROP_CONTAINER]} />
-            <LegendSwatch color="#8a7f72" label={PROP_KIND_LABEL[PROP_STRUCTURE]} />
-            <span title={[...new Set(layout.propNames.map(propLabel))].sort().join(', ')}>
-              ({[...new Set(layout.propNames.map(propLabel))].length} kinds recorded in the save)
-            </span>
           </>
         )}
       </div>

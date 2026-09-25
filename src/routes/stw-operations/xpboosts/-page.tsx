@@ -11,6 +11,7 @@ import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ExternalLink,
   Info,
+  Search,
   Send,
   Trash2,
   Undo2,
@@ -28,14 +29,17 @@ import { pennyDBProfileURL } from '../../../config/fortnite/links'
 import { Button } from '../../../components/ui/button'
 import {
   EmptyState,
-  FieldGroup,
-  FieldRow,
+  FilterBar,
   PageHeader,
   PageTabs,
   PageTabPanel,
   Panel,
   PanelBody,
-  PanelFooter,
+  PanelHeader,
+  ProgressBar,
+  SearchField,
+  StatRow,
+  StatTile,
 } from '../../../components/page'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
@@ -89,6 +93,7 @@ export function RouteComponent() {
         icon={Zap}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.xp-boosts')}
+        description="Burn personal XP boosts across your accounts or send teammate boosts to a player, and look up anyone's boosts and record."
       />
       <Content />
     </>
@@ -159,17 +164,19 @@ function Content() {
       ]} onValueChange={(value) => { void navigate({ search: (previous) => ({ ...previous, tab: value }), resetScroll: false }) }}>
         <PageTabPanel value="lookup" activeValue={tab}>
             <Panel>
-              <PanelBody className="space-y-4">
+              <PanelHeader
+                compact
+                icon={Search}
+                title="Look up a player"
+              />
+              <PanelBody className="space-y-5">
                 <div className="space-y-4">
-                  <div className="space-y-2">
+                  <div className="max-w-xl space-y-2">
                     <Label htmlFor="global-input-search-player">
                       {t('form.search-account.label', {
                         ns: 'general',
                       })}
                     </Label>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {t('xpboosts.top-search.description')}
-                    </p>
                     <form
                       className="flex items-center relative"
                       onSubmit={(event) => {
@@ -227,7 +234,7 @@ function Content() {
                     )}
                 </div>
                 {searchedUser?.data && (
-                  <div>
+                  <div className="border-t border-border/40 pt-4">
                     <div>
                       <div>
                         <a
@@ -244,7 +251,7 @@ function Content() {
                               searchedUser.data.lookup.externalAuthType
                             }
                           />
-                          <span className="max-w-72 text-lg truncate">
+                          <span className="max-w-72 truncate text-title font-bold">
                             {searchedUser.data.lookup.displayName}
                           </span>
                           <ExternalLink
@@ -253,7 +260,7 @@ function Content() {
                           />
                         </a>
                       </div>
-                      <div className="mt-2 space-y-0.5 rounded-lg bg-surface/70 px-3 py-2 text-muted-foreground text-sm [&_.icon-wrapper]:flex [&_.icon-wrapper]:items-center [&_.icon-wrapper]:justify-center [&_.icon-wrapper]:size-5">
+                      <div className="mt-3 text-sm">
                         {searchedUser.isPrivate ? (
                           <>
                             <AccountBasicInformationSection
@@ -303,38 +310,36 @@ function Content() {
 
         </PageTabPanel>
         <PageTabPanel value="accounts" activeValue={tab}>
+            {/*
+              The account selector that opened this form is gone — the
+              titlebar picker answers it. The amount is the form.
+            */}
             <Panel id="xpboosts-card">
-              <PanelBody>
-                <FieldGroup>
-                  {/*
-                    The account selector that opened this form is gone —
-                    the titlebar picker answers it. The amount is the form.
-                  */}
-                  <FieldRow
-                    label={
-                      <Label htmlFor="amountToSend">
-                        {t('xpboosts.form.label', {
-                          limit: compactNumber(maxAmountLimitedTo),
-                        })}
-                      </Label>
-                    }
-                    stacked
-                  >
-                    <Input
-                      placeholder={t('xpboosts.form.input.placeholder')}
-                      value={amountToSend}
-                      onChange={handleChangeAmount}
-                      disabled={actionFormIsDisabled}
-                      id="amountToSend"
-                    />
-                  </FieldRow>
-                </FieldGroup>
-              </PanelBody>
-              <PanelFooter>
+              <PanelHeader
+                compact
+                icon={Zap}
+                title="Boosts to use"
+              />
+              <PanelBody className="flex flex-wrap items-end gap-3">
+                <div className="min-w-56 flex-1 space-y-2 sm:max-w-sm">
+                  <Label htmlFor="amountToSend">
+                    {t('xpboosts.form.label', {
+                      limit: compactNumber(maxAmountLimitedTo),
+                    })}
+                  </Label>
+                  <Input
+                    placeholder={t('xpboosts.form.input.placeholder')}
+                    value={amountToSend}
+                    onChange={handleChangeAmount}
+                    disabled={actionFormIsDisabled}
+                    id="amountToSend"
+                  />
+                </div>
                 <Button
-                  className="flex-1"
+                  className="min-w-32"
                   onClick={handleSearch}
                   disabled={seeBoostsButtonIsDisabled}
+                  variant={data.length > 0 ? 'outline' : 'default'}
                 >
                   {isSubmitting ? (
                     <UpdateIcon className="animate-spin" />
@@ -344,71 +349,77 @@ function Content() {
                     t('xpboosts.form.see-boosts')
                   )}
                 </Button>
-
-                <SendBoostsSheet recalculateTotal={recalculateTotal} />
-              </PanelFooter>
+                <div className="min-w-32">
+                  <SendBoostsSheet recalculateTotal={recalculateTotal} />
+                </div>
+              </PanelBody>
             </Panel>
 
       {data.length > 0 && (
         <>
-          {/*
-            Result count, totals and the filter used to be three centred
-            blocks floating between cards. They belong together as one
-            toolbar over the grid they describe.
-          */}
-          <div className="flex flex-wrap items-center gap-3 border-b border-border/60 pb-4">
-            <h2 className="text-sm font-semibold">
-              {t('xpboosts.results.summary.title', {
+          <StatRow>
+            <StatTile
+              label="Teammate XP boosts"
+              tone="primary"
+              value={<BoostFigure quantity={summary.teammate} type="teammate" />}
+            />
+            <StatTile
+              label="Personal XP boosts"
+              value={<BoostFigure quantity={summary.personal} type="personal" />}
+            />
+            <StatTile
+              label="Accounts"
+              value={data.length}
+            />
+          </StatRow>
+
+          <Panel>
+            <PanelHeader
+              compact
+              title={t('xpboosts.results.summary.title', {
                 total: data.length,
               })}
-            </h2>
-
-            <div className="flex items-center gap-2">
-              <BoostSummaryItem
-                type="teammate"
-                quantity={summary.teammate}
-              />
-              <BoostSummaryItem
-                type="personal"
-                quantity={summary.personal}
-              />
-            </div>
+            />
 
             {data.length > 1 && (
-              <Input
-                className="ml-auto h-9 max-w-xs"
-                placeholder={t('form.accounts.placeholder', {
-                  ns: 'general',
-                  context: !getMenuOptionVisibility('showTotalAccounts')
-                    ? 'private'
-                    : undefined,
-                  total: data.length,
-                })}
-                value={searchValue}
-                onChange={onChangeSearchValue}
+              <FilterBar>
+                <SearchField
+                  className="max-w-xs"
+                  label="Filter accounts"
+                  placeholder={t('form.accounts.placeholder', {
+                    ns: 'general',
+                    context: !getMenuOptionVisibility('showTotalAccounts')
+                      ? 'private'
+                      : undefined,
+                    total: data.length,
+                  })}
+                  value={searchValue}
+                  onChange={onChangeSearchValue}
+                />
+              </FilterBar>
+            )}
+
+            {filteredData.length > 0 ? (
+              <ul className="grid gap-px bg-border/30 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredData.map((currentData) => (
+                  <AccountInformation
+                    data={currentData}
+                    disableActions={actionFormIsDisabled}
+                    teammateXPBoostsFiltered={
+                      teammateXPBoostsFiltered[currentData.accountId] ?? 0
+                    }
+                    key={currentData.accountId}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <EmptyState
+                className="border-0 bg-transparent py-8"
+                icon={Zap}
+                title={t('form.accounts.search-empty', { ns: 'general' })}
               />
             )}
-          </div>
-
-          {filteredData.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredData.map((currentData) => (
-                <AccountInformation
-                  data={currentData}
-                  disableActions={actionFormIsDisabled}
-                  teammateXPBoostsFiltered={
-                    teammateXPBoostsFiltered[currentData.accountId] ?? 0
-                  }
-                  key={currentData.accountId}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={Zap}
-              title={t('form.accounts.search-empty', { ns: 'general' })}
-            />
-          )}
+          </Panel>
         </>
       )}
 
@@ -527,7 +538,7 @@ function SendBoostsSheet({
                   <div className="flex flex-col gap-1 overflow-auto">
                     {dataFilterByPersonalType.map((item) => (
                       <div
-                        className="border px-2 py-1 rounded-sm"
+                        className="rounded-md bg-muted/30 px-2.5 py-1.5"
                         key={item.accountId}
                       >
                         <div className="text-muted-foreground text-sm truncate max-w-[40ch]">
@@ -631,7 +642,7 @@ function SendBoostsSheet({
                               searchedUser.data.lookup.externalAuthType
                             }
                           />
-                          <span className="max-w-72 text-lg truncate">
+                          <span className="max-w-72 truncate text-title font-bold">
                             {searchedUser.data.lookup.displayName}
                           </span>
                           <ExternalLink
@@ -640,7 +651,7 @@ function SendBoostsSheet({
                           />
                         </a>
                       </div>
-                      <div className="mt-2 space-y-0.5 rounded-lg bg-surface/70 px-3 py-2 text-muted-foreground text-sm [&_.icon-wrapper]:flex [&_.icon-wrapper]:items-center [&_.icon-wrapper]:justify-center [&_.icon-wrapper]:size-5">
+                      <div className="mt-3 text-sm">
                         {searchedUser.isPrivate ? (
                           <>
                             <AccountBasicInformationSection
@@ -794,28 +805,26 @@ function SearchExternalAccount({
   )
 }
 
-function BoostSummaryItem({
-  type,
+/** A boost count beside the game's boost art: the gift box for teammate, the bolt for personal. */
+function BoostFigure({
   quantity,
+  size = 'large',
+  type,
 }: {
-  type: XPBoostType
   quantity: number
+  size?: 'small' | 'large'
+  type: XPBoostType
 }) {
-  const isPersonal = type === 'personal'
-
-  /*
-    Was a 9rem-tall tile per boost type, stacked above the results. As a pill
-    it carries the same two facts in a line of the toolbar.
-  */
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-surface/70 py-1 pl-1 pr-3">
-      <img decoding="async" loading="lazy"
-        src={assets(`smallxpboost${isPersonal ? '' : '_gift'}`)}
-        className="size-6"
+    <span className="flex items-center gap-2">
+      <img
+        alt=""
+        className={size === 'large' ? 'size-7' : 'size-6'}
+        decoding="async"
+        loading="lazy"
+        src={assets(`smallxpboost${type === 'personal' ? '' : '_gift'}`)}
       />
-      <span className="text-sm font-bold tabular-nums">
-        {compactNumber(quantity)}
-      </span>
+      <span className="figure">{numberWithCommaSeparator(quantity)}</span>
     </span>
   )
 }
@@ -832,24 +841,20 @@ function AccountInformation({
   const { t } = useTranslation(['stw-operations'])
 
   const {
-    amountToSendParsedToNumber,
     isDisabled,
     isZero,
     handleChangeAvailability,
   } = useAccountDataItem({
     data,
   })
+  const teammateTotal = data.items.teammate?.quantity ?? 0
 
   return (
-    <Panel
-      className={cn({
-        'opacity-60': isDisabled,
-      })}
-    >
-      <div className="flex items-center gap-2 border-b border-border/60 px-3 py-1.5">
+    <li className="flex flex-col gap-3 bg-card px-4 py-3">
+      <div className="flex items-center gap-2">
         <span
-          className={cn('min-w-0 flex-1 truncate text-[0.8125rem] font-medium', {
-            'opacity-40': isDisabled,
+          className={cn('min-w-0 flex-1 truncate text-ui font-semibold', {
+            'text-muted-foreground line-through': isDisabled,
           })}
         >
           {parseCustomDisplayName(data.account)}
@@ -860,90 +865,44 @@ function AccountInformation({
             defaultPressed={isDisabled}
             onPressedChange={handleChangeAvailability}
             disabled={disableActions}
-            aria-label="toggle availability"
+            aria-label={isDisabled ? 'Use this account again' : 'Leave this account out'}
+            title={isDisabled ? 'Use this account again' : 'Leave this account out'}
           >
             {isDisabled ? <Undo2 size={14} /> : <Trash2 size={14} />}
           </Toggle>
         )}
       </div>
-      <footer>
-        <div
-          className={cn('gap-1 grid grid-cols-2 px-1', {
-            'opacity-40': isDisabled,
-          })}
-        >
-          <AccountSummaryItem
-            type="teammate"
-            data={data}
-          />
-          <AccountSummaryItem
-            type="personal"
-            data={data}
-          />
-        </div>
-        <div
-          className={cn(
-            'border-t border-border/60 pt-2 px-3 text-muted-foreground text-xs',
-            {
-              'opacity-40': isDisabled,
-            }
-          )}
-        >
-          {t('xpboosts.results.options.description')}
-        </div>
-        <div
-          className={cn('flex px-1', {
-            'opacity-40': isDisabled,
-          })}
-        >
-          <div className="flex items-center py-1">
-            <figure className="flex-shrink-0 px-2">
-              <img decoding="async" loading="lazy"
-                src={assets('smallxpboost_gift')}
-                className="size-5"
-              />
-            </figure>
-            <div className="flex-grow space-y-1">
-              <div className="text-muted-foreground text-xs">
-                {t('xpboosts.results.options.information', {
-                  current: compactNumber(teammateXPBoostsFiltered),
-                  total: compactNumber(data.items.teammate.quantity),
-                  amount: compactNumber(amountToSendParsedToNumber),
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </Panel>
-  )
-}
-
-function AccountSummaryItem({
-  data,
-  type,
-}: {
-  data: XPBoostsDataWithAccountData
-  type: XPBoostType
-}) {
-  const isPersonal = type === 'personal'
-
-  return (
-    <div className="flex items-center py-1 last:border-l">
-      <figure className="flex-shrink-0 px-2">
-        <img decoding="async" loading="lazy"
-          src={assets(`smallxpboost${isPersonal ? '' : '_gift'}`)}
-          className="size-5"
+      <div
+        className={cn('flex items-center gap-6 text-lg font-bold', {
+          'opacity-40': isDisabled,
+        })}
+      >
+        <BoostFigure
+          quantity={teammateTotal}
+          size="small"
+          type="teammate"
         />
-      </figure>
-      <div className="flex-grow space-y-1">
-        <div className="flex max-w-20 relative text-muted-foreground text-xs">
-          <span className="truncate">
-            {compactNumber(data.items[type]?.quantity)}
-          </span>
-        </div>
+        <BoostFigure
+          quantity={data.items.personal?.quantity ?? 0}
+          size="small"
+          type="personal"
+        />
       </div>
-    </div>
+      {!isDisabled && teammateTotal > 0 && (
+        <div className="space-y-1">
+          <p className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+            {t('xpboosts.results.options.description').replace(/:\s*$/, '')}
+            <span className="figure text-foreground">
+              {compactNumber(teammateXPBoostsFiltered)} / {compactNumber(teammateTotal)}
+            </span>
+          </p>
+          <ProgressBar
+            total={teammateTotal}
+            value={teammateXPBoostsFiltered}
+          />
+        </div>
+      )}
+    </li>
   )
 }
 

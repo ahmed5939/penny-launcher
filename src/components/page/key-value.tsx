@@ -39,7 +39,7 @@ export function KeyValue({
   return (
     <div className={cn('min-w-0', className)}>
       <dt className="micro-label">{label}</dt>
-      <dd className="mt-1 flex items-center gap-1 text-[0.8125rem] leading-tight text-foreground/85">
+      <dd className="mt-1 flex items-center gap-1 text-ui leading-tight text-foreground/85">
         <span
           className="min-w-0 flex-1"
           ref={$value}

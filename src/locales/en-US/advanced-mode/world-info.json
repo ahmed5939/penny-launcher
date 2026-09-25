@@ -1,7 +1,8 @@
 {
+  "description": "Snapshot the live mission data (world info) to a JSON file, then open, rename or export past snapshots.",
   "form": {
-    "save": "Save On Local",
-    "refetch": "Refetch Data"
+    "save": "Save locally",
+    "refetch": "Refresh"
   },
   "search": {
     "input": {
@@ -36,5 +37,14 @@
       "success": "The file has been renamed",
       "error": "The file can't be renamed, please try again later"
     }
+  },
+  "current": {
+    "title": "Live world info",
+    "loaded": "Loaded, ready to save as {{date}}",
+    "fetching": "Fetching the latest world info…",
+    "empty": "Not loaded. Refresh to fetch it."
+  },
+  "files": {
+    "title": "Saved snapshots"
   }
 }

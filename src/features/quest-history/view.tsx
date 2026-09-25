@@ -1,29 +1,27 @@
 import type { QuestHistory, StormShield, Zone, ZoneProgress } from './model'
+import type { ItemRecordMap } from '../../kernel/core/item-database'
 
 import { useMemo, useState } from 'react'
-import { CheckCircle2, History, Shield } from 'lucide-react'
+import { History, Map as MapIcon, Shield } from 'lucide-react'
 
 import { useItemDatabaseStore, getItemRecord } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
 import { recentActivity, stormShields, zoneProgress, zones } from './model'
 
-import stonewoodArt from '../../../assets/images/zones/stonewood.webp'
-import plankertonArt from '../../../assets/images/zones/plankerton.webp'
-import cannyValleyArt from '../../../assets/images/zones/canny-valley.webp'
-import twinePeaksArt from '../../../assets/images/zones/twine-peaks.webp'
 
-import { AccountResourceGate, Chip, EmptyState, IconWell, PageHeader, PageTabPanel, PageTabs, Pager, Panel, PanelHeader, ProgressBar, RefreshButton, ToolBadges, paginate, useAccountResource } from '../../components/page'
+import { ItemIcon } from '../../components/items/item-icon'
+import { AccountResourceGate, AnimatedNumber, EmptyState, Pager, PageHeader, Panel, PanelHeader, ProgressBar, RefreshButton, Segmented, StatRow, StatTile, ToolBadges, paginate, useAccountResource, zoneArt as keyArt } from '../../components/page'
 
 import { cn } from '../../lib/utils'
 
 const PAGE_SIZE = 20
 
-/** Zone backdrops, bundled so the page never reaches out to a website. */
+/** The game's zone key art, bundled so the page never reaches out to a website. */
 const zoneArt: Record<Zone, string> = {
-  Stonewood: stonewoodArt,
-  Plankerton: plankertonArt,
-  'Canny Valley': cannyValleyArt,
-  'Twine Peaks': twinePeaksArt,
+  Stonewood: keyArt.stonewood,
+  Plankerton: keyArt.plankerton,
+  'Canny Valley': keyArt['canny-valley'],
+  'Twine Peaks': keyArt['twine-peaks'],
 }
 
 const day = (iso: string | null) =>
@@ -40,6 +38,7 @@ const percent = (done: number, total: number) => (total > 0 ? Math.round((done /
 export function QuestHistoryPage() {
   useRequestItemDatabase()
   const resource = useAccountResource((accountId) => window.electronAPI.requestQuestHistory(accountId), {
+    cacheKey: 'stw.quest-history',
     fallbackError: 'Could not load quest history. Refresh to retry.',
     owner: (result) => result.accountId,
   })
@@ -68,28 +67,42 @@ function HistoryBody({ data }: { data: QuestHistory }) {
   const activity = useMemo(() => recentActivity(data), [data])
   const [zone, setZone] = useState<Zone>(() => shields.find((s) => s.completed < 10)?.zone ?? 'Stonewood')
   const defended = shields.reduce((n, s) => n + s.completed, 0)
+  const storyDone = progress.reduce((n, p) => n + p.questsDone, 0)
+  const storyTotal = progress.reduce((n, p) => n + p.questsTotal, 0)
+  const firstAt = progress.map((p) => p.firstAt).filter((d): d is string => Boolean(d)).sort()[0] ?? null
+  const selected = progress.find((p) => p.zone === zone) ?? progress[0]
 
   return (
     <>
-      <section className="space-y-4" aria-labelledby="ssd-heading">
-        <SectionTitle eyebrow="Base fortifications" id="ssd-heading" title="Storm Shield Defences" trailing={<Chip tone={defended === 40 ? 'success' : 'neutral'}>{defended}/40 defended</Chip>} />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {shields.map((shield) => <ShieldCard key={shield.zone} shield={shield} />)}
+      <StatRow>
+        <StatTile label="Storm Shields defended" tone={defended === 40 ? 'success' : 'primary'} value={<><AnimatedNumber value={defended} /><span className="text-sm text-muted-foreground">/40</span></>}>
+          <ProgressBar className="mt-2.5" total={40} value={defended} />
+        </StatTile>
+        <StatTile label="Storyline quests" value={<>{storyDone.toLocaleString()}<span className="text-sm text-muted-foreground">/{storyTotal.toLocaleString()}</span></>}>
+          <ProgressBar className="mt-2.5" total={storyTotal} value={storyDone} />
+        </StatTile>
+        <StatTile label="Quests finished" value={activity.length.toLocaleString()} />
+        <StatTile label="Playing since" value={<span className="text-base">{day(firstAt) ?? '—'}</span>} />
+      </StatRow>
+
+      <Panel>
+        <PanelHeader compact icon={Shield} title="Storm Shield Defences" />
+        <div className="grid gap-px bg-border/30 sm:grid-cols-2 xl:grid-cols-4">
+          {shields.map((shield) => <ShieldCard key={shield.zone} onSelect={() => setZone(shield.zone)} selected={shield.zone === zone} shield={shield} />)}
         </div>
-      </section>
+      </Panel>
 
-      <section className="space-y-4" aria-labelledby="zones-heading">
-        <SectionTitle eyebrow="Storyline" id="zones-heading" title="Zone quest progression" />
-        <PageTabs label="Zones" onValueChange={setZone} tabs={zones.map((z) => ({ value: z, label: z }))} value={zone}>
-          {progress.map((p) => (
-            <PageTabPanel activeValue={zone} key={p.zone} value={p.zone}>
-              <ZoneDetail progress={p} />
-            </PageTabPanel>
-          ))}
-        </PageTabs>
-      </section>
+      <Panel>
+        <PanelHeader
+          actions={<Segmented onChange={setZone} options={zones.map((z) => ({ value: z, label: z }))} value={zone} />}
+          compact
+          icon={MapIcon}
+          title="Zone questline"
+        />
+        {selected && <ZoneDetail progress={selected} records={records} />}
+      </Panel>
 
-      <Activity activity={activity} nameOf={(id) => getItemRecord(records, id)?.name ?? null} />
+      <Activity activity={activity} nameOf={(id) => getItemRecord(records, id)?.name ?? null} records={records} />
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         Dates are when Epic last changed each quest’s state, which for a finished quest is when it was done. The questline grouping is PennyDB’s list of storyline quest names; a quest the item database cannot name is shown as not done rather than guessed.
@@ -98,172 +111,125 @@ function HistoryBody({ data }: { data: QuestHistory }) {
   )
 }
 
-function SectionTitle({ eyebrow, id, title, trailing }: { eyebrow: string; id: string; title: string; trailing?: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-end justify-between gap-2">
-      <div className="space-y-1.5">
-        <h2 className="text-lg font-bold leading-tight tracking-tight" id={id}>{title}</h2>
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="h-1 w-10 rounded-full bg-primary" />
-          <span className="micro-label">{eyebrow}</span>
-        </div>
-      </div>
-      {trailing}
-    </div>
-  )
-}
-
-/** The website's zone card: zone art as a wash that wakes up on hover, count pill, bar and ten pips. */
-function ShieldCard({ shield }: { shield: StormShield }) {
-  const pct = percent(shield.completed, 10)
+/** One zone's shield: its key art, the count, and ten pips — one per defence. Picking it opens that zone's questline below. */
+function ShieldCard({ onSelect, selected, shield }: { onSelect: () => void; selected: boolean; shield: StormShield }) {
   const latest = shield.levels.filter((l) => l.doneAt).map((l) => l.doneAt!).sort().pop() ?? null
+  const complete = shield.completed === 10
   return (
-    <article className="panel group relative overflow-hidden transition-transform duration-200 hover:-translate-y-0.5">
-      <span aria-hidden className="absolute inset-x-0 top-0 z-[2] h-0.5 bg-primary/70" />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-10 grayscale transition-all duration-700 group-hover:opacity-25 group-hover:grayscale-0"
-        style={{ backgroundImage: `url(${zoneArt[shield.zone]})` }}
-      />
-      <div className="relative space-y-4 p-5">
-        <div className="flex items-center justify-between">
-          <IconWell icon={Shield} tone="accent" />
-          <span className="figure rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs font-bold">{shield.completed}/10</span>
-        </div>
-        <div>
-          <h3 className="text-lg font-bold leading-tight">{shield.zone}</h3>
-          <p className="micro-label mt-1">{latest ? `Last defended ${day(latest)}` : 'Not started'}</p>
-        </div>
-        <div className="space-y-2">
-          <ProgressBar total={10} value={shield.completed} />
-          <div className="flex items-center justify-between">
-            <span className="micro-label">Progress</span>
-            <span className="figure text-xs font-bold">{pct}%</span>
-          </div>
-        </div>
-        <ol aria-label={`${shield.zone} defences`} className="grid grid-cols-5 gap-1.5 pt-1">
+    <button
+      aria-pressed={selected}
+      className={cn('group relative flex flex-col bg-card text-left transition-colors hover:bg-muted/40', selected && 'bg-primary/[0.06]')}
+      onClick={onSelect}
+      type="button"
+    >
+      <span className="relative block h-20 overflow-hidden">
+        <img alt="" className="size-full object-cover opacity-80 transition-opacity group-hover:opacity-100" src={zoneArt[shield.zone]} />
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
+        <span className="absolute inset-x-4 bottom-2 flex items-end justify-between gap-2">
+          <span className="text-title font-bold leading-tight">{shield.zone}</span>
+          <span className={cn('figure text-xl font-bold leading-none', complete ? 'text-success' : 'text-foreground')}>{shield.completed}<span className="text-xs text-muted-foreground">/10</span></span>
+        </span>
+      </span>
+      <span className="block space-y-2 px-4 pb-3.5 pt-2">
+        <ol aria-label={`${shield.zone} defences`} className="grid grid-cols-10 gap-1">
           {shield.levels.map((level) => (
             <li
-              className={cn('h-1.5 rounded-full transition-all', level.done ? 'bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.45)]' : 'bg-muted opacity-60')}
+              className={cn('h-1.5 rounded-full', level.done ? (complete ? 'bg-success' : 'bg-primary') : 'bg-muted')}
               key={level.level}
               title={level.done ? `SSD ${level.level} · ${day(level.doneAt) ?? 'date unknown'}` : `SSD ${level.level} · not defended`}
             />
           ))}
         </ol>
-      </div>
-    </article>
+        <span className="block text-xs text-muted-foreground">{latest ? `Last defended ${day(latest)}` : 'Not started'}</span>
+      </span>
+      {selected && <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />}
+    </button>
   )
 }
 
-function ZoneDetail({ progress }: { progress: ZoneProgress }) {
+function ZoneDetail({ progress, records }: { progress: ZoneProgress; records: ItemRecordMap }) {
   const pct = percent(progress.questsDone, progress.questsTotal)
   const complete = progress.questsTotal > 0 && progress.questsDone === progress.questsTotal
   const days = progress.firstAt && progress.lastAt ? Math.floor((Date.parse(progress.lastAt) - Date.parse(progress.firstAt)) / 86_400_000) : null
   const levels = progress.levels.filter((l) => l.quests.length > 0)
 
   return (
-    <div className="space-y-6">
-      {/* Zone hero. */}
-      <div className="panel relative overflow-hidden">
-        <span aria-hidden className="absolute inset-x-0 top-0 z-[2] h-0.5 bg-primary" />
-        <span aria-hidden className="absolute inset-0 bg-cover bg-center opacity-60" style={{ backgroundImage: `url(${zoneArt[progress.zone]})` }} />
-        <span aria-hidden className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/75 to-background/40" />
-        <div className="relative space-y-6 p-6 md:p-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="micro-label">Zone progression</p>
-              <h3 className="mt-1 text-3xl font-bold leading-none tracking-tight md:text-4xl">{progress.zone}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">Storm Shield questline overview</p>
-            </div>
-            <div className="md:text-right">
-              <p className="micro-label">Completion</p>
-              <p className="figure text-4xl font-bold leading-none md:text-5xl">{pct}%</p>
-              <p className="mt-1 text-xs text-muted-foreground">{progress.questsDone} / {progress.questsTotal} quests</p>
-            </div>
+    <>
+      {/* The zone's key art behind its completion, the way the game's map screen introduces a zone. */}
+      <div className="relative overflow-hidden">
+        <img alt="" className="absolute inset-0 size-full object-cover opacity-50" src={zoneArt[progress.zone]} />
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-r from-card via-card/80 to-card/20" />
+        <div className="relative flex flex-wrap items-end gap-x-10 gap-y-3 px-5 py-5">
+          <div className="min-w-40">
+            <p className="text-display font-bold leading-none tracking-tight">{progress.zone}</p>
+            <p className="figure mt-2 text-sm text-muted-foreground"><span className={cn('font-bold', complete ? 'text-success' : 'text-foreground')}>{pct}%</span> · {progress.questsDone} / {progress.questsTotal} quests</p>
           </div>
-          <ProgressBar className="h-2.5" total={progress.questsTotal} value={progress.questsDone} />
-          <div className="grid gap-3 sm:grid-cols-3">
+          <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
             {[
               { label: 'Started', value: day(progress.firstAt) ?? '—' },
-              { label: 'Duration', value: days !== null && days > 0 ? `${days.toLocaleString()} days` : '—' },
-              { label: complete ? 'Completed' : 'Latest', value: day(progress.lastAt) ?? '—' },
-            ].map((tile) => (
-              <div className="rounded-lg border border-border/60 bg-background/60 p-4 text-center backdrop-blur-sm" key={tile.label}>
-                <p className="micro-label">{tile.label}</p>
-                <p className="mt-2 text-base font-semibold">{tile.value}</p>
+              { label: 'Took', value: days !== null && days > 0 ? `${days.toLocaleString()} days` : '—' },
+              { label: complete ? 'Finished' : 'Latest', value: day(progress.lastAt) ?? '—' },
+            ].map((fact) => (
+              <div key={fact.label}>
+                <dt className="micro-label">{fact.label}</dt>
+                <dd className="mt-1 font-semibold">{fact.value}</dd>
               </div>
             ))}
-          </div>
+          </dl>
+          <ProgressBar className="basis-full" total={progress.questsTotal} value={progress.questsDone} />
         </div>
       </div>
 
-      {/* SSD levels. */}
-      <div className="space-y-3">
+      {/* One row per defence: the quests that lead to it, then the defence itself. */}
+      <ol className="divide-y divide-border/50 border-t border-border/50">
         {levels.map((level) => {
           const doneCount = level.quests.filter((q) => q.done).length
-          const ordered = [...level.quests].sort((a, b) => Number(b.done) - Number(a.done) || (a.doneAt ?? '').localeCompare(b.doneAt ?? ''))
           return (
-            <article
-              aria-label={`SSD ${level.level}`}
-              className="panel space-y-4 p-5 transition-transform duration-200 hover:-translate-y-0.5"
-              key={level.level}
-              style={{ boxShadow: `inset 3px 0 0 hsl(var(${level.defence.done ? '--success' : '--border'}))` }}
-            >
-              <header className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-baseline gap-3">
-                  <span className="figure text-2xl font-bold leading-none">SSD {level.level}</span>
-                  <span className="text-xs text-muted-foreground">{doneCount}/{level.quests.length} quests</span>
-                </div>
-                {level.defence.done ? (
-                  <div className="text-right">
-                    <p className="micro-label text-success">Defended</p>
-                    <p className="mt-0.5 text-sm text-muted-foreground">{day(level.defence.doneAt) ?? 'Date unknown'}</p>
-                  </div>
-                ) : (
-                  <Chip>Not defended</Chip>
-                )}
-              </header>
-              <ul className="grid gap-2 md:grid-cols-2">
-                {ordered.map((q) => (
-                  <li
-                    className={cn('flex items-start gap-3 rounded-lg border p-3 transition-colors', q.done ? 'border-primary/20 bg-primary/5' : 'border-border/50 bg-transparent')}
-                    key={q.name}
-                  >
-                    <span className={cn('mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border', q.done ? 'border-primary/40 bg-primary/15' : 'border-border/60')}>
-                      {q.done && <span className="size-2.5 rounded-full bg-primary" />}
-                    </span>
+            <li aria-label={`SSD ${level.level}`} className="grid gap-3 px-5 py-3.5 md:grid-cols-[8rem_minmax(0,1fr)]" key={level.level}>
+              <div>
+                <p className={cn('figure text-lg font-bold leading-none', level.defence.done ? 'text-success' : 'text-foreground')}>SSD {level.level}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{level.defence.done ? `Defended ${day(level.defence.doneAt) ?? ''}`.trim() : 'Not defended'}</p>
+                <p className="figure mt-0.5 text-xs text-muted-foreground">{doneCount}/{level.quests.length} quests</p>
+              </div>
+              <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2 xl:grid-cols-3">
+                {level.quests.map((q) => (
+                  <li className="flex items-center gap-2.5" key={q.name}>
+                    <ItemIcon className={cn(!q.done && 'opacity-40 grayscale')} records={records} templateId={q.templateId ?? 'Quest:unknown'} title={q.name} />
                     <span className="min-w-0 flex-1">
-                      <span className={cn('block text-sm leading-snug', q.done ? 'font-medium' : 'text-muted-foreground')}>{q.name}</span>
-                      {q.doneAt && <span className="mt-1 block text-xs text-muted-foreground">{day(q.doneAt)}</span>}
+                      <span className={cn('block truncate text-ui leading-tight', q.done ? 'font-medium' : 'text-muted-foreground')}>{q.name}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{q.done ? day(q.doneAt) ?? 'Done' : 'Not done'}</span>
                     </span>
                   </li>
                 ))}
               </ul>
-            </article>
+            </li>
           )
         })}
-      </div>
-    </div>
+      </ol>
+    </>
   )
 }
 
-function Activity({ activity, nameOf }: { activity: ReturnType<typeof recentActivity>; nameOf: (id: string) => string | null }) {
+function Activity({ activity, nameOf, records }: { activity: ReturnType<typeof recentActivity>; nameOf: (id: string) => string | null; records: ItemRecordMap }) {
   const [page, setPage] = useState(0)
   const shown = paginate(activity, page, PAGE_SIZE)
   return (
     <Panel>
-      <PanelHeader actions={<span className="micro-label">{activity.length.toLocaleString()} quests</span>} description="Every finished quest with a date, newest first." icon={History} title="Recent activity" />
+      <PanelHeader actions={<span className="text-xs text-muted-foreground"><span className="figure">{activity.length.toLocaleString()}</span> quests</span>} compact icon={History} title="Recently finished" />
       {activity.length === 0 ? (
         <EmptyState className="border-0 bg-transparent py-8" description="This account has no dated quests yet." icon={History} title="No quest history" />
       ) : (
-        <ul className="divide-y divide-border/50">
-          {shown.items.map((q, index) => (
-            <li className="flex items-center gap-3 px-5 py-2.5 text-sm" key={`${q.templateId}-${index}`}>
-              <CheckCircle2 className="size-3.5 shrink-0 text-success" />
-              <span className="min-w-0 flex-1 truncate" title={q.templateId}>{nameOf(q.templateId) ?? q.templateId.replace(/^Quest:/i, '')}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{day(q.changedAt)}</span>
-            </li>
-          ))}
+        <ul className="grid divide-border/50 md:grid-cols-2">
+          {shown.items.map((q, index) => {
+            const name = nameOf(q.templateId)
+            return (
+              <li className="flex items-center gap-3 border-b border-border/50 px-4 py-2 md:odd:border-r" key={`${q.templateId}-${index}`}>
+                <ItemIcon records={records} size="small" templateId={q.templateId} title={name ?? 'Unnamed quest'} />
+                <span className={cn('min-w-0 flex-1 truncate text-ui', !name && 'text-muted-foreground')}>{name ?? 'Unnamed quest'}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{day(q.changedAt)}</span>
+              </li>
+            )
+          })}
         </ul>
       )}
       <Pager onPageChange={setPage} page={shown.page} pageSize={PAGE_SIZE} total={activity.length} />

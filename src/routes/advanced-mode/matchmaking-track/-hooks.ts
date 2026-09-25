@@ -1,5 +1,4 @@
 import type { MatchmakingTrackStatus } from '../../../types/data/advanced-mode/matchmaking'
-import type { XPBoostsSearchUserResponse } from '../../../types/xpboosts'
 import type { FriendsSearchResult } from '../../../kernel/core/friends-manager'
 
 import { useShallow } from 'zustand/react/shallow'
@@ -93,21 +92,14 @@ export function usePlayerSuggestions({
   return { clear, isSearching, results }
 }
 
-export function useCurrentActions({
-  searchedUser,
-
-  handleManualChangeSearchDisplayName,
-}: {
-  searchedUser: XPBoostsSearchUserResponse | null
-
-  handleManualChangeSearchDisplayName: (value: string) => void
-}) {
+export function useCurrentActions() {
   const [status, setStatus] = useState<MatchmakingTrackStatus | null>(null)
+  const [target, setTarget] = useState<string | null>(null)
   const [isTracking, setIsTracking] = useState(false)
   const [trackedAt, setTrackedAt] = useState<Date | null>(null)
 
   const { selected } = useGetSelectedAccount()
-  const { players } = useMatchmakingPlayersPath()
+  const { players, updateRecentlyPlayers } = useMatchmakingPlayersPath()
   const { friends, friendsLoadedFor } = useFriendsManagerStore(
     useShallow((state) => ({
       friends: state.entries.filter((entry) => entry.kind === 'friend'),
@@ -115,15 +107,11 @@ export function useCurrentActions({
     }))
   )
 
-  /**
-   * Private profiles still resolve a lookup and the session endpoint does
-   * not care about profile privacy, so anyone who searched successfully is
-   * trackable — `success` only reflects the profile fetch.
-   */
-  const trackedAccountId = searchedUser?.data?.lookup.id ?? null
   const selectedRef = useRef(selected)
+  const targetRef = useRef(target)
 
   selectedRef.current = selected
+  targetRef.current = target
 
   /**
    * Friends are trackable targets too, so they belong in the same picker as
@@ -160,12 +148,25 @@ export function useCurrentActions({
     return true
   })
 
+  /**
+   * The main process resolves the query (Epic lookup, then PennyDB) and
+   * answers with the player and their session in one message; answers for
+   * an earlier query are dropped.
+   */
   useEffect(() => {
     const listener = window.electronAPI.notificationMatchmakingStatus(
       async (response) => {
+        if (response.query !== targetRef.current) {
+          return
+        }
+
         setStatus(response)
         setTrackedAt(new Date())
         setIsTracking(false)
+
+        if (response.player) {
+          updateRecentlyPlayers(response.player)
+        }
       }
     )
 
@@ -174,40 +175,45 @@ export function useCurrentActions({
     }
   }, [])
 
-  /**
-   * Tracking fires as soon as a player resolves — there is nothing else to
-   * configure — and re-checks on an interval while the page stays open so
-   * the card follows the player between lobby, mission and logout.
-   */
-  useEffect(() => {
-    if (!trackedAccountId) {
-      setStatus(null)
+  const request = (query: string) => {
+    const account = selectedRef.current
 
+    if (!account) {
       return
     }
 
-    const track = () => {
-      const account = selectedRef.current
+    setIsTracking(true)
+    window.electronAPI.requestMatchmakingStatus(account, query)
+  }
 
-      if (!account) {
-        return
-      }
-
-      setIsTracking(true)
-      window.electronAPI.requestMatchmakingStatus(
-        account,
-        trackedAccountId
-      )
+  /**
+   * Re-checks on an interval while the page stays open so the card follows
+   * the player between lobby, mission and logout.
+   */
+  useEffect(() => {
+    if (!target) {
+      return
     }
 
-    track()
-
-    const interval = window.setInterval(track, 60_000)
+    const interval = window.setInterval(() => request(target), 60_000)
 
     return () => {
       window.clearInterval(interval)
     }
-  }, [trackedAccountId])
+  }, [target])
+
+  const track = (query: string) => {
+    const trimmed = query.trim()
+
+    if (!trimmed || !selected) {
+      return
+    }
+
+    setStatus(null)
+    setTarget(trimmed)
+    targetRef.current = trimmed
+    request(trimmed)
+  }
 
   const customFilter: ComboboxProps['customFilter'] = (
     _value,
@@ -224,22 +230,12 @@ export function useCurrentActions({
     return _keys ? 1 : 0
   }
 
-  const autoCompletePlayer = (value: string) => {
-    const currentPlayer = players.find((item) => item.id === value)
-    const currentFriend = friends.find((item) => item.accountId === value)
-
-    handleManualChangeSearchDisplayName(
-      currentPlayer?.displayName ?? currentFriend?.displayName ?? ''
-    )
-  }
-
   const handleRefresh = () => {
-    if (!selected || !trackedAccountId || isTracking) {
+    if (!target || isTracking) {
       return
     }
 
-    setIsTracking(true)
-    window.electronAPI.requestMatchmakingStatus(selected, trackedAccountId)
+    request(target)
   }
 
   return {
@@ -249,8 +245,8 @@ export function useCurrentActions({
     status,
     trackedAt,
 
-    autoCompletePlayer,
     customFilter,
     handleRefresh,
+    track,
   }
 }

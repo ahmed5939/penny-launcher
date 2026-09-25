@@ -290,8 +290,6 @@ logging now return promises. Replace filesystem access with `storage`; replace
 BrowserWindows with UI contributions; remove `getMainWindow`, `storageDirectory`,
 and direct launcher internals. No unrestricted fallback is provided.
 
-The bundled Endurance plugin is migrated: it needs only `navigation` and opens
-Penny's existing Endurance page. Its actual automation remains launcher-owned.
 
 ## Publishing
 

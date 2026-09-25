@@ -132,7 +132,7 @@ export function CommandPalette({
                     <Icon className="size-4 shrink-0 text-muted-foreground" />
                     <span className="flex-1">{label}</span>
                     {hidden && (
-                      <span className="text-[0.625rem] text-muted-foreground">
+                      <span className="text-2xs text-muted-foreground">
                         Hidden
                       </span>
                     )}
@@ -226,7 +226,7 @@ function AppearanceCommands({ onDone }: { onDone: () => void }) {
             <Icon className="size-4 shrink-0 text-muted-foreground" />
             <span className="flex-1">{label}</span>
             {theme === mode.id && (
-              <span className="text-[0.625rem] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 Active
               </span>
             )}
@@ -247,7 +247,7 @@ function AppearanceCommands({ onDone }: { onDone: () => void }) {
           <ThemeSwatch className="size-4" gradient={current.gradient} />
           <span className="flex-1">{current.name}</span>
           {colorTheme === current.id && (
-            <span className="text-[0.625rem] text-muted-foreground">
+            <span className="text-2xs text-muted-foreground">
               Active
             </span>
           )}

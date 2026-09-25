@@ -124,18 +124,22 @@ export function useData() {
     }
 
   const questOptions = useMemo(() => {
+    /* The game's name; the id in words only until the item database loads. */
+    const nameOf = (templateId: string) =>
+      getItemRecord(records, templateId)?.name ??
+      (templateId.split(':').pop() ?? templateId)
+        .split(/[_.]/)
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+
     return Object.fromEntries(
       Object.entries(availableQuests).map(([accountId, quests]) => [
         accountId,
         [
           ...quests.map((quest) => ({
-            name:
-              getItemRecord(records, quest.templateId)?.name ??
-              (quest.templateId.split(':').pop() ?? quest.templateId)
-                .split(/[_.]/)
-                .filter(Boolean)
-                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(' '),
+            active: true,
+            name: nameOf(quest.templateId),
             templateId: quest.templateId,
           })),
           ...(selectedAccounts[accountId] ?? [])
@@ -144,27 +148,18 @@ export function useData() {
                 !quests.some((quest) => quest.templateId === templateId)
             )
             .map((templateId) => ({
-              name: `${
-                getItemRecord(records, templateId)?.name ??
-                (templateId.split(':').pop() ?? templateId)
-                  .split(/[_.]/)
-                  .filter(Boolean)
-                  .map(
-                    (word) =>
-                      word.charAt(0).toUpperCase() + word.slice(1)
-                  )
-                  .join(' ')
-              } (not currently active)`,
+              active: false,
+              name: nameOf(templateId),
               templateId,
             })),
-        ]
-          .sort((a, b) => a.name.localeCompare(b.name)),
+        ].sort((a, b) => a.name.localeCompare(b.name)),
       ])
     )
   }, [availableQuests, records, selectedAccounts])
 
   return {
     accounts,
+    records,
     accountSelectorIsDisabled,
     options,
     selectedAccounts,

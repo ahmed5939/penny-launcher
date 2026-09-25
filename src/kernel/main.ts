@@ -5,9 +5,7 @@ import type {
 import type {
   AccountBasicInfo,
   AccountData,
-  AccountDataList,
   AccountDataRecord,
-  AccountList,
 } from '../types/accounts'
 import type { AlertsDoneSearchPlayerConfig } from '../types/alerts'
 import type { FriendsActionPayload } from './core/friends-manager'
@@ -25,8 +23,6 @@ import type {
 } from '../types/fn-launch'
 import type { CustomizableMenuSettings, Settings } from '../types/settings'
 import type { GameInstallOpenTarget } from '../types/game-install'
-import type { EnduranceConfig } from '../types/endurance'
-import type { TaxiServiceServiceActionConfig } from '../types/taxi-service'
 import type { Event as ElectronEvent } from 'electron'
 import type {
   XPBoostsConsumePersonalData,
@@ -100,7 +96,6 @@ const features = {
   claimRewards: () => import('./core/claim-rewards'),
   customProcess: () => import('./core/custom-process'),
   dataDirectory: () => import('./startup/data-directory'),
-  endurance: () => import('./startup/endurance-plugin').then(({ getEndurancePlugin }) => getEndurancePlugin()),
   eula: () => import('./core/eula-tracking'),
   expeditions: () => import('./core/expeditions'),
   fnLaunch: () => import('./core/fn-launch'),
@@ -126,7 +121,6 @@ const features = {
   settings: () => import('./startup/settings'),
   shop: () => import('./core/shop'),
   squads: () => import('./core/squads'),
-  taxi: () => import('./startup/taxi-service'),
   timeline: () => import('./core/timeline'),
   vbucks: () => import('./core/vbucks-information'),
   worldInfo: () => import('./core/world-info'),
@@ -145,6 +139,22 @@ process.on('uncaughtExceptionMonitor', (error) => {
   if (!gotTheLock) {
     return app.quit()
   }
+
+  let historyFlushedForQuit = false
+  let historyFlushPending = false
+  app.on('before-quit', (event) => {
+    if (historyFlushedForQuit) return
+    event.preventDefault()
+    if (historyFlushPending) return
+    historyFlushPending = true
+    void import('./startup/automation-history')
+      .then(({ flushAutomationHistory }) => flushAutomationHistory())
+      .catch((error) => RuntimeLog.error('automation-history:shutdown', error))
+      .finally(() => {
+        historyFlushedForQuit = true
+        app.quit()
+      })
+  })
 
   const createWindow = async () => {
     await Appearance.restore()
@@ -226,7 +236,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     mainWindow.webContents.on('will-navigate', guardNavigation)
     mainWindow.webContents.on('will-redirect', guardNavigation)
     mainWindow.webContents.on('context-menu', (_event, params) => {
-      NativeContextMenu.popupEditable(mainWindow.webContents, params)
+      NativeContextMenu.popupDefault(mainWindow.webContents, params)
     })
 
     WindowState.apply(mainWindow, savedState)
@@ -291,6 +301,9 @@ process.on('uncaughtExceptionMonitor', (error) => {
         rendererRecoveryAttempts = 0
       }, 60_000)
       sendChromeState()
+      // A precision-touchpad pinch otherwise magnifies the whole window like
+      // a web page. Ctrl+wheel is stopped in the renderer (lib/native-input).
+      void mainWindow.webContents.setVisualZoomLevelLimits(1, 1)
     })
     mainWindow.webContents.on('render-process-gone', (_event, details) => {
       RuntimeLog.error('renderer-process-gone', new Error(details.reason))
@@ -467,65 +480,6 @@ process.on('uncaughtExceptionMonitor', (error) => {
         OverlayWindow.setAccountScope(scope)
       }
     )
-
-    /**
-     * Endurance
-     */
-
-    secureIpcHandle(ElectronAPIEventKeys.EnduranceStatusRequest, async () => {
-      const [
-        { EnduranceAutomation },
-        { endurancePointDefinitions, enduranceZones },
-      ] = await Promise.all([
-        features.endurance(),
-        import('./core/endurance/config'),
-      ])
-
-      return {
-        config: await EnduranceAutomation.getConfig(),
-        pointDefinitions: endurancePointDefinitions,
-        status: EnduranceAutomation.getStatus(),
-        zones: enduranceZones,
-      }
-    })
-
-    secureIpcOn(
-      ElectronAPIEventKeys.EnduranceStart,
-      async (_, account: AccountData) => {
-        const { EnduranceAutomation } = await features.endurance()
-        EnduranceAutomation.start(account).catch((error) => {
-          RuntimeLog.error('endurance:start', error)
-        })
-      }
-    )
-
-    secureIpcOn(ElectronAPIEventKeys.EnduranceStop, async () => {
-      const { EnduranceAutomation } = await features.endurance()
-      EnduranceAutomation.stop()
-    })
-
-    secureIpcHandle(
-      ElectronAPIEventKeys.EnduranceConfigUpdate,
-      async (_, partial: Partial<EnduranceConfig>) => {
-        const { EnduranceAutomation } = await features.endurance()
-        return EnduranceAutomation.updateConfig(partial)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.EnduranceCalibrateStart,
-      async (_, pointId: string) => {
-        const { EnduranceAutomation } = await features.endurance()
-        EnduranceAutomation.startCalibration(pointId).catch((error) => {
-          RuntimeLog.error('endurance:calibration', error)
-        })
-      }
-    )
-
-    secureIpcOn(ElectronAPIEventKeys.EnduranceCalibrateCancel, async () => {
-      const { EnduranceAutomation } = await features.endurance()
-      EnduranceAutomation.cancelCalibration()
-    })
 
     /**
      * Settings
@@ -819,6 +773,16 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
+    secureIpcOn(ElectronAPIEventKeys.CreateAuthWithQuickLogin, async () => {
+      const { QuickLogin } = await features.authentication()
+      await QuickLogin.start()
+    })
+
+    secureIpcOn(ElectronAPIEventKeys.CancelAuthWithQuickLogin, async () => {
+      const { QuickLogin } = await features.authentication()
+      QuickLogin.cancel()
+    })
+
     secureIpcOn(
       ElectronAPIEventKeys.ImportAccountsFromAerial,
       async () => {
@@ -1029,12 +993,16 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     secureIpcHandle('world-inventory:query', async (_, accountId: string, location: 'backpack' | 'storage') => (await import('./core/world-inventory')).requestWorldInventory(accountId, location))
+    secureIpcHandle('world-inventory:transfer', async (_, accountId: string, transfers: unknown) => (await import('./core/world-inventory')).transferWorldItems(accountId, transfers))
+    secureIpcHandle('automation-history:list', async () => (await import('./startup/automation-history')).automationHistory())
+
     secureIpcHandle('quest-history:query', async (_, accountId: string) => (await import('./core/quest-history')).requestQuestHistory(accountId))
     secureIpcHandle('ventures:query', async (_, accountId: string) => (await import('./core/ventures')).requestVentures(accountId))
     secureIpcHandle('collection-book:query', async (_, accountId: string) => {
       const { requestCollectionBook } = await import('./core/collection-book')
       return requestCollectionBook(accountId)
     })
+    secureIpcHandle('collection-book:upgrade', async (_, accountId: string, request: unknown) => (await import('./core/collection-book')).upgradeCollectionBookItem(accountId, request))
     secureIpcHandle('rare-item-finder:scan', async (_, accountId: string) => {
       const { requestRareItemScan } = await import('./core/rare-item-finder')
       return requestRareItemScan(accountId)
@@ -1269,51 +1237,6 @@ process.on('uncaughtExceptionMonitor', (error) => {
         await XPBoostsManager.generalSearchUser(config)
       }
     )
-
-    /**
-     * Party
-     */
-
-    secureIpcOn(
-      ElectronAPIEventKeys.PartyClaimAction,
-      async (_, selectedAccount: Array<AccountData>) => {
-        const { ClaimRewards } = await features.claimRewards()
-        await ClaimRewards.start(selectedAccount)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.PartyKickAction,
-      async (
-        _,
-        selectedAccount: AccountData,
-        accounts: AccountDataList,
-        claimState: boolean
-      ) => {
-        const { Party } = await features.party()
-        await Party.kickPartyMembers(selectedAccount, accounts, claimState, {
-          force: true,
-        })
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.PartyLeaveAction,
-      async (
-        _,
-        selectedAccounts: AccountList,
-        accounts: AccountDataList,
-        claimState: boolean
-      ) => {
-        const { Party } = await features.party()
-        await Party.leaveParty(selectedAccounts, accounts, claimState)
-      }
-    )
-
-    secureIpcOn(ElectronAPIEventKeys.PartyLoadFriends, async () => {
-      const { Party } = await features.party()
-      await Party.loadFriends()
-    })
 
     secureIpcOn(
       ElectronAPIEventKeys.PartyAddNewFriendAction,
@@ -1776,74 +1699,6 @@ process.on('uncaughtExceptionMonitor', (error) => {
       async (_, accountId: string, config: AutomationServiceActionConfig) => {
         const { Automation } = await features.automation()
         await Automation.updateAction(accountId, config)
-      }
-    )
-
-    /**
-     * Taxi Service
-     */
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceServiceAddAccounts,
-      async (_, origin: Array<string>, destination: Array<string>) => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.sendRequests(origin, destination)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceServiceRequestData,
-      async () => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.load()
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceServiceStart,
-      async (_, accountId: string) => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.addAccount(accountId)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceServiceReload,
-      async (_, ids: Array<string>) => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.reload(ids)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceServiceRemove,
-      async (_, accountId: string) => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.removeAccount(accountId)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceServiceActionUpdate,
-      async (_, accountId: string, config: TaxiServiceServiceActionConfig) => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.updateAction(accountId, config)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceWhitelistAdd,
-      async (_, accountId: string, displayName: string) => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.addWhitelist(accountId, displayName)
-      }
-    )
-
-    secureIpcOn(
-      ElectronAPIEventKeys.TaxiServiceWhitelistRemove,
-      async (_, accountId: string, targetId: string) => {
-        const { TaxiService } = await features.taxi()
-        await TaxiService.removeWhitelist(accountId, targetId)
       }
     )
 

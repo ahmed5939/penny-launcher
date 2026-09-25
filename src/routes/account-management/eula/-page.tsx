@@ -1,15 +1,20 @@
+import type { AccountData } from '../../../types/accounts'
+
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { Check, Clipboard, FileText, FileWarning, X } from 'lucide-react'
+import { ExternalLink, FileText, FileWarning } from 'lucide-react'
 import { Trans, useTranslation } from 'react-i18next'
 
 import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
 import { GoToTop } from '../../../components/go-to-top'
 import {
-  Callout,
+  Chip,
+  CopyField,
   EmptyState,
+  FilterBar,
   PageHeader,
   Panel,
+  PanelHeader,
+  SearchField,
 } from '../../../components/page'
 
 import {
@@ -20,199 +25,208 @@ import {
 import { useCustomizableMenuSettingsVisibility } from '../../../hooks/settings'
 import { useEULAActions } from './-hooks'
 
-import { cn, parseCustomDisplayName } from '../../../lib/utils'
+import { parseCustomDisplayName } from '../../../lib/utils'
 
+const eulaHistoryUrl = 'https://www.epicgames.com/account/eula-history'
+
+/**
+ * Which accounts still owe Epic an "I Agree". One row per linked account:
+ * its state, the Verify that finds out, and — when Epic answers with a
+ * continuation link — the link itself, right under the account it belongs to.
+ */
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'], {
     keyPrefix: 'account-management',
   })
+  const actions = useEULAActions()
+  const anyLoading = actions.accounts.some(
+    (account) => actions.data[account.accountId]?.isLoading
+  )
 
   return (
-    <>
-      <PageHeader icon={FileText} section={t('title')} title="EULA" />
-      <Content />
-    </>
+    <div
+      className="space-y-6"
+      id="gtk-eula"
+    >
+      <PageHeader
+        actions={
+          actions.accounts.length > 1 && (
+            <Button
+              disabled={anyLoading}
+              onClick={actions.handleVerifyAll}
+              variant="outline"
+            >
+              {anyLoading ? (
+                <UpdateIcon className="mr-2 size-4 animate-spin" />
+              ) : null}
+              Verify all
+            </Button>
+          )
+        }
+        description="Check whether each account has accepted Epic's latest EULA, and get the link for any that has not."
+        icon={FileText}
+        section={t('title')}
+        title="EULA"
+      />
+      <Content actions={actions} />
+      <GoToTop containerId="gtk-eula" />
+    </div>
   )
 }
 
-function Content() {
+function Content({ actions }: { actions: ReturnType<typeof useEULAActions> }) {
   const { t } = useTranslation(['account-management', 'general'])
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
 
   const {
     accounts,
     accountsArray,
     data,
     searchValue,
-    handleCopyUrl,
     handleVerifyById,
-    onChangeSearchValue,
-  } = useEULAActions()
-  // const { scrollToTopButtonIsVisible, scrollButtonOnClick } =
-  //   useScrollToTop()
-  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
+    setSearchValue,
+  } = actions
 
   return (
-    <>
-      <div className="max-w-2xl space-y-4" id="gtk-eula">
-        <Callout
-          title={t('eula.good-to-know', {
-            ns: 'account-management',
-          })}
-        >
-          <p>
-            <Trans
-              ns="account-management"
-              i18nKey="eula.link"
-              values={{
-                link: 'https://www.epicgames.com/account/eula-history',
-              }}
-            >
-              You can go to{' '}
-              <a
-                href="https://www.epicgames.com/account/eula-history"
-                className="font-bold text-primary"
-                onClick={(event) => {
-                  event.preventDefault()
-                  window.electronAPI.openExternalURL(
-                    'https://www.epicgames.com/account/eula-history'
-                  )
-                }}
-              >
-                https://www.epicgames.com/account/eula-history
-              </a>{' '}
-              and click the "I Agree" button at the bottom of the page:
-            </Trans>
-          </p>
-        </Callout>
-
+    <div className="max-w-3xl space-y-4">
+      <Panel>
+        <PanelHeader
+          compact
+          title="Accounts"
+          actions={
+            <span className="text-xs text-muted-foreground">
+              <span className="figure">{accountsArray.length}</span> linked
+            </span>
+          }
+        />
         {accountsArray.length > 1 && (
-          <div className="flex gap-3 items-center">
-            <Input
-              // placeholder={
-              //   getMenuOptionVisibility('showTotalAccounts')
-              //     ? `Search on ${accounts.length} accounts...`
-              //     : 'Search on your accounts'
-              // }
+          <FilterBar className="px-4">
+            <SearchField
+              label="Search accounts"
+              onChange={setSearchValue}
               placeholder={t('form.accounts.placeholder', {
                 ns: 'general',
                 context: !getMenuOptionVisibility('showTotalAccounts')
                   ? 'private'
                   : undefined,
-                total: accounts.length,
+                total: accountsArray.length,
               })}
               value={searchValue}
-              onChange={onChangeSearchValue}
             />
-          </div>
+          </FilterBar>
         )}
 
         {accounts.length > 0 ? (
-          <section className="flex flex-col gap-2 w-full">
-            {accounts.map((account) => {
-              const current: EULAAccountStatus =
-                data[account.accountId] ?? defaultEULAAccountStatus
-              const continuationUrl = current.url
-
-              return (
-                <Panel key={account.accountId}>
-                  <div className="flex items-center gap-3 border-b border-border/60 px-3 py-2 text-xs">
-                    <span className="min-w-0 max-w-40 flex-1 truncate text-[0.8125rem] font-medium">
-                      {parseCustomDisplayName(account)}
-                    </span>
-                    <div className="ml-auto flex items-center gap-3">
-                      <div
-                        className={cn('flex gap-1 items-center', {
-                          'opacity-0 pointer-events-none select-none':
-                            typeof current.status !== 'boolean',
-                          'text-success': current.status === true,
-                          'font-semibold text-destructive':
-                            current.status === false,
-                        })}
-                      >
-                        {current.status ? (
-                          <>
-                            <Check size={16} />
-                            {t('actions.accepted', {
-                              ns: 'general',
-                            })}
-                          </>
-                        ) : (
-                          <>
-                            <X size={16} />
-                            {current.correctiveAction}
-                          </>
-                        )}
-                      </div>
-                      <Button
-                        className="h-8 relative w-24"
-                        variant="secondary"
-                        onClick={handleVerifyById(account.accountId)}
-                        disabled={current.isLoading}
-                      >
-                        {current.isLoading ? (
-                          <UpdateIcon className="animate-spin" />
-                        ) : (
-                          t('actions.verify', {
-                            ns: 'general',
-                          })
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <footer>
-                    <div
-                      className={cn(
-                        'flex items-center overflow-hidden relative rounded-md'
-                      )}
-                    >
-                      <Input
-                        className={cn(
-                          'border-none pr-10 select-none text-primary focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:ring-transparent'
-                        )}
-                        placeholder={t('eula.placeholder', {
-                          ns: 'account-management',
-                        })}
-                        value={continuationUrl ?? ''}
-                        readOnly
-                      />
-                      <Button
-                        variant="ghost"
-                        className={cn('absolute p-0 right-1 size-8 z-20')}
-                        onClick={handleCopyUrl(current.url)}
-                        disabled={continuationUrl === null}
-                      >
-                        <Clipboard size={16} />
-                      </Button>
-                    </div>
-                  </footer>
-                </Panel>
-              )
-            })}
-          </section>
+          <ul className="divide-y divide-border/40">
+            {accounts.map((account) => (
+              <AccountRow
+                account={account}
+                key={account.accountId}
+                onVerify={handleVerifyById(account.accountId)}
+                status={data[account.accountId] ?? defaultEULAAccountStatus}
+              />
+            ))}
+          </ul>
         ) : (
           <EmptyState
+            className="border-0 bg-transparent py-8"
             icon={FileWarning}
             title={t('form.accounts.search-empty', {
               ns: 'general',
             })}
           />
         )}
+      </Panel>
+
+      {/* Fine print: the manual route, for anyone who would rather click it themselves. */}
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        <Trans
+          ns="account-management"
+          i18nKey="eula.link"
+          values={{
+            link: eulaHistoryUrl,
+          }}
+        >
+          You can go to{' '}
+          <a
+            href={eulaHistoryUrl}
+            className="font-medium text-primary hover:underline"
+            onClick={(event) => {
+              event.preventDefault()
+              window.electronAPI.openExternalURL(eulaHistoryUrl)
+            }}
+          >
+            {eulaHistoryUrl}
+          </a>{' '}
+          and click the "I Agree" button at the bottom of the page:
+        </Trans>
+      </p>
+    </div>
+  )
+}
+
+function AccountRow({
+  account,
+  onVerify,
+  status,
+}: {
+  account: AccountData
+  onVerify: () => void
+  status: Partial<EULAAccountStatus>
+}) {
+  const { t } = useTranslation(['general'])
+
+  const url = status.url ?? null
+
+  return (
+    <li className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="min-w-0 flex-1 truncate text-ui font-medium">
+          {parseCustomDisplayName(account)}
+        </span>
+
+        {status.status === true ? (
+          <Chip tone="success">{t('actions.accepted')}</Chip>
+        ) : status.status === false ? (
+          <Chip tone="danger">
+            {status.correctiveAction ?? 'Needs accepting'}
+          </Chip>
+        ) : (
+          <span className="text-xs text-muted-foreground">Not checked</span>
+        )}
+
+        <Button
+          className="h-8 w-24"
+          disabled={status.isLoading}
+          onClick={onVerify}
+          size="sm"
+          variant="secondary"
+        >
+          {status.isLoading ? (
+            <UpdateIcon className="animate-spin" />
+          ) : (
+            t('actions.verify')
+          )}
+        </Button>
       </div>
 
-      {/* <Button
-        className={cn(
-          'bottom-5 fixed opacity-0 px-4 right-5 transition-all translate-x-28 z-50',
-          {
-            'opacity-100 translate-x-0': scrollToTopButtonIsVisible,
-          }
-        )}
-        size="sm"
-        variant="secondary"
-        onClick={scrollButtonOnClick}
-      >
-        Go To Top
-      </Button> */}
-      <GoToTop containerId="gtk-eula" />
-    </>
+      {url && (
+        <div className="mt-2 flex items-center gap-2">
+          <CopyField
+            className="min-w-0 flex-1"
+            value={url}
+          />
+          <Button
+            className="h-8"
+            onClick={() => window.electronAPI.openExternalURL(url)}
+            size="sm"
+            variant="outline"
+          >
+            <ExternalLink className="mr-1.5 size-3.5" />
+            Open
+          </Button>
+        </div>
+      )}
+    </li>
   )
 }

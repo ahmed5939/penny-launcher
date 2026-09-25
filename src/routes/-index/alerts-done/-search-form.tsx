@@ -38,10 +38,11 @@ export function SearchForm() {
     /*
      * Opaque `bg-card` rather than the panel's translucent default: the "Or"
      * separator knocks its rule out with a chip of the surface behind it, and
-     * a 60% fill over the page leaves a visible seam through the label.
+     * a 60% fill over the page leaves a visible seam through the label. On a
+     * wide window the two routes to a player sit side by side instead.
      */
     <div
-      className="panel grid gap-4 bg-card p-4"
+      className="panel grid items-end gap-x-5 gap-y-3 bg-card px-5 py-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
       id="form-alerts-done"
     >
       <div className="space-y-2">
@@ -85,11 +86,17 @@ export function SearchForm() {
           hideSelectorOnSelectItem
         />
       </div>
-      <SeparatorWithTitle className="bg-card text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground/55">
+      <SeparatorWithTitle className="bg-card text-2xs font-semibold text-muted-foreground/55 lg:hidden">
         {t('separators.or', {
           ns: 'general',
         })}
       </SeparatorWithTitle>
+      {/* Side by side, the two routes to a player need only a word between them. */}
+      <span className="hidden pb-2 text-xs text-muted-foreground lg:block">
+        {t('separators.or', {
+          ns: 'general',
+        })}
+      </span>
       <form
         className="space-y-2"
         onSubmit={(event) => {
@@ -113,7 +120,7 @@ export function SearchForm() {
             placeholder={t('form.search-account.input.placeholder', {
               ns: 'general',
             })}
-            className="h-9 pl-3 pr-[var(--pr-button-width)] text-[0.8125rem]"
+            className="h-9 pl-3 pr-[var(--pr-button-width)] text-ui"
             value={inputSearch}
             onChange={handleChangeSearchDisplayName}
             disabled={formDisabled || searchIsSubmitting}
@@ -126,7 +133,7 @@ export function SearchForm() {
           */}
           <Button
             type="submit"
-            className="absolute right-1 h-7 w-24 px-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]"
+            className="absolute right-1 h-7 w-24 px-2 text-caption font-semibold"
             variant="secondary"
             disabled={formDisabled || inputSearchButtonIsDisabled}
             ref={$submitButton}

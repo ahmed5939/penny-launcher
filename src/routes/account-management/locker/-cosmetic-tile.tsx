@@ -96,7 +96,7 @@ export function CosmeticTile({
         <span
           className={cn(
             'absolute inset-x-0 bottom-0 truncate px-1 pb-1 text-center font-semibold text-white',
-            size === 'small' ? 'text-[0.5625rem]' : 'text-[0.625rem]'
+            size === 'small' ? 'text-3xs' : 'text-2xs'
           )}
         >
           {cosmetic.name}

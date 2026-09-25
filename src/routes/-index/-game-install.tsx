@@ -1,15 +1,11 @@
 import {
-  FolderOpen,
-  Gamepad2,
   HardDrive,
   RefreshCw,
-  Store,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import {
   Chip,
-  EmptyState,
   KeyValue,
   Panel,
   PanelBody,
@@ -23,11 +19,12 @@ import { useGameInstall } from '../../hooks/game-install'
 import { relativeTime } from '../../lib/dates'
 import { toast } from '../../lib/notifications'
 
-export function HomeGameInstall() {
+/** Point Penny at the game, or hand off to the store app that installs it. */
+export function useGameFolderActions() {
   const { t } = useTranslation(['general'])
-  const { loading, status, refresh } = useGameInstall()
+  const { refresh } = useGameInstall()
 
-  const handleChooseFolder = async () => {
+  const chooseFolder = async () => {
     const result = await window.electronAPI.chooseGameFolder()
 
     if (result.reason === 'canceled') {
@@ -35,21 +32,36 @@ export function HomeGameInstall() {
     }
 
     if (!result.ok) {
-      toast(t('home.game.folder-invalid'))
+      toast.error(t('home.game.folder-invalid'))
       return
     }
 
     await refresh(true)
   }
 
-  const handleOpen = async (target: 'updater' | 'egl' | 'xbox') => {
+  const openOfficial = async (target: 'updater' | 'egl' | 'xbox') => {
     const result = await window.electronAPI.openGameOfficialApp(target)
 
-    toast(
-      t(result.ok ? 'home.game.update-started' : 'home.game.update-failed')
-    )
+    if (result.ok) {
+      toast.success(t('home.game.update-started'))
+    } else {
+      toast.error(t('home.game.update-failed'))
+    }
     await refresh(true)
   }
+
+  return { chooseFolder, openOfficial }
+}
+
+/**
+ * The installed game's version and update state. A missing install is the
+ * hero's business — it replaces Play with "Choose game folder" — so this
+ * only draws once there is a game to describe.
+ */
+export function HomeGameInstall() {
+  const { t } = useTranslation(['general'])
+  const { loading, status, refresh } = useGameInstall()
+  const { chooseFolder: handleChooseFolder, openOfficial: handleOpen } = useGameFolderActions()
 
   if (!status) {
     return (
@@ -64,40 +76,7 @@ export function HomeGameInstall() {
   }
 
   if (!status.install.found) {
-    return (
-      <EmptyState
-        icon={HardDrive}
-        title={t('home.game.missing-title')}
-        description={t('home.game.missing-description')}
-        action={
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button
-              type="button"
-              onClick={() => void handleChooseFolder()}
-            >
-              <FolderOpen className="mr-2 size-4" />
-              {t('home.game.choose-folder')}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void handleOpen('egl')}
-            >
-              <Store className="mr-2 size-4" />
-              {t('home.game.open-egl')}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => void handleOpen('xbox')}
-            >
-              <Gamepad2 className="mr-2 size-4" />
-              {t('home.game.open-xbox')}
-            </Button>
-          </div>
-        }
-      />
-    )
+    return null
   }
 
   const { install } = status
@@ -133,7 +112,7 @@ export function HomeGameInstall() {
             copyable
             label={t('home.game.path')}
             value={
-              <span className="break-all font-mono text-[0.75rem]">
+              <span className="break-all font-mono text-xs">
                 {install.binariesPath}
               </span>
             }

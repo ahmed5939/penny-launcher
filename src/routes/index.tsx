@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { PanelSectionHeader } from '../components/page'
 import { AutomationChips } from './-index/-automation-chips'
 import { HomeGameInstall } from './-index/-game-install'
-import { HomeHero } from './-index/-hero'
+import { HomeDashboard } from './-index/-home/-dashboard'
 import { HomeAlerts } from './-index/-home/-index'
 import { PennyDBMissionBoard } from './-index/-home/-pennydb-board'
 import { useAlertsSummary } from './-index/-hooks'
@@ -17,29 +17,36 @@ export const Route = createRoute({
 
 export function IndexComponent() {
   const { t } = useTranslation(['general', 'sidebar'])
+
   return (
-    <div className="home-dashboard space-y-5">
-      <HomeHero />
-      <div className="home-dashboard-panels grid items-start gap-4">
-        <HomeGameInstall />
-        <AutomationChips />
-      </div>
-      <section className="space-y-4">
-        <PanelSectionHeader
-          title={t('general:home.alerts.title')}
-          actions={
-            <Link
-              to="/stw-operations/missions"
-              search={{ tab: 'overview' }}
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              {t('sidebar:open-missions')} →
-            </Link>
-          }
-        />
-        <HomeAlerts summaryOnly />
-        <PennyDBMissionBoardFallback />
-      </section>
+    <div className="home-dashboard space-y-6">
+      <HomeDashboard
+        main={
+          <section className="space-y-3">
+            <PanelSectionHeader
+              className="border-0 px-0.5 py-0"
+              title={t('general:home.alerts.title')}
+              actions={
+                <Link
+                  to="/stw-operations/missions"
+                  search={{ tab: 'overview' }}
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  {t('sidebar:open-missions')} →
+                </Link>
+              }
+            />
+            <HomeAlerts summaryOnly />
+            <PennyDBMissionBoardFallback />
+          </section>
+        }
+        side={
+          <>
+            <AutomationChips />
+            <HomeGameInstall />
+          </>
+        }
+      />
     </div>
   )
 }

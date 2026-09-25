@@ -13,6 +13,7 @@ import {
 import { CommonMissionsSection } from '../-components/-common-missions-section'
 import { EmptySection } from '../-components/-empty'
 import { TitleSection } from '../-components/-title'
+import { zoneArtForTheater } from '../-components/-zone-art'
 import { ZonePagination } from './-zone-pagination'
 
 import { useZoneMissionsPagination } from './-hooks'
@@ -50,6 +51,7 @@ export function ZoneSection({
     >
       <TitleSection
         accent={accent}
+        art={zoneArtForTheater(theaterId)}
         deps={deps}
         id={`section-${theaterId}`}
       >
@@ -70,7 +72,7 @@ export function ZoneSection({
             children in one inline `.section-label` span, so there is no flex
             context here to order against.
           */}
-          <span className="figure ml-2 whitespace-nowrap text-[0.6875rem] font-normal normal-case tracking-normal text-muted-foreground/50">
+          <span className="figure ml-2 whitespace-nowrap text-caption font-normal normal-case tracking-normal text-muted-foreground/50">
             {t('information.missions', {
               total: missions.size,
             })}

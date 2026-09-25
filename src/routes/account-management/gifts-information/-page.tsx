@@ -5,18 +5,16 @@ import {
   CalendarDays,
   Gift,
   Package,
-  RefreshCw,
-  Search,
   Send,
   Users,
 } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '../../../components/ui/button'
+import { cosmeticTileColors } from '../../../config/fortnite/locker'
+
 import { GoToTop } from '../../../components/go-to-top'
 import { VirtualList } from '../../../components/virtual-list'
-import { Input } from '../../../components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -28,21 +26,27 @@ import {
   Callout,
   Chip,
   EmptyState,
+  FilterBar,
   KeyValue,
   PageHeader,
   Panel,
   PanelHeader,
+  RefreshButton,
+  SearchField,
   Segmented,
   StatRow,
   StatTile,
+  vaultRarityColors,
 } from '../../../components/page'
+
+import { CosmeticTile } from '../locker/-cosmetic-tile'
 
 import { useGiftsInformationData } from './-hooks'
 
 import { useGetAccounts } from '../../../hooks/accounts'
 
 import { getDateWithFormat, getRawDate } from '../../../lib/dates'
-import { cn, parseCustomDisplayName } from '../../../lib/utils'
+import { parseCustomDisplayName } from '../../../lib/utils'
 
 /**
  * Gift history — who gifted what, to which account, on which day.
@@ -86,18 +90,15 @@ function formatGiftDate(
 }
 
 /**
- * Battle-royale rarities carry their own palette, not the STW one in
- * `page/rarity` — that ladder is built from `RarityType` and knows nothing of
- * the series tiers Epic ships cosmetics in. Anything unmapped simply has no
- * colour, which keeps the ledger quiet.
+ * The six ordinary tiers take the app's one rarity palette. The series tiers
+ * Epic ships cosmetics in have no entry there, and the locker's tile gradient
+ * stops (`cosmeticRarityColors`) are too dark to read as text for several of
+ * them (Star Wars, Shadow), so their text colours stay here. Anything
+ * unmapped simply has no colour, which keeps the ledger quiet.
  */
-const rarityAccents: Record<string, string> = {
-  common: '#bfbaba',
-  uncommon: '#04c577',
-  rare: '#51a1db',
-  epic: '#d076f6',
-  legendary: '#ed7e39',
-  mythic: '#ffd93d',
+const baseRarityAccents: Record<string, string> = vaultRarityColors
+
+const seriesRarityAccents: Record<string, string> = {
   'icon series': '#20c9c0',
   'dark series': '#c034c4',
   'frozen series': '#8ed4f5',
@@ -111,8 +112,37 @@ const rarityAccents: Record<string, string> = {
 }
 
 function rarityAccent(rarity: string | null) {
-  return rarity ? rarityAccents[rarity.toLowerCase()] ?? null : null
+  if (!rarity) {
+    return null
+  }
+
+  const key = rarity.toLowerCase()
+
+  return baseRarityAccents[key] ?? seriesRarityAccents[key] ?? null
 }
+
+/**
+ * Epic's display value ("Icon Series", "Gaming Legends Series") folded to
+ * the token the locker palette is keyed by (`icon`, `gaminglegends`), so a
+ * gifted cosmetic sits on the same plate it does in the locker.
+ */
+function rarityToken(rarity: string | null) {
+  return (rarity ?? '')
+    .toLowerCase()
+    .replace(/\s*series$/, '')
+    .replace(/\s+/g, '')
+}
+
+function plateStyle(rarity: string | null) {
+  const [from, to] = cosmeticTileColors({ rarity: rarityToken(rarity) })
+
+  return {
+    backgroundImage: `radial-gradient(circle at 50% 38%, ${from}, ${to})`,
+  }
+}
+
+/** How many of the newest gifts the showcase strip draws as full tiles. */
+const showcaseSize = 10
 
 type GiftRow = {
   accountId: string
@@ -137,25 +167,12 @@ type GiftGroup = {
 type GroupMode = 'day' | 'sender'
 
 export function RouteComponent() {
-  const { t } = useTranslation(['sidebar', 'account-management'])
-
-  return (
-    <>
-      <PageHeader
-        icon={Gift}
-        section={t('account-management.title')}
-        title={t('account-management.options.gifts-information')}
-        description={t('gifts-information.description', {
-          ns: 'account-management',
-        })}
-      />
-      <Content />
-    </>
-  )
+  return <Content />
 }
 
 function Content() {
   const { t } = useTranslation(['account-management'])
+  const { t: tSidebar } = useTranslation(['sidebar'])
 
   const { accountList } = useGetAccounts()
   const { data, handleGetInfo, isDisabledForm, isLoading } =
@@ -182,7 +199,7 @@ function Content() {
       const account = accountList[entry.accountId]
       const accountName = account
         ? parseCustomDisplayName(account)
-        : entry.accountId
+        : 'Unlinked account'
 
       entry.senders.forEach((sender) => {
         sender.cosmetics.forEach((cosmetic, index) => {
@@ -249,35 +266,19 @@ function Content() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
-        <Segmented
-          onChange={setGroupMode}
-          options={groupOptions}
-          value={groupMode}
-        />
-
-        <div className="relative ml-auto w-full max-w-xs">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="h-8 pl-8"
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder={t('gifts-information.filters.search')}
-            value={search}
+      <PageHeader
+        actions={
+          <RefreshButton
+            disabled={isDisabledForm}
+            loading={isLoading}
+            onClick={handleGetInfo}
           />
-        </div>
-
-        <Button
-          className="min-w-32"
-          disabled={isDisabledForm}
-          onClick={handleGetInfo}
-        >
-          {isLoading ? (
-            <RefreshCw className="animate-spin" />
-          ) : (
-            t('gifts-information.form.submit-button')
-          )}
-        </Button>
-      </div>
+        }
+        description={t('gifts-information.description')}
+        icon={Gift}
+        section={tSidebar('account-management.title')}
+        title={tSidebar('account-management.options.gifts-information')}
+      />
 
       {data.length > 0 && (
         <StatRow>
@@ -321,6 +322,11 @@ function Content() {
         </Callout>
       ))}
 
+      <LatestGifts
+        onSelect={setSelected}
+        rows={rows}
+      />
+
       <Panel id="gifts-card">
         <PanelHeader
           compact
@@ -338,6 +344,21 @@ function Content() {
             </span>
           }
         />
+
+        <FilterBar>
+          <Segmented
+            onChange={setGroupMode}
+            options={groupOptions}
+            value={groupMode}
+          />
+          <SearchField
+            className="ml-auto max-w-xs"
+            label={t('gifts-information.filters.search')}
+            onChange={setSearch}
+            placeholder={t('gifts-information.filters.search')}
+            value={search}
+          />
+        </FilterBar>
 
         {groups.length === 0 ? (
           <div className="p-4">
@@ -465,13 +486,13 @@ function formatDayLabel(dayKey: string) {
  * row is a div like any other.
  */
 function columnTemplate(showAccount: boolean) {
-  return `minmax(12rem, 1fr) 9rem 9rem 12rem${
+  return `minmax(14rem, 1fr) 9rem 12rem${
     showAccount ? ' 12rem' : ''
   } 7rem`
 }
 
 /** First guesses; every line reports its real height once it mounts. */
-const giftRowHeight = 48
+const giftRowHeight = 57
 const giftGroupHeight = 37
 
 type GiftLine =
@@ -521,9 +542,6 @@ function GiftsTable({
         >
           <span className="micro-label">
             {t('gifts-information.table.item')}
-          </span>
-          <span className="micro-label">
-            {t('gifts-information.table.type')}
           </span>
           <span className="micro-label">
             {t('gifts-information.table.rarity')}
@@ -601,12 +619,11 @@ const GiftTableRow = memo(function GiftTableRow({
   showAccount: boolean
   template: string
 }) {
-  const accent = rarityAccent(row.cosmetic.rarity)
   const time = formatGiftDate(row.date, 'h:mm A')
 
   return (
     <div
-      className="grid cursor-pointer items-center gap-3 border-b border-border/30 px-4 py-2 text-[0.8125rem] transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:outline-none"
+      className="grid items-center gap-3 border-b border-border/30 px-4 py-2 text-ui transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:outline-none"
       onClick={() => onSelect(row)}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -619,21 +636,17 @@ const GiftTableRow = memo(function GiftTableRow({
       tabIndex={0}
     >
       <span className="flex min-w-0 items-center gap-3">
-        <CosmeticArt
-          accent={accent}
-          cosmetic={row.cosmetic}
-        />
+        <CosmeticArt cosmetic={row.cosmetic} />
         <span className="min-w-0">
           <span className="block truncate font-medium">
             {row.cosmetic.name}
           </span>
-          <span className="block truncate text-[0.6875rem] text-muted-foreground">
-            {row.cosmetic.templateId}
-          </span>
+          {row.cosmetic.type && (
+            <span className="block truncate text-caption text-muted-foreground">
+              {row.cosmetic.type}
+            </span>
+          )}
         </span>
-      </span>
-      <span className="truncate text-muted-foreground">
-        {row.cosmetic.type ?? '—'}
       </span>
       <RarityLabel rarity={row.cosmetic.rarity} />
       <span className="truncate">{row.senderName}</span>
@@ -649,29 +662,12 @@ const GiftTableRow = memo(function GiftTableRow({
   )
 })
 
-function CosmeticArt({
-  accent,
-  className,
-  cosmetic,
-}: {
-  accent: string | null
-  className?: string
-  cosmetic: GiftsInformationCosmetic
-}) {
+/** The row's art on the rarity plate the locker draws it on. */
+function CosmeticArt({ cosmetic }: { cosmetic: GiftsInformationCosmetic }) {
   return (
     <span
-      className={cn(
-        'grid size-9 shrink-0 place-items-center overflow-hidden rounded-lg border bg-muted/40',
-        className
-      )}
-      style={
-        accent
-          ? {
-              borderColor: `color-mix(in srgb, ${accent} 45%, transparent)`,
-              backgroundColor: `color-mix(in srgb, ${accent} 12%, transparent)`,
-            }
-          : { borderColor: 'hsl(var(--border) / 0.6)' }
-      }
+      className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-md"
+      style={plateStyle(cosmetic.rarity)}
     >
       {cosmetic.image ? (
         <img
@@ -682,9 +678,64 @@ function CosmeticArt({
           src={cosmetic.image}
         />
       ) : (
-        <Gift className="size-4 text-muted-foreground" />
+        <Gift className="size-4 text-white/60" />
       )}
     </span>
+  )
+}
+
+/**
+ * The newest gifts as the game would show them: full cosmetic tiles on
+ * their rarity plates, the sender underneath. The ledger below is for
+ * finding things; this strip is for seeing what arrived.
+ */
+function LatestGifts({
+  onSelect,
+  rows,
+}: {
+  onSelect: (row: GiftRow) => void
+  rows: Array<GiftRow>
+}) {
+  const latest = useMemo(
+    () =>
+      rows
+        .filter((row) => row.timestamp !== null)
+        .sort((rowA, rowB) => (rowB.timestamp ?? 0) - (rowA.timestamp ?? 0))
+        .slice(0, showcaseSize),
+    [rows]
+  )
+
+  if (latest.length === 0) {
+    return null
+  }
+
+  return (
+    <Panel>
+      <PanelHeader
+        compact
+        icon={Gift}
+        title="Latest gifts"
+      />
+      <div className="flex gap-2 overflow-x-auto px-4 py-4">
+        {latest.map((row) => (
+          <CosmeticTile
+            cosmetic={{
+              color: null,
+              imageUrl: row.cosmetic.image,
+              name: row.cosmetic.name,
+              rarity: rarityToken(row.cosmetic.rarity),
+              seriesColors: null,
+            }}
+            footer={`From ${row.senderName}`}
+            key={row.key}
+            onClick={() => onSelect(row)}
+            title={`${row.cosmetic.name} — from ${row.senderName}${
+              row.date ? `, ${formatGiftDate(row.date)}` : ''
+            }`}
+          />
+        ))}
+      </div>
+    </Panel>
   )
 }
 
@@ -726,7 +777,6 @@ function GiftDetailDialog({
 }) {
   const { t } = useTranslation(['account-management'])
 
-  const accent = row ? rarityAccent(row.cosmetic.rarity) : null
   const received = row
     ? formatGiftDate(row.date, 'dddd, MMMM D, YYYY · h:mm A')
     : null
@@ -756,15 +806,8 @@ function GiftDetailDialog({
 
             <div className="flex flex-col gap-4 sm:flex-row">
               <span
-                className="grid aspect-square w-full shrink-0 place-items-center overflow-hidden rounded-xl border bg-muted/30 sm:size-40"
-                style={
-                  accent
-                    ? {
-                        borderColor: `color-mix(in srgb, ${accent} 45%, transparent)`,
-                        backgroundImage: `radial-gradient(circle at 50% 30%, color-mix(in srgb, ${accent} 28%, transparent), transparent 70%)`,
-                      }
-                    : undefined
-                }
+                className="grid aspect-square w-full shrink-0 place-items-center overflow-hidden rounded-xl sm:size-44"
+                style={plateStyle(row.cosmetic.rarity)}
               >
                 {row.cosmetic.image ? (
                   <img
@@ -774,7 +817,7 @@ function GiftDetailDialog({
                     src={row.cosmetic.image}
                   />
                 ) : (
-                  <Gift className="size-10 text-muted-foreground" />
+                  <Gift className="size-10 text-white/60" />
                 )}
               </span>
 

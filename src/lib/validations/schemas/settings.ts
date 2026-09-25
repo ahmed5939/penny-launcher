@@ -97,12 +97,10 @@ export const customizableMenuSettingsSchema = z
 
     stwOperations: z.boolean().default(true),
     autoKick: z.boolean().default(true),
-    taxiService: z.boolean().default(true),
-    party: z.boolean().default(true),
     expeditions: z.boolean().default(true),
     squadPresets: z.boolean().default(true),
     inventory: z.boolean().default(true),
-    compendium: z.boolean().default(true),
+    codex: z.boolean().default(true),
     timeline: z.boolean().default(true),
     quests: z.boolean().default(true),
     loadouts: z.boolean().default(true),

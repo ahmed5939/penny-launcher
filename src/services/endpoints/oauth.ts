@@ -3,10 +3,13 @@ import type {
   AuthorizationCodeResponse,
   CreateAccessTokenWithClientCredentialsResponse,
   CreateExchangeCodeResponse,
+  DeviceAuthorizationResponse,
   DeviceAuthResponse,
   ExchangeCodeResponse,
   VerifyAccessTokenResponse,
 } from '../../types/services/authorizations'
+
+import { nintendoSwitchGameClient } from '../../config/fortnite/clients'
 
 import { oauthService } from '../config/oauth'
 import { publicAccountService } from '../config/public-account'
@@ -108,6 +111,65 @@ export function createAccessTokenUsingClientCredentials({
       },
     },
   )
+}
+
+/**
+ * Quick login (device code grant). Epic only serves the device authorization
+ * and its polling from the prod03 account host, and only for the Switch
+ * client.
+ */
+
+const oauthProd03BaseURL =
+  'https://account-public-service-prod03.ol.epicgames.com/account/api/oauth'
+
+export function createDeviceAuthorization(
+  bootstrapAccessToken: string,
+  config?: AxiosRequestConfig
+) {
+  return oauthService.post<DeviceAuthorizationResponse>(
+    '/deviceAuthorization',
+    {},
+    {
+      ...config,
+      baseURL: oauthProd03BaseURL,
+      headers: {
+        Authorization: `bearer ${bootstrapAccessToken}`,
+      },
+    }
+  )
+}
+
+export function getAccessTokenUsingDeviceCode(
+  device_code: string,
+  config?: AxiosRequestConfig
+) {
+  return oauthService.post<AuthorizationCodeResponse>(
+    '/token',
+    {
+      grant_type: 'device_code',
+      device_code,
+    },
+    {
+      ...config,
+      baseURL: oauthProd03BaseURL,
+      headers: {
+        Authorization: `basic ${nintendoSwitchGameClient.auth}`,
+      },
+    }
+  )
+}
+
+export function getExchangeCodeUsingDeviceCodeToken(
+  accessToken: string,
+  config?: AxiosRequestConfig
+) {
+  return oauthService.get<CreateExchangeCodeResponse>('/exchange', {
+    ...config,
+    baseURL: oauthProd03BaseURL,
+    headers: {
+      Authorization: `bearer ${accessToken}`,
+    },
+  })
 }
 
 export function createDeviceAuthCredentials({

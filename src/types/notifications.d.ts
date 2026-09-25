@@ -3,6 +3,9 @@ export type RewardsNotification = {
     totalMissionXPRedeemed: number
     totalQuestXPRedeemed: number
   }
+  source?: string
+  description?: string
+  outcome?: 'success' | 'error' | 'info'
   accountId: string
   createdAt: string
   id: string

@@ -1,74 +1,83 @@
 import type { ReactNode } from 'react'
 
 import { Link } from '@tanstack/react-router'
-import { Plus, Rocket, Square } from 'lucide-react'
+import { FolderOpen, Plus, Rocket, Square } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEffect, useRef, useState } from 'react'
 import { useDocumentVisible } from '../../hooks/ui/document-visibility'
 
-import { PennyRender } from '../../components/branding/penny-portrait'
+import { zoneArt } from '../../components/page/page-header'
 import { Button } from '../../components/ui/button'
 
 import { useGetAccounts, useGetSelectedAccount } from '../../hooks/accounts'
 import { useGameAction } from '../../hooks/ui/game-action'
-import { useAlertsSummary, useAutomationServices } from './-hooks'
+import { useGameInstall } from '../../hooks/game-install'
+import { useGameFolderActions } from './-game-install'
 
-import { numberWithCommaSeparator } from '../../lib/parsers/numbers'
-import { parseCustomDisplayName, cn } from '../../lib/utils'
+import { parseCustomDisplayName } from '../../lib/utils'
 
-/** Home identity, launch action and live summary. */
-export function HomeHero() {
+/** What a player checks before pressing Play. Absent until loaded. */
+export type HeroToday = {
+  dailies: { done: number; total: number } | null
+  expeditionsReady: number | null
+  resetIn: string
+}
+
+/**
+ * The launcher: key art, who you are, one Play button and the three things
+ * worth knowing before you press it. When the game is not installed, Play
+ * becomes the way to fix that, rather than a disabled button above a
+ * separate "not installed" card further down the page.
+ */
+export function HomeHero({ today }: { today?: HeroToday }) {
   const { t } = useTranslation(['general'])
 
   const { accountsArray } = useGetAccounts()
   const { selected } = useGetSelectedAccount()
   const { isRunning: customProcessIsRunning, canLaunch, launch: handleLaunch, close } = useGameAction()
-  const { running, services } = useAutomationServices()
-  const alerts = useAlertsSummary()
+  const { status: install } = useGameInstall()
+  const { chooseFolder, openOfficial } = useGameFolderActions()
+  const notInstalled = install !== null && !install.install.found
 
   const elapsed = useSessionTimer(customProcessIsRunning)
 
   const hasAccounts = accountsArray.length > 0
   const displayName = selected ? parseCustomDisplayName(selected) : null
 
-  const headline = !hasAccounts
-    ? t('home.no-account')
-    : customProcessIsRunning
-      ? t('home.playing')
-      : t('home.ready')
+  // The game's name, not a status: the state (ready, playing, not
+  // installed) is the line above it, in the tone it deserves.
+  const headline = !hasAccounts ? t('home.no-account') : 'Save the World'
 
   return (
-    <section className="relative select-none overflow-hidden rounded-xl border border-border/70 bg-card">
+    <section className="relative -mx-5 -mt-5 select-none overflow-hidden">
       {/*
-        Backdrop: a brand-gradient wash over the card plus two soft light
-        sources. Everything is tokens — the wash follows the active colour
-        theme, and the card underneath follows the mode, so the hero reads as
-        a poster in dark and a sunlit panel in light instead of a dark island.
+        The game's key art, full bleed, fading into the page — the opening of
+        a game client's library page. It replaces a brand-gradient wash, two
+        blurred light orbs and a faded mascot watermark, which together were
+        the generated-landing-page look this screen was meant not to have.
       */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--brand-via)/0.10)] via-transparent to-[hsl(var(--brand-to)/0.08)] dark:from-[hsl(var(--brand-via)/0.16)] dark:to-[hsl(var(--brand-to)/0.14)]" />
-      <div className="absolute -right-24 -top-32 size-80 rounded-full bg-primary/20 blur-3xl" />
-      {/* The gradient's far stop, as the second light source. */}
-      <div className="absolute -bottom-36 -left-24 size-80 rounded-full bg-[hsl(var(--brand-to)/0.10)] blur-3xl" />
-      {/*
-        Penny herself as the watermark. Faded into the corner and masked out
-        toward the text so the headline never sits on top of her face.
-      */}
-      <PennyRender className="absolute -bottom-16 -right-16 hidden h-[128%] w-auto opacity-[0.10] [mask-image:linear-gradient(to_left,black_30%,transparent_80%)] sm:block" />
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
+      <img
+        alt=""
+        aria-hidden
+        className="absolute inset-0 size-full object-cover object-[center_35%] opacity-80 dark:opacity-75"
+        decoding="async"
+        src={zoneArt['twine-peaks']}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/30 to-background/0" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/20 to-transparent" />
 
-      <div className="relative flex flex-col gap-5 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+      <div className="relative flex min-h-60 flex-col justify-end gap-5 px-6 pb-6 pt-14 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-primary/80">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground/70">
             {customProcessIsRunning && (
               <span className="relative flex size-1.5">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
                 <span className="relative inline-flex size-full rounded-full bg-success" />
               </span>
             )}
-            {t('home.eyebrow')}
+            {!hasAccounts ? t('home.eyebrow') : customProcessIsRunning ? t('home.playing') : notInstalled ? <span className="text-warning">{t('home.game.missing-title')}</span> : t('home.ready')}
           </div>
 
-          <h1 className="mt-2 text-[1.75rem] font-black leading-none tracking-tight text-foreground sm:text-[2rem]">
+          <h1 className="mt-2 text-display-lg font-extrabold leading-none tracking-tight text-foreground">
             {headline}
           </h1>
 
@@ -77,14 +86,14 @@ export function HomeHero() {
               <span>{t('home.no-account-description')}</span>
             ) : displayName ? (
               <>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[0.65rem] font-bold uppercase text-primary ring-1 ring-inset ring-primary/40">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-2xs font-bold uppercase text-primary ring-1 ring-inset ring-primary/40">
                   {displayName.charAt(0)}
                 </span>
                 <span className="truncate font-medium text-foreground/80">
                   {displayName}
                 </span>
                 {elapsed !== null && (
-                  <span className="ml-1 rounded-full bg-foreground/10 px-2 py-0.5 text-[0.7rem] tabular-nums text-foreground/70">
+                  <span className="ml-1 rounded-full bg-foreground/10 px-2 py-0.5 text-caption tabular-nums text-foreground/70">
                     {formatElapsed(elapsed)}
                   </span>
                 )}
@@ -97,25 +106,37 @@ export function HomeHero() {
           <div className="mt-5 flex flex-wrap items-center gap-2.5">
             {!hasAccounts ? (
               <Button
-                className="h-11 rounded-lg bg-gradient-to-r from-brand-from to-brand-to px-7 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-black/15 hover:brightness-110 dark:shadow-black/40"
+                className="h-11 px-7 text-sm font-semibold"
                 asChild
               >
                 <Link
                   to="/accounts/add/$type"
-                  params={{ type: 'authorization-code' }}
+                  params={{ type: 'quick-login' }}
                 >
                   <Plus className="mr-2 size-4" />
                   {t('home.add-account')}
                 </Link>
               </Button>
+            ) : notInstalled && !customProcessIsRunning ? (
+              <>
+                <Button
+                  className="h-12 px-8 text-base font-semibold"
+                  onClick={() => void chooseFolder()}
+                >
+                  <FolderOpen className="mr-2 size-4" />
+                  {t('home.game.choose-folder')}
+                </Button>
+                <Button
+                  className="h-12 px-5 text-sm font-semibold"
+                  variant="secondary"
+                  onClick={() => void openOfficial('egl')}
+                >
+                  {t('home.game.open-egl')}
+                </Button>
+              </>
             ) : (
               <Button
-                className={cn(
-                  'h-11 rounded-lg px-9 text-sm font-bold uppercase tracking-wider text-white',
-                  'bg-gradient-to-r from-brand-from to-brand-to',
-                  'shadow-lg shadow-black/15 transition-all hover:brightness-110 dark:shadow-black/40',
-                  'disabled:opacity-40 disabled:shadow-none'
-                )}
+                className="h-12 min-w-44 px-10 text-base font-semibold"
                 disabled={
                   !canLaunch
                 }
@@ -130,7 +151,7 @@ export function HomeHero() {
 
             {customProcessIsRunning && (
               <Button
-                className="h-11 rounded-lg border-destructive/40 px-5 text-sm font-semibold uppercase tracking-wider text-destructive hover:bg-destructive/15"
+                className="h-12 border-destructive/40 px-5 text-sm font-semibold text-destructive hover:bg-destructive/15"
                 variant="outline"
                 onClick={close}
               >
@@ -141,24 +162,22 @@ export function HomeHero() {
           </div>
         </div>
 
-        <dl className="flex shrink-0 gap-6 sm:flex-col sm:gap-3 sm:border-l sm:border-foreground/10 sm:pl-8">
-          <Stat
-            label={t('home.stats.accounts')}
-            value={numberWithCommaSeparator(accountsArray.length)}
-          />
-          <Stat
-            label={t('home.stats.services')}
-            value={`${running}/${services.length}`}
-          />
-          <Stat
-            label={t('home.stats.alerts')}
-            value={
-              alerts.isLoading
-                ? '—'
-                : numberWithCommaSeparator(alerts.total)
-            }
-          />
-        </dl>
+        {today && (
+          <dl className="flex shrink-0 gap-8">
+            <Stat
+              label="Daily quests"
+              value={today.dailies ? `${today.dailies.done}/${today.dailies.total}` : '—'}
+            />
+            <Stat
+              label="Expeditions ready"
+              value={today.expeditionsReady ?? '—'}
+            />
+            <Stat
+              label="Daily reset in"
+              value={today.resetIn}
+            />
+          </dl>
+        )}
       </div>
     </section>
   )
@@ -166,11 +185,11 @@ export function HomeHero() {
 
 function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="sm:text-right">
-      <dd className="text-lg font-bold leading-none tabular-nums text-foreground">
+    <div className="flex flex-col-reverse">
+      <dd className="figure text-display-sm font-bold leading-none text-foreground">
         {value}
       </dd>
-      <dt className="mt-1 text-[0.7rem] uppercase tracking-wide text-muted-foreground/70">
+      <dt className="mt-1.5 text-caption text-foreground/60">
         {label}
       </dt>
     </div>

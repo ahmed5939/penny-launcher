@@ -11,7 +11,7 @@
   },
   "missing": {
     "title": "No settings file yet",
-    "note": "Launch Fortnite once so it writes its settings, then reload this page."
+    "note": "Launch Fortnite once so it writes its settings, then select Refresh."
   },
   "form": {
     "resolution": {
@@ -57,7 +57,7 @@
     "save": "Save changes",
     "discard": "Discard",
     "restore": "Restore backup",
-    "reload": "Reload"
+    "reload": "Refresh"
   },
   "dirty": "Unsaved changes",
   "status": {
@@ -65,5 +65,6 @@
     "save-error": "Could not save GameUserSettings.ini",
     "restored": "Backup restored",
     "restore-error": "Could not restore the backup"
-  }
+  },
+  "clean": "No changes"
 }

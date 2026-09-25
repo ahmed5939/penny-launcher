@@ -105,7 +105,7 @@ export function RewardPayload({
         )}
         {grade.name && (
           <span
-            className="truncate text-[0.75rem] font-medium leading-tight text-foreground/85 compact:hidden"
+            className="truncate text-xs font-medium leading-tight text-foreground/85 compact:hidden"
             title={grade.name}
           >
             {grade.name}
@@ -113,7 +113,7 @@ export function RewardPayload({
         )}
         {grade.word && (
           <span
-            className="truncate text-[0.625rem] font-semibold uppercase leading-none tracking-[0.1em] text-[color:var(--rarity)] compact:hidden"
+            className="truncate text-2xs font-semibold leading-none text-[color:var(--rarity)] compact:hidden"
             style={rarityStyle(grade.accent)}
           >
             {grade.word}
@@ -122,7 +122,7 @@ export function RewardPayload({
       </span>
 
       {extraCount > 0 && (
-        <span className="figure shrink-0 rounded bg-background/60 px-1.5 py-0.5 text-[0.625rem] font-semibold text-muted-foreground ring-1 ring-inset ring-border/60">
+        <span className="figure shrink-0 rounded bg-background/60 px-1.5 py-0.5 text-2xs font-semibold text-muted-foreground ring-1 ring-inset ring-border/60">
           +{extraCount}
         </span>
       )}
@@ -161,19 +161,19 @@ export function RewardLine({
       />
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[0.8125rem] font-medium leading-tight text-foreground/90">
+        <span className="block truncate text-ui font-medium leading-tight text-foreground/90">
           {grade.name || reward.itemId}
         </span>
         {grade.word && (
           <span
-            className="mt-0.5 block text-[0.625rem] font-semibold uppercase leading-none tracking-[0.08em] text-[color:var(--rarity)]"
+            className="mt-0.5 block text-2xs font-semibold leading-none text-[color:var(--rarity)]"
             style={rarityStyle(grade.accent)}
           >
             {grade.word}
           </span>
         )}
         {isBad && (
-          <span className="mt-0.5 block text-[0.625rem] font-semibold uppercase leading-none tracking-[0.06em] text-destructive">
+          <span className="mt-0.5 block text-2xs font-semibold leading-none text-destructive">
             {t('sections.twine-peaks.mid')}
           </span>
         )}

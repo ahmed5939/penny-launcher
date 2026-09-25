@@ -22,8 +22,6 @@ export function useParseSummary() {
   const { accountsArray } = useGetAccounts()
 
   const result = useMemo(() => {
-    const totalNotifications = data.length
-    const totalNotificationsIndex = totalNotifications - 1
 
     const globalSummary: {
       accolades: RewardsNotification['accolades']
@@ -74,9 +72,8 @@ export function useParseSummary() {
       // Global first notification
       if (index === 0) {
         globalSummary.startsAt = notification.createdAt
-      } else if (totalNotificationsIndex === index) {
-        globalSummary.endsAt = notification.createdAt
       }
+      globalSummary.endsAt = notification.createdAt
 
       // Account last notification
       tmpAccountsSummary[notification.accountId].endsAt =

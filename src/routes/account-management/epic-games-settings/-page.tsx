@@ -1,30 +1,31 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { Clipboard, Cog, ExternalLinkIcon } from 'lucide-react'
-import { Trans, useTranslation } from 'react-i18next'
+import { Cog, ExternalLinkIcon, UserX } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { epicGamesAccountSettingsURL } from '../../../config/fortnite/links'
 
-import { SeparatorWithTitle } from '../../../components/ui/extended/separator'
 import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
 import {
-  FieldGroup,
-  FieldRow,
+  CopyField,
+  EmptyState,
   PageHeader,
   Panel,
-  PanelBody,
   PanelFooter,
 } from '../../../components/page'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 import { useHandlers } from './-actions'
 
-import { cn, parseCustomDisplayName } from '../../../lib/utils'
+import { assets } from '../../../lib/repository'
+import { parseCustomDisplayName } from '../../../lib/utils'
+
+const epicLogo = assets('epicgames')
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'], {
     keyPrefix: 'account-management',
   })
+  const { selected } = useGetSelectedAccount()
 
   return (
     <>
@@ -32,23 +33,35 @@ export function RouteComponent() {
         icon={Cog}
         section={t('title')}
         title={t('options.epic-settings')}
+        description="Open your Epic account settings in the browser, already signed in as the title-bar account."
       />
-      <Content />
+      {/* Keyed so a link made for one account never shows under another. */}
+      <Content key={selected?.accountId ?? 'none'} />
     </>
   )
 }
 
+/**
+ * One job: get the selected account into epicgames.com without a password.
+ * The account and the button that does it lead; the link itself — for
+ * pasting into another browser — sits under it once there is one.
+ */
 function Content() {
   const { t } = useTranslation(['account-management', 'general'])
 
   const { selected } = useGetSelectedAccount()
-  const {
-    currentCode,
-    isLoading,
-    handleGenerateCode,
-    handleOpenURL,
-    handleCopyCode,
-  } = useHandlers()
+  const { currentCode, isLoading, handleGenerateCode, handleOpenURL } =
+    useHandlers()
+
+  if (!selected) {
+    return (
+      <EmptyState
+        description="Pick one in the title bar and its settings link is generated here."
+        icon={UserX}
+        title="No account selected"
+      />
+    )
+  }
 
   const settingsUrl = currentCode
     ? epicGamesAccountSettingsURL(currentCode)
@@ -56,84 +69,61 @@ function Content() {
 
   return (
     <Panel className="max-w-xl">
-      <PanelBody>
-        <FieldGroup>
-          <FieldRow
-            label={
-              <Trans
-                ns="general"
-                i18nKey="account-selected"
-                values={{
-                  name: parseCustomDisplayName(selected),
-                }}
-              >
-                Account selected:{' '}
-                <span className="font-semibold text-foreground">
-                  {parseCustomDisplayName(selected)}
-                </span>
-              </Trans>
-            }
-          >
-            <Button onClick={handleGenerateCode}>
-              {isLoading ? (
-                <UpdateIcon className="animate-spin" />
-              ) : (
-                t('epic-settings.form.generate-button')
-              )}
-            </Button>
-          </FieldRow>
-
-          <FieldRow
-            label={t('epic-settings.form.open-button')}
-            stacked
-          >
-            <div className="relative flex w-full items-center">
-              <Input
-                type="text"
-                className="select-none pr-10"
-                defaultValue={settingsUrl}
-                disabled={settingsUrl === undefined}
-                readOnly
-              />
-              <Button
-                type="button"
-                className="absolute right-1 z-20 size-8 p-0"
-                variant="ghost"
-                onClick={handleCopyCode}
-                disabled={settingsUrl === undefined}
-              >
-                <Clipboard size={16} />
-              </Button>
-            </div>
-          </FieldRow>
-        </FieldGroup>
-      </PanelBody>
-
-      <PanelFooter className="flex-col items-stretch gap-3">
-        <SeparatorWithTitle>
-          {t('separators.or', {
-            ns: 'general',
-          })}
-        </SeparatorWithTitle>
-
+      <div className="flex items-center gap-4 px-5 py-5">
+        {epicLogo && (
+          <img
+            alt=""
+            className="size-12 shrink-0 object-contain opacity-90 dark:invert"
+            decoding="async"
+            src={epicLogo}
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-title font-semibold">
+            {parseCustomDisplayName(selected)}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {settingsUrl
+              ? 'Link ready — open it or copy it below.'
+              : 'Generate a one-time sign-in link for this account.'}
+          </p>
+        </div>
         <Button
-          className={cn('space-x-1 w-full', {
-            'bg-secondary/80 cursor-not-allowed opacity-50':
-              settingsUrl === undefined,
-          })}
-          variant="secondary"
-          asChild
+          className="min-w-32"
+          disabled={isLoading}
+          onClick={handleGenerateCode}
+          variant={settingsUrl ? 'secondary' : 'default'}
         >
-          <a
-            href={settingsUrl}
-            title={settingsUrl}
-            onClick={handleOpenURL}
-          >
-            {t('epic-settings.form.open-button')}
-            <ExternalLinkIcon size={16} />
-          </a>
+          {isLoading ? (
+            <UpdateIcon className="animate-spin" />
+          ) : (
+            t('epic-settings.form.generate-button')
+          )}
         </Button>
-      </PanelFooter>
+      </div>
+
+      {settingsUrl && (
+        <PanelFooter>
+          <CopyField
+            className="min-w-0 flex-1"
+            value={settingsUrl}
+          />
+          <Button
+            asChild
+            className="h-8"
+            size="sm"
+          >
+            <a
+              href={settingsUrl}
+              onClick={handleOpenURL}
+              title={settingsUrl}
+            >
+              {t('epic-settings.form.open-button')}
+              <ExternalLinkIcon className="ml-1.5 size-3.5" />
+            </a>
+          </Button>
+        </PanelFooter>
+      )}
     </Panel>
   )
 }

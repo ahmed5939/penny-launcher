@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { itemCosts } from './costs'
+import { costRules, evolutionStep, itemCosts, levelStepCost } from './costs'
 import type { CostRules } from './costs'
 import type { BookItem } from './types'
 const xp='accountresource:schematicxp', rain='accountresource:reagent_c_t01'
@@ -39,5 +39,19 @@ describe('collection book resource costs',()=>{
     }}
     expect(itemCosts({...base,templateId:'schematic:three',level:30},'crystal',branches).remaining[rain]).toBe(40)
     expect(itemCosts({...base,templateId:'schematic:a_ore_t04',level:40},'crystal',branches).needsUpgrade).toBe(false)
+  })
+})
+
+describe('upgrade steps', () => {
+  it('prices a level step and lists the evolutions from the star cap', () => {
+    const id = Object.keys(costRules.rules).find((k) => k.startsWith('hero:') && costRules.rules[k].tier === 1 && costRules.rules[k].next.length)!
+    const step = evolutionStep(id)!
+    expect(step.tier).toBe(1)
+    expect(step.cap).toBe(10)
+    expect(step.next.length).toBeGreaterThan(0)
+    const cost = levelStepCost(id, 1, 10)!
+    expect(cost['accountresource:peoplexp']).toBeGreaterThan(0)
+    expect(levelStepCost(id, 1, 60)).toBeNull()
+    expect(levelStepCost('hero:nope', 1, 2)).toBeNull()
   })
 })

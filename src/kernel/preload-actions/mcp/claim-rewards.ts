@@ -90,3 +90,7 @@ export function notificationAutoKick(
       ),
   }
 }
+
+export function getAutomationHistory(): Promise<RewardsNotification[]> {
+  return ipcRenderer.invoke('automation-history:list')
+}

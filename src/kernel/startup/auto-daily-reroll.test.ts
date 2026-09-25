@@ -1,3 +1,4 @@
+import { recordAutomationHistory } from './automation-history'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -9,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   account: vi.fn(),
   snapshot: vi.fn(),
 }))
+vi.mock('./automation-history', () => ({ recordAutomationHistory: vi.fn() }))
 vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn(),
   readFile: vi.fn(async (file: string) => {
@@ -222,6 +224,7 @@ describe('daily reroll worker', () => {
     mocks.reroll.mockResolvedValue({ data: { profileChanges: [] } })
     const worker = await service()
     await worker.tick()
+    expect(recordAutomationHistory).toHaveBeenCalledWith(expect.objectContaining({ source: 'Auto daily reroll', outcome: 'info', description: expect.stringContaining('did not confirm') }))
     expect((await worker.status()).accounts.a.lastResult).toContain(
       'did not confirm',
     )

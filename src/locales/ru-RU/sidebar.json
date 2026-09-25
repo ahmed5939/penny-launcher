@@ -3,20 +3,17 @@
     "title": "ПВЕ Операции",
     "options": {
       "auto-kick": "АвтоКик",
-      "taxi-service": "Такси Сервис",
-      "party": "Управление Группой",
       "expeditions": "Экспедиции",
       "squad-presets": "Отряды выживших",
       "inventory": "Хранилище",
-      "compendium": "Компендиум",
+      "codex": "Кодекс",
       "quests": "Журнал заданий",
       "loadouts": "Наборы героев",
       "timeline": "Хронология событий",
       "shop": "Магазин STW",
       "xp-boosts": "Усилители Опыта",
       "auto-pin-urns": "Автозакрепление заданий",
-      "auto-llamas": "Автолама",
-      "endurance": "Эндьюранс"
+      "auto-llamas": "Автолама"
     },
     "auto-kick-status": {
       "issue": "Ошибка",

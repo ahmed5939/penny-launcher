@@ -49,7 +49,7 @@ export function AccountSwitcher() {
         <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 text-xs">
           <Link
             to="/accounts/add/$type"
-            params={{ type: 'authorization-code' }}
+            params={{ type: 'quick-login' }}
             onClick={() => setOpen(false)}
             className="hover:underline"
           >

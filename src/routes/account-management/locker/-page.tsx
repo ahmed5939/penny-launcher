@@ -3,7 +3,7 @@ import type { LockerSlotState } from '../../../kernel/core/locker'
 import type { LockerView } from '../../../state/management/locker'
 import type { SegmentedOption } from '../../../components/page'
 
-import { Plus, RotateCw, Shirt, Sparkles, UserX } from 'lucide-react'
+import { Plus, Shirt, Sparkles, UserX } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useTranslation } from 'react-i18next'
 
@@ -12,20 +12,19 @@ import {
   slotLabels,
 } from '../../../config/fortnite/locker'
 
-import { Button } from '../../../components/ui/button'
 import {
-  AccountToolbar,
   Callout,
   EmptyState,
   PageHeader,
   Panel,
   PanelBody,
   PanelHeader,
+  RefreshButton,
   Segmented,
   StatRow,
   StatTile,
+  ToolBadges,
 } from '../../../components/page'
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 
 import { CardPanel } from './-card-panel'
 import { Collection } from './-collection'
@@ -37,6 +36,12 @@ import { useLockerStore } from '../../../state/management/locker'
 
 import { useLockerPage, useOwnedForSlot } from './-hooks'
 
+/** Every slot the loadout board draws — the denominator for "Slots filled". */
+const slotTotal = lockerSlotCategories.reduce(
+  (total, category) => total + category.slots.length,
+  0
+)
+
 const viewOptions: Array<SegmentedOption<LockerView>> = [
   { label: 'Loadout', value: 'loadout' },
   { label: 'Collection', value: 'collection' },
@@ -45,24 +50,7 @@ const viewOptions: Array<SegmentedOption<LockerView>> = [
 ]
 
 export function RouteComponent() {
-  const { t } = useTranslation(['sidebar'])
-
-  return (
-    <>
-      <PageHeader
-        description="What this account is wearing, everything it owns, which sidekicks it is still missing, and the whole locker as one shareable image. Pick a slot to change what is equipped."
-        icon={Shirt}
-        section={t('account-management.title')}
-        title={
-          <span className="flex items-center gap-2">
-            BR Locker
-            <BetaBadge />
-          </span>
-        }
-      />
-      <Content />
-    </>
-  )
+  return <Content />
 }
 
 function Content() {
@@ -100,49 +88,48 @@ function Content() {
       }))
     )
   const pickerItems = useOwnedForSlot(owned, pickerSlot)
+  const { t } = useTranslation(['sidebar'])
+
+  const header = (
+    <PageHeader
+      actions={
+        <RefreshButton
+          disabled={!account}
+          loading={isLoading || isLoadingOwned}
+          onClick={handleReload}
+        />
+      }
+      description="What this account is wearing, everything it owns, the sidekicks it is still missing, and the whole locker as one shareable image. Pick a slot to change it."
+      icon={Shirt}
+      section={t('account-management.title')}
+      status={<ToolBadges beta />}
+      title="BR Locker"
+    />
+  )
 
   if (!account) {
     return (
-      <EmptyState
-        description="Pick one in the title bar and its locker loads here."
-        icon={UserX}
-        title="No account selected"
-      />
+      <>
+        {header}
+        <EmptyState
+          description="Pick one in the title bar and its locker loads here."
+          icon={UserX}
+          title="No account selected"
+        />
+      </>
     )
   }
 
-  const equippedCount = Object.values(slots).filter(
-    (slot) => slot.templateId
-  ).length
+  const equippedCount = lockerSlotCategories
+    .flatMap((category) => category.slots)
+    .filter((slotKey) => slots[slotKey]?.templateId).length
   const outfitCount = owned.filter(
     (cosmetic) => cosmetic.backendType === 'AthenaCharacter'
   ).length
 
   return (
     <>
-      <Panel>
-        <PanelBody>
-          <AccountToolbar
-            account={account}
-            actions={
-              <Button
-                disabled={isLoading || isLoadingOwned}
-                onClick={handleReload}
-                variant="outline"
-              >
-                <RotateCw
-                  className={
-                    isLoading || isLoadingOwned
-                      ? 'mr-2 size-4 animate-spin'
-                      : 'mr-2 size-4'
-                  }
-                />
-                Reload
-              </Button>
-            }
-          />
-        </PanelBody>
-      </Panel>
+      {header}
 
       {errorMessage && (
         <Callout
@@ -162,28 +149,30 @@ function Content() {
         </Callout>
       )}
 
-      <StatRow>
-        <StatTile
-          icon={Sparkles}
-          label="Owned"
-          value={owned.length.toLocaleString()}
-        />
-        <StatTile
-          icon={Shirt}
-          label="Outfits"
-          value={outfitCount.toLocaleString()}
-        />
-        <StatTile
-          label="Slots filled"
-          value={equippedCount}
-        />
-      </StatRow>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <StatRow>
+          <StatTile
+            icon={Sparkles}
+            label="Owned"
+            value={owned.length.toLocaleString()}
+          />
+          <StatTile
+            icon={Shirt}
+            label="Outfits"
+            value={outfitCount.toLocaleString()}
+          />
+          <StatTile
+            label="Slots filled"
+            value={`${equippedCount} / ${slotTotal}`}
+          />
+        </StatRow>
 
-      <Segmented
-        onChange={setView}
-        options={viewOptions}
-        value={view}
-      />
+        <Segmented
+          onChange={setView}
+          options={viewOptions}
+          value={view}
+        />
+      </div>
 
       {view === 'loadout' &&
         lockerSlotCategories.map((category) => (

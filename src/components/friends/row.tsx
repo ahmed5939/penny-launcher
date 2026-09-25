@@ -34,7 +34,7 @@ export function SearchResultRow({
   return (
     <li className="flex items-center gap-2 px-2.5 py-2">
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[0.8125rem] font-medium">
+        <span className="block truncate text-ui font-medium">
           {result.displayName}
         </span>
         <span className="block truncate text-xs text-muted-foreground">
@@ -93,7 +93,7 @@ export function FriendRow({
           )}
           <span
             className={cn(
-              'truncate text-[0.8125rem] font-medium',
+              'truncate text-ui font-medium',
               entry.nameSource !== 'epic' && 'text-muted-foreground'
             )}
           >

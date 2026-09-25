@@ -2,7 +2,7 @@ import type { CosmeticMeta } from '../../../kernel/core/locker-catalog'
 import type { CardCosmeticGroup } from '../../../config/fortnite/locker'
 
 import { useMemo, useRef, useState } from 'react'
-import { PackageOpen, Search } from 'lucide-react'
+import { PackageOpen } from 'lucide-react'
 
 import {
   cardCosmeticGroupLabels,
@@ -11,12 +11,11 @@ import {
   cosmeticRarityWeight,
 } from '../../../config/fortnite/locker'
 
-import { Input } from '../../../components/ui/input'
 import {
   ToggleGroup,
   ToggleGroupItem,
 } from '../../../components/ui/toggle-group'
-import { EmptyState, Panel, PanelBody, PanelHeader } from '../../../components/page'
+import { EmptyState, FilterBar, Panel, PanelBody, PanelHeader, SearchField } from '../../../components/page'
 import { VirtualList } from '../../../components/virtual-list'
 
 import { CosmeticTile } from './-cosmetic-tile'
@@ -108,16 +107,14 @@ export function Collection({
           description="Every cosmetic on this account, best rarity first. Equipping is done from the Loadout tab."
           title="Collection"
         />
-        <PanelBody className="space-y-3">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by name"
-              value={query}
-            />
-          </div>
+        <FilterBar>
+          <SearchField
+            className="basis-full"
+            label="Search cosmetics"
+            onChange={setQuery}
+            placeholder="Search by name"
+            value={query}
+          />
 
           <ToggleGroup
             className="flex-wrap justify-start"
@@ -143,7 +140,8 @@ export function Collection({
                 </ToggleGroupItem>
               ))}
           </ToggleGroup>
-
+        </FilterBar>
+        <PanelBody className="py-3">
           <p className="text-xs text-muted-foreground">
             Showing {visible.length.toLocaleString()} of{' '}
             {owned.length.toLocaleString()}

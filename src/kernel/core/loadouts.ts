@@ -11,6 +11,7 @@ import {
   setAssignDefenderToLoadout,
   setAssignHeroToLoadout,
   setAssignGadgetToLoadout,
+  setAssignTeamPerkToLoadout,
   setAssignWeaponToDefender,
   setClearHeroLoadout,
 } from '../../services/endpoints/mcp'
@@ -39,7 +40,10 @@ export type LoadoutEntry = {
   active: boolean
   commander: LoadoutMember | null
   team: Array<LoadoutMember>
+  /** The team perk's template id, resolved from the item it points at. */
   teamPerk: string | null
+  /** The team perk item's GUID — what `AssignTeamPerkToLoadout` wants. */
+  teamPerkId: string | null
   gadgets: Array<string | null>
   defenders: Array<LoadoutDefender>
 }
@@ -54,6 +58,8 @@ export type LoadoutDefender = LoadoutMember & {
 export type LoadoutsPayload = {
   accountId: string
   availableGadgets: Array<string>
+  /** Team perks the account owns, as item GUID and template id. */
+  availableTeamPerks: Array<{ itemId: string; templateId: string }>
   errorMessage?: string
   loadouts: Array<LoadoutEntry>
 }
@@ -63,8 +69,10 @@ export type LoadoutEditKind =
   | 'assign-defender'
   | 'assign-defender-weapon'
   | 'assign-gadget'
+  | 'assign-team-perk'
   | 'activate'
   | 'clear'
+  | 'copy'
 
 export type LoadoutEditRequest = {
   kind: LoadoutEditKind
@@ -76,13 +84,32 @@ export type LoadoutEditRequest = {
   defenderId?: string
   schematicId?: string
   gadgetId?: string
+  /** `assign-team-perk`: the team perk item's GUID. */
+  teamPerkId?: string
   slotIndex?: number
+  /** `copy`: another account's loadout, as template ids, to rebuild here. */
+  copy?: LoadoutCopy
+}
+
+/**
+ * A loadout lifted off one account to be rebuilt on another. Items are named
+ * by template id — GUIDs are per account — and each is matched to the
+ * target's own highest-level copy of the same item.
+ */
+export type LoadoutCopy = {
+  commander: string | null
+  support: Array<string | null>
+  teamPerk: string | null
+  gadgets: Array<string | null>
+  defenders: Array<{ templateId: string | null; weapon: string | null }>
 }
 
 export type LoadoutEditNotification = {
   accountId: string
   kind: LoadoutEditKind
   errorMessage?: string
+  /** `copy`: the template ids the target account does not own. */
+  missing?: Array<string>
 }
 
 /** Support slots, in the order the game lays them out. */
@@ -129,6 +156,7 @@ export class Loadouts {
           errorMessage:
             error?.response?.data?.errorMessage ?? 'Unknown Error',
           availableGadgets: [],
+          availableTeamPerks: [],
           loadouts: [],
         } as LoadoutsPayload
       )
@@ -139,6 +167,7 @@ export class Loadouts {
     const payload: LoadoutsPayload = {
       accountId: account.accountId,
       availableGadgets: [],
+      availableTeamPerks: [],
       loadouts: [],
     }
     const accessToken = await Authentication.verifyAccessToken(account)
@@ -162,6 +191,9 @@ export class Loadouts {
         (templateId, index, all) =>
           templateId.startsWith('Gadget:') && all.indexOf(templateId) === index
       )
+    payload.availableTeamPerks = Object.entries(items)
+      .filter(([, item]) => item.templateId.startsWith('TeamPerk:'))
+      .map(([itemId, item]) => ({ itemId, templateId: item.templateId }))
 
     /**
      * Loadouts only store hero *item ids*, so every slot has to be looked
@@ -308,7 +340,18 @@ export class Loadouts {
         active: itemId === selected,
         commander: toMember('commanderslot', crew.commanderslot),
         team: followerSlots.map((slot) => toMember(slot, crew[slot])),
-        teamPerk: attributes.team_perk ?? null,
+        /*
+         * The profile stores the team perk as the GUID of a TeamPerk item,
+         * not as its template id; an older shape may hold the id itself.
+         */
+        teamPerk: attributes.team_perk
+          ? (items[attributes.team_perk]?.templateId ??
+            (attributes.team_perk.includes(':') ? attributes.team_perk : null))
+          : null,
+        teamPerkId:
+          attributes.team_perk && items[attributes.team_perk]
+            ? attributes.team_perk
+            : null,
         gadgets,
         defenders: defenderSlots.map((slot) =>
           toDefender(slot, defenders[slot], defenderWeapons[slot])
@@ -322,6 +365,80 @@ export class Loadouts {
     )
 
     return payload
+  }
+
+  /**
+   * Rebuilds a loadout from another account's copy: empties it, then fills
+   * every seat, the team perk, gadgets and defenders with this account's own
+   * best copy of each item. What the account does not own is left empty and
+   * returned, so the page can say so.
+   */
+  private static async applyCopy(
+    accountId: string,
+    accessToken: string,
+    loadoutId: string,
+    copy: LoadoutCopy
+  ) {
+    const response = await getQueryProfile({ accessToken, accountId })
+    const items = response.data.profileChanges[0]?.profile?.items ?? {}
+    const missing: Array<string> = []
+    const used = new Set<string>()
+
+    /** This account's highest-level copy of a template, not yet placed. */
+    const own = (templateId: string | null) => {
+      if (!templateId) return null
+      const wanted = templateId.toLowerCase()
+      const match = Object.entries(items)
+        .filter(([itemId, item]) => item.templateId.toLowerCase() === wanted && !used.has(itemId))
+        .sort(
+          ([, a], [, b]) =>
+            (((b.attributes as Record<string, unknown>)?.level as number) ?? 0) -
+            (((a.attributes as Record<string, unknown>)?.level as number) ?? 0)
+        )[0]
+
+      if (!match) {
+        missing.push(templateId)
+        return null
+      }
+      used.add(match[0])
+      return match[0]
+    }
+
+    await setClearHeroLoadout({ accessToken, accountId, loadoutId })
+
+    const heroes: Array<[string, string | null]> = [
+      ['CommanderSlot', copy.commander],
+      ...copy.support.map((templateId, index): [string, string | null] => [`FollowerSlot${index + 1}`, templateId]),
+    ]
+
+    for (const [slotName, templateId] of heroes) {
+      const heroId = own(templateId)
+      if (heroId) await setAssignHeroToLoadout({ accessToken, accountId, heroId, loadoutId, slotName })
+    }
+
+    const teamPerkId = own(copy.teamPerk)
+    if (teamPerkId) await setAssignTeamPerkToLoadout({ accessToken, accountId, loadoutId, teamPerkId })
+
+    for (const [slotIndex, gadgetId] of copy.gadgets.entries()) {
+      /* Gadgets are assigned by template id and only need to be unlocked. */
+      if (!gadgetId) continue
+      const owned = Object.values(items).some((item) => item.templateId.toLowerCase() === gadgetId.toLowerCase())
+      if (!owned) {
+        missing.push(gadgetId)
+        continue
+      }
+      await setAssignGadgetToLoadout({ accessToken, accountId, gadgetId, loadoutId, slotIndex })
+    }
+
+    for (const [index, defender] of copy.defenders.entries()) {
+      const defenderId = own(defender.templateId)
+      if (!defenderId) continue
+      await setAssignDefenderToLoadout({ accessToken, accountId, defenderId, loadoutId, slotName: `DefenderSlot${index + 1}` })
+      const weaponSchematicId = own(defender.weapon)
+      if (weaponSchematicId) await setAssignWeaponToDefender({ accessToken, accountId, defenderId, weaponSchematicId })
+    }
+
+    return missing
   }
 
   /**
@@ -387,6 +504,26 @@ export class Loadouts {
           loadoutId: request.loadoutId,
           slotIndex: request.slotIndex,
         })
+      } else if (request.kind === 'assign-team-perk') {
+        if (!request.teamPerkId) {
+          throw new Error('No team perk was given')
+        }
+        await setAssignTeamPerkToLoadout({
+          accessToken,
+          accountId: account.accountId,
+          loadoutId: request.loadoutId,
+          teamPerkId: request.teamPerkId,
+        })
+      } else if (request.kind === 'copy') {
+        if (!request.copy) {
+          throw new Error('No loadout was given to copy')
+        }
+        notification.missing = await Loadouts.applyCopy(
+          account.accountId,
+          accessToken,
+          request.loadoutId,
+          request.copy
+        )
       } else if (request.kind === 'activate') {
         await setActiveHeroLoadout({
           accessToken,

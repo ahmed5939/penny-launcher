@@ -1,15 +1,20 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
+import type { ReactNode } from 'react'
+
 import {
   Activity,
   BookOpen,
   Boxes,
   Code2,
   Download,
+  FolderInput,
   FolderOpen,
+  LoaderCircle,
   Puzzle,
   Settings2,
+  ShieldCheck,
   Trash2,
 } from 'lucide-react'
+import { useState } from 'react'
 
 import type { PluginCapability } from '../../types/plugins'
 
@@ -21,15 +26,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import {
   Callout,
+  Chip,
   EmptyState,
   PageHeader,
+  PageTabPanel,
+  PageTabs,
   Panel,
   PanelBody,
   PanelFooter,
-  PanelHeader,
   StatusPill,
 } from '../../components/page'
 
@@ -60,23 +66,54 @@ function CapabilityPills({
   if (capabilities.length === 0) return null
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Access it asks for">
       {capabilities.map((capability) => {
         const { icon: Icon, label } = capabilityLabels[capability]
 
         return (
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 px-2.5 py-1 text-[0.625rem] font-semibold uppercase tracking-wide text-warning"
-            key={capability}
-          >
-            <Icon className="size-3" />
-            {label}
-          </span>
+          <li key={capability}>
+            <Chip className="inline-flex items-center gap-1" tone="warning">
+              <Icon className="size-3" />
+              {label}
+            </Chip>
+          </li>
         )
       })}
+    </ul>
+  )
+}
+
+/** Name, version and who made it — the line every add-on card opens on. */
+function PluginTitle({
+  meta,
+  name,
+  status,
+  version,
+}: {
+  meta?: string
+  name: string
+  status?: ReactNode
+  version?: string | null
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="min-w-0 flex-1">
+        <p className="flex items-baseline gap-2 text-title font-semibold leading-tight">
+          <span className="truncate">{name}</span>
+          {version && (
+            <span className="figure shrink-0 text-xs font-normal text-muted-foreground">
+              v{version}
+            </span>
+          )}
+        </p>
+        {meta && <p className="mt-1 truncate text-xs text-muted-foreground">{meta}</p>}
+      </div>
+      {status}
     </div>
   )
 }
+
+type LibraryTab = 'discover' | 'installed'
 
 export function RouteComponent() {
   const {
@@ -95,41 +132,65 @@ export function RouteComponent() {
     setRemoveTarget,
   } = usePluginsData()
 
+  const [tab, setTab] = useState<LibraryTab>('discover')
+  const busy = pendingId !== null
+
   return (
     <>
       <PageHeader
         icon={Puzzle}
         section="Penny add-ons"
         title="Add-on library"
-        description="Optional tools with reviewed permissions, isolated execution, and controls you own."
+        description="Optional tools that run in their own sandbox, with only the access you approve."
+        status={
+          mode.safeMode ? (
+            <StatusPill tone="warning">Safe mode</StatusPill>
+          ) : undefined
+        }
         actions={
-          <div className="flex flex-wrap gap-2">
-          <Button disabled={pendingId !== null || review !== null} onClick={() => handleReview('import')}>Import folder</Button>
-          <Button variant="outline" onClick={() => window.electronAPI.openPluginsDirectory()}>
-            <FolderOpen className="mr-2 size-4" />
-            Open add-ons folder
-          </Button>
-          </div>
+          <>
+            <Button variant="secondary" onClick={() => window.electronAPI.openPluginsDirectory()}>
+              <FolderOpen className="size-4" />
+              Open folder
+            </Button>
+            <Button disabled={busy || review !== null} onClick={() => handleReview('import')}>
+              <FolderInput className="size-4" />
+              Import folder
+            </Button>
+          </>
         }
       />
 
-      <Callout className="mb-4" title={mode.safeMode ? 'Safe mode: add-ons are stopped' : 'Add-ons run in isolated sandboxes'} tone={mode.safeMode ? 'warning' : 'info'}>
-        {mode.safeMode ? 'Installed code and saved data are retained. Turn off safe mode to resume enabled add-ons.' : 'Every installation and update is reviewed before execution. Plugins receive only their declared launcher permissions.'}
-        {mode.forced && <p>Restart without --disable-plugins to leave safe mode.</p>}
-        <Button className="mt-3" variant="outline" disabled={pendingId !== null || mode.forced} onClick={() => handleManage({ action: 'safe-mode', enabled: !mode.safeMode })}>
-          {mode.safeMode ? 'Turn off safe mode' : 'Stop all with safe mode'}
-        </Button>
-      </Callout>
+      {mode.safeMode && (
+        <Callout title="Add-ons are stopped" tone="warning">
+          Installed code and saved data are kept.
+          {mode.forced ? ' Restart without --disable-plugins to leave safe mode.' : ''}
+          <div className="mt-3">
+            <Button
+              disabled={busy || mode.forced}
+              onClick={() => handleManage({ action: 'safe-mode', enabled: false })}
+              size="sm"
+              variant="secondary"
+            >
+              Turn off safe mode
+            </Button>
+          </div>
+        </Callout>
+      )}
 
-      <Tabs defaultValue="discover">
-        <TabsList>
-          <TabsTrigger value="discover">Discover</TabsTrigger>
-          <TabsTrigger value="installed">
-            Installed{installed.length > 0 ? ` (${installed.length})` : ''}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="discover">
+      <PageTabs
+        label="Add-on library"
+        onValueChange={setTab}
+        tabs={[
+          { value: 'discover', label: 'Discover' },
+          {
+            value: 'installed',
+            label: installed.length > 0 ? `Installed (${installed.length})` : 'Installed',
+          },
+        ]}
+        value={tab}
+      >
+        <PageTabPanel activeValue={tab} value="discover">
           {marketplace.length === 0 ? (
             <EmptyState
               icon={Puzzle}
@@ -137,46 +198,43 @@ export function RouteComponent() {
               description="Add-on packages will appear here when they are available."
             />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               {marketplace.map((plugin) => (
-                <Panel key={plugin.id}>
-                  <PanelHeader
-                    icon={Boxes}
-                    title={
-                      <span className="flex items-center gap-2">
-                        {plugin.name}
-                        {plugin.version && (
-                          <span className="text-xs font-normal text-muted-foreground">v{plugin.version}</span>
-                        )}
-                      </span>
-                    }
-                    description={
-                      [plugin.category, plugin.author && `by ${plugin.author}`]
-                        .filter(Boolean)
-                        .join(' · ') || 'Community add-on'
-                    }
-                    actions={plugin.installed ? <StatusPill tone="active">Installed</StatusPill> : undefined}
-                  />
-                  <PanelBody>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
+                <Panel className="flex flex-col" key={plugin.id}>
+                  <PanelBody className="flex-1">
+                    <PluginTitle
+                      meta={
+                        [plugin.category, plugin.author && `by ${plugin.author}`]
+                          .filter(Boolean)
+                          .join(' · ') || 'Community add-on'
+                      }
+                      name={plugin.name}
+                      status={
+                        plugin.installed ? (
+                          <StatusPill tone="active">Installed</StatusPill>
+                        ) : undefined
+                      }
+                      version={plugin.version}
+                    />
+                    <p className="mt-3 text-ui leading-relaxed text-muted-foreground">
                       {plugin.description ?? 'No description provided.'}
                     </p>
                     <CapabilityPills capabilities={plugin.capabilities} />
                   </PanelBody>
                   <PanelFooter>
                     <Button
-                      disabled={pendingId !== null || review !== null}
+                      disabled={busy || review !== null}
                       onClick={() => handleInstall(plugin)}
                     >
                       {pendingId === plugin.id ? (
-                        <UpdateIcon className="mr-2 animate-spin" />
+                        <LoaderCircle className="size-4 animate-spin" />
                       ) : (
-                        <Download className="mr-2 size-4" />
+                        <Download className="size-4" />
                       )}
                       {plugin.installed ? 'Review catalog version' : 'Review & install'}
                     </Button>
-                    <Button variant="outline" onClick={() => handleReadme(plugin)}>
-                      <BookOpen className="mr-2 size-4" />
+                    <Button variant="ghost" onClick={() => handleReadme(plugin)}>
+                      <BookOpen className="size-4" />
                       README
                     </Button>
                     {plugin.repository && (
@@ -184,7 +242,7 @@ export function RouteComponent() {
                         variant="ghost"
                         onClick={() => window.electronAPI.openExternalURL(plugin.repository!)}
                       >
-                        <Code2 className="mr-2 size-4" />
+                        <Code2 className="size-4" />
                         Source
                       </Button>
                     )}
@@ -193,57 +251,77 @@ export function RouteComponent() {
               ))}
             </div>
           )}
-        </TabsContent>
+        </PageTabPanel>
 
-        <TabsContent value="installed">
+        <PageTabPanel activeValue={tab} value="installed">
           {installed.length === 0 ? (
             <EmptyState
               icon={Boxes}
               title={isLoading ? 'Loading installed add-ons…' : 'No add-ons installed'}
-              description="Choose an add-on from Discover. It stays separate from Penny and can be inspected in your add-ons folder."
+              description="Pick one from Discover. It stays separate from Penny and you can inspect it in the add-ons folder."
             />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid items-start gap-4 lg:grid-cols-2">
               {installed.map((plugin) => (
                 <Panel key={plugin.id}>
-                  <PanelHeader
-                    icon={Boxes}
-                    title={plugin.name}
-                    description={plugin.version ? `Version ${plugin.version}` : 'Installed add-on'}
-                    actions={
-                      plugin.status === 'error' ? (
-                        <StatusPill tone="danger">Error</StatusPill>
-                      ) : (
-                        <StatusPill pulse={plugin.status === 'running'} tone={plugin.status === 'running' ? 'active' : 'warning'}>{plugin.status === 'running' ? 'Running' : plugin.status === 'review' ? 'Needs review' : 'Disabled'}</StatusPill>
-                      )
-                    }
-                  />
                   <PanelBody>
-                    <p className="text-xs leading-relaxed text-muted-foreground">
+                    <PluginTitle
+                      name={plugin.name}
+                      status={
+                        plugin.status === 'error' ? (
+                          <StatusPill tone="danger">Error</StatusPill>
+                        ) : (
+                          <StatusPill
+                            pulse={plugin.status === 'running'}
+                            tone={plugin.status === 'running' ? 'active' : plugin.status === 'review' ? 'warning' : 'idle'}
+                          >
+                            {plugin.status === 'running' ? 'Running' : plugin.status === 'review' ? 'Needs review' : 'Disabled'}
+                          </StatusPill>
+                        )
+                      }
+                      version={plugin.version}
+                    />
+                    <p className="mt-3 text-ui leading-relaxed text-muted-foreground">
                       {plugin.description ?? 'No description provided.'}
                     </p>
                     <CapabilityPills capabilities={plugin.capabilities} />
-                    <PluginContributions plugin={plugin} manage={handleManage} busy={pendingId !== null} />
                     {plugin.error && (
                       <Callout className="mt-3" title="Add-on needs attention" tone="warning">
                         {plugin.error}
                       </Callout>
                     )}
+                    <PluginContributions plugin={plugin} manage={handleManage} busy={busy} />
                   </PanelBody>
                   <PanelFooter>
-                    {plugin.status === 'review'
-                      ? <Button disabled={pendingId !== null || review !== null} onClick={() => handleReview('installed', plugin.id)}>Review access</Button>
-                      : <Button variant="outline" disabled={pendingId !== null || mode.safeMode} onClick={() => handleManage({ action: plugin.status === 'running' ? 'disable' : 'enable', id: plugin.id })}>{plugin.status === 'running' ? 'Disable' : 'Enable'}</Button>}
-                    <Button variant="outline" disabled={pendingId !== null || mode.safeMode} onClick={() => handleManage({ action: 'reload', id: plugin.id })}>Reload</Button>
-                    {plugin.canRollback && <Button variant="outline" disabled={pendingId !== null} onClick={() => handleManage({ action: 'rollback', id: plugin.id })}>Roll back code</Button>}
+                    {plugin.status === 'review' ? (
+                      <Button disabled={busy || review !== null} onClick={() => handleReview('installed', plugin.id)}>
+                        Review access
+                      </Button>
+                    ) : (
+                      <Button
+                        disabled={busy || mode.safeMode}
+                        onClick={() => handleManage({ action: plugin.status === 'running' ? 'disable' : 'enable', id: plugin.id })}
+                        variant={plugin.status === 'running' ? 'secondary' : 'default'}
+                      >
+                        {plugin.status === 'running' ? 'Disable' : 'Enable'}
+                      </Button>
+                    )}
                     {plugin.canOpen && (
-                      <Button disabled={pendingId !== null} onClick={() => handleOpen(plugin)}>
-                        {pendingId === plugin.id && <UpdateIcon className="mr-2 animate-spin" />}
+                      <Button disabled={busy} onClick={() => handleOpen(plugin)} variant="secondary">
+                        {pendingId === plugin.id && <LoaderCircle className="size-4 animate-spin" />}
                         Open
                       </Button>
                     )}
-                    <Button variant="outline" onClick={() => handleReadme(plugin)}>
-                      <BookOpen className="mr-2 size-4" />
+                    <Button variant="ghost" disabled={busy || mode.safeMode} onClick={() => handleManage({ action: 'reload', id: plugin.id })}>
+                      Reload
+                    </Button>
+                    {plugin.canRollback && (
+                      <Button variant="ghost" disabled={busy} onClick={() => handleManage({ action: 'rollback', id: plugin.id })}>
+                        Roll back code
+                      </Button>
+                    )}
+                    <Button variant="ghost" onClick={() => handleReadme(plugin)}>
+                      <BookOpen className="size-4" />
                       README
                     </Button>
                     {plugin.repository && (
@@ -251,25 +329,45 @@ export function RouteComponent() {
                         variant="ghost"
                         onClick={() => window.electronAPI.openExternalURL(plugin.repository!)}
                       >
-                        <Code2 className="mr-2 size-4" />
+                        <Code2 className="size-4" />
                         Source
                       </Button>
                     )}
                     <Button
-                      variant="ghost"
-                      disabled={pendingId !== null}
+                      aria-label={`Remove ${plugin.name}`}
+                      className="ml-auto text-destructive/80 hover:text-destructive"
+                      disabled={busy}
                       onClick={() => setRemoveTarget(plugin)}
+                      size="icon"
+                      title="Remove"
+                      variant="ghost"
                     >
-                      <Trash2 className="mr-2 size-4" />
-                      Remove
+                      <Trash2 className="size-4" />
                     </Button>
                   </PanelFooter>
                 </Panel>
               ))}
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </PageTabPanel>
+      </PageTabs>
+
+      {/* Fine print, and the one control that stops everything at once. */}
+      {!mode.safeMode && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <ShieldCheck className="size-3.5" />
+          Every install and update is reviewed before it runs, and an add-on
+          gets only the launcher access it declared.
+          <button
+            className="font-medium text-primary hover:underline disabled:opacity-50"
+            disabled={busy || mode.forced}
+            onClick={() => handleManage({ action: 'safe-mode', enabled: true })}
+            type="button"
+          >
+            Stop all with safe mode
+          </button>
+        </p>
+      )}
 
       <PluginReviewDialog review={review} busy={pendingId !== null} accept={handleAccept} cancel={handleCancelReview} />
       <Dialog open={readme !== null} onOpenChange={(open) => !open && setReadme(null)}>
@@ -303,9 +401,9 @@ export function RouteComponent() {
             >
               Cancel
             </Button>
-            <Button disabled={pendingId !== null} onClick={handleRemove}>
+            <Button disabled={pendingId !== null} onClick={handleRemove} variant="destructive">
               {pendingId === removeTarget?.id && (
-                <UpdateIcon className="mr-2 animate-spin" />
+                <LoaderCircle className="size-4 animate-spin" />
               )}
               Remove
             </Button>

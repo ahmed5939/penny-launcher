@@ -1,4 +1,5 @@
 import type { InventoryRow } from './-hooks'
+import type { InventoryEntry } from '../../../kernel/core/inventory'
 import type { ItemActionRequest } from '../../../kernel/core/item-actions'
 import type { ItemKind, Rarity } from '../../../config/constants/fortnite/items'
 import type { ItemRecordMap } from '../../../kernel/core/item-database'
@@ -8,21 +9,18 @@ import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ArrowUp,
   Boxes,
-  CheckCheck,
+  Crown,
+  HeartPulse,
   Hammer,
   Info,
-  Lock,
-  Recycle,
-  RefreshCw,
-  Search,
   ShieldAlert,
   ShieldHalf,
   Sparkles,
   Star,
   Swords,
+  Target,
   Trash2,
   UsersRound,
-  UserX,
   Zap,
 } from 'lucide-react'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -31,7 +29,6 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { VirtualList } from '../../../components/virtual-list'
-import { Input } from '../../../components/ui/input'
 import {
   ItemDetailDialog,
   levelCapForTier,
@@ -63,19 +60,23 @@ import {
   SelectValue,
 } from '../../../components/ui/select'
 import {
-  Callout,
+  AccountResourceGate,
   EmptyState,
+  FilterBar,
   PageHeader,
   Panel,
   PanelBody,
   PanelHeader,
+  Picker,
+  RefreshButton,
+  SearchField,
   Segmented,
   StatRow,
   StatTile,
   vaultRarityColors,
 } from '../../../components/page'
 
-import { useInventoryData } from './-hooks'
+import { useInventoryData, useInventoryResource } from './-hooks'
 import { useInventoryStore } from '../../../state/stw-operations/inventory'
 import { DefendersView } from '../defenders/-view'
 
@@ -87,8 +88,6 @@ import {
   rarityLabels,
   rarityOrder,
 } from '../../../config/constants/fortnite/items'
-
-import { parseCustomDisplayName } from '../../../lib/utils'
 
 /**
  * Kind is a tab, not a filter.
@@ -102,10 +101,10 @@ import { parseCustomDisplayName } from '../../../lib/utils'
  * that remain are two dropdowns on one line.
  */
 const kindIcons: Record<ItemKind, LucideIcon> = {
-  defender: ShieldHalf,
-  hero: Swords,
+  defender: Target,
+  hero: Crown,
   schematic: Hammer,
-  survivor: UsersRound,
+  survivor: HeartPulse,
 }
 
 /** `itemKindLabels` is plural — a shelf of one still has to read right. */
@@ -141,9 +140,9 @@ const tierFilterOptions = [
 type SortMode = 'power' | 'level' | 'name'
 
 const sortOptions: Array<{ label: string; value: SortMode }> = [
-  { label: 'Power', value: 'power' },
-  { label: 'Level', value: 'level' },
-  { label: 'Name', value: 'name' },
+  { label: 'Sort by power', value: 'power' },
+  { label: 'Sort by level', value: 'level' },
+  { label: 'Sort by name', value: 'name' },
 ]
 
 /** Lowercase roman numerals — what `UpgradeItemBulk` wants for a tier. */
@@ -301,15 +300,42 @@ function KindPage({ kind }: { kind: ItemKind }) {
     }
   }, [kind, current, updateFilters, clearSelection])
 
+  const resource = useInventoryResource()
+
   return (
     <>
       <PageHeader
+        actions={
+          <RefreshButton
+            disabled={!resource.accountId}
+            loading={resource.loading}
+            onClick={resource.refresh}
+          />
+        }
         icon={kindIcons[kind]}
         section={t('stw-operations.title')}
         title={itemKindLabels[kind]}
         description={kindPages[kind].description}
       />
-      {current === kind && <Content />}
+      {current === kind && (
+        <AccountResourceGate
+          icon={kindIcons[kind]}
+          loading={{
+            title: `Loading ${kindNouns[kind][1]}…`,
+            description: 'Reading the account profile from Epic.',
+          }}
+          resource={resource}
+          what={`this account's ${kindNouns[kind][1]}`}
+        >
+          {(entry) => (
+            <Content
+              entry={entry}
+              key={entry.accountId}
+              reload={resource.refresh}
+            />
+          )}
+        </AccountResourceGate>
+      )}
     </>
   )
 }
@@ -319,18 +345,22 @@ export const HeroesPage = () => <KindPage kind="hero" />
 export const DefendersPage = () => <KindPage kind="defender" />
 export const SurvivorsPage = () => <KindPage kind="survivor" />
 
-function Content() {
+function Content({
+  entry,
+  reload,
+}: {
+  entry: InventoryEntry
+  reload: () => void
+}) {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [sort, setSort] = useState<SortMode>('power')
 
   const {
-    account,
     activeKind,
     allRows,
     alterationPools,
     clearSelection,
     confirmOpen,
-    errorMessage,
     filters,
     handleItemAction,
     handleLoad,
@@ -339,10 +369,8 @@ function Content() {
     handleToggleItem,
     handleToggleMany,
     handleUpgradeSelected,
-    hasLoaded,
     isActing,
     isDisabledRecycle,
-    isLoading,
     isRecycling,
     lockedCount,
     queuedUpgrades,
@@ -356,7 +384,7 @@ function Content() {
     setConfirmOpen,
     totalSelected,
     updateFilters,
-  } = useInventoryData()
+  } = useInventoryData(entry, reload)
 
   const defenderFit = activeKind === 'defender' && filters.defenderView === 'fit'
 
@@ -457,80 +485,102 @@ function Content() {
   const handleAction = useStableCallback(handleItemAction)
   const handleToggleSection = useStableCallback(handleToggleMany)
 
-  if (!account) {
-    return (
-      <EmptyState
-        description="Pick one in the title bar and its vault loads here."
-        icon={UserX}
-        title="No account selected"
-      />
-    )
-  }
-
   const allSelected =
     recyclableCount > 0 && selectedIds.length >= recyclableCount
 
+  /** The whole kind as the game shows it — before search, rarity or tier. */
+  const owned = useMemo(() => {
+    const ofKind = allRows.filter(
+      (item) =>
+        item.kind === activeKind &&
+        (item.kind !== 'schematic' ||
+          ['Melee', 'Ranged', 'Trap'].includes(
+            getItemRecord(records, item.templateId)?.category ?? ''
+          ))
+    )
+    const mythic = ofKind.filter((item) => item.rarity === 'mythic').length
+
+    return {
+      mythic,
+      topShelf:
+        mythic + ofKind.filter((item) => item.rarity === 'legendary').length,
+      total: ofKind.length,
+    }
+  }, [activeKind, allRows, records])
+
   return (
     <>
-      <Panel id="vault-card">
-        <PanelHeader
-          actions={
-            <Button
-              disabled={isLoading}
-              onClick={handleLoad}
-              size="sm"
-              variant="ghost"
-            >
-              {isLoading ? (
-                <UpdateIcon className="animate-spin" />
-              ) : (
-                <>
-                  <RefreshCw className="size-3.5" />
-                  Refresh
-                </>
-              )}
-            </Button>
-          }
-          as="div"
-          compact
-          icon={Boxes}
-          title={parseCustomDisplayName(account)}
-        />
+      {/* What the go-to-top button watches: once this scrolls away, it shows. */}
+      <div id="vault-card" />
 
-      </Panel>
-      <div className="chrome-surface sticky top-0 z-10 space-y-3 rounded-xl border border-border/60 p-3">
-          {activeKind === 'defender' && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Segmented
-                onChange={(defenderView) => updateFilters({ defenderView })}
-                options={[
-                  { label: 'Browse', value: 'browse' },
-                  { label: 'Weapon fit', value: 'fit' },
-                ]}
-                value={filters.defenderView}
-              />
-              <span className="text-xs text-muted-foreground">
-                {defenderFit
-                  ? 'Ranks each defender’s rolls and suggests schematics you own that suit them.'
-                  : 'Switch to Weapon fit to match defenders with your weapon schematics.'}
-              </span>
-            </div>
-          )}
+      {/*
+        The figures a vault is read for, straight under the title: how much
+        there is, how much of it is top-shelf, what is off-limits and what is
+        in hand. They describe the whole kind, not the filtered view, so
+        narrowing the list does not make the account look poorer.
+      */}
+      {!defenderFit && (
+        <StatRow>
+          <StatTile
+            label="Owned"
+            value={owned.total.toLocaleString()}
+          />
+          <StatTile
+            accent={vaultRarityColors.legendary}
+            hint={
+              owned.mythic > 0
+                ? `${owned.mythic.toLocaleString()} mythic`
+                : undefined
+            }
+            label="Legendary and up"
+            value={owned.topShelf.toLocaleString()}
+          />
+          <StatTile
+            hint="Favourited or equipped"
+            label="Protected"
+            value={lockedCount.toLocaleString()}
+          />
+          <StatTile
+            hint={totalSelected > 0 ? undefined : 'Tick items to recycle'}
+            label="Selected"
+            tone={totalSelected > 0 ? 'primary' : 'default'}
+            value={totalSelected.toLocaleString()}
+          />
+        </StatRow>
+      )}
 
-          {!defenderFit && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="relative min-w-52 flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="h-8 pl-8"
-                onChange={(event) =>
-                  updateFilters({ search: event.target.value })
-                }
-                placeholder="Name, type or template id"
-                value={filters.search}
-              />
+      <Panel className="chrome-surface sticky top-0 z-10">
+        {activeKind === 'defender' && (
+          <FilterBar className={defenderFit ? 'border-b-0' : undefined}>
+            <Segmented
+              onChange={(defenderView) => updateFilters({ defenderView })}
+              options={[
+                { label: 'Browse', value: 'browse' },
+                { label: 'Weapon fit', value: 'fit' },
+              ]}
+              value={filters.defenderView}
+            />
+            <span className="text-xs text-muted-foreground">
+              {defenderFit
+                ? 'Ranks each defender’s rolls and suggests schematics you own that suit them.'
+                : 'Switch to Weapon fit to match defenders with your weapon schematics.'}
             </span>
+          </FilterBar>
+        )}
 
+        {!defenderFit && (
+          <FilterBar className="border-b-0">
+            <SearchField
+              label={`Search ${kindNouns[activeKind][1]}`}
+              onChange={(search) => updateFilters({ search })}
+              placeholder="Name, type or template id"
+              value={filters.search}
+            />
+
+            {/*
+              Kept as a plain Select rather than a Picker: each option carries
+              its rarity dot, which a Picker's text-only options cannot.
+            */}
             <Select
               onValueChange={(maxRarity: Rarity) => {
                 updateFilters({ maxRarity })
@@ -539,7 +589,8 @@ function Content() {
               value={filters.maxRarity}
             >
               <SelectTrigger
-                className="w-40"
+                aria-label="Highest rarity shown"
+                className="h-8 w-40"
                 title="Shows this rarity and everything below it"
               >
                 <SelectValue />
@@ -559,139 +610,42 @@ function Content() {
               </SelectContent>
             </Select>
 
-            <Select
-              onValueChange={(value) => {
+            <Picker
+              className="min-w-32"
+              label="Highest tier shown"
+              onChange={(value) => {
                 updateFilters({ maxTier: Number(value) })
                 clearSelection()
               }}
+              options={tierFilterOptions}
               value={String(filters.maxTier)}
-            >
-              <SelectTrigger
-                className="w-32"
-                title="Shows this tier and everything below it"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {tierFilterOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
 
-            <Select
-              onValueChange={(value: SortMode) => setSort(value)}
+            <Picker
+              label="Sort order"
+              onChange={setSort}
+              options={sortOptions}
               value={sort}
-            >
-              <SelectTrigger className="w-32 gap-2">
-                <span className="micro-label shrink-0">Sort</span>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem
-                    key={option.value}
-                    value={option.value}
-                  >
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          )}
-      </div>
+            />
+          </FilterBar>
+        )}
+      </Panel>
 
-      {errorMessage && (
-        <Callout
-          title="Could not read this account's vault"
-          tone="danger"
-        >
-          {errorMessage}
-        </Callout>
-      )}
-
-      {defenderFit && hasLoaded && !errorMessage && (
+      {defenderFit && (
         <DefendersView
-          accountSelected={Boolean(account)}
+          accountSelected
           embedded
           error={null}
           items={allRows}
-          loading={isLoading}
+          loading={false}
           onRefresh={handleLoad}
           ratings={ratings}
           records={records}
         />
       )}
 
-      {hasLoaded && !errorMessage && !defenderFit && (
+      {!defenderFit && (
         <>
-          <StatRow>
-            <StatTile
-              icon={Boxes}
-              label="Shown"
-              value={rows.length}
-            />
-            <StatTile
-              hint="Favourited or equipped"
-              icon={Lock}
-              label="Protected"
-              value={lockedCount}
-            />
-            <StatTile
-              icon={CheckCheck}
-              label="Selected"
-              tone={totalSelected > 0 ? 'primary' : 'default'}
-              value={totalSelected}
-            />
-            <StatTile
-              hint={
-                recycleRewards.length > 0 ? undefined : 'Select some items'
-              }
-              icon={Recycle}
-              label="Recycle value"
-              tone={recycleRewards.length > 0 ? 'success' : 'default'}
-              value={
-                recycleRewards.length > 0 ? (
-                  <span className="flex flex-wrap items-center gap-2">
-                    {recycleRewards.slice(0, 2).map((reward) => (
-                      <span
-                        className="inline-flex items-center gap-1"
-                        key={reward.templateId}
-                      >
-                        <ItemIcon
-                          records={records}
-                          size="small"
-                          templateId={reward.templateId}
-                        />
-                        <span className="text-base">
-                          {reward.amount.toLocaleString()}
-                        </span>
-                      </span>
-                    ))}
-                  </span>
-                ) : (
-                  '—'
-                )
-              }
-            />
-          </StatRow>
-
-          {totalSelected > 0 && (
-            <Callout
-              title="Recycling cannot be undone"
-              tone="warning"
-            >
-              Favourited and equipped items carry a padlock and cannot be
-              selected — the main process re-checks that against a fresh
-              profile before anything is destroyed.
-            </Callout>
-          )}
 
           <Panel>
             <PanelHeader
@@ -736,13 +690,9 @@ function Content() {
               <PanelBody>
                 <EmptyState
                   className="border-0 bg-transparent py-8"
-                  description={
-                    isLoading
-                      ? 'Reading the account profile…'
-                      : 'Nothing on this tab matches the current search.'
-                  }
+                  description="Nothing here matches the current search, rarity and tier."
                   icon={Boxes}
-                  title={isLoading ? 'Loading' : 'No matches'}
+                  title="No matches"
                 />
               </PanelBody>
             )}
@@ -752,19 +702,27 @@ function Content() {
 
       {totalSelected > 0 && (
         <div className="sticky bottom-3 z-10">
-          <Panel className="flex flex-wrap items-center gap-3 border-destructive/30 px-4 py-3 shadow-lg">
+          <Panel className="chrome-surface flex flex-wrap items-center gap-3 px-4 py-3 shadow-lg">
             <ShieldAlert className="size-4 shrink-0 text-destructive" />
-            <p className="text-[0.8125rem]">
-              <span className="font-semibold tabular-nums">
-                {totalSelected}
-              </span>{' '}
-              item{totalSelected === 1 ? '' : 's'} selected
-            </p>
+            <div className="min-w-0">
+              <p className="text-sm">
+                <span className="figure font-semibold">
+                  {totalSelected}
+                </span>{' '}
+                item{totalSelected === 1 ? '' : 's'} selected
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Recycling can’t be undone. Protected items are never included.
+              </p>
+            </div>
             {recycleRewards.length > 0 && (
-              <span className="flex flex-wrap items-center gap-2">
+              <span
+                aria-label="Recycle value"
+                className="flex flex-wrap items-center gap-1.5"
+              >
                 {recycleRewards.map((reward) => (
                   <span
-                    className="inline-flex items-center gap-1 text-xs tabular-nums"
+                    className="figure inline-flex items-center gap-1 rounded-md bg-muted/50 py-0.5 pl-0.5 pr-2 text-xs"
                     key={reward.templateId}
                   >
                     <ItemIcon
@@ -855,7 +813,7 @@ function Content() {
             <ul className="flex flex-wrap gap-3 rounded-xl border border-border/60 bg-surface/50 px-4 py-3">
               {recycleRewards.map((reward) => (
                 <li
-                  className="flex items-center gap-2 text-sm tabular-nums"
+                  className="figure flex items-center gap-2 text-sm"
                   key={reward.templateId}
                 >
                   <ItemIcon
@@ -900,11 +858,11 @@ function RarityDot({ rarity }: { rarity: Rarity }) {
 }
 
 /** The tile grid's own metrics, shared by the CSS and the virtualiser. */
-const tileMinWidth = 104
-const tileGap = 8
+const tileMinWidth = 132
+const tileGap = 12
 const headerHeight = 37
-/** Name bar plus footer — the part of a tile that is not the square plate. */
-const estimatedNameBar = 46
+/** Eyebrow, name and footer — the part of a tile that is not the artboard. */
+const estimatedNameBar = 52
 
 type VaultSection = { items: Array<InventoryRow>; rarity: Rarity }
 
@@ -1068,7 +1026,7 @@ function ShelfHeader({
       </span>
       {selectable.length > 0 && (
         <Button
-          className="ml-auto h-6 px-2 text-[0.6875rem]"
+          className="ml-auto h-6 px-2 text-xs"
           onClick={() =>
             onToggleSection(section.items.map((item) => item.itemId))
           }
@@ -1132,10 +1090,12 @@ const VaultTile = memo(function VaultTile({
       onToggleSelect={
         locked ? undefined : () => onToggleItem(item.itemId)
       }
+      personality={item.personality}
       portrait={item.portrait}
       power={item.power}
       records={records}
       selected={selected}
+      setBonus={item.setBonus}
       templateId={item.templateId}
       tier={item.tier}
       title={

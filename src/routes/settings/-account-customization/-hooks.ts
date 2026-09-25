@@ -42,10 +42,8 @@ export function useAccounts() {
         })
       : accountsArray
 
-  const onChangeSearchValue: ChangeEventHandler<HTMLInputElement> = (
-    event
-  ) => {
-    setSearchValue(event.currentTarget.value.replace(/\s+/g, ' '))
+  const onChangeSearchValue = (value: string) => {
+    setSearchValue(value.replace(/\s+/g, ' '))
   }
 
   return {

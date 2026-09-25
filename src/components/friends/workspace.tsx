@@ -2,14 +2,14 @@ import type { FriendEntry } from '../../kernel/core/friends-manager'
 import type { FriendAction } from './row'
 
 import { UpdateIcon } from '@radix-ui/react-icons'
-import { Search, UserPlus } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
 
-import { Callout, EmptyState, Panel } from '../page'
+import { Callout, EmptyState, FilterBar, Panel, PanelHeader, SearchField } from '../page'
 
 import { FriendRow, SearchResultRow } from './row'
 import type { GroupedFriends } from './group'
@@ -49,32 +49,57 @@ export type FriendsWorkspaceData = {
  * Shared by the docked panel and the hub page so a row action cannot exist
  * in one place and go missing in the other. `scrollLists` is the panel's
  * inner scroller; the page lets the window pane scroll instead.
+ *
+ * `layout="page"` is the Friends page: the lists are the page, so they take
+ * the wide column, and adding someone new is a side panel beside them — the
+ * way a game's social screen puts "Add friend" next to the roster rather
+ * than on top of it.
  */
 export function FriendsWorkspace({
   data,
+  layout = 'panel',
   scrollLists = false,
   showInvite = true,
 }: {
   data: FriendsWorkspaceData
+  layout?: 'page' | 'panel'
   scrollLists?: boolean
   showInvite?: boolean
 }) {
-  const {
-    errorMessage,
-    filter,
-    grouped,
-    handleAction,
-    handleAdd,
-    handleBulk,
-    handleInvite,
-    isSearching,
-    limitsReached,
-    pending,
-    query,
-    searchResults,
-    setFilter,
-    setQuery,
-  } = data
+  if (layout === 'page') {
+    return (
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <Panel className="min-w-0">
+          <FriendLists
+            data={data}
+            header={
+              <FilterBar className="px-4">
+                <SearchField
+                  label="Filter your friends"
+                  onChange={data.setFilter}
+                  placeholder="Filter your friends"
+                  value={data.filter}
+                />
+              </FilterBar>
+            }
+            scroll={false}
+            showInvite={showInvite}
+          />
+        </Panel>
+
+        <Panel className="xl:sticky xl:top-4">
+          <PanelHeader
+            compact
+            icon={UserPlus}
+            title="Add a friend"
+          />
+          <div className="space-y-3 px-4 py-3">
+            <AddFriend data={data} />
+          </div>
+        </Panel>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -84,171 +109,203 @@ export function FriendsWorkspace({
           scrollLists && 'border-b border-border/60 px-4 py-3'
         )}
       >
-        {limitsReached && Object.values(limitsReached).some(Boolean) && (
-          <Callout tone="warning">
-            An Epic friends limit has been reached. Remove old requests or
-            friends before adding more.
-          </Callout>
-        )}
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Filter your friends"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-          />
-        </div>
-        <div className="relative">
-          <UserPlus className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8"
-            placeholder="Search Epic to add someone"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          {isSearching && (
-            <UpdateIcon className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
-          )}
-        </div>
+        <SearchField
+          label="Filter your friends"
+          onChange={data.setFilter}
+          placeholder="Filter your friends"
+          value={data.filter}
+        />
+        <AddFriend data={data} />
+      </div>
 
-        {searchResults.length > 0 && (
-          <Panel>
-            <ul className="divide-y divide-border/40">
-              {searchResults.map((result) => (
-                <SearchResultRow
-                  isPending={pending.includes(result.accountId)}
-                  key={result.accountId}
-                  onAdd={handleAdd}
-                  result={result}
-                />
-              ))}
-            </ul>
-          </Panel>
+      <FriendLists
+        data={data}
+        scroll={scrollLists}
+        showInvite={showInvite}
+      />
+    </>
+  )
+}
+
+/** The Epic search, its results and the limit warning that gates it. */
+function AddFriend({ data }: { data: FriendsWorkspaceData }) {
+  const { handleAdd, isSearching, limitsReached, pending, query, searchResults, setQuery } = data
+
+  return (
+    <>
+      {limitsReached && Object.values(limitsReached).some(Boolean) && (
+        <Callout tone="warning">
+          An Epic friends limit has been reached. Remove old requests or
+          friends before adding more.
+        </Callout>
+      )}
+      <div className="relative">
+        <UserPlus className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          aria-label="Epic display name to add"
+          className="h-8 pl-9"
+          placeholder="Add by Epic name"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        {isSearching && (
+          <UpdateIcon className="absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
         )}
       </div>
 
-      <Tabs
-        defaultValue="friends"
+      {searchResults.length > 0 && (
+        <ul className="divide-y divide-border/40 rounded-lg bg-muted/30">
+          {searchResults.map((result) => (
+            <SearchResultRow
+              isPending={pending.includes(result.accountId)}
+              key={result.accountId}
+              onAdd={handleAdd}
+              result={result}
+            />
+          ))}
+        </ul>
+      )}
+    </>
+  )
+}
+
+function FriendLists({
+  data,
+  header,
+  scroll,
+  showInvite,
+}: {
+  data: FriendsWorkspaceData
+  /** Rendered between the tab strip and the lists — the page's filter bar. */
+  header?: React.ReactNode
+  scroll: boolean
+  showInvite: boolean
+}) {
+  const { errorMessage, grouped, handleAction, handleBulk, handleInvite, pending } = data
+  const isPage = header !== undefined
+
+  return (
+    <Tabs
+      defaultValue="friends"
+      className={cn(
+        'flex flex-col',
+        scroll ? 'min-h-0 flex-1' : 'gap-1'
+      )}
+    >
+      <TabsList
         className={cn(
-          'flex flex-col',
-          scrollLists ? 'min-h-0 flex-1' : 'gap-1'
+          'grid grid-cols-4',
+          scroll ? 'mx-3 mt-3' : isPage ? 'mx-4 mt-3' : 'w-full'
         )}
       >
-        <TabsList
-          className={cn(
-            'grid grid-cols-4',
-            scrollLists ? 'mx-3 mt-3' : 'w-full'
-          )}
-        >
-          <CountTab
-            count={grouped.friends.length}
-            label="Friends"
-            value="friends"
-          />
-          <CountTab
-            count={grouped.incoming.length}
-            label="Incoming"
-            value="incoming"
-          />
-          <CountTab
-            count={grouped.outgoing.length}
-            label="Sent"
-            value="outgoing"
-          />
-          <CountTab
-            count={grouped.blocked.length}
-            label="Blocked"
-            value="blocked"
-          />
-        </TabsList>
-        {errorMessage && (
-          <Callout
-            className={scrollLists ? 'mx-3 mt-2' : undefined}
-            tone="danger"
-          >
-            {errorMessage}
-          </Callout>
-        )}
-
-        <FriendTab
-          scroll={scrollLists}
+        <CountTab
+          count={grouped.friends.length}
+          label="Friends"
           value="friends"
-        >
-          <Section
-            empty="No friends yet."
-            entries={grouped.friends}
-            pending={pending}
-            onAction={handleAction}
-            onInvite={handleInvite}
-            showInvite={showInvite}
-          />
-        </FriendTab>
-        <FriendTab
-          scroll={scrollLists}
+        />
+        <CountTab
+          count={grouped.incoming.length}
+          label="Incoming"
           value="incoming"
-        >
-          <Section
-            empty="No incoming requests."
-            entries={grouped.incoming}
-            pending={pending}
-            onAction={handleAction}
-            bulkActions={[
-              {
-                label: 'Accept all',
-                action: () =>
-                  handleBulk(
-                    grouped.incoming.map((entry) => entry.accountId),
-                    'add'
-                  ),
-              },
-              {
-                label: 'Reject all',
-                destructive: true,
-                action: () =>
-                  handleBulk(
-                    grouped.incoming.map((entry) => entry.accountId),
-                    'remove'
-                  ),
-              },
-            ]}
-          />
-        </FriendTab>
-        <FriendTab
-          scroll={scrollLists}
+        />
+        <CountTab
+          count={grouped.outgoing.length}
+          label="Sent"
           value="outgoing"
-        >
-          <Section
-            empty="No sent requests."
-            entries={grouped.outgoing}
-            pending={pending}
-            onAction={handleAction}
-            bulkActions={[
-              {
-                label: 'Cancel all',
-                destructive: true,
-                action: () =>
-                  handleBulk(
-                    grouped.outgoing.map((entry) => entry.accountId),
-                    'remove'
-                  ),
-              },
-            ]}
-          />
-        </FriendTab>
-        <FriendTab
-          scroll={scrollLists}
+        />
+        <CountTab
+          count={grouped.blocked.length}
+          label="Blocked"
           value="blocked"
+        />
+      </TabsList>
+      {header}
+      {errorMessage && (
+        <Callout
+          className={scroll || isPage ? 'mx-3 mt-2' : undefined}
+          tone="danger"
         >
-          <Section
-            empty="No blocked accounts."
-            entries={grouped.blocked}
-            pending={pending}
-            onAction={handleAction}
-          />
-        </FriendTab>
-      </Tabs>
-    </>
+          {errorMessage}
+        </Callout>
+      )}
+
+      <FriendTab
+        scroll={scroll}
+        value="friends"
+      >
+        <Section
+          empty="No friends yet."
+          entries={grouped.friends}
+          pending={pending}
+          onAction={handleAction}
+          onInvite={handleInvite}
+          showInvite={showInvite}
+        />
+      </FriendTab>
+      <FriendTab
+        scroll={scroll}
+        value="incoming"
+      >
+        <Section
+          empty="No incoming requests."
+          entries={grouped.incoming}
+          pending={pending}
+          onAction={handleAction}
+          bulkActions={[
+            {
+              label: 'Accept all',
+              action: () =>
+                handleBulk(
+                  grouped.incoming.map((entry) => entry.accountId),
+                  'add'
+                ),
+            },
+            {
+              label: 'Reject all',
+              destructive: true,
+              action: () =>
+                handleBulk(
+                  grouped.incoming.map((entry) => entry.accountId),
+                  'remove'
+                ),
+            },
+          ]}
+        />
+      </FriendTab>
+      <FriendTab
+        scroll={scroll}
+        value="outgoing"
+      >
+        <Section
+          empty="No sent requests."
+          entries={grouped.outgoing}
+          pending={pending}
+          onAction={handleAction}
+          bulkActions={[
+            {
+              label: 'Cancel all',
+              destructive: true,
+              action: () =>
+                handleBulk(
+                  grouped.outgoing.map((entry) => entry.accountId),
+                  'remove'
+                ),
+            },
+          ]}
+        />
+      </FriendTab>
+      <FriendTab
+        scroll={scroll}
+        value="blocked"
+      >
+        <Section
+          empty="No blocked accounts."
+          entries={grouped.blocked}
+          pending={pending}
+          onAction={handleAction}
+        />
+      </FriendTab>
+    </Tabs>
   )
 }
 

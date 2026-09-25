@@ -1,8 +1,10 @@
 import type { ItemRecord, ItemRecordMap } from '../../kernel/core/item-database'
-import type { WorldInventory, WorldInventoryLocation, WorldItem } from './model'
+import type { LucideIcon } from 'lucide-react'
+import type { ComponentProps, MouseEvent } from 'react'
+import type { WorldInventory, WorldInventoryLocation, WorldItem, WorldTransfer } from './model'
 
 import { useMemo, useState } from 'react'
-import { Backpack, Boxes, Layers, Sparkles, Star, Warehouse } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Backpack, BrickWall, Crosshair, Gem, Info, Package, Sparkles, Star, Sword, Warehouse, X, Zap } from 'lucide-react'
 
 import { useItemDatabaseStore } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
@@ -10,39 +12,77 @@ import { worldItemDisplay, worldPerkDisplay, rollColors } from './display'
 import resources from '../../data/resources.json'
 import ingredients from '../../data/ingredients.json'
 
-import { Dialog, DialogContent } from '../../components/ui/dialog'
-import { ItemCard, ItemCardGrid } from '../../components/items/item-card'
-import { DetailHeader, DetailSection, PerkSlotRow } from '../../components/items/detail-parts'
-import { AccountResourceGate, Chip, EmptyState, FilterBar, KeyValue, PageHeader, Pager, Panel, PanelBody, PanelHeader, Picker, RefreshButton, SearchField, Segmented, StatRow, StatTile, ToolBadges, paginate, useAccountResource } from '../../components/page'
+import { toast } from '../../lib/notifications'
 
-const PAGE_SIZE = 60
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { ItemDetailDialog } from '../../components/items/item-detail'
+import { ItemTile } from '../../components/items/item-tile'
+import { DetailSection } from '../../components/items/detail-parts'
+import { AccountResourceGate, Chip, EmptyState, KeyValue, PageHeader, Panel, PanelBody, PanelFooter, PanelHeader, RefreshButton, SearchField, Segmented, ToolBadges, useAccountResource } from '../../components/page'
 
-const copy: Record<WorldInventoryLocation, { title: string; icon: typeof Backpack; description: string; empty: string }> = {
-  backpack: {
-    title: 'Backpack',
-    icon: Backpack,
-    description: 'What the account is carrying: crafted weapons and traps with their actual rolls, ammunition and materials.',
-    empty: 'The backpack is empty.',
-  },
-  storage: {
-    title: 'Storage',
-    icon: Warehouse,
-    description: 'Everything parked in Storm Shield storage, copy by copy.',
-    empty: 'Storage is empty.',
-  },
+const copy: Record<WorldInventoryLocation, { title: string; icon: LucideIcon; empty: string; moveTo: string }> = {
+  backpack: { title: 'Backpack', icon: Backpack, empty: 'Nothing of this kind in the backpack.', moveTo: 'storage' },
+  storage: { title: 'Storage', icon: Warehouse, empty: 'Nothing of this kind in storage.', moveTo: 'backpack' },
 }
 
 const fallbackNames = { ...resources, ...ingredients } as Record<string, { name: string }>
+
+/**
+ * The template prefix is Epic's word for a category, not the game's.
+ * These are the names the in-game backpack tabs use.
+ */
+const categoryLabels: Record<string, string> = {
+  AccountResource: 'Account resources',
+  Ammo: 'Ammunition',
+  Gadget: 'Gadgets',
+  Ingredient: 'Crafting materials',
+  Trap: 'Traps',
+  Weapon: 'Weapons',
+  WorldItem: 'Building materials',
+}
+
+function categoryLabel(category: string) {
+  return categoryLabels[category] ?? category.replace(/([a-z])([A-Z])/g, '$1 $2')
+}
+
+/** The in-game storage screen's tabs, in its order. Anything else lands on the last one. */
+const tabs = [
+  { value: 'Weapon', label: 'Weapons', icon: Sword },
+  { value: 'Trap', label: 'Traps', icon: Zap },
+  { value: 'Ammo', label: 'Ammunition', icon: Crosshair },
+  { value: 'Ingredient', label: 'Crafting materials', icon: Gem },
+  { value: 'WorldItem', label: 'Building materials', icon: BrickWall },
+  { value: 'other', label: 'Everything else', icon: Package },
+]
+
+function tabOf(category: string) {
+  return tabs.some((t) => t.value === category) ? category : 'other'
+}
+
+/** The game sorts each tab best-first. */
+const rarityOrder = ['mythic', 'legendary', 'epic', 'rare', 'uncommon', 'common']
+
+function rarityRank(rarity: string | null | undefined) {
+  const index = rarityOrder.indexOf((rarity ?? '').toLowerCase())
+  return index === -1 ? rarityOrder.length : index
+}
+
+/** Electron wraps a main-process throw in its own sentence; the user only needs ours. */
+function ipcMessage(cause: unknown) {
+  const message = cause instanceof Error ? cause.message : ''
+  return message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') || 'The transfer failed. Refresh and try again.'
+}
 
 /**
  * Crafted `Weapon:` ids are often absent from the live database, so the
  * bundled display snapshot supplies their name and art. Fold it under the
  * live records so the cards can draw them.
  */
-function useTileRecords(records: ItemRecordMap, inventory: WorldInventory | null) {
+function useTileRecords(records: ItemRecordMap, inventories: WorldInventory[]) {
   return useMemo(() => {
     const merged: ItemRecordMap = { ...records }
-    for (const item of inventory?.items ?? []) {
+    for (const item of inventories.flatMap((i) => i.items)) {
       const key = item.templateId.toLowerCase()
       if (merged[key]) continue
       const display = worldItemDisplay(item.templateId, records)
@@ -50,192 +90,276 @@ function useTileRecords(records: ItemRecordMap, inventory: WorldInventory | null
       merged[key] = { name: display.name, description: display.description, rarity: display.rarity, tier: display.tier, image: display.image, largeImage: display.largeImage, displayTier: display.displayTier } as unknown as ItemRecord
     }
     return merged
-  }, [records, inventory])
+  }, [records, ...inventories])
 }
 
 /**
- * Backpack and Storage are one page with a switch: the same kind of items in
- * two places, read the same way. Both routes land here; they only differ in
- * which side opens first.
+ * Backpack and Storage side by side, the way the game's Storm Shield storage
+ * screen lays them out: the same category tabs over both, six items to a
+ * row, and a transfer strip under each side. Both routes land here.
  */
 export function BackpackPage() {
-  return <WorldInventoryPage initial="backpack" />
+  return <WorldInventoryPage />
 }
 
 export function StoragePage() {
-  return <WorldInventoryPage initial="storage" />
+  return <WorldInventoryPage />
 }
 
-const locationOptions: Array<{ value: WorldInventoryLocation; label: string }> = [
-  { value: 'backpack', label: 'Backpack' },
-  { value: 'storage', label: 'Storage' },
-]
+type BothSides = { accountId: string; backpack: WorldInventory; storage: WorldInventory }
 
-function WorldInventoryPage({ initial }: { initial: WorldInventoryLocation }) {
+function WorldInventoryPage() {
   useRequestItemDatabase()
-  const [location, setLocation] = useState<WorldInventoryLocation>(initial)
-  const resource = useAccountResource((accountId) => window.electronAPI.requestWorldInventory(accountId, location), {
-    deps: [location],
-    owner: (result) => result.accountId,
-  })
-  const { title, icon } = copy[location]
+  const resource = useAccountResource(
+    async (accountId): Promise<BothSides> => {
+      const [backpack, storage] = await Promise.all([
+        window.electronAPI.requestWorldInventory(accountId, 'backpack'),
+        window.electronAPI.requestWorldInventory(accountId, 'storage'),
+      ])
+      return { accountId, backpack, storage }
+    },
+    { cacheKey: 'stw.world-inventory.both', owner: (result) => result.accountId }
+  )
 
   return (
     <div className="space-y-5">
       <PageHeader
-        actions={
-          <>
-            <Segmented onChange={setLocation} options={locationOptions} value={location} />
-            <RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />
-          </>
-        }
-        description="Crafted weapons and traps with their actual rolls, ammunition and materials — what the account carries, and what is parked in Storm Shield storage."
+        actions={<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />}
+        description="Your backpack and Storm Shield storage side by side, as in game. Select items and move them across; perks are read from each copy."
         icon={Backpack}
         section="Save the World"
-        status={<ToolBadges beta readOnly />}
+        status={<ToolBadges beta />}
         title="Backpack & Storage"
       />
-      <AccountResourceGate icon={icon} resource={resource} what={`the ${title.toLowerCase()}`}>
-        {(data) => <Contents data={data} key={`${data.accountId}:${location}`} location={location} />}
+      <AccountResourceGate icon={Backpack} resource={resource} what="the backpack and storage">
+        {(data) => <Contents data={data} key={data.accountId} onChanged={resource.refresh} refreshing={resource.loading} />}
       </AccountResourceGate>
     </div>
   )
 }
 
-function Contents({ data, location }: { data: WorldInventory; location: WorldInventoryLocation }) {
-  const records = useTileRecords(useItemDatabaseStore((s) => s.records), data)
-  const { icon: Icon, empty, title, description } = copy[location]
+type Selection = { side: WorldInventoryLocation; ids: string[]; amount: number }
+
+function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged: () => void; refreshing: boolean }) {
+  const records = useTileRecords(useItemDatabaseStore((s) => s.records), [data.backpack, data.storage])
+  const ratings = useItemDatabaseStore((s) => s.ratings)
+  const [tab, setTab] = useState('Weapon')
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('all')
-  const [page, setPage] = useState(0)
+  const [selection, setSelection] = useState<Selection | null>(null)
+  const [moving, setMoving] = useState(false)
   const [detail, setDetail] = useState<WorldItem | null>(null)
+  const busy = moving || refreshing
 
   const name = (id: string) =>
     worldItemDisplay(id, records)?.name ?? fallbackNames[id.split(':')[1]]?.name ?? (id.split(':')[1] ?? id).replaceAll('_', ' ')
 
-  const categories = useMemo(() => [...new Set(data.items.map((i) => i.category))].sort(), [data])
-  const items = useMemo(() => {
+  const sides = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return data.items
-      .filter((i) => (category === 'all' || i.category === category) && (!q || `${name(i.templateId)} ${i.templateId}`.toLowerCase().includes(q)))
-      .sort((a, b) => name(a.templateId).localeCompare(name(b.templateId)) || a.id.localeCompare(b.id))
+    const shown = (inventory: WorldInventory) =>
+      inventory.items
+        .filter((i) => tabOf(i.category) === tab && (!q || `${name(i.templateId)} ${i.templateId}`.toLowerCase().includes(q)))
+        .sort((a, b) => {
+          const da = worldItemDisplay(a.templateId, records)
+          const db = worldItemDisplay(b.templateId, records)
+          return rarityRank(da?.rarity) - rarityRank(db?.rarity) || (db?.tier ?? 0) - (da?.tier ?? 0) || name(a.templateId).localeCompare(name(b.templateId)) || a.id.localeCompare(b.id)
+        })
+    return { backpack: shown(data.backpack), storage: shown(data.storage) }
     // `name` reads `records`, which is the dependency that matters.
-  }, [data, category, query, records])
-  const shown = paginate(items, page, PAGE_SIZE)
-  const totalUnits = data.items.reduce((n, i) => n + i.quantity, 0)
-  const favourites = data.items.filter((i) => i.favorite).length
+  }, [data, tab, query, records])
+
+  const tabCount = (value: string) => [...data.backpack.items, ...data.storage.items].filter((i) => tabOf(i.category) === value).length
+  const tabOptions = tabs.map((t) => ({ ...t, label: `${t.label} (${tabCount(t.value).toLocaleString()})` }))
+
+  const pick = (side: WorldInventoryLocation, item: WorldItem, event: MouseEvent) => {
+    setSelection((current) => {
+      const additive = event.ctrlKey || event.metaKey
+      if (additive && current?.side === side) {
+        const ids = current.ids.includes(item.id) ? current.ids.filter((id) => id !== item.id) : [...current.ids, item.id]
+        return ids.length ? { side, ids, amount: ids.length === 1 ? find(side, ids[0])?.quantity ?? 1 : 0 } : null
+      }
+      if (current?.side === side && current.ids.length === 1 && current.ids[0] === item.id) return null
+      return { side, ids: [item.id], amount: item.quantity }
+    })
+  }
+
+  const find = (side: WorldInventoryLocation, id: string) => data[side].items.find((i) => i.id === id)
+
+  const move = async (side: WorldInventoryLocation, transfers: WorldTransfer[]) => {
+    setMoving(true)
+    try {
+      await window.electronAPI.transferWorldItems(data.accountId, transfers)
+      toast.success(`Moved ${transfers.length === 1 ? name(find(side, transfers[0].itemId)?.templateId ?? '') : `${transfers.length} stacks`} to ${copy[side].moveTo}.`)
+      setSelection(null)
+      onChanged()
+    } catch (cause) {
+      toast.error(ipcMessage(cause))
+    } finally {
+      setMoving(false)
+    }
+  }
+
+  const moveSelection = (side: WorldInventoryLocation) => {
+    if (!selection || selection.side !== side) return
+    const single = selection.ids.length === 1
+    move(side, selection.ids.flatMap((id) => {
+      const item = find(side, id)
+      if (!item) return []
+      const quantity = single ? Math.min(Math.max(1, Math.floor(selection.amount) || 1), item.quantity) : item.quantity
+      return [{ itemId: id, quantity, toStorage: side === 'backpack' }]
+    }))
+  }
 
   return (
     <>
-      <StatRow>
-        <StatTile icon={Boxes} label="Stacks" value={data.items.length.toLocaleString()} />
-        <StatTile icon={Layers} label="Items in total" value={totalUnits.toLocaleString()} />
-        <StatTile icon={Star} label="Favourited" value={favourites.toLocaleString()} />
-        <StatTile hint={`Updated ${new Date(data.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`} label="Item types" value={categories.length.toLocaleString()} />
-      </StatRow>
+      <div className="flex flex-wrap items-center gap-2">
+        <Segmented onChange={(value) => { setTab(value); setSelection(null) }} options={tabOptions} value={tab} />
+        <SearchField className="w-64" label="Search both sides" onChange={setQuery} placeholder="Item name" value={query} />
+      </div>
 
-      <Panel>
-        <PanelHeader
-          actions={<span className="micro-label">{items.length.toLocaleString()} of {data.items.length.toLocaleString()} stacks</span>}
-          description={`${description} Perk rolls are read from each copy, never from a schematic.`}
-          icon={Icon}
-          title={title}
-        />
-        <FilterBar>
-          <SearchField label="Search items" onChange={(v) => { setQuery(v); setPage(0) }} placeholder="Item name or template id" value={query} />
-          <Picker label="Item type" onChange={(v) => { setCategory(v); setPage(0) }} options={[{ value: 'all', label: 'All item types' }, ...categories.map((c) => ({ value: c, label: c }))]} value={category} />
-        </FilterBar>
-
-        <PanelBody>
-          {shown.items.length > 0 ? (
-            <ItemCardGrid>
-              {shown.items.map((item) => {
-                const rolls = (item.alterationSlots ?? item.alterations).filter(Boolean).length
-                return (
-                  <ItemCard
-                    favorite={item.favorite}
-                    footer={
-                      item.durability !== null
-                        ? <span>Durability <span className="figure text-foreground">{item.durability.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>{rolls ? ` · ${rolls} perk${rolls === 1 ? '' : 's'}` : ''}</span>
-                        : undefined
-                    }
-                    key={item.id}
-                    level={item.level}
-                    name={name(item.templateId)}
-                    onClick={() => setDetail(item)}
-                    quantity={item.quantity}
-                    records={records}
-                    subtitle={item.category}
-                    templateId={item.templateId}
-                    tier={worldItemDisplay(item.templateId, records)?.tier}
-                  />
-                )
-              })}
-            </ItemCardGrid>
-          ) : (
-            <EmptyState className="border-0 bg-transparent py-8" description={data.items.length ? 'Nothing matches the current search or type filter.' : empty} icon={Icon} title={data.items.length ? 'No matches' : 'Nothing here'} />
-          )}
-        </PanelBody>
-        <Pager onPageChange={setPage} page={shown.page} pageSize={PAGE_SIZE} total={items.length} />
-      </Panel>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {(['backpack', 'storage'] as const).map((side) => {
+          const selected = selection?.side === side ? selection : null
+          const single = selected?.ids.length === 1 ? find(side, selected.ids[0]) : undefined
+          const { title, icon, empty, moveTo } = copy[side]
+          const Arrow = side === 'backpack' ? ArrowRight : ArrowLeft
+          return (
+            <Panel className="flex flex-col" key={side}>
+              <PanelHeader
+                actions={<span className="text-xs text-muted-foreground"><span className="figure text-foreground">{sides[side].length.toLocaleString()}</span> here · <span className="figure">{data[side].items.length.toLocaleString()}</span> stacks in all</span>}
+                as="div"
+                compact
+                icon={icon}
+                title={title}
+              />
+              <PanelBody className="h-[58vh] min-h-72 overflow-y-auto px-3 py-3">
+                {sides[side].length > 0 ? (
+                  <div className="grid grid-cols-6 content-start gap-1.5">
+                    {sides[side].map((item) => {
+                      const display = worldItemDisplay(item.templateId, records)
+                      const facts = [item.level !== null && `Level ${item.level}`, item.durability !== null && `Durability ${Math.round(item.durability)}`, item.quantity > 1 && `×${item.quantity.toLocaleString()}`].filter(Boolean)
+                      return (
+                        <ItemTile
+                          className="w-full"
+                          disabled={busy}
+                          key={item.id}
+                          locked={item.favorite}
+                          name={name(item.templateId)}
+                          onClick={(event) => pick(side, item, event)}
+                          onDoubleClick={() => move(side, [{ itemId: item.id, quantity: item.quantity, toStorage: side === 'backpack' }])}
+                          quantity={item.quantity}
+                          records={records}
+                          selected={selected?.ids.includes(item.id) ?? false}
+                          size="small"
+                          templateId={item.templateId}
+                          tier={display?.tier}
+                          title={[name(item.templateId), ...facts].join(' · ')}
+                        />
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <EmptyState className="border-0 bg-transparent py-8" description={query ? 'Nothing matches the search.' : empty} icon={icon} title="Nothing here" />
+                )}
+              </PanelBody>
+              <PanelFooter className="min-h-14 px-3 py-2.5">
+                {selected ? (
+                  <>
+                    <span className="min-w-0 flex-1 truncate text-ui">
+                      {single ? name(single.templateId) : <><span className="figure">{selected.ids.length}</span> stacks selected</>}
+                    </span>
+                    {single && single.quantity > 1 && (
+                      <span className="flex items-center gap-1">
+                        <Input
+                          aria-label="Amount to move"
+                          className="figure h-8 w-20"
+                          max={single.quantity}
+                          min={1}
+                          onChange={(event) => setSelection({ ...selected, amount: Number(event.target.value) })}
+                          type="number"
+                          value={selected.amount || ''}
+                        />
+                        <Button onClick={() => setSelection({ ...selected, amount: single.quantity })} size="sm" variant="ghost">All</Button>
+                      </span>
+                    )}
+                    {single && (
+                      <Button aria-label="Item details" onClick={() => setDetail(single)} size="icon" variant="ghost"><Info className="size-4" /></Button>
+                    )}
+                    <Button aria-label="Clear selection" onClick={() => setSelection(null)} size="icon" variant="ghost"><X className="size-4" /></Button>
+                    <Button disabled={busy} onClick={() => moveSelection(side)} size="sm">
+                      {side === 'storage' && <Arrow className="size-4" />}
+                      Move to {moveTo}
+                      {side === 'backpack' && <Arrow className="size-4" />}
+                    </Button>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Click to select, Ctrl-click for several, double-click to move a whole stack to {moveTo}.</span>
+                )}
+              </PanelFooter>
+            </Panel>
+          )
+        })}
+      </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Names and artwork come from the launcher item database where it has them and from a bundled snapshot otherwise; unknown items keep their template id. Refresh after changing anything in game.
+        Transfers use the same Storm Shield storage call as the game; Epic refuses them when the other side is full or the item cannot be stored. Names and art come from the item database, or a bundled snapshot for crafted weapons it lacks. Read at {new Date(data.backpack.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — refresh after changing anything in game.
       </p>
 
-      <Dialog onOpenChange={(open) => { if (!open) setDetail(null) }} open={detail !== null}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
-          {detail && <Detail item={detail} name={name(detail.templateId)} records={records} />}
-        </DialogContent>
-      </Dialog>
+      <WorldItemDialog item={detail} onClose={() => setDetail(null)} ratings={ratings} records={records} />
     </>
   )
 }
 
-function Detail({ item, name, records }: { item: WorldItem; name: string; records: ItemRecordMap }) {
-  const display = worldItemDisplay(item.templateId, records)
-  const slots = item.alterationSlots ?? item.alterations
+/**
+ * The item dialog every other screen opens, read-only. A backpack copy's
+ * perks come from the bundled perk table — crafted weapons roll ids the
+ * database often lacks — so each row carries that name and its rarity.
+ */
+function WorldItemDialog({ item, onClose, ratings, records }: {
+  item: WorldItem | null
+  onClose: () => void
+  ratings: ComponentProps<typeof ItemDetailDialog>['ratings']
+  records: ItemRecordMap
+}) {
+  const perks = (item?.alterationSlots ?? item?.alterations ?? []).filter((id): id is string => Boolean(id))
+  const graded = item !== null && (item.level !== null || perks.length > 0)
 
   return (
-    <>
-      <DetailHeader
-        description={display?.description}
-        facts={
-          <>
-            <span>Quantity <span className="figure">{item.quantity.toLocaleString()}</span></span>
-            {item.level !== null && <span>Level <span className="figure">{item.level}</span></span>}
-            {item.durability !== null && <span>Durability <span className="figure">{item.durability.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span></span>}
-            {item.favorite && <span className="inline-flex items-center gap-1"><Star className="size-3" /> Favourited</span>}
-          </>
+    <ItemDetailDialog
+      onOpenChange={(open) => { if (!open) onClose() }}
+      perkDetails={perks.map((id) => {
+        const perk = worldPerkDisplay(id, records)
+        const color = perk.rarity ? rollColors[perk.rarity] : null
+        return {
+          name: perk.description,
+          tags: (
+            <>
+              {perk.rarity ? <Chip><span style={{ color: color ?? undefined }}>{perk.rarity}</span></Chip> : <Chip tone="warning">Rarity unavailable</Chip>}
+              {perk.system === 'legacy' && <Chip tone="accent">Legacy</Chip>}
+            </>
+          ),
         }
-        meta={[item.category, display?.displayTier, (display?.tier ?? 0) > 0 && `Tier ${display?.tier}`]}
-        name={name}
-        rarity={display?.rarity}
-        records={records}
-        templateId={item.templateId}
-      />
-
-      {slots.length > 0 && (
-        <DetailSection icon={Sparkles} title="Perks on this copy">
-          <ul className="space-y-1.5">
-            {slots.map((id, index) => {
-              const perk = worldPerkDisplay(id, records)
-              const color = perk.rarity ? rollColors[perk.rarity] : null
-              return (
-                <PerkSlotRow accent={color} empty={!id} id={id} index={index} key={index} title={perk.description}>
-                  {id && (perk.rarity ? <Chip><span style={{ color: color ?? undefined }}>{perk.rarity}</span></Chip> : <Chip tone="warning">Rarity unavailable</Chip>)}
-                  {perk.system === 'legacy' && <Chip tone="accent">Legacy</Chip>}
-                </PerkSlotRow>
-              )
-            })}
-          </ul>
+      })}
+      ratings={ratings}
+      records={records}
+      subject={item && {
+        alterations: graded ? perks : undefined,
+        level: item.level ?? undefined,
+        lockedReason: item.favorite ? 'favorite' : null,
+        templateId: item.templateId,
+      }}
+    >
+      {item && (
+        <DetailSection icon={Package} title="This stack">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <KeyValue label="Category" value={categoryLabel(item.category)} />
+            <KeyValue label="Quantity" value={item.quantity.toLocaleString()} />
+            {item.durability !== null && (
+              <KeyValue label="Durability" value={item.durability.toLocaleString(undefined, { maximumFractionDigits: 2 })} />
+            )}
+            <KeyValue copyable label="Stack id" value={item.id} />
+          </div>
         </DetailSection>
       )}
-
-      <div className="grid gap-2 sm:grid-cols-2">
-        <KeyValue copyable label="Template" value={item.templateId} />
-        <KeyValue copyable label="Stack id" value={item.id} />
-      </div>
-    </>
+    </ItemDetailDialog>
   )
 }

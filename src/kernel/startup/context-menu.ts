@@ -76,11 +76,41 @@ export class NativeContextMenu {
     })
   }
 
-  static popupEditable(sender: WebContents, params: ContextMenuParams) {
-    if (!params.isEditable) {
+  /**
+   * The menu for a right-click nothing in the renderer claimed: the edit menu
+   * in a field, Copy on selected text, Copy link on an outbound link. Anywhere
+   * else stays silent, as a right-click on a plain control does in Windows.
+   */
+  static popupDefault(sender: WebContents, params: ContextMenuParams) {
+    if (params.isEditable) {
+      return NativeContextMenu.popupEditable(sender, params)
+    }
+
+    const template: Array<MenuItemConstructorOptions> = []
+
+    if (params.selectionText.trim()) {
+      template.push({ role: 'copy', enabled: params.editFlags.canCopy })
+    }
+
+    if (/^https:/i.test(params.linkURL)) {
+      template.push({
+        label: 'Copy link',
+        click: () => clipboard.writeText(params.linkURL),
+      })
+    }
+
+    if (template.length === 0) {
       return false
     }
 
+    Menu.buildFromTemplate(template).popup({
+      window: BrowserWindow.fromWebContents(sender) ?? undefined,
+    })
+
+    return true
+  }
+
+  static popupEditable(sender: WebContents, params: ContextMenuParams) {
     const { editFlags } = params
     const template: Array<MenuItemConstructorOptions> = [
       { role: 'undo', enabled: editFlags.canUndo },

@@ -34,7 +34,7 @@ export function ListRow({
       {well}
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[0.8125rem] font-medium leading-tight text-foreground/90">
+        <span className="block truncate text-ui font-medium leading-tight text-foreground/90">
           {name}
         </span>
         {caption && (

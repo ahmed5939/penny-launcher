@@ -73,7 +73,7 @@ function MissionSkeleton({ total = defaultTotal }: { total?: number }) {
             <Skeleton className="size-5 rounded" />
           </div>
           <div className="flex min-w-0 items-center gap-3 overflow-hidden py-2.5 pl-3 pr-2 compact:gap-2 compact:pl-2">
-            <Skeleton className="size-9 shrink-0 rounded-lg compact:size-8" />
+            <Skeleton className="size-9 shrink-0 rounded-full compact:size-8" />
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <Skeleton className="h-3.5 w-40 max-w-full rounded" />
               <Skeleton className="h-2.5 w-28 max-w-full rounded" />

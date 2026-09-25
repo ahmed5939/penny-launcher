@@ -1,54 +1,29 @@
-import { CollectionPicker } from '../../../components/page/collection-picker'
-import { resolveCollectionSelection } from '../../../lib/navigation/page-tabs'
 import { Route } from './route'
-import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type {
   LoadoutEntry,
-  LoadoutDefender,
-  LoadoutMember,
+  LoadoutsPayload,
 } from '../../../kernel/core/loadouts'
 import type {
   ItemRecordMap,
   ItemRecordPerk,
 } from '../../../kernel/core/item-database'
 import type { InventoryItem } from '../../../kernel/core/inventory'
-import type { RatingTables } from '../../../config/constants/fortnite/power'
 
-import { UpdateIcon } from '@radix-ui/react-icons'
 import {
-  CheckCheck,
-  Crown,
-  Eraser,
-  Info,
-  Plus,
-  Repeat,
-  RefreshCw,
-  Rocket,
-  Search,
-  Shield,
-  ShieldHalf,
-  Star,
-  UserX,
+  ClipboardPaste,
+  Gamepad2,
   Users,
-  Zap,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
 import { ItemIcon } from '../../../components/items/item-icon'
 import { ItemTile } from '../../../components/items/item-tile'
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from '../../../components/ui/context-menu'
 import {
   Dialog,
   DialogContent,
@@ -63,13 +38,18 @@ import {
   TooltipTrigger,
 } from '../../../components/ui/tooltip'
 import {
-  Callout,
+  AccountResourceGate,
   EmptyState,
   PageHeader,
-  Panel,
-  PanelBody,
-  StatusPill,
+  RefreshButton,
+  SearchField,
+  Segmented,
+  useAccountResource,
 } from '../../../components/page'
+import { loadInventory } from '../inventory/-hooks'
+import { LoadoutBoard } from './-board'
+import { CopyLoadoutDialog, ImportLoadoutDialog } from './-copy-dialog'
+import { requestLoadouts } from './-requests'
 
 import {
   getItemRecord,
@@ -82,7 +62,7 @@ import { useGetSelectedAccount } from '../../../hooks/accounts'
 import { computeItemPower } from '../../../config/constants/fortnite/power'
 
 import { toast } from '../../../lib/notifications'
-import { cn, parseCustomDisplayName } from '../../../lib/utils'
+import { cn } from '../../../lib/utils'
 
 /** Profile keys are lowercase; `AssignHeroToLoadout` wants them cased. */
 function slotName(slot: string) {
@@ -111,6 +91,14 @@ function slotLabel(slot: string) {
  * and the loadout takes its number instead. Anything a person could have
  * typed is still printed, in case Epic ever hands the naming over.
  */
+const heroClassOptions = [
+  { label: 'All classes', value: 'All' },
+  { label: 'Soldier', value: 'Soldier' },
+  { label: 'Constructor', value: 'Constructor' },
+  { label: 'Ninja', value: 'Ninja' },
+  { label: 'Outlander', value: 'Outlander' },
+]
+
 function loadoutTitle(loadout: LoadoutEntry) {
   const name = loadout.name?.trim() ?? ''
   const generated = name.length < 1 || /^[A-Za-z0-9]{6,}$/.test(name)
@@ -118,26 +106,112 @@ function loadoutTitle(loadout: LoadoutEntry) {
   return generated ? `Loadout ${loadout.position}` : name
 }
 
+/** What the page reads: the loadouts, and the vault as the pool to fill them from. */
+type LoadoutsData = {
+  accountId: string
+  availableGadgets: Array<string>
+  availableTeamPerks: LoadoutsPayload['availableTeamPerks']
+  defenders: Array<InventoryItem>
+  heroes: Array<InventoryItem>
+  loadouts: Array<LoadoutEntry>
+  schematics: Array<InventoryItem>
+}
+
+async function loadLoadouts(accountId: string): Promise<LoadoutsData> {
+  /*
+   * The vault only feeds the pickers. If it fails the loadouts still show —
+   * the pickers are just empty, as they always were in that case.
+   */
+  const [payload, inventory] = await Promise.all([
+    requestLoadouts(accountId),
+    loadInventory(accountId).catch(() => null),
+  ])
+
+  if (payload.errorMessage) {
+    throw new Error(
+      payload.errorMessage === 'Unknown Error'
+        ? 'Epic did not return the loadouts. Try Refresh.'
+        : payload.errorMessage
+    )
+  }
+
+  const items = inventory?.errorMessage ? [] : inventory?.items ?? []
+
+  return {
+    accountId: payload.accountId,
+    availableGadgets: payload.availableGadgets,
+    availableTeamPerks: payload.availableTeamPerks ?? [],
+    defenders: items.filter((item) => item.kind === 'defender'),
+    heroes: items.filter((item) => item.kind === 'hero'),
+    loadouts: payload.loadouts,
+    schematics: items.filter((item) => item.kind === 'schematic'),
+  }
+}
+
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
-  const { selected } = useGetSelectedAccount()
+  const resource = useAccountResource(loadLoadouts, {
+    cacheKey: 'loadouts',
+    fallbackError: 'Could not read the loadouts. Try Refresh.',
+    owner: (data) => data.accountId,
+  })
+  const [importing, setImporting] = useState(false)
 
   return (
     <>
       <PageHeader
-        icon={Users}
+        actions={
+          <>
+            <Button
+              disabled={!resource.accountId}
+              onClick={() => setImporting(true)}
+              variant="secondary"
+            >
+              <ClipboardPaste className="size-4" />
+              Import code
+            </Button>
+            <RefreshButton
+              disabled={!resource.accountId}
+              loading={resource.loading}
+              onClick={resource.refresh}
+            />
+          </>
+        }
+        icon={Gamepad2}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.loadouts')}
-        description="Every loadout the account has saved, in the game's own order. Click a seat to change who is in it, right-click one to inspect them."
+        description="Every loadout the account has saved, in the game's own order. Click any seat, gadget, defender or weapon to change it; right-click a hero to inspect them."
       />
-      <Content key={selected?.accountId ?? 'none'} />
+      <AccountResourceGate
+        icon={Gamepad2}
+        loading={{
+          title: 'Loading loadouts…',
+          description: 'Reading the saved loadouts and the heroes, defenders and schematics to fill them with.',
+        }}
+        resource={resource}
+        what="the loadouts"
+      >
+        {(data) => (
+          <Content
+            data={data}
+            key={data.accountId}
+            reload={resource.refresh}
+          />
+        )}
+      </AccountResourceGate>
+      <ImportLoadoutDialog onOpenChange={setImporting} open={importing} />
     </>
   )
 }
 
-function Content() {
+function Content({
+  data,
+  reload,
+}: {
+  data: LoadoutsData
+  reload: () => void
+}) {
   const { loadout: requestedLoadout } = Route.useSearch()
-  const navigate = Route.useNavigate()
   useRequestItemDatabase()
 
   const { selected } = useGetSelectedAccount()
@@ -146,17 +220,15 @@ function Content() {
   const records = useItemDatabaseStore((state) => state.records)
   const ratings = useItemDatabaseStore((state) => state.ratings)
 
+  const { availableGadgets, availableTeamPerks, defenders, heroes, loadouts, schematics } = data
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
-  const [loadouts, setLoadouts] = useState<Array<LoadoutEntry>>([])
-  const currentLoadout = resolveCollectionSelection(loadouts.map((loadout) => loadout.itemId), requestedLoadout, loadouts.find((loadout) => loadout.active)?.itemId)
-  const [heroes, setHeroes] = useState<Array<InventoryItem>>([])
-  const [availableGadgets, setAvailableGadgets] = useState<Array<string>>([])
-  const [defenders, setDefenders] = useState<Array<InventoryItem>>([])
-  const [schematics, setSchematics] = useState<Array<InventoryItem>>([])
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [isLoading, setLoading] = useState(false)
+  /* A loadout linked to by id is scrolled to once the board has drawn. */
+  useEffect(() => {
+    if (requestedLoadout) {
+      document.getElementById(`loadout-${requestedLoadout}`)?.scrollIntoView({ block: 'center' })
+    }
+  }, [requestedLoadout])
   const [isEditing, setEditing] = useState(false)
-  const [hasLoaded, setHasLoaded] = useState(false)
   /** The slot waiting for a hero to be picked for it. */
   const [pendingSlot, setPendingSlot] = useState<{
     loadoutId: string
@@ -172,55 +244,31 @@ function Content() {
     loadoutId: string
     slotIndex: number
   } | null>(null)
+  /** The loadout being copied to another account. */
+  const [copying, setCopying] = useState<{ loadout: LoadoutEntry; title: string } | null>(null)
+  /** The loadout waiting for a team perk to be picked for it. */
+  const [pendingTeamPerk, setPendingTeamPerk] = useState<string | null>(null)
   const [heroClass, setHeroClass] = useState('All')
   const [heroSearch, setHeroSearch] = useState('')
-
-  useEffect(() => {
-    const listener = window.electronAPI.responseLoadouts(
-      async (response) => {
-        if (response.accountId !== accountId) return
-        setLoading(false)
-        setHasLoaded(true)
-        setLoadouts(response.loadouts)
-        setAvailableGadgets(response.availableGadgets)
-        setErrorMessage(response.errorMessage ?? null)
-      }
-    )
-
-    return () => {
-      listener.removeListener()
-    }
-  }, [])
-
-  /** The vault feed doubles as the pool of heroes to slot. */
-  useEffect(() => {
-    const listener = window.electronAPI.responseInventory(
-      async (response) => {
-        const entry = accountId ? response[accountId] : undefined
-
-        if (entry) {
-          setHeroes(entry.items.filter((item) => item.kind === 'hero'))
-          setDefenders(entry.items.filter((item) => item.kind === 'defender'))
-          setSchematics(entry.items.filter((item) => item.kind === 'schematic'))
-        }
-      }
-    )
-
-    return () => {
-      listener.removeListener()
-    }
-  }, [accountId])
 
   useEffect(() => {
     const listener = window.electronAPI.notificationLoadoutEdit(
       async (response) => {
         if (response.accountId !== accountId) return
+
+        /* A copy or import into this account reports through its own dialog. */
+        if (response.kind === 'copy') {
+          if (!response.errorMessage) reload()
+          return
+        }
+
         setEditing(false)
         setPendingSlot(null)
         setPendingWeapon(null)
         setPendingGadget(null)
+        setPendingTeamPerk(null)
 
-        toast(
+        toast[response.errorMessage ? 'error' : 'success'](
           response.errorMessage
             ? `Epic rejected that: ${response.errorMessage}`
             : response.kind === 'activate'
@@ -233,8 +281,13 @@ function Content() {
                     ? 'Defender weapon assigned'
                     : response.kind === 'assign-gadget'
                       ? 'Gadget assigned'
+                    : response.kind === 'assign-team-perk'
+                      ? 'Team perk changed'
                     : 'Hero assigned'
         )
+
+        /* The loadouts stay on screen while the edited copy loads. */
+        reload()
       }
     )
 
@@ -242,22 +295,6 @@ function Content() {
       listener.removeListener()
     }
   }, [])
-
-  const handleLoad = () => {
-    if (!selected) {
-      return
-    }
-
-    setLoading(true)
-    window.electronAPI.requestLoadouts(selected)
-    window.electronAPI.requestInventory([selected])
-  }
-
-  useEffect(() => {
-    if (accountId) {
-      handleLoad()
-    }
-  }, [accountId])
 
   const candidates = useMemo(
     () =>
@@ -353,93 +390,35 @@ function Content() {
       : record?.perk ?? null
   }
 
-  if (!selected) {
-    return (
-      <EmptyState
-        description="Pick one in the title bar and its loadouts load here."
-        icon={UserX}
-        title="No account selected"
-      />
-    )
-  }
-
   return (
     <>
-      <Panel id="loadouts-card">
-        <PanelBody className="flex flex-wrap items-center gap-3">
-          <span className="text-[0.8125rem] font-medium">
-            {parseCustomDisplayName(selected)}
-          </span>
-          <Button
-            className="ml-auto"
-            disabled={isLoading}
-            onClick={handleLoad}
-            size="sm"
-            variant="ghost"
-          >
-            {isLoading ? (
-              <UpdateIcon className="animate-spin" />
-            ) : (
-              <>
-                <RefreshCw className="size-3.5" />
-                Refresh
-              </>
-            )}
-          </Button>
-        </PanelBody>
-      </Panel>
+      {/* What the go-to-top button watches: once this scrolls away, it shows. */}
+      <div id="loadouts-card" />
 
-      {errorMessage && (
-        <Callout
-          title="Could not read the loadouts"
-          tone="danger"
-        >
-          {errorMessage}
-        </Callout>
+      {loadouts.length > 0 && (
+        <LoadoutBoard
+          actions={{
+            isEditing,
+            onActivate: (loadoutId) => edit({ kind: 'activate', loadoutId }),
+            onClear: (loadoutId) => edit({ kind: 'clear', loadoutId }),
+            onCopyToAccount: (loadout, title) => setCopying({ loadout, title }),
+            onInspect: setDetail,
+            onPickGadget: (loadoutId, slotIndex) => setPendingGadget({ loadoutId, slotIndex }),
+            onPickTeamPerk: setPendingTeamPerk,
+            onPickSlot: (loadoutId, slot, kind) => setPendingSlot({ loadoutId, slot, kind }),
+            onPickWeapon: (loadoutId, defenderId, defenderTemplateId) =>
+              setPendingWeapon({ loadoutId, defenderId, defenderTemplateId }),
+          }}
+          highlighted={requestedLoadout}
+          sharedBy={selected?.displayName}
+          loadouts={loadouts}
+          ratings={ratings}
+          records={records}
+          titleOf={loadoutTitle}
+        />
       )}
 
-      {hasLoaded && !errorMessage && loadouts.length > 0 && (
-        <div className="collection-container">
-        <div className="collection-workspace grid items-start gap-4">
-          <CollectionPicker label="Loadouts" value={currentLoadout}
-            items={loadouts.map((loadout) => ({ value: loadout.itemId, label: loadoutTitle(loadout), status: loadout.active ? <StatusPill tone="active">Equipped</StatusPill> : undefined }))}
-            onValueChange={(value) => { void navigate({ search: (previous) => ({ ...previous, loadout: value }), resetScroll: false }) }} />
-          <div className="min-w-0">
-          {loadouts.filter((loadout) => loadout.itemId === currentLoadout).map((loadout) => (
-            <LoadoutCard
-              isEditing={isEditing}
-              key={loadout.itemId}
-              loadout={loadout}
-              onActivate={() =>
-                edit({ kind: 'activate', loadoutId: loadout.itemId })
-              }
-              onClear={() =>
-                edit({ kind: 'clear', loadoutId: loadout.itemId })
-              }
-              onInspect={setDetail}
-              onPickSlot={(slot, kind) =>
-                setPendingSlot({ loadoutId: loadout.itemId, slot, kind })
-              }
-              onPickWeapon={(defenderId, defenderTemplateId) =>
-                setPendingWeapon({
-                  loadoutId: loadout.itemId,
-                  defenderId,
-                  defenderTemplateId,
-                })
-              }
-              onPickGadget={(slotIndex) =>
-                setPendingGadget({ loadoutId: loadout.itemId, slotIndex })
-              }
-              ratings={ratings}
-              records={records}
-            />
-          ))}
-          </div>
-        </div>
-        </div>
-      )}
-
-      {hasLoaded && !errorMessage && loadouts.length <= 0 && (
+      {loadouts.length <= 0 && (
         <EmptyState
           description="This account has no hero loadouts saved."
           icon={Users}
@@ -470,29 +449,18 @@ function Content() {
 
           {pendingSlot?.kind === 'hero' && (
             <div className="space-y-2">
-              <div className="flex flex-wrap gap-1">
-                {['All', 'Soldier', 'Constructor', 'Ninja', 'Outlander'].map(
-                  (value) => (
-                    <Button
-                      key={value}
-                      onClick={() => setHeroClass(value)}
-                      size="sm"
-                      variant={heroClass === value ? 'secondary' : 'ghost'}
-                    >
-                      {value}
-                    </Button>
-                  )
-                )}
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  className="pl-9"
-                  onChange={(event) => setHeroSearch(event.target.value)}
-                  placeholder="Search heroes or perks"
-                  value={heroSearch}
-                />
-              </div>
+              <Segmented
+                onChange={setHeroClass}
+                options={heroClassOptions}
+                value={heroClass}
+              />
+              <SearchField
+                className="block"
+                label="Search heroes or perks"
+                onChange={setHeroSearch}
+                placeholder="Search heroes or perks"
+                value={heroSearch}
+              />
             </div>
           )}
 
@@ -594,6 +562,68 @@ function Content() {
       </Dialog>
 
       <Dialog
+        onOpenChange={(open) => !open && setPendingTeamPerk(null)}
+        open={pendingTeamPerk !== null}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Pick a team perk</DialogTitle>
+            <DialogDescription>
+              The team perk works with the classes of the support team; it switches on in game once they match.
+            </DialogDescription>
+          </DialogHeader>
+          {availableTeamPerks.length > 0 ? (
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {[...availableTeamPerks]
+                .sort((a, b) =>
+                  (getItemRecord(records, a.templateId)?.name ?? a.templateId).localeCompare(
+                    getItemRecord(records, b.templateId)?.name ?? b.templateId
+                  )
+                )
+                .map((perk) => {
+                  const record = getItemRecord(records, perk.templateId)
+                  const current = loadouts.find((loadout) => loadout.itemId === pendingTeamPerk)?.teamPerkId === perk.itemId
+
+                  return (
+                    <button
+                      className={cn(
+                        'flex min-w-0 items-start gap-2.5 rounded-lg bg-muted/40 p-2 text-left transition-colors hover:bg-accent/40 disabled:opacity-60',
+                        current && 'ring-1 ring-inset ring-primary'
+                      )}
+                      disabled={isEditing || current}
+                      key={perk.itemId}
+                      onClick={() =>
+                        pendingTeamPerk &&
+                        edit({ kind: 'assign-team-perk', loadoutId: pendingTeamPerk, teamPerkId: perk.itemId })
+                      }
+                      type="button"
+                    >
+                      <ItemIcon records={records} templateId={perk.templateId} />
+                      <span className="min-w-0">
+                        <span className="block truncate text-ui font-semibold">
+                          {record?.name ?? perk.templateId.split(':').pop()}
+                          {current && <span className="ml-1.5 text-xs font-normal text-primary">Equipped</span>}
+                        </span>
+                        {record?.description && (
+                          <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{record.description}</span>
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+            </div>
+          ) : (
+            <EmptyState
+              className="border-0 bg-transparent py-6"
+              description="This account owns no team perks."
+              icon={Users}
+              title="Nothing to pick"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         onOpenChange={(open) => !open && setPendingWeapon(null)}
         open={pendingWeapon !== null}
       >
@@ -650,6 +680,14 @@ function Content() {
         </DialogContent>
       </Dialog>
 
+      <CopyLoadoutDialog
+        fromAccountId={accountId}
+        loadout={copying?.loadout ?? null}
+        onOpenChange={(open) => !open && setCopying(null)}
+        records={records}
+        title={copying?.title ?? ''}
+      />
+
       <ItemDetailDialog
         onOpenChange={(open) => {
           if (!open) {
@@ -663,314 +701,6 @@ function Content() {
 
       <GoToTop containerId="loadouts-card" />
     </>
-  )
-}
-
-/**
- * One loadout, in the shape the game lays it out.
- *
- * In game a loadout slot is a vertical stack of labelled bands — commander,
- * team perk, support, gadgets — read top to bottom, and that order is the one
- * people already know, so the card keeps it rather than inventing a
- * two-column arrangement of tiles nobody has seen before. Each band names
- * itself at the section rank and holds rows, so five support heroes read as a
- * list of five decisions rather than a shelf of anonymous portraits.
- *
- * What it does not keep is the game's chrome. The game fills the commander
- * band with its rarity colour and paints every support row a different
- * gradient; here rarity stays a hairline on the art the way `ItemIcon` draws
- * it everywhere else, which leaves the perk names as the loudest text in the
- * card — and a perk is what a hero is actually picked for.
- *
- * Defenders and their selected weapon schematics follow the gadget band.
- */
-function LoadoutCard({
-  isEditing,
-  loadout,
-  onActivate,
-  onClear,
-  onInspect,
-  onPickSlot,
-  onPickWeapon,
-  onPickGadget,
-  ratings,
-  records,
-}: {
-  isEditing: boolean
-  loadout: LoadoutEntry
-  onActivate: () => void
-  onClear: () => void
-  onInspect: (subject: ItemDetailSubject) => void
-  onPickSlot: (slot: string, kind: 'hero' | 'defender') => void
-  onPickWeapon: (defenderId: string, defenderTemplateId: string) => void
-  onPickGadget: (slotIndex: number) => void
-  ratings: RatingTables
-  records: ItemRecordMap
-}) {
-  const commander = loadout.commander
-  const commanderRecord = commander?.templateId
-    ? getItemRecord(records, commander.templateId)
-    : null
-  const teamPerk = loadout.teamPerk
-    ? getItemRecord(records, loadout.teamPerk)
-    : null
-  const filled = loadout.team.filter((member) => member.templateId).length
-
-  const memberPower = (member: {
-    level: number
-    templateId: string | null
-  }) =>
-    member.templateId
-      ? computeItemPower({
-          level: member.level,
-          tables: ratings,
-          templateId: member.templateId,
-        })
-      : null
-
-  const inspect = (member: LoadoutMember) => () =>
-    onInspect({
-      templateId: member.templateId as string,
-      itemId: member.itemId ?? undefined,
-      level: member.level,
-      tier: member.tier,
-    })
-
-  return (
-    <Panel className={cn(loadout.active && 'border-primary/50')}>
-      <header className="flex flex-wrap items-center gap-1.5 border-b border-border/60 px-3 py-2">
-        <p className="text-[0.8125rem] font-semibold">
-          {loadoutTitle(loadout)}
-        </p>
-        {loadout.active && <StatusPill tone="active">Equipped</StatusPill>}
-
-        <div className="ml-auto flex gap-1">
-          {!loadout.active && (
-            <Button
-              disabled={isEditing}
-              onClick={onActivate}
-              size="sm"
-              variant="secondary"
-            >
-              <CheckCheck className="size-3.5" />
-              Equip
-            </Button>
-          )}
-          <Button
-            disabled={isEditing}
-            onClick={onClear}
-            size="sm"
-            title="Empty every slot in this loadout"
-            variant="ghost"
-          >
-            <Eraser className="size-3.5" />
-          </Button>
-        </div>
-      </header>
-
-      <Band
-        icon={Crown}
-        title="Commander"
-      >
-        {/*
-          The commander's perk is its *commander* perk — the upgraded one it
-          only grants from this seat — which is the whole reason a particular
-          hero leads a loadout. A hero with no commander perk in the database
-          still has its standard one, and showing that beats showing nothing.
-        */}
-        <HeroSlot
-          isLead
-          member={commander}
-          onInspect={commander?.templateId ? inspect(commander) : undefined}
-          onPick={() => onPickSlot('commanderslot', 'hero')}
-          perk={
-            commanderRecord?.commanderPerk ?? commanderRecord?.perk ?? null
-          }
-          perkTemplate={
-            commanderRecord?.commanderPerkTemplate ??
-            commanderRecord?.perkTemplate ??
-            null
-          }
-          power={commander ? memberPower(commander) : null}
-          records={records}
-        />
-      </Band>
-
-      {teamPerk && (
-        <Band
-          icon={Shield}
-          title="Team perk"
-        >
-          <div className="flex items-center gap-2 px-1.5 py-1">
-            <ItemIcon
-              records={records}
-              size="small"
-              templateId={loadout.teamPerk as string}
-            />
-            <div className="min-w-0">
-              <p className="truncate text-[0.8125rem] font-semibold leading-tight">
-                {teamPerk.name}
-              </p>
-              {teamPerk.description && (
-                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                  {teamPerk.description}
-                </p>
-              )}
-            </div>
-          </div>
-        </Band>
-      )}
-
-      <Band
-        count={`${filled}/${loadout.team.length}`}
-        icon={Users}
-        title="Support team"
-      >
-        <div className="space-y-0.5">
-          {loadout.team.map((member) => (
-            <HeroSlot
-              key={member.slot}
-              member={member}
-              onInspect={member.templateId ? inspect(member) : undefined}
-              onPick={() => onPickSlot(member.slot, 'hero')}
-              perk={
-                member.templateId
-                  ? getItemRecord(records, member.templateId)?.perk ?? null
-                  : null
-              }
-              perkTemplate={
-                member.templateId
-                  ? getItemRecord(records, member.templateId)?.perkTemplate ??
-                    null
-                  : null
-              }
-              power={memberPower(member)}
-              records={records}
-            />
-          ))}
-        </div>
-      </Band>
-
-      <Band icon={Rocket} title="Gadgets">
-        <div className="grid grid-cols-2 gap-1 px-1.5">
-          {loadout.gadgets.map((gadget, index) => (
-            <button
-              className="flex min-w-0 items-center gap-1.5 rounded-lg border border-border/60 bg-surface/50 p-1 text-left text-xs transition-colors hover:border-primary/50"
-              key={index}
-              onClick={() => onPickGadget(index)}
-              type="button"
-            >
-              {gadget ? (
-                <ItemIcon
-                  records={records}
-                  size="small"
-                  templateId={gadget}
-                />
-              ) : (
-                <span className="grid size-8 place-items-center rounded bg-muted/40">
-                  <Plus className="size-3.5" />
-                </span>
-              )}
-              {gadget
-                ? getItemRecord(records, gadget)?.name ??
-                  gadget.split(':').pop()
-                : `Empty gadget slot ${index + 1}`}
-            </button>
-          ))}
-        </div>
-      </Band>
-
-      <Band
-        count={`${loadout.defenders.filter((member) => member.templateId).length}/3`}
-        icon={ShieldHalf}
-        title="Defenders"
-      >
-        <div className="space-y-1">
-          {loadout.defenders.map((defender) => (
-            <DefenderSlot
-              defender={defender}
-              key={defender.slot}
-              onPick={() => onPickSlot(defender.slot, 'defender')}
-              onPickWeapon={() =>
-                defender.itemId &&
-                defender.templateId &&
-                onPickWeapon(defender.itemId, defender.templateId)
-              }
-              records={records}
-            />
-          ))}
-        </div>
-      </Band>
-    </Panel>
-  )
-}
-
-function DefenderSlot({
-  defender,
-  onPick,
-  onPickWeapon,
-  records,
-}: {
-  defender: LoadoutDefender
-  onPick: () => void
-  onPickWeapon: () => void
-  records: ItemRecordMap
-}) {
-  if (!defender.templateId) {
-    return (
-      <Button className="w-full justify-start" onClick={onPick} variant="ghost">
-        <Plus className="size-4" /> Empty defender slot
-      </Button>
-    )
-  }
-
-  const defenderRecord = getItemRecord(records, defender.templateId)
-  const weaponRecord = defender.schematicTemplateId
-    ? getItemRecord(records, defender.schematicTemplateId)
-    : null
-
-  return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-border/60 p-1">
-      <PerkTooltip
-        alterations={defender.alterations}
-        className="min-w-0 flex-1"
-        records={records}
-        title={defenderRecord?.name ?? 'Defender perks'}
-      >
-        <button
-          className="flex w-full min-w-0 items-center gap-2 text-left"
-          onClick={onPick}
-          type="button"
-        >
-          <ItemIcon
-            records={records}
-            size="small"
-            templateId={defender.templateId}
-          />
-          <span className="min-w-0 truncate text-xs font-semibold">
-            {defenderRecord?.name ?? defender.templateId.split(':').pop()}
-          </span>
-        </button>
-      </PerkTooltip>
-      <PerkTooltip
-        alterations={defender.schematicAlterations}
-        records={records}
-        title={weaponRecord?.name ?? 'Default weapon'}
-      >
-        <Button onClick={onPickWeapon} size="sm" variant="secondary">
-          {defender.schematicTemplateId && (
-            <ItemIcon
-              records={records}
-              size="small"
-              templateId={defender.schematicTemplateId}
-            />
-          )}
-          <span className="max-w-40 truncate">
-            {weaponRecord?.name ?? 'Default weapon'}
-          </span>
-        </Button>
-      </PerkTooltip>
-    </div>
   )
 }
 
@@ -1031,190 +761,5 @@ function PerkTooltip({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  )
-}
-
-/**
- * One labelled band of the card.
- *
- * The game separates its bands with a full-width rule and a heading in the
- * corner, and that is what makes a loadout scannable — you find the support
- * team by looking for the word, not by counting portraits. Same rule here,
- * at the panel's own gutter, with the count on the right for the one band
- * where "how many are filled" is a question worth answering at a glance.
- */
-function Band({
-  children,
-  count,
-  icon: Icon,
-  title,
-}: {
-  children: ReactNode
-  /** Filled-of-total, when the band is a set of seats. */
-  count?: string
-  icon: LucideIcon
-  title: string
-}) {
-  return (
-    <section className="border-b border-border/60 px-2 py-1.5 last:border-b-0">
-      <div className="flex items-center gap-1.5 px-1 pb-1">
-        <Icon className="size-3 shrink-0 text-muted-foreground/70" />
-        <h3 className="section-label">{title}</h3>
-        {count && (
-          <span className="figure micro-label ml-auto">{count}</span>
-        )}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-/**
- * A hero in a seat: portrait, who they are, what they grant, what they are
- * worth.
- *
- * The perk is the second line rather than a hover-only detail because it is
- * the reason the seat is filled the way it is — swapping a support hero is a
- * choice between two perks, and a grid of portraits hides exactly that. The
- * lead seat takes the bigger portrait and gets its perk's description as
- * well; a support row keeps the perk to its name, or five descriptions would
- * bury the commander the card is built around.
- *
- * Everything inside is phrasing content — spans, never divs — because the row
- * itself is the button that opens the hero picker.
- */
-function HeroSlot({
-  isLead = false,
-  member,
-  onInspect,
-  onPick,
-  perk,
-  perkTemplate,
-  power,
-  records,
-}: {
-  /** The commander seat: bigger art, and the perk's description with it. */
-  isLead?: boolean
-  member: LoadoutMember | null
-  /** Absent while the seat is empty — there is nothing to inspect. */
-  onInspect?: () => void
-  onPick: () => void
-  perk: ItemRecordPerk | null
-  perkTemplate: string | null
-  power: number | null
-  records: ItemRecordMap
-}) {
-  if (!member?.templateId) {
-    return (
-      <button
-        className={cn(
-          'flex w-full items-center gap-2 rounded-lg border border-dashed border-border/60',
-          'px-2 py-1 text-left text-muted-foreground transition-colors',
-          'hover:border-primary/50 hover:text-primary'
-        )}
-        onClick={onPick}
-        type="button"
-      >
-        <span
-          className={cn(
-            'grid shrink-0 place-items-center rounded-lg bg-muted/30',
-            isLead ? 'size-10' : 'size-8'
-          )}
-        >
-          <Plus className="size-4" />
-        </span>
-        <span className="text-[0.8125rem]">
-          {isLead ? 'No commander — pick one' : 'Empty support slot'}
-        </span>
-      </button>
-    )
-  }
-
-  const record = getItemRecord(records, member.templateId)
-  const caption = [record?.rarity, record?.subType]
-    .filter(Boolean)
-    .join(' · ')
-
-  const row = (
-    <button
-      className={cn(
-        'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left',
-        'transition-colors hover:bg-accent/40'
-      )}
-      onClick={onPick}
-      title="Click to change · right-click for more"
-      type="button"
-    >
-      <ItemIcon
-        records={records}
-        size={isLead ? 'large' : 'small'}
-        templateId={member.templateId}
-      />
-
-      <span className="min-w-0 flex-1">
-        <span
-          className={cn(
-            'block truncate font-semibold leading-tight',
-            'text-[0.8125rem]'
-          )}
-        >
-          {record?.name ?? member.templateId.split(':').pop()}
-        </span>
-        {caption && (
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-            {caption}
-          </span>
-        )}
-
-        {perk && (
-          <span
-            className="mt-0.5 flex items-center gap-1.5"
-            title={perk.description ?? undefined}
-          >
-            {perkTemplate ? (
-              <ItemIcon
-                records={records}
-                size="small"
-                templateId={perkTemplate}
-              />
-            ) : (
-              <Star className="mt-0.5 size-3 shrink-0 text-muted-foreground/70" />
-            )}
-            <span className="min-w-0">
-              <span className="block truncate text-xs font-medium text-foreground/90">
-                {perk.name}
-              </span>
-            </span>
-          </span>
-        )}
-      </span>
-
-      {power !== null && power > 0 && (
-        <span className="flex shrink-0 items-center gap-1">
-          <Zap className="size-3 text-muted-foreground" />
-          <span className="figure text-sm font-bold">{power}</span>
-        </span>
-      )}
-    </button>
-  )
-
-  if (!onInspect) {
-    return row
-  }
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>{row}</ContextMenuTrigger>
-      <ContextMenuContent className="w-52">
-        <ContextMenuItem onSelect={onPick}>
-          <Repeat className="mr-2 size-3.5" />
-          Change hero
-        </ContextMenuItem>
-        <ContextMenuItem onSelect={onInspect}>
-          <Info className="mr-2 size-3.5" />
-          Inspect
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
   )
 }

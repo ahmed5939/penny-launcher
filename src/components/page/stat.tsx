@@ -1,32 +1,28 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { IconWell } from './icon-well'
 
 import { cn } from '../../lib/utils'
 
 export type StatusTone = 'idle' | 'active' | 'warning' | 'danger'
 
 /**
- * A single number with its label. Put several in a `StatRow` to get the
- * summary strip most of these tools were missing.
+ * A single number with its label, in a `StatRow`.
+ *
+ * A game client's stat line, not a KPI card: the figure large, the label
+ * small above it, no box and no icon tile. `accent` (a rarity, a F.O.R.T.
+ * stat) colours a short bar beside the figure; `tone` colours the figure.
+ * `icon` is accepted for existing call sites and not drawn.
  */
 export function StatTile({
   accent,
   children,
   className,
   hint,
-  icon: Icon,
   label,
   tone = 'default',
   value,
 }: {
-  /**
-   * A colour that belongs to the thing being counted — a rarity, a F.O.R.T.
-   * stat. Draws the left edge, top rule and wash the item cards use. Leave
-   * it off for plain counts; a row where every tile is coloured has no
-   * emphasis left.
-   */
   accent?: string
   /** Extra content under the figure: a progress bar, a breakdown. */
   children?: ReactNode
@@ -46,55 +42,22 @@ export function StatTile({
   }[tone]
 
   return (
-    <div
-      className={cn('panel relative flex items-start gap-3 overflow-hidden px-4 py-3', className)}
-      style={
-        accent
-          ? {
-              boxShadow: `inset 3px 0 0 ${accent}`,
-              backgroundImage: `linear-gradient(90deg, color-mix(in srgb, ${accent} 7%, transparent), transparent 45%)`,
-            }
-          : undefined
-      }
-    >
-      {accent && (
-        <span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-0.5"
-          style={{ background: accent }}
-        />
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="micro-label">{label}</p>
-        <p
-          className={cn(
-            'figure mt-1.5 text-xl font-bold leading-none',
-            toneClass
-          )}
-        >
-          {value}
-        </p>
-        {children}
-        {hint && (
-          <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-        )}
-      </div>
-
-      {/*
-        Trailing, not inline with the label: a 12px glyph on the label line was
-        competing with the caption it sat next to, and the tiles in a row lost
-        the shared left edge their labels are supposed to share.
-      */}
-      {Icon && (
-        <IconWell
-          icon={Icon}
-          size="sm"
-        />
-      )}
+    <div className={cn('relative min-w-0 py-1', className)}>
+      <p className="micro-label">{label}</p>
+      <p className="mt-2 flex items-center gap-2">
+        {accent && <span aria-hidden className="h-5 w-1 rounded-full" style={{ background: accent }} />}
+        <span className={cn('figure text-display-sm font-bold leading-none', toneClass)}>{value}</span>
+      </p>
+      {children}
+      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
     </div>
   )
 }
 
+/**
+ * The stat line under a page title: figures side by side on the page
+ * rather than in four boxes. Wraps cleanly on a narrow window.
+ */
 export function StatRow({
   children,
   className,
@@ -105,7 +68,7 @@ export function StatRow({
   return (
     <div
       className={cn(
-        'grid gap-3 sm:grid-cols-2 lg:grid-cols-4',
+        'flex flex-wrap gap-x-12 gap-y-4 [&>*]:min-w-32',
         className
       )}
     >

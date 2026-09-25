@@ -24,6 +24,30 @@ module.exports = {
           max: '900px',
         },
       },
+      /*
+       * The type scale. Every size a screen uses has a name here, so pages
+       * line up and `text-[…]` never appears in a component. Font size only —
+       * line height stays with the element, as the arbitrary sizes had it.
+       * Registered with tailwind-merge in `src/lib/utils.ts`; keep in step.
+       *
+       *   3xs      9px  corner badges on item art
+       *   2xs     10px  micro labels, tile captions
+       *   caption 11px  section labels, secondary facts
+       *   xs      12px  hints (Tailwind's own)
+       *   ui      13px  body text in dense panels, list rows
+       *   title   15px  small headings, brand text
+       *   display-sm / display / display-lg  22 / 28 / 32px  page and hero titles
+       */
+      fontSize: {
+        '3xs': '0.5625rem',
+        '2xs': '0.625rem',
+        caption: '0.6875rem',
+        ui: '0.8125rem',
+        title: '0.9375rem',
+        'display-sm': '1.375rem',
+        display: '1.75rem',
+        'display-lg': '2rem',
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

@@ -480,34 +480,6 @@ export function createParticles({
 // ── Wind ─────────────────────────────────────────────────────
 
 /**
- * Sways instanced foliage in the vertex shader. Displacement grows with
- * height so trunks stay planted; each instance gets its own phase.
- */
-export function addWindSway(material: THREE.Material, time: { value: number }, strength: number) {
-  const previous = material.onBeforeCompile.bind(material)
-  const previousKey = material.customProgramCacheKey.bind(material)
-
-  material.onBeforeCompile = (shader, renderer) => {
-    previous(shader, renderer)
-    shader.uniforms.uWindTime = time
-    shader.vertexShader = `uniform float uWindTime;\n${shader.vertexShader}`.replace(
-      '#include <begin_vertex>',
-      `#include <begin_vertex>
-      #ifdef USE_INSTANCING
-        float windPhase = instanceMatrix[3].x * 0.37 + instanceMatrix[3].z * 0.23;
-      #else
-        float windPhase = 0.0;
-      #endif
-      float windBend = max(transformed.y - 0.25, 0.0);
-      windBend *= windBend * ${strength.toFixed(3)};
-      transformed.x += sin(uWindTime * 1.3 + windPhase) * windBend;
-      transformed.z += cos(uWindTime * 1.1 + windPhase * 1.7) * windBend * 0.6;`
-    )
-  }
-  material.customProgramCacheKey = () => `${previousKey()}|wind-${strength}`
-}
-
-/**
  * Leaf cards carry canopy-shaped normals. Three.js flips normals on back
  * faces, which darkens every card seen from behind, so keep them as authored.
  */

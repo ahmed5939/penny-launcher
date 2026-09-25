@@ -3,6 +3,8 @@ import type { CollectionBookData } from '../../../features/collection-book/types
 import { useMemo, useState } from 'react'
 
 import { bookCosts } from '../../../features/collection-book/costs'
+import { ItemIcon } from '../../../components/items/item-icon'
+import { useItemDatabaseStore } from '../../../state/items/database'
 
 import { Callout, Panel, PanelBody, PanelHeader, Segmented } from '../../../components/page'
 
@@ -20,6 +22,7 @@ const names: Record<string, string> = {
 }
 
 export function Resources({ data, label }: { data: CollectionBookData; label: (id: string) => string }) {
+  const records = useItemDatabaseStore((s) => s.records)
   const [path, setPath] = useState<'ore' | 'crystal'>('ore')
   const totals = useMemo(() => bookCosts(data.slotted, path), [data.slotted, path])
   const ids = [...new Set([...Object.keys(names).map((k) => 'accountresource:' + k), ...Object.keys(totals.invested), ...Object.keys(totals.remaining)])]
@@ -39,7 +42,7 @@ export function Resources({ data, label }: { data: CollectionBookData; label: (i
               </span>
             ) : undefined
           }
-          description={<>All <span className="figure">{data.slotted.length.toLocaleString()}</span> slotted items · <span className="figure">{totals.upgrades}</span> need upgrading · <span className="figure">{atMax}</span> already at their natural maximum.{totals.choices > 0 && <> {totals.choices} item{totals.choices === 1 ? '' : 's'} have not chosen an evolution path yet; items that already have one keep it.</>}</>}
+          description={<><span className="figure">{data.slotted.length.toLocaleString()}</span> slotted · <span className="figure">{totals.upgrades}</span> to upgrade · <span className="figure">{atMax}</span> maxed.{totals.choices > 0 && <> {totals.choices} still to pick an evolution path.</>}</>}
           title="Investment and remaining cost"
         />
         {totals.unknown.length > 0 && (
@@ -65,7 +68,12 @@ export function Resources({ data, label }: { data: CollectionBookData; label: (i
                 const short = Math.max(0, need - has)
                 return (
                   <tr className="hover:bg-muted/30" key={id}>
-                    <td className="px-5 py-2.5 font-medium">{names[id.split(':').pop()!] ?? label(id)}</td>
+                    <td className="px-5 py-2">
+                      <span className="flex items-center gap-2.5 font-medium">
+                        <ItemIcon records={records} size="small" templateId={id} />
+                        {names[id.split(':').pop()!] ?? label(id)}
+                      </span>
+                    </td>
                     <td className="figure px-4 py-2.5 text-right text-muted-foreground">{(totals.invested[id] ?? 0).toLocaleString()}</td>
                     <td className="figure px-4 py-2.5 text-right">{need.toLocaleString()}</td>
                     <td className="figure px-4 py-2.5 text-right text-muted-foreground">{has.toLocaleString()}</td>

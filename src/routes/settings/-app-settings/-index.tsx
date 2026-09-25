@@ -1,23 +1,21 @@
-import { Panel, PanelBody } from '../../../components/page'
-import { Separator } from '../../../components/ui/separator'
+import { useTranslation } from 'react-i18next'
+
+import { SettingsSection } from '../-section'
 import { AppearanceSettings } from './-appearance'
 import { AppSettingsBaseForm } from './-base-form'
 import { LanguageSelector } from './-language'
 
 export function AppSettings() {
+  const { t } = useTranslation(['settings'])
+
   return (
-    <Panel>
-      <PanelBody className="grid">
+    <div className="space-y-5">
+      <SettingsSection title={t('app-settings.form.sections.appearance')}>
         <AppearanceSettings />
-
-        <Separator className="my-6" />
-
         <LanguageSelector />
+      </SettingsSection>
 
-        <Separator className="my-6" />
-
-        <AppSettingsBaseForm />
-      </PanelBody>
-    </Panel>
+      <AppSettingsBaseForm />
+    </div>
   )
 }

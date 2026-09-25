@@ -9,6 +9,7 @@ import {
 } from '../page/rarity'
 
 import { RarityType } from '../../config/constants/resources'
+import { artboardStyle } from './artboard'
 import { peglegImageURL } from '../../config/constants/pegleg'
 
 import { getItemRecord } from '../../state/items/database'
@@ -63,6 +64,19 @@ const frameByRarity: Record<string, string> = {
   [RarityType.Epic]: 'vr',
   [RarityType.Legendary]: 'sr',
   [RarityType.Mythic]: 'ur',
+}
+
+let plateUrls: Set<string> | null = null
+
+/** Every rarity plate's URL — what `parseResource` hands back for "no art". */
+function rarityPlates() {
+  plateUrls ??= new Set(
+    Object.values(frameByRarity)
+      .map((token) => assets(token))
+      .filter((url): url is string => Boolean(url))
+  )
+
+  return plateUrls
 }
 
 /** The kinds whose decoded name beats `parseResource`'s generic one. */
@@ -158,7 +172,7 @@ const neutralVoucher = new Map<string, string>()
  * inset scale with the art it sits on. What it looks like is not.
  */
 export const itemBadge =
-  'absolute z-10 inline-flex items-center gap-0.5 rounded-lg bg-background/85 px-1 py-px text-[0.625rem] font-semibold leading-none text-foreground ring-1 ring-inset ring-border/50'
+  'absolute z-10 inline-flex items-center gap-0.5 rounded-lg bg-background/85 px-1 py-px text-2xs font-semibold leading-none text-foreground ring-1 ring-inset ring-border/50'
 
 /**
  * The rarity colour this item's chrome is allowed to spend, on the app's one
@@ -348,6 +362,26 @@ function computeItemArt(
   }
 
   /*
+   * `parseResource` answers "no art" with the plate for the rarity *it*
+   * decoded from the id, and the database can disagree — a Lead Doctor is
+   * `_vr_` in its id but Legendary in the record — so the check against this
+   * item's own plate misses and the purple plate lands on an orange one as if
+   * it were the picture. Any plate is no picture; a survivor still has a glyph.
+   */
+  if (imgUrl && rarityPlates().has(imgUrl)) {
+    imgUrl =
+      (body.startsWith('worker:')
+        ? assets(
+            body.startsWith('worker:manager')
+              ? 'voucher_generic_manager'
+              : 'voucher_generic_worker'
+          )
+        : undefined) ??
+      plate ??
+      imgUrl
+  }
+
+  /*
    * Last, because every branch above picks a voucher and none of them care
    * which cut of it ends up on screen.
    */
@@ -408,24 +442,17 @@ export function ItemIcon({
     <span
       className={cn(
         'relative grid shrink-0 place-items-center overflow-hidden rounded-lg',
-        'bg-muted/40 ring-1 ring-inset',
-        art.accent ? 'ring-[color:var(--rarity-soft)]' : 'ring-border/60',
+        !art.frame && 'bg-muted/40 ring-1 ring-inset ring-border/60',
         box,
         className
       )}
-      style={rarityStyle(art.accent)}
+      style={
+        art.frame
+          ? { ...rarityStyle(art.accent), ...artboardStyle(art.rarity) }
+          : rarityStyle(art.accent)
+      }
       title={title ?? art.name}
     >
-      {art.frame && (
-        <img
-          alt=""
-          aria-hidden
-          className="absolute inset-0 size-full object-cover"
-          decoding="async"
-          loading="lazy"
-          src={art.frame}
-        />
-      )}
       {art.imgUrl && (
         <img
           alt=""

@@ -9,10 +9,20 @@ import { cn } from '../../lib/utils'
  */
 export function ProgressBar({
   className,
+  color,
+  label,
   total,
   value,
 }: {
   className?: string
+  /**
+   * A named palette colour (a F.O.R.T. stat, a rarity) when the bar is a
+   * measure of that thing rather than completion. Replaces the done/doing
+   * primary–success pair.
+   */
+  color?: string
+  /** Accessible name, when the bar has no visible label beside it. */
+  label?: string
   total: number
   value: number
 }) {
@@ -26,6 +36,7 @@ export function ProgressBar({
       role="progressbar"
       aria-valuemax={safeTotal}
       aria-valuemin={0}
+      aria-label={label}
       aria-valuenow={value}
       className={cn(
         'h-1.5 w-full overflow-hidden rounded-full bg-muted/70',
@@ -35,9 +46,9 @@ export function ProgressBar({
       <div
         className={cn(
           'h-full rounded-full transition-[width] duration-300',
-          complete ? 'bg-success' : 'bg-primary'
+          !color && (complete ? 'bg-success' : 'bg-primary')
         )}
-        style={{ width: `${percent}%` }}
+        style={{ background: color, width: `${percent}%` }}
       />
     </div>
   )

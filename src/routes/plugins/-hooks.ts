@@ -20,7 +20,7 @@ export function usePluginsData() {
     } catch (error) {
       setInstalled((previous) => previous ?? [])
       setMarketplace((previous) => previous ?? [])
-      toast(`Add-ons could not be loaded: ${errorMessage(error)}`)
+      toast.error(`Add-ons could not be loaded: ${errorMessage(error)}`)
     }
   }, [])
   useEffect(() => {
@@ -40,17 +40,17 @@ export function usePluginsData() {
   }, [refresh])
   const perform = useCallback(async (id: string, operation: () => Promise<{ ok: boolean; error?: string }>) => {
     setPendingId(id)
-    try { const result = await operation(); if (!result.ok) toast(result.error ?? 'Add-on operation failed.') }
-    catch (error) { toast(errorMessage(error)) }
+    try { const result = await operation(); if (!result.ok) toast.error(result.error ?? 'Add-on operation failed.') }
+    catch (error) { toast.error(errorMessage(error)) }
     finally { setPendingId(null); await refresh() }
   }, [refresh])
   const handleReview = useCallback(async (kind: 'catalog' | 'installed' | 'import', id?: string) => {
     setPendingId(id ?? 'import')
     try {
       const result = await window.electronAPI.reviewPlugin(kind, id)
-      if (!result.ok) toast(result.error ?? 'Could not inspect add-on.')
+      if (!result.ok) toast.error(result.error ?? 'Could not inspect add-on.')
       else if (result.review) setReview(result.review)
-    } catch (error) { toast(errorMessage(error)) }
+    } catch (error) { toast.error(errorMessage(error)) }
     finally { setPendingId(null) }
   }, [])
   const handleInstall = (plugin: MarketplacePlugin) => handleReview('catalog', plugin.id)
@@ -78,9 +78,9 @@ export function usePluginsData() {
   const handleReadme = async (plugin: { id: string; name: string }) => {
     try {
       const result = await window.electronAPI.readPluginReadme(plugin.id)
-      if (!result.ok) toast(result.error ?? 'README not found.')
+      if (!result.ok) toast.error(result.error ?? 'README not found.')
       else setReadme({ name: plugin.name, content: result.content ?? '' })
-    } catch (error) { toast(errorMessage(error)) }
+    } catch (error) { toast.error(errorMessage(error)) }
   }
   return {
     handleInstall, handleOpen, handleReadme, handleRemove, handleReview, handleAccept, handleCancelReview, handleManage,

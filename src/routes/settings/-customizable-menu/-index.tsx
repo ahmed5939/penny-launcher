@@ -1,7 +1,8 @@
+import type { CustomizableMenuSettings } from '../../../types/settings'
+
 import { useTranslation } from 'react-i18next'
 
-import { Panel, PanelBody } from '../../../components/page'
-import { Label } from '../../../components/ui/label'
+import { Panel, PanelHeader } from '../../../components/page'
 import { Switch } from '../../../components/ui/switch'
 
 import {
@@ -11,6 +12,8 @@ import {
 
 import { cn } from '../../../lib/utils'
 
+type MenuKey = keyof CustomizableMenuSettings
+
 /** The legacy per-method keys the single "Add account" switch stands in for. */
 const addAccountMenuKeys = [
   'authorizationCode',
@@ -18,522 +21,168 @@ const addAccountMenuKeys = [
   'deviceAuth',
 ] as const
 
+/**
+ * One entry: a sidebar key and its label. `keys` lets one switch drive
+ * several stored keys (Add account); `label` is either a `sidebar` i18n key
+ * or, where the rail never had a translation, the literal name.
+ */
+type MenuEntry = {
+  id: string
+  keys: ReadonlyArray<MenuKey>
+  label: string
+  literal?: boolean
+}
+
+type MenuCategory = {
+  entries: ReadonlyArray<MenuEntry>
+  id: string
+  key: MenuKey
+  label: string
+}
+
+const entry = (id: string, key: MenuKey, label: string, literal = false): MenuEntry => ({
+  id,
+  keys: [key],
+  label,
+  literal,
+})
+
+const categories: ReadonlyArray<MenuCategory> = [
+  {
+    id: 'stw-operations',
+    key: 'stwOperations',
+    label: 'stw-operations.title',
+    entries: [
+      entry('menu-currentAlerts', 'currentAlerts', 'missions'),
+      // The auto-kick toggle is hidden while the feature is disabled — party
+      // kicks no longer work while a match is running.
+      entry('expeditions', 'expeditions', 'stw-operations.options.expeditions'),
+      entry('squad-presets', 'squadPresets', 'stw-operations.options.squad-presets'),
+      entry('inventory', 'inventory', 'stw-operations.options.inventory'),
+      entry('codex', 'codex', 'stw-operations.options.codex'),
+      entry('loadouts', 'loadouts', 'stw-operations.options.loadouts'),
+      entry('quests', 'quests', 'stw-operations.options.quests'),
+      entry('timeline', 'timeline', 'stw-operations.options.timeline'),
+      entry('shop', 'shop', 'stw-operations.options.shop'),
+      entry('xp-boosts', 'xpBoosts', 'stw-operations.options.xp-boosts'),
+      entry('auto-pin-urns', 'autoPinUrns', 'stw-operations.options.auto-pin-urns'),
+      entry('auto-llamas', 'autoLlamas', 'stw-operations.options.auto-llamas'),
+      entry('auto-daily-reroll', 'autoDailyReroll', 'stw-operations.options.auto-daily-reroll'),
+      entry('outpost', 'outpost', 'Outpost', true),
+    ],
+  },
+  {
+    id: 'account-management',
+    key: 'accountManagement',
+    label: 'account-management.title',
+    entries: [
+      entry('vbucks-information', 'vbucksInformation', 'account-management.options.vbucks-information'),
+      entry('gifts-information', 'giftsInformation', 'account-management.options.gifts-information'),
+      entry('profile', 'profile', 'account-management.options.history'),
+      entry('redeem-codes', 'redeemCodes', 'account-management.options.redeem-codes'),
+      entry('epic-games-settings', 'epicGamesSettings', 'account-management.options.epic-settings'),
+      entry('eula', 'eula', 'EULA', true),
+    ],
+  },
+  {
+    id: 'advanced-mode',
+    key: 'advancedMode',
+    label: 'advanced-mode.title',
+    entries: [
+      entry('matchmaking-track', 'matchmakingTrack', 'advanced-mode.options.matchmaking-track'),
+      entry('server-status', 'serverStatus', 'advanced-mode.options.server-status'),
+      entry('world-info', 'worldInfo', 'advanced-mode.options.world-info'),
+      entry('game-settings', 'fnLaunch', 'advanced-mode.options.game-settings'),
+    ],
+  },
+  {
+    id: 'my-accounts',
+    key: 'myAccounts',
+    label: 'accounts.title',
+    entries: [
+      entry('show-total-accounts', 'showTotalAccounts', 'accounts.options.show-total-accounts'),
+      /*
+        One switch for the unified Add-account page. It drives the three
+        legacy per-method keys together, so old saved settings still count.
+      */
+      { id: 'add-account', keys: addAccountMenuKeys, label: 'Add account', literal: true },
+      entry('remove-account', 'removeAccount', 'accounts.options.remove'),
+    ],
+  },
+]
+
+/**
+ * The sidebar, section by section: each section's switch in its title strip,
+ * its pages as a grid of switches underneath, dimmed while the section is off.
+ */
 export function CustomizableMenu() {
   const { t } = useTranslation(['settings'])
 
   return (
+    <div className="space-y-5">
+      <p className="text-ui text-muted-foreground">
+        {t('custom-menu.description')}
+      </p>
+      {categories.map((category) => (
+        <CategoryPanel category={category} key={category.id} />
+      ))}
+    </div>
+  )
+}
+
+function CategoryPanel({ category }: { category: MenuCategory }) {
+  const { t } = useTranslation(['sidebar'])
+
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
+  const { updateMenuOption } = useCustomizableMenuSettingsActions()
+
+  const title = t(category.label)
+  const sectionOn = getMenuOptionVisibility(category.key)
+
+  return (
     <Panel>
-      {/* The page tabs already name this section. */}
-      <div className="border-b border-border/60 px-5 py-3.5">
-        <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
-          {t('custom-menu.description')}
-        </p>
-      </div>
-      <PanelBody
+      <PanelHeader
+        actions={
+          <Switch
+            aria-label={title}
+            checked={sectionOn}
+            id={category.id}
+            onCheckedChange={updateMenuOption(category.key)}
+          />
+        }
+        compact
+        title={title}
+      />
+      <ul
         className={cn(
-          'space-y-4',
-          '[&_.category:not(:last-child)]:border-b [&_.category:not(:last-child)]:border-border/50 [&_.category:not(:last-child)]:pb-4',
-          '[&_.list]:gap-x-6 [&_.list]:gap-y-1 [&_.list]:grid [&_.list]:grid-cols-2',
-          '[&_.title]:flex-1 [&_.title]:cursor-pointer [&_.title]:leading-4',
-          '[&_.item]:flex [&_.item]:items-center [&_.item]:justify-between [&_.item]:py-1 [&_.item.main]:mb-2'
+          'grid gap-x-6 px-5 py-3 sm:grid-cols-2 lg:grid-cols-3',
+          !sectionOn && 'opacity-50'
         )}
       >
-        <STWOperationsSection />
-        <AccountManagementSection />
-        <AdvancedModeSection />
-        <MyAccountsSection />
-      </PanelBody>
+        {category.entries.map((item) => {
+          const label = item.literal ? item.label : t(item.label)
+
+          return (
+            <li
+              className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted/30"
+              key={item.id}
+            >
+              <label className="min-w-0 flex-1 truncate text-ui" htmlFor={item.id}>
+                {label}
+              </label>
+              <Switch
+                checked={item.keys.some((key) => getMenuOptionVisibility(key))}
+                id={item.id}
+                onCheckedChange={(visibility) => {
+                  for (const key of item.keys) {
+                    updateMenuOption(key)(visibility)
+                  }
+                }}
+              />
+            </li>
+          )
+        })}
+      </ul>
     </Panel>
-  )
-}
-
-function STWOperationsSection() {
-  const { t } = useTranslation(['sidebar'])
-
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
-  const { updateMenuOption } = useCustomizableMenuSettingsActions()
-
-  return (
-    <div className="category">
-      <div className="item main">
-        <Label
-          className="title text-lg"
-          htmlFor="stw-operations"
-        >
-          {t('stw-operations.title')}
-        </Label>
-        <Switch
-          id="stw-operations"
-          checked={getMenuOptionVisibility('stwOperations')}
-          onCheckedChange={updateMenuOption('stwOperations')}
-        />
-      </div>
-      <div className="list">
-        {(['currentAlerts'] as const).map((key) => (
-          <div className="item" key={key}>
-            <Label className="title" htmlFor={`menu-${key}`}>{t('missions')}</Label>
-            <Switch id={`menu-${key}`} checked={getMenuOptionVisibility(key)} onCheckedChange={updateMenuOption(key)} />
-          </div>
-        ))}
-        {/* The auto-kick toggle is hidden while the feature is disabled —
-            party kicks no longer work while a match is running. */}
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="taxi-service"
-          >
-            Taxi Service
-          </Label>
-          <Switch
-            id="taxi-service"
-            checked={getMenuOptionVisibility('taxiService')}
-            onCheckedChange={updateMenuOption('taxiService')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="party"
-          >
-            {t('stw-operations.options.party')}
-          </Label>
-          <Switch
-            id="party"
-            checked={getMenuOptionVisibility('party')}
-            onCheckedChange={updateMenuOption('party')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="expeditions"
-          >
-            {t('stw-operations.options.expeditions')}
-          </Label>
-          <Switch
-            id="expeditions"
-            checked={getMenuOptionVisibility('expeditions')}
-            onCheckedChange={updateMenuOption('expeditions')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="squad-presets"
-          >
-            {t('stw-operations.options.squad-presets')}
-          </Label>
-          <Switch
-            id="squad-presets"
-            checked={getMenuOptionVisibility('squadPresets')}
-            onCheckedChange={updateMenuOption('squadPresets')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="inventory"
-          >
-            {t('stw-operations.options.inventory')}
-          </Label>
-          <Switch
-            id="inventory"
-            checked={getMenuOptionVisibility('inventory')}
-            onCheckedChange={updateMenuOption('inventory')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="compendium"
-          >
-            {t('stw-operations.options.compendium')}
-          </Label>
-          <Switch
-            id="compendium"
-            checked={getMenuOptionVisibility('compendium')}
-            onCheckedChange={updateMenuOption('compendium')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="loadouts"
-          >
-            {t('stw-operations.options.loadouts')}
-          </Label>
-          <Switch
-            id="loadouts"
-            checked={getMenuOptionVisibility('loadouts')}
-            onCheckedChange={updateMenuOption('loadouts')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="quests"
-          >
-            {t('stw-operations.options.quests')}
-          </Label>
-          <Switch
-            id="quests"
-            checked={getMenuOptionVisibility('quests')}
-            onCheckedChange={updateMenuOption('quests')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="timeline"
-          >
-            {t('stw-operations.options.timeline')}
-          </Label>
-          <Switch
-            id="timeline"
-            checked={getMenuOptionVisibility('timeline')}
-            onCheckedChange={updateMenuOption('timeline')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="shop"
-          >
-            {t('stw-operations.options.shop')}
-          </Label>
-          <Switch
-            id="shop"
-            checked={getMenuOptionVisibility('shop')}
-            onCheckedChange={updateMenuOption('shop')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="xp-boosts"
-          >
-            {t('stw-operations.options.xp-boosts')}
-          </Label>
-          <Switch
-            id="xp-boosts"
-            checked={getMenuOptionVisibility('xpBoosts')}
-            onCheckedChange={updateMenuOption('xpBoosts')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="auto-pin-urns"
-          >
-            {t('stw-operations.options.auto-pin-urns')}
-          </Label>
-          <Switch
-            id="auto-pin-urns"
-            checked={getMenuOptionVisibility('autoPinUrns')}
-            onCheckedChange={updateMenuOption('autoPinUrns')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="auto-llamas"
-          >
-            {t('stw-operations.options.auto-llamas')}
-          </Label>
-          <Switch
-            id="auto-llamas"
-            checked={getMenuOptionVisibility('autoLlamas')}
-            onCheckedChange={updateMenuOption('autoLlamas')}
-          />
-        </div>
-        <div className="item">
-          <Label className="title" htmlFor="auto-daily-reroll">
-            {t('stw-operations.options.auto-daily-reroll')}
-          </Label>
-          <Switch id="auto-daily-reroll"
-            checked={getMenuOptionVisibility('autoDailyReroll')}
-            onCheckedChange={updateMenuOption('autoDailyReroll')} />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="outpost"
-          >
-            Outpost
-          </Label>
-          <Switch
-            id="outpost"
-            checked={getMenuOptionVisibility('outpost')}
-            onCheckedChange={updateMenuOption('outpost')}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function AccountManagementSection() {
-  const { t } = useTranslation(['sidebar'])
-
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
-  const { updateMenuOption } = useCustomizableMenuSettingsActions()
-
-  return (
-    <div className="category">
-      <div className="item main">
-        <Label
-          className="title text-lg"
-          htmlFor="account-management"
-        >
-          {t('account-management.title')}
-        </Label>
-        <Switch
-          id="account-management"
-          checked={getMenuOptionVisibility('accountManagement')}
-          onCheckedChange={updateMenuOption('accountManagement')}
-        />
-      </div>
-      <div className="list">
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="vbucks-information"
-          >
-            {t('account-management.options.vbucks-information')}
-          </Label>
-          <Switch
-            id="vbucks-information"
-            checked={getMenuOptionVisibility('vbucksInformation')}
-            onCheckedChange={updateMenuOption('vbucksInformation')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="gifts-information"
-          >
-            {t('account-management.options.gifts-information')}
-          </Label>
-          <Switch
-            id="gifts-information"
-            checked={getMenuOptionVisibility('giftsInformation')}
-            onCheckedChange={updateMenuOption('giftsInformation')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="profile"
-          >
-            {t('account-management.options.history')}
-          </Label>
-          <Switch
-            id="profile"
-            checked={getMenuOptionVisibility('profile')}
-            onCheckedChange={updateMenuOption('profile')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="redeem-codes"
-          >
-            {t('account-management.options.redeem-codes')}
-          </Label>
-          <Switch
-            id="redeem-codes"
-            checked={getMenuOptionVisibility('redeemCodes')}
-            onCheckedChange={updateMenuOption('redeemCodes')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="epic-games-settings"
-          >
-            {t('account-management.options.epic-settings')}
-          </Label>
-          <Switch
-            id="epic-games-settings"
-            checked={getMenuOptionVisibility('epicGamesSettings')}
-            onCheckedChange={updateMenuOption('epicGamesSettings')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="eula"
-          >
-            EULA
-          </Label>
-          <Switch
-            id="eula"
-            checked={getMenuOptionVisibility('eula')}
-            onCheckedChange={updateMenuOption('eula')}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function AdvancedModeSection() {
-  const { t } = useTranslation(['sidebar'])
-
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
-  const { updateMenuOption } = useCustomizableMenuSettingsActions()
-
-  return (
-    <div className="category">
-      <div className="item main">
-        <Label
-          className="title text-lg"
-          htmlFor="advanced-mode"
-        >
-          {t('advanced-mode.title')}
-        </Label>
-        <Switch
-          id="advanced-mode"
-          checked={getMenuOptionVisibility('advancedMode')}
-          onCheckedChange={updateMenuOption('advancedMode')}
-        />
-      </div>
-      <div className="list">
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="matchmaking-track"
-          >
-            {t('advanced-mode.options.matchmaking-track')}
-          </Label>
-          <Switch
-            id="matchmaking-track"
-            checked={getMenuOptionVisibility('matchmakingTrack')}
-            onCheckedChange={updateMenuOption('matchmakingTrack')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="server-status"
-          >
-            {t('advanced-mode.options.server-status')}
-          </Label>
-          <Switch
-            id="server-status"
-            checked={getMenuOptionVisibility('serverStatus')}
-            onCheckedChange={updateMenuOption('serverStatus')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="world-info"
-          >
-            {t('advanced-mode.options.world-info')}
-          </Label>
-          <Switch
-            id="world-info"
-            checked={getMenuOptionVisibility('worldInfo')}
-            onCheckedChange={updateMenuOption('worldInfo')}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="game-settings"
-          >
-            {t('advanced-mode.options.game-settings')}
-          </Label>
-          <Switch
-            id="game-settings"
-            checked={getMenuOptionVisibility('fnLaunch')}
-            onCheckedChange={updateMenuOption('fnLaunch')}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MyAccountsSection() {
-  const { t } = useTranslation(['sidebar'])
-
-  const { getMenuOptionVisibility } =
-    useCustomizableMenuSettingsVisibility()
-  const { updateMenuOption } = useCustomizableMenuSettingsActions()
-
-  return (
-    <div className="category">
-      <div className="item main">
-        <Label
-          className="title text-lg"
-          htmlFor="my-accounts"
-        >
-          {t('accounts.title')}
-        </Label>
-        <Switch
-          id="my-accounts"
-          checked={getMenuOptionVisibility('myAccounts')}
-          onCheckedChange={updateMenuOption('myAccounts')}
-        />
-      </div>
-      <div className="list">
-        <div className="item mb-1">
-          <Label
-            className="title"
-            htmlFor="show-total-accounts"
-          >
-            {t('accounts.options.show-total-accounts')}
-          </Label>
-          <Switch
-            id="show-total-accounts"
-            checked={getMenuOptionVisibility('showTotalAccounts')}
-            onCheckedChange={updateMenuOption('showTotalAccounts')}
-          />
-        </div>
-      </div>
-      <div className="list">
-        {/*
-          One switch for the unified Add-account page. It drives the three
-          legacy per-method keys together, so old saved settings still count.
-        */}
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="add-account"
-          >
-            Add account
-          </Label>
-          <Switch
-            id="add-account"
-            checked={addAccountMenuKeys.some((key) =>
-              getMenuOptionVisibility(key)
-            )}
-            onCheckedChange={(visibility) => {
-              for (const key of addAccountMenuKeys) {
-                updateMenuOption(key)(visibility)
-              }
-            }}
-          />
-        </div>
-        <div className="item">
-          <Label
-            className="title"
-            htmlFor="remove-account"
-          >
-            {t('accounts.options.remove')}
-          </Label>
-          <Switch
-            id="remove-account"
-            checked={getMenuOptionVisibility('removeAccount')}
-            onCheckedChange={updateMenuOption('removeAccount')}
-          />
-        </div>
-      </div>
-    </div>
   )
 }

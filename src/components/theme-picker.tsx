@@ -154,7 +154,7 @@ export function ThemeSwatchGrid({
             className={cn(
               isMenu
                 ? [
-                    'flex h-8 items-center gap-2.5 rounded-lg px-2 text-[0.8125rem]',
+                    'flex h-8 items-center gap-2.5 rounded-lg px-2 text-ui',
                     'text-muted-foreground transition-colors',
                     'hover:bg-accent/30 hover:text-foreground',
                     isActive && 'bg-accent/25 text-foreground',

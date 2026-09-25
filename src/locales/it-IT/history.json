@@ -1,10 +1,10 @@
 {
   "history": {
-    "note": "Nota: Questa cronologia è temporanea.",
+    "note": "Attività e ricompense delle automazioni degli ultimi 30 giorni. Conservate dopo il riavvio.",
     "empty": "Cronologia Ricompense Riscattate"
   },
   "summary": {
-    "note": "Nota: Questo Resoconto è basato sulla tua cronologia temporanea.",
+    "note": "Azioni e ricompense di tutte le automazioni degli ultimi 30 giorni.",
     "empty": "Resoconto Della Cronologia Delle Ricompense Riscattate",
     "all-accounts": "Resoconto di tutti gli account"
   }

@@ -1,3 +1,4 @@
+import { recordAutomationHistory } from './automation-history'
 import { confirmedRewards, expeditionKind, recyclableRewards, resourceGains, rewardTypes, type Reward, type Items } from '../../features/expeditions/model'
 import { RuntimeLog } from '../runtime-log'
 import { AutomationRewards } from './automation-rewards'
@@ -71,10 +72,25 @@ function notificationData(value: unknown) {
 }
 
 function appendHistory(
+  accountId: string,
   config: AutoExpeditionConfig,
   entry: AutoExpeditionHistoryEntry
 ) {
   config.history = [...(config.history ?? []), entry]
+  publishHistory(accountId, entry)
+}
+
+function publishHistory(accountId: string, entry: AutoExpeditionHistoryEntry) {
+  const rewards: Record<string, number> = {}
+  for (const reward of [...(entry.rewardItems ?? []), ...(entry.recyclingGains ?? [])]) {
+    rewards[reward.templateId] = (rewards[reward.templateId] ?? 0) + reward.quantity
+  }
+  recordAutomationHistory({
+    id: `expedition:${accountId}:${entry.expeditionId ?? entry.expedition}:${entry.timestamp}:${entry.action}`,
+    accountId, createdAt: entry.timestamp, source: 'Auto-expeditions', rewards,
+    description: `${entry.action}: ${entry.expedition}${entry.success === false ? ' (unsuccessful)' : ''}${entry.recycledItems?.length ? ` · recycled ${entry.recycledItems.length} items` : ''}${entry.error || entry.recyclingError ? ` · ${entry.error || entry.recyclingError}` : ''}`,
+    outcome: entry.error || entry.recyclingError || entry.success === false ? 'error' : 'success',
+  })
 }
 
 export class AutoExpeditions {
@@ -212,7 +228,7 @@ export class AutoExpeditions {
           }
           result.collected += 1
           collectedRewards.push(...rewards)
-          appendHistory(config, history)
+          appendHistory(accountId, config, history)
           // Save confirmation before optional inventory/recycling work. A secondary
           // failure must never erase a confirmed collection or its reward ledger.
           await AutoExpeditions.save(accountId, { history: config.history })
@@ -241,9 +257,10 @@ export class AutoExpeditions {
             history.recyclingError = error instanceof Error ? error.message : 'Reward inventory verification failed'
             result.errors.push(history.recyclingError)
           }
+          publishHistory(accountId, history)
           await AutoExpeditions.save(accountId, { history: config.history })
         } catch (error) {
-          appendHistory(config, {
+          appendHistory(accountId, config, {
             action: 'collect-error', expedition: slot.templateId,
             expeditionId: slot.itemId,
             error: error instanceof Error ? error.message : 'Collection failed',
@@ -309,12 +326,12 @@ export class AutoExpeditions {
           board = await Expeditions.getExpeditions(account)
           if (!board.slots.some((item) => item.itemId === slot.itemId && item.state === 'in-flight')) throw new Error('Expedition start could not be verified')
         } catch (error) {
-          appendHistory(config, { action: 'start-error', expedition: slot.templateId, expeditionId: slot.itemId, timestamp: new Date().toISOString(), error: error instanceof Error ? error.message : 'Start failed' })
+          appendHistory(accountId, config, { action: 'start-error', expedition: slot.templateId, expeditionId: slot.itemId, timestamp: new Date().toISOString(), error: error instanceof Error ? error.message : 'Start failed' })
           throw error
         }
         result.sent += 1
         sentRewards.push(slot.name)
-        appendHistory(config, {
+        appendHistory(accountId, config, {
           action: 'started', expedition: slot.templateId, expeditionId: slot.itemId,
           timestamp: new Date().toISOString(),
         })

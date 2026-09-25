@@ -21,3 +21,7 @@ it('rejects oversized executable entries', async () => {
   await writeFile(path.join(root, 'main.js'), 'x'.repeat(1024 * 1024 + 1))
   await expect(inspectPlugin(root)).rejects.toThrow('1 MiB')
 })
+it('rejects previously installed copies of the removed Endurance add-on', async () => {
+  await writeFile(path.join(root, 'plugin.json'), JSON.stringify({ id: 'endurance', name: 'Endurance', runtime: 'sandbox', apiVersion: 4 }))
+  await expect(inspectPlugin(root)).rejects.toThrow('Endurance add-on has been removed')
+})

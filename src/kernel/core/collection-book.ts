@@ -1,4 +1,4 @@
-import type { BookItem, CollectionBookData } from '../../features/collection-book/types'
+import { validBookUpgrade, type BookItem, type CollectionBookData } from '../../features/collection-book/types'
 import { Authentication } from './authentication'
 import { AccountsManager } from '../startup/accounts'
 
@@ -36,4 +36,29 @@ export async function requestCollectionBook(accountId: string): Promise<Collecti
   }
   return { accountId, fetchedAt: new Date().toISOString(), slotted: [...bookItems(profiles[1].items), ...bookItems(profiles[2].items)], inventory: bookItems(profiles[0].items), resources,
     highestLevel: profiles[0].stats?.attributes?.collection_book?.maxBookXpLevelAchieved ?? null }
+}
+
+/**
+ * Levels or evolves an item where it sits in the book: `UpgradeSlottedItem`
+ * and `ConvertSlottedItem` on the book's own profile. Materials come out of
+ * the campaign inventory, exactly as when the game does it.
+ */
+export async function upgradeCollectionBookItem(accountId: string, request: unknown) {
+  if (typeof accountId !== 'string' || !/^[a-f0-9]{32}$/i.test(accountId)) throw new Error('Choose a valid Epic account.')
+  const upgrade = validBookUpgrade(request)
+  const account = AccountsManager.getAccounts().get(accountId)
+  if (!account) throw new Error('Select a linked account.')
+  const accessToken = await Authentication.verifyAccessToken(account)
+  if (!accessToken) throw new Error('Epic authentication expired. Sign in again.')
+  const [operation, body] = upgrade.action === 'level'
+    ? ['UpgradeSlottedItem', { targetItemId: upgrade.itemId, desiredLevel: upgrade.desiredLevel }]
+    : ['ConvertSlottedItem', { targetItemId: upgrade.itemId, ConversionIndex: upgrade.conversionIndex }]
+  const response = await fetch(`https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/game/v2/profile/${accountId}/client/${operation}?profileId=collection_book_${upgrade.book}0&rvn=-1`, {
+    method: 'POST', headers: { Authorization: `bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000),
+  })
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { errorMessage?: string } | null
+    throw new Error(error?.errorMessage ? `Epic refused the upgrade: ${error.errorMessage}` : `Could not upgrade the item (HTTP ${response.status}). Refresh and try again.`)
+  }
+  return { ok: true as const }
 }

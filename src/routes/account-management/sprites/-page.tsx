@@ -9,8 +9,6 @@ import { useMemo, useState } from 'react'
 import {
   Coins,
   Ghost,
-  RotateCw,
-  Search,
   Sparkles,
   Star,
   UserX,
@@ -19,21 +17,22 @@ import { useTranslation } from 'react-i18next'
 
 import { spriteIconUrl } from '../../../sprite-images'
 
-import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
 import {
-  AccountToolbar,
   Callout,
+  Chip,
   EmptyState,
+  FilterBar,
   PageHeader,
   Panel,
   PanelBody,
   PanelHeader,
+  RefreshButton,
+  SearchField,
   Segmented,
   StatRow,
   StatTile,
+  ToolBadges,
 } from '../../../components/page'
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 
 import { CosmeticTile } from '../locker/-cosmetic-tile'
 
@@ -57,68 +56,39 @@ const seasonLabels: Record<string, string> = {
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
+  const { account, collection, errorMessage, handleReload, isLoading } =
+    useSpritesPage()
 
   return (
     <>
       <PageHeader
+        actions={
+          <RefreshButton
+            disabled={!account}
+            loading={isLoading}
+            onClick={handleReload}
+          />
+        }
         description="Every sprite Battle Royale has released and each of its treatments: what this account owns, what it lost in the field, and what it has never secured."
         icon={Ghost}
         section={t('account-management.title')}
-        title={
-          <span className="flex items-center gap-2">
-            Sprites
-            <BetaBadge />
-          </span>
-        }
+        status={<ToolBadges beta />}
+        title="Sprites"
       />
-      <Content />
-    </>
-  )
-}
-
-function Content() {
-  const { account, collection, errorMessage, handleReload, isLoading } =
-    useSpritesPage()
-
-  if (!account) {
-    return (
-      <EmptyState
-        description="Pick one in the title bar and its sprite collection loads here."
-        icon={UserX}
-        title="No account selected"
-      />
-    )
-  }
-
-  return (
-    <>
-      <Panel>
-        <PanelBody>
-          <AccountToolbar
-            account={account}
-            actions={
-              <Button
-                disabled={isLoading}
-                onClick={handleReload}
-                variant="outline"
-              >
-                <RotateCw
-                  className={
-                    isLoading ? 'mr-2 size-4 animate-spin' : 'mr-2 size-4'
-                  }
-                />
-                Reload
-              </Button>
-            }
-          />
-        </PanelBody>
-      </Panel>
-
-      <SpritesView
-        collection={collection}
-        errorMessage={errorMessage}
-        isLoading={isLoading}
-      />
+      {account ? (
+        <SpritesView
+          collection={collection}
+          errorMessage={errorMessage}
+          isLoading={isLoading}
+          key={account.accountId}
+        />
+      ) : (
+        <EmptyState
+          description="Pick one in the title bar and its sprite collection loads here."
+          icon={UserX}
+          title="No account selected"
+        />
+      )}
     </>
   )
 }
@@ -220,48 +190,67 @@ function SpritesView({
 
       <Panel>
         <PanelHeader
-          description="Amber treatments were lost in the field and can be summoned back for Sprite Dust; greyed-out ones have never been secured."
+          actions={
+            <span className="text-xs text-muted-foreground">
+              <span className="figure">{visible.length.toLocaleString()}</span>
+              {' of '}
+              <span className="figure">{families.length.toLocaleString()}</span>
+              {' sprites'}
+            </span>
+          }
+          compact
           title="Collection"
         />
-        <PanelBody className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Segmented
-              onChange={setOwnership}
-              options={ownershipOptions}
-              value={ownership}
-            />
-            <div className="relative min-w-52 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by name or ability"
-                value={query}
-              />
-            </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Showing {visible.length.toLocaleString()} of{' '}
-            {families.length.toLocaleString()} sprites
-          </p>
-        </PanelBody>
+        <FilterBar className="px-4">
+          <Segmented
+            onChange={setOwnership}
+            options={ownershipOptions}
+            value={ownership}
+          />
+          <SearchField
+            label="Search sprites"
+            onChange={setQuery}
+            placeholder="Search by name or ability"
+            value={query}
+          />
+        </FilterBar>
+        {/* The tile code, spelt out once instead of as a paragraph. */}
+        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm bg-foreground/70" />
+            Owned
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm ring-1 ring-warning" />
+            Lost — summon back for Sprite Dust
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-sm bg-foreground/25" />
+            Never secured
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Star className="size-3 fill-warning text-warning" />
+            Mastered
+          </span>
+        </p>
       </Panel>
 
       {visible.length > 0 ? (
-        visible.map((family) => (
-          <SpriteFamilyCard
-            family={family}
-            key={family.family}
-          />
-        ))
+        <div className="grid items-start gap-3 2xl:grid-cols-2">
+          {visible.map((family) => (
+            <SpriteFamilyCard
+              family={family}
+              key={family.family}
+            />
+          ))}
+        </div>
       ) : (
         <EmptyState
           description={
             isLoading
               ? 'Reading this account’s sprites…'
               : families.length === 0
-                ? 'Nothing loaded yet — try Reload.'
+                ? 'Nothing loaded yet — try Refresh.'
                 : ownership === 'missing' || ownership === 'lost'
                   ? 'Nothing in this state — good news.'
                   : 'Nothing matches that search.'
@@ -286,20 +275,10 @@ function SpriteFamilyCard({ family }: { family: SpriteFamilySummary }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{family.name}</span>
-              <span className="micro-label rounded border border-border/60 px-1.5 py-0.5 capitalize text-muted-foreground">
-                {family.rarity}
-              </span>
-              {season && (
-                <span className="micro-label rounded border border-border/60 px-1.5 py-0.5 text-muted-foreground">
-                  {season}
-                </span>
-              )}
-              {family.complete && (
-                <span className="micro-label rounded bg-primary/15 px-1.5 py-0.5 text-primary">
-                  Complete
-                </span>
-              )}
+              <span className="text-title font-semibold">{family.name}</span>
+              <Chip className="capitalize">{family.rarity}</Chip>
+              {season && <Chip>{season}</Chip>}
+              {family.complete && <Chip tone="success">Complete</Chip>}
             </div>
             {family.ability && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -307,8 +286,9 @@ function SpriteFamilyCard({ family }: { family: SpriteFamilySummary }) {
               </p>
             )}
           </div>
-          <span className="text-xs text-muted-foreground">
-            {family.ownedCount} / {total}
+          <span className="figure text-ui font-semibold">
+            {family.ownedCount}
+            <span className="text-muted-foreground"> / {total}</span>
           </span>
         </div>
 
@@ -344,7 +324,7 @@ function SpriteVariantTile({ sprite }: { sprite: SpriteEntry }) {
         'relative rounded-lg transition-opacity',
         sprite.status === 'missing' &&
           'opacity-45 grayscale-[35%] hover:opacity-80',
-        sprite.lost && 'ring-1 ring-amber-400/70',
+        sprite.lost && 'ring-1 ring-warning/70',
         sprite.equipped &&
           'ring-2 ring-primary ring-offset-1 ring-offset-background'
       )}
@@ -363,7 +343,7 @@ function SpriteVariantTile({ sprite }: { sprite: SpriteEntry }) {
           ) : sprite.owned ? (
             'Owned'
           ) : sprite.lost ? (
-            <span className="text-amber-400">Lost</span>
+            <span className="text-warning">Lost</span>
           ) : (
             'Missing'
           )
@@ -374,7 +354,7 @@ function SpriteVariantTile({ sprite }: { sprite: SpriteEntry }) {
       {sprite.mastered && (
         <Star
           aria-label="Mastered"
-          className="absolute right-1 top-1 size-3.5 fill-amber-300 text-amber-300 drop-shadow"
+          className="absolute right-1 top-1 size-3.5 fill-warning text-warning drop-shadow"
         />
       )}
     </div>

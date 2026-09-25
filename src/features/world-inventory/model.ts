@@ -17,3 +17,13 @@ export function parseWorldProfile(body: unknown, accountId: string, location: Wo
   }).filter((i) => i.quantity > 0)
   return { accountId, location, fetchedAt: new Date().toISOString(), items }
 }
+/** One stack moving between backpack (theater0) and storage (outpost0). `toStorage` is the direction. */
+export type WorldTransfer = { itemId: string; quantity: number; toStorage: boolean }
+export function validWorldTransfers(value: unknown): WorldTransfer[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 500) throw new Error('Choose between 1 and 500 stacks to move.')
+  return value.map((op) => {
+    const { itemId, quantity, toStorage } = (op ?? {}) as Partial<WorldTransfer>
+    if (typeof itemId !== 'string' || !/^[\w-]{1,64}$/.test(itemId) || typeof toStorage !== 'boolean' || !Number.isInteger(quantity) || (quantity as number) < 1) throw new Error('That transfer is malformed. Refresh and try again.')
+    return { itemId, quantity: quantity as number, toStorage }
+  })
+}

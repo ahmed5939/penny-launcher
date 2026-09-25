@@ -14,11 +14,14 @@ import { cn } from '../../../lib/utils'
  */
 export function TitleSection({
   accent,
+  art,
   children,
   deps,
   id,
 }: PropsWithChildren<{
   accent?: string
+  /** The zone's key art, drawn as a small plate before the label. */
+  art?: string | null
   deps?: unknown
   id?: string
 }>) {
@@ -62,6 +65,13 @@ export function TitleSection({
           className="tick h-3 w-[2px] shrink-0 rounded-full opacity-0 transition-opacity"
           style={{ backgroundColor: accent ?? 'hsl(var(--primary))' }}
         />
+        {art && (
+          <img
+            alt=""
+            className="h-7 w-12 shrink-0 rounded-md object-cover ring-1 ring-inset ring-border/50"
+            src={art}
+          />
+        )}
         <span className="section-label">{children}</span>
         {/* The rule is what carries the eye across, so it bleeds right and fades. */}
         <span

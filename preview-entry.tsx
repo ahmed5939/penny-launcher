@@ -54,7 +54,7 @@ import { localeReady } from './src/locale'
 import { useAccountListStore } from './src/state/accounts/list'
 import { useAccountScopeStore } from './src/state/accounts/scope'
 import { useItemDatabaseStore } from './src/state/items/database'
-import { RouteComponent as VaultPage } from './src/routes/stw-operations/inventory/-page'
+import { SchematicsPage as VaultPage } from './src/routes/stw-operations/inventory/-page'
 
 dayjs.extend(relativeTime)
 dayjs.extend(localizedFormat)

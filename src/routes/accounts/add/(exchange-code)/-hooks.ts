@@ -71,7 +71,7 @@ export function useGenerateHandlers() {
           window.navigator.clipboard.writeText(code).catch(() => {})
         }
 
-        toast(
+        toast[status ? 'success' : 'error'](
           status ? t('generate-code.success') : t('generate-code.error')
         )
       }
@@ -97,7 +97,7 @@ export function useGenerateHandlers() {
     window.navigator.clipboard
       .writeText(generatedCode)
       .then(() => {
-        toast(t('clipboard'))
+        toast.success(t('clipboard'))
       })
       .catch(() => {})
   }

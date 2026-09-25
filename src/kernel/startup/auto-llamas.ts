@@ -1,3 +1,4 @@
+import { recordAutomationHistory } from './automation-history'
 import { AutomationRewards } from './automation-rewards'
 import { RuntimeLog } from '../runtime-log'
 import type { AccountDataList } from '../../types/accounts'
@@ -709,13 +710,13 @@ function sendRewardsNotification({
       totalQuestXPRedeemed: 0,
     },
     rewards,
+    source: 'Auto-llamas',
+    description: 'Llama rewards claimed',
+    outcome: 'success',
     createdAt: getDateWithDefaultFormat(),
     id: crypto.randomUUID(),
     accountId,
   }
 
-  MainWindow.instance.webContents.send(
-    ElectronAPIEventKeys.ClaimRewardsClientGlobalSyncNotification,
-    [result]
-  )
+  recordAutomationHistory(result)
 }

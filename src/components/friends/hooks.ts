@@ -107,7 +107,7 @@ export function useFriendsManagerListeners() {
     const listener = window.electronAPI.responseFriendsSearch(
       async (response) => {
         if (response.errorMessage) {
-          toast(response.errorMessage)
+          toast.error(response.errorMessage)
         }
 
         setSearchResults(response.results)
@@ -129,7 +129,7 @@ export function useFriendsManagerListeners() {
         }
 
         if (response.errorMessage) {
-          toast(response.errorMessage)
+          toast.error(response.errorMessage)
 
           if (response.targetAccountId === '__bulk__') {
             reloadFriends()
@@ -138,7 +138,7 @@ export function useFriendsManagerListeners() {
           return
         }
 
-        toast(
+        toast.success(
           response.total
             ? `${actionMessages[response.action]} (${response.total})`
             : actionMessages[response.action]
@@ -166,7 +166,7 @@ export function useFriendsManagerListeners() {
       useFriendsManagerStore.setState({ inviting: [] })
 
       if (response.length <= 0) {
-        toast('Could not send the party invite. Join a party first?')
+        toast.error('Could not send the party invite. Join a party first?')
 
         return
       }
@@ -195,7 +195,7 @@ export function useFriendsManagerListeners() {
         )
       }
 
-      toast(messages.join('. '))
+      toast.success(messages.join('. '))
     })
 
     return () => {

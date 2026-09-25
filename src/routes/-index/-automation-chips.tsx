@@ -12,7 +12,6 @@ import { useAutomationServices } from './-hooks'
 
 const labels: Record<PlayService['key'], string> = {
   'auto-kick': 'sidebar:stw-operations.options.auto-kick',
-  'taxi-service': 'sidebar:stw-operations.options.taxi-service',
   'auto-llamas': 'sidebar:stw-operations.options.auto-llamas',
 }
 
@@ -21,8 +20,8 @@ export function AutomationChips() {
   const { services } = useAutomationServices()
   return (
     <Panel>
-      <PanelHeader title={t('home.services.title')} />
-      <PanelBody>
+      <PanelHeader compact title={t('home.services.title')} />
+      <PanelBody className="py-1">
         <ul className="divide-y divide-border/60">
           {services.map((service) => (
             <ListRow

@@ -25,8 +25,6 @@ export type PropStyle = {
   faceted?: boolean
   /** How far each instance's tint may wander, 0–1. */
   variation?: number
-  /** Wind strength; zero or missing keeps the prop still. */
-  sway?: number
 }
 
 function translated(geometry: THREE.BufferGeometry, y: number) {
@@ -195,8 +193,8 @@ export function propStyle(kind: number, className: string): Record<string, PropS
     return {
       trunk: { color: 0x5e3f27, faceted: true, geometry: () => trunk(0.8), variation: 0.15 },
       [conifer ? 'conifer' : 'broadleaf']: conifer
-        ? { color: 0x2e6a3e, faceted: true, geometry: coniferCanopy, sway: 0.035, variation: 0.35 }
-        : { color: 0x5b9a3f, faceted: true, geometry: broadleafCanopy, sway: 0.03, variation: 0.4 },
+        ? { color: 0x2e6a3e, faceted: true, geometry: coniferCanopy, variation: 0.35 }
+        : { color: 0x5b9a3f, faceted: true, geometry: broadleafCanopy, variation: 0.4 },
     }
   }
 
@@ -206,7 +204,7 @@ export function propStyle(kind: number, className: string): Record<string, PropS
 
   if (kind === PROP_CONTAINER) {
     return isPlant(className)
-      ? { bush: { color: 0x5f9a42, faceted: true, geometry: bush, sway: 0.08, variation: 0.35 } }
+      ? { bush: { color: 0x5f9a42, faceted: true, geometry: bush, variation: 0.35 } }
       : { container: { color: 0xb08a4a, geometry: crate, variation: 0.15 } }
   }
 

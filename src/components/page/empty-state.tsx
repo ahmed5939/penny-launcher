@@ -10,7 +10,8 @@ import { cn } from '../../lib/utils'
  *
  * Previously these screens rendered an empty card, or nothing at all, which
  * left you unsure whether the page had loaded or you had done something
- * wrong. A dashed panel reads as "waiting for input" rather than "broken".
+ * wrong. Quiet text on the page itself, not another box: a dashed card is
+ * one more rectangle on a screen that already has enough.
  */
 export function EmptyState({
   action,
@@ -29,7 +30,7 @@ export function EmptyState({
     <div
       className={cn(
         'flex flex-col items-center justify-center gap-3 rounded-xl',
-        'border border-dashed border-border/70 bg-card/30 px-6 py-12 text-center',
+        'px-6 py-12 text-center',
         className
       )}
     >
@@ -42,7 +43,7 @@ export function EmptyState({
       <div className="space-y-1">
         <p className="text-sm font-semibold">{title}</p>
         {description && (
-          <p className="mx-auto max-w-sm text-[0.8125rem] leading-relaxed text-muted-foreground">
+          <p className="mx-auto max-w-sm text-ui leading-relaxed text-muted-foreground">
             {description}
           </p>
         )}

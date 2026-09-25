@@ -9,7 +9,6 @@ import type {
   DevSettings,
   Settings,
 } from '../../types/settings'
-import type { TaxiServiceAccountFileDataList } from '../../types/taxi-service'
 import type { AutoPinQuestDataList, AutoPinUrnDataList } from '../../types/urns'
 
 import {
@@ -40,7 +39,6 @@ import {
   fnLaunchFileSchema,
   settingsSchema,
 } from '../../lib/validations/schemas/settings'
-import { taxiServiceFileSchema } from '../../lib/validations/schemas/taxi-service'
 
 import {
   accountNeedsSecretMigration,
@@ -139,12 +137,6 @@ export class DataDirectory {
   )
   private static automationDefaultData: AutomationAccountFileDataList = {}
 
-  static taxiServiceFilePath = path.join(
-    DataDirectory.dataDirectoryPath,
-    'taxi-service.json'
-  )
-  private static taxiServiceDefaultData: TaxiServiceAccountFileDataList = {}
-
   static urnsFilePath = path.join(DataDirectory.dataDirectoryPath, 'urns.json')
   private static urnsDefaultData: AutoPinUrnDataList = {}
 
@@ -230,7 +222,6 @@ export class DataDirectory {
       DataDirectory.getOrCreateCustomizableMenuSettingsJsonFile(),
       DataDirectory.getOrCreateFriendsJsonFile(),
       DataDirectory.getOrCreateAutomationJsonFile(),
-      DataDirectory.getOrCreateTaxiServiceJsonFile(),
       DataDirectory.getOrCreateUrnsJsonFile(),
       DataDirectory.getOrCreateAutoLlamasJsonFile(),
       DataDirectory.getOrCreateMiniBossesJsonFile(),
@@ -437,30 +428,6 @@ export class DataDirectory {
   }
 
   /**
-   * Get data from taxi-service.json
-   */
-  static async getTaxiServiceFile(): Promise<{
-    taxiService: TaxiServiceAccountFileDataList
-  }> {
-    const result = await DataDirectory.getOrCreateTaxiServiceJsonFile()
-
-    try {
-      const list = taxiServiceFileSchema.safeParse(JSON.parse(result))
-      const taxiService = list.success
-        ? list.data
-        : DataDirectory.taxiServiceDefaultData
-
-      return { taxiService }
-
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      RuntimeLog.error('caught:startup/data-directory.ts', error)
-    }
-
-    return { taxiService: DataDirectory.taxiServiceDefaultData }
-  }
-
-  /**
    * Get data from urns.json
    */
   static async getUrnsFile(): Promise<{
@@ -626,13 +593,6 @@ export class DataDirectory {
    */
   static async updateAutomationFile(data: AutomationAccountFileDataList) {
     await DataDirectory.updateJsonFile(DataDirectory.automationFilePath, data)
-  }
-
-  /**
-   * Update taxi-service.json
-   */
-  static async updateTaxiServiceFile(data: TaxiServiceAccountFileDataList) {
-    await DataDirectory.updateJsonFile(DataDirectory.taxiServiceFilePath, data)
   }
 
   /**
@@ -804,23 +764,6 @@ export class DataDirectory {
 
     return await DataDirectory.getOrCreateJsonFile(
       DataDirectory.automationFilePath,
-      {
-        defaults: {
-          rawString: JSON.stringify(initialData),
-          value: initialData,
-        },
-      }
-    )
-  }
-
-  /**
-   * Creating taxi-service.json
-   */
-  private static async getOrCreateTaxiServiceJsonFile() {
-    const initialData = DataDirectory.taxiServiceDefaultData
-
-    return await DataDirectory.getOrCreateJsonFile(
-      DataDirectory.taxiServiceFilePath,
       {
         defaults: {
           rawString: JSON.stringify(initialData),

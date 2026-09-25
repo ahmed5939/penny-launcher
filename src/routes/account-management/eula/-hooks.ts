@@ -62,7 +62,7 @@ export function useEULAActions() {
     window.navigator.clipboard
       .writeText(url)
       .then(() => {
-        toast('URL has been copied into clipboard')
+        toast.success('URL has been copied into clipboard')
       })
       .catch(() => {})
   }
@@ -73,6 +73,10 @@ export function useEULAActions() {
     setSearchValue(event.currentTarget.value.replace(/\s+/g, ' '))
   }
 
+  const handleVerifyAll = () => {
+    accounts.forEach((account) => handleVerifyById(account.accountId)())
+  }
+
   return {
     accounts,
     accountsArray,
@@ -80,6 +84,9 @@ export function useEULAActions() {
     searchValue,
 
     handleCopyUrl,
+    handleVerifyAll,
+    setSearchValue: (value: string) =>
+      setSearchValue(value.replace(/\s+/g, ' ')),
     handleVerifyById,
     onChangeSearchValue,
   }

@@ -1,72 +1,70 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
-import { IconWell } from './icon-well'
+import cannyValleyArt from '../../../assets/images/zones/canny-valley.webp'
+import plankertonArt from '../../../assets/images/zones/plankerton.webp'
+import stonewoodArt from '../../../assets/images/zones/stonewood.webp'
+import twinePeaksArt from '../../../assets/images/zones/twine-peaks.webp'
+
+/** The game's own zone key art, for Home's launcher banner. */
+export const zoneArt = {
+  stonewood: stonewoodArt,
+  plankerton: plankertonArt,
+  'canny-valley': cannyValleyArt,
+  'twine-peaks': twinePeaksArt,
+} as const
+
+export type ZoneArt = keyof typeof zoneArt
 
 /**
- * The masthead every tool page opens with.
+ * The title row every tool page opens with.
  *
- * Replaces the breadcrumb trail the app used to carry. A trail was doing two
- * jobs badly: it named the page in 11px grey type, and it offered a way back
- * that the section bar already provides. This says what the page is at a size
- * you can read, and gives the page somewhere to hang its controls.
+ * Compact on purpose. A full-bleed art banner on every page spent a third
+ * of a short window on a dark smear before any content; a game client's
+ * inner pages open on their content, with the title, status and actions on
+ * one line and a single line of description under it. Key art is kept for
+ * Home, where it is the point.
+ *
+ * `icon`, `section` and `art` are accepted for the call sites that pass
+ * them; the nav already shows the icon and section.
  */
 export function PageHeader({
   actions,
   description,
-  icon: Icon,
-  section,
   status,
   title,
 }: {
   /** Buttons or controls that act on the page as a whole. */
   actions?: ReactNode
+  art?: ZoneArt
   description?: ReactNode
   icon?: LucideIcon
-  /** Group this tool belongs to, e.g. "STW Operations". */
   section?: string
   /** Live badge — a running service, a connection state. */
   status?: ReactNode
   title: ReactNode
 }) {
   return (
-    <header className="relative -mx-1 mb-1 select-none">
-      <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
-        {Icon && (
-          <IconWell
-            className="mt-0.5"
-            icon={Icon}
-            size="lg"
-            tone="accent"
-          />
-        )}
-
-        <div className="min-w-0 flex-1">
-          {section && (
-            <p className="mb-1.5 micro-label">{section}</p>
-          )}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className="text-xl font-bold leading-tight tracking-tight sm:text-[1.375rem]">
-              {title}
-            </h1>
-            {status}
-          </div>
-          {description && (
-            <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              {description}
-            </p>
-          )}
+    <header className="flex select-none flex-wrap items-center gap-x-6 gap-y-2 pb-1">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="text-display-sm font-bold leading-tight tracking-tight">
+            {title}
+          </h1>
+          {status}
         </div>
-
-        {actions && (
-          <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
-            {actions}
-          </div>
+        {description && (
+          <p className="mt-1 line-clamp-2 max-w-3xl text-ui leading-relaxed text-muted-foreground">
+            {description}
+          </p>
         )}
       </div>
 
-      {/* Hairline that fades out rather than cutting the full width. */}
-      <div className="mt-5 h-px bg-gradient-to-r from-border via-border/60 to-transparent" />
+      {actions && (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {actions}
+        </div>
+      )}
     </header>
   )
 }

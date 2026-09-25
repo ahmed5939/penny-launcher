@@ -130,10 +130,10 @@ function HistoryPane({
   )
 }
 
-/** The "this is temporary" caveat, demoted to the caption it is. */
+/** Explain the history retention window. */
 function PaneNote({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+    <p className="text-ui leading-relaxed text-muted-foreground">
       {children}
     </p>
   )
@@ -144,7 +144,13 @@ function SummarySection() {
 
   const { accountList } = useGetAccounts()
   const { accountsSummary, globalSummary } = useParseSummary()
-  const isEmpty = Object.values(globalSummary.rewards).length <= 0
+  const { data } = useClaimedRewards()
+  const sources = new Map<string, number>()
+  for (const entry of data) {
+    const source = entry.source ?? 'Reward claims'
+    sources.set(source, (sources.get(source) ?? 0) + 1)
+  }
+  const isEmpty = data.length === 0
 
   if (isEmpty) {
     return <EmptyState title={t('summary.empty')} />
@@ -162,6 +168,9 @@ function SummarySection() {
       >
         <SummaryTrigger>{t('summary.all-accounts')}</SummaryTrigger>
         <AccordionContent className="px-1 pb-2 pt-1">
+          <ul className="mb-3 space-y-1 text-ui">
+            {[...sources].map(([source, count]) => <li className="flex justify-between gap-3" key={source}><span>{source}</span><span>{count} {count === 1 ? 'event' : 'events'}</span></li>)}
+          </ul>
           <DateRange
             startsAt={globalSummary.startsAt}
             endsAt={globalSummary.endsAt}
@@ -207,7 +216,7 @@ function SummarySection() {
  */
 function SummaryTrigger({ children }: { children: React.ReactNode }) {
   return (
-    <AccordionTrigger className="break-all rounded-lg bg-muted/40 px-3 py-2 text-left text-[0.8125rem] font-medium">
+    <AccordionTrigger className="break-all rounded-lg bg-muted/40 px-3 py-2 text-left text-ui font-medium">
       {children}
     </AccordionTrigger>
   )
@@ -241,20 +250,23 @@ function DateRange({
 }
 
 function RewardSection({ data }: { data: RewardsNotification }) {
-  const { t } = useTranslation(['general'])
-
   const { accountList } = useGetAccounts()
 
   return (
     <section className="py-2 first:pt-0 last:pb-0">
       <header className="flex items-baseline gap-2">
-        <h3 className="min-w-0 flex-1 break-all text-[0.8125rem] font-medium">
-          {t(parseCustomDisplayName(accountList[data.accountId]))}
+        <h3 className="min-w-0 flex-1 break-all text-ui font-medium">
+          {accountList[data.accountId] ? parseCustomDisplayName(accountList[data.accountId]) : 'Removed account'}
         </h3>
         <span className="figure shrink-0 text-xs text-muted-foreground">
           {getShortDateFormat(data.createdAt)}
         </span>
       </header>
+      {(data.source || data.description) && (
+        <p className={`mt-1 text-ui ${data.outcome === 'error' ? 'text-warning' : 'text-muted-foreground'}`}>
+          {data.source}{data.description ? ` · ${data.description}` : ''}
+        </p>
+      )}
       <ul>
         <RewardItems rewards={data.rewards} />
         <AccoladesItem accolades={data.accolades} />

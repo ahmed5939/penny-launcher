@@ -6,8 +6,6 @@ import type { AutomationAccountData } from '../../../types/automation'
 
 import { useEffect } from 'react'
 
-import { useTaxiServiceStore } from '../../../state/stw-operations/taxi-service'
-
 import {
   useGetAutomationActions,
   useGetAutomationData,
@@ -20,9 +18,6 @@ import { parseCustomDisplayName } from '../../../lib/utils'
 export function useAutomationData() {
   const { accountsArray, accountList } = useGetAccounts()
   const { selectedAccounts } = useGetAutomationData()
-  const taxiServiceAccounts = useTaxiServiceStore(
-    (state) => state.accounts,
-  )
   const {
     addAccount,
     removeAccount,
@@ -34,8 +29,7 @@ export function useAutomationData() {
   const options = accountsArray
     .filter(
       (account) =>
-        !selectedAccounts[account.accountId] &&
-        !taxiServiceAccounts[account.accountId],
+        !selectedAccounts[account.accountId],
     )
     .map((account) => {
       const _keys: Array<string> = [account.displayName]

@@ -52,6 +52,17 @@ export type CreateAccessTokenWithClientCredentialsResponse = {
   application_id: string
 }
 
+export type DeviceAuthorizationResponse = {
+  user_code: string
+  device_code: string
+  verification_uri: string
+  verification_uri_complete: string
+  prompt: string
+  expires_in: number
+  interval: number
+  client_id: string
+}
+
 export type DeviceAuthResponse = {
   deviceId: string
   accountId: string

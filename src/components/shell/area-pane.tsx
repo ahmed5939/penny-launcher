@@ -1,12 +1,12 @@
 import type { NavItem, NavSection } from '../../config/navigation'
-import { useLayoutEffect, useRef } from 'react'
+import { Fragment, useLayoutEffect, useRef } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { matchesNavPath, visibilityKeys } from '../../config/navigation'
 import { useGetAccounts } from '../../hooks/accounts'
 import { useGetAutomationDataStatus } from '../../hooks/stw-operations/automation'
-import { useGetTaxiServiceDataStatus } from '../../hooks/stw-operations/taxi-service'
 import { NavRow } from './nav-row'
+import { cn } from '../../lib/utils'
 
 export function AreaItems({
   items,
@@ -21,8 +21,7 @@ export function AreaItems({
     (account) => account.authStatus !== 'invalid',
   )
   const { status: autoKick } = useGetAutomationDataStatus()
-  const { status: taxi } = useGetTaxiServiceDataStatus()
-  const statuses = { 'auto-kick': autoKick, 'taxi-service': taxi }
+  const statuses = { 'auto-kick': autoKick }
 
   return (
     <>
@@ -38,16 +37,27 @@ export function AreaItems({
               secondary ? 'mt-3 border-t border-border/60 pt-3' : undefined
             }
           >
-            {group.map((item) => (
-              <NavRow
-                key={item.to}
-                item={item}
-                label={t(item.label)}
-                hideKeys={visibilityKeys(item)}
-                isActive={matchesNavPath(pathname, item.to)}
-                isDisabled={item.needsAccount && !hasAccount}
-                status={item.status ? statuses[item.status] : null}
-              />
+            {group.map((item, index) => (
+              <Fragment key={item.to}>
+                {item.group && item.group !== group[index - 1]?.group && (
+                  <p
+                    className={cn(
+                      'px-2 pb-1 text-2xs font-medium text-muted-foreground/80',
+                      index === 0 ? 'pt-0.5' : 'pt-3'
+                    )}
+                  >
+                    {t(item.group)}
+                  </p>
+                )}
+                <NavRow
+                  item={item}
+                  label={t(item.label)}
+                  hideKeys={visibilityKeys(item)}
+                  isActive={matchesNavPath(pathname, item.to)}
+                  isDisabled={item.needsAccount && !hasAccount}
+                  status={item.status ? statuses[item.status] : null}
+                />
+              </Fragment>
             ))}
           </div>
         )

@@ -111,7 +111,7 @@ export function CopyField({
       )}
       <div className="relative flex items-center">
         <Input
-          className="h-8 select-text pl-3 pr-[var(--pr-button-width)] text-[0.8125rem]"
+          className="h-8 select-text pl-3 pr-[var(--pr-button-width)] text-ui"
           id={id}
           readOnly
           ref={$input}

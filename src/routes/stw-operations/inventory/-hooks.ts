@@ -1,4 +1,7 @@
-import type { InventoryItem } from '../../../kernel/core/inventory'
+import type {
+  InventoryEntry,
+  InventoryItem,
+} from '../../../kernel/core/inventory'
 import type {
   ItemActionKind,
   ItemActionRequest,
@@ -13,6 +16,7 @@ import {
   useItemDatabaseStore,
 } from '../../../state/items/database'
 import { useInventoryStore } from '../../../state/stw-operations/inventory'
+import { useAccountListStore } from '../../../state/accounts/list'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
@@ -23,7 +27,76 @@ import {
   rarityOrder,
 } from '../../../config/constants/fortnite/items'
 
+import { useAccountResource } from '../../../components/page'
+
 import { toast } from '../../../lib/notifications'
+
+/**
+ * One account's vault, as a promise.
+ *
+ * The main process answers `requestInventory` on a broadcast channel rather
+ * than as a reply, so this listens for the payload that carries this account
+ * and resolves with it. The IPC still takes the account object; it is looked
+ * up here by id so the page only ever deals in ids.
+ */
+export function loadInventory(accountId: string) {
+  const account = useAccountListStore.getState().accounts[accountId]
+
+  if (!account) {
+    return Promise.reject(
+      new Error('That account is no longer signed in. Pick another one.')
+    )
+  }
+
+  return new Promise<InventoryEntry>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      listener.removeListener()
+      reject(new Error('Epic did not return the inventory within a minute. Try Refresh.'))
+    }, 60_000)
+    const listener = window.electronAPI.responseInventory(async (response) => {
+      const entry = response[accountId]
+
+      if (!entry) {
+        return
+      }
+
+      window.clearTimeout(timer)
+      listener.removeListener()
+      resolve(entry)
+    })
+
+    window.electronAPI.requestInventory([account])
+  })
+}
+
+/** Turns an entry Epic refused into an error the gate can show. */
+function entryOrThrow(entry: InventoryEntry) {
+  if (entry.errorMessage) {
+    throw new Error(
+      entry.errorMessage === 'Unknown Error'
+        ? 'Epic did not return the profile. Try Refresh.'
+        : entry.errorMessage
+    )
+  }
+
+  return entry
+}
+
+/**
+ * The vault for the selected account. Cached under one key, so moving
+ * between the schematics, heroes, defenders and survivors pages shows the
+ * vault at once and refreshes it behind the scenes.
+ */
+export function useInventoryResource() {
+  return useAccountResource(
+    (accountId) => loadInventory(accountId).then(entryOrThrow),
+    {
+      cacheKey: 'inventory',
+      fallbackError: 'Could not read the vault. Try Refresh.',
+      owner: (entry) => entry.accountId,
+    }
+  )
+}
 
 /**
  * What the success toast says, per action. "Item updated" told you nothing —
@@ -56,7 +129,11 @@ export type InventoryRow = InventoryItem & {
   power: number | null
 }
 
-export function useInventoryData() {
+/**
+ * Everything the vault pages do with a loaded entry. Mounted under the
+ * resource gate, keyed by account, so it never sees another account's items.
+ */
+export function useInventoryData(entry: InventoryEntry, reload: () => void) {
   useRequestItemDatabase()
 
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -77,38 +154,29 @@ export function useInventoryData() {
   )
   const isDatabaseLoading = useItemDatabaseStore((state) => state.isLoading)
 
-  const { data, filters, isLoading, isRecycling, mode, selection } =
-    useInventoryStore(
-      useShallow((state) => ({
-        data: state.data,
-        filters: state.filters,
-        isLoading: state.isLoading,
-        isRecycling: state.isRecycling,
-        mode: state.mode,
-        selection: state.selection,
-      }))
-    )
+  const { filters, isRecycling, mode, selection } = useInventoryStore(
+    useShallow((state) => ({
+      filters: state.filters,
+      isRecycling: state.isRecycling,
+      mode: state.mode,
+      selection: state.selection,
+    }))
+  )
   const {
     clearSelection,
-    updateData,
     updateFilters,
-    updateLoading,
     updateMode,
     updateRecycling,
     updateSelection,
   } = useInventoryStore(
     useShallow((state) => ({
       clearSelection: state.clearSelection,
-      updateData: state.updateData,
       updateFilters: state.updateFilters,
-      updateLoading: state.updateLoading,
       updateMode: state.updateMode,
       updateRecycling: state.updateRecycling,
       updateSelection: state.updateSelection,
     }))
   )
-
-  const entry = accountId ? data[accountId] : undefined
   const selected_ = (accountId ? selection[accountId] : undefined) ?? []
   const selectedSet = useMemo(() => new Set(selected_), [selected_])
 
@@ -126,7 +194,7 @@ export function useInventoryData() {
    * rarity, tier and search* while you are standing on the heroes tab.
    */
   const { allRows, countsByKind, lockedCount, rows } = useMemo(() => {
-    const items = entry?.items ?? []
+    const items = entry.items
 
     const mapped: Array<InventoryRow> = items.map((item) => {
       const record = getItemRecord(records, item.templateId)
@@ -242,19 +310,6 @@ export function useInventoryData() {
   const isDisabledRecycle = isRecycling || totalSelected <= 0 || !accountId
 
   useEffect(() => {
-    const listener = window.electronAPI.responseInventory(
-      async (response) => {
-        updateLoading(false)
-        updateData(response)
-      }
-    )
-
-    return () => {
-      listener.removeListener()
-    }
-  }, [])
-
-  useEffect(() => {
     const listener = window.electronAPI.notificationInventoryRecycle(
       async (response) => {
         updateRecycling(false)
@@ -270,20 +325,20 @@ export function useInventoryData() {
         )
         const failed = response.results.filter((item) => item.errorMessage)
 
-        toast(
+        toast[recycled > 0 ? 'success' : 'info'](
           recycled > 0
             ? `Recycled ${recycled} item${recycled === 1 ? '' : 's'}`
             : 'Nothing was recycled'
         )
 
         if (skipped > 0) {
-          toast(
+          toast.warning(
             `${skipped} item${skipped === 1 ? ' was' : 's were'} skipped — favourited or equipped since you loaded the list`
           )
         }
 
         if (failed.length > 0) {
-          toast(`Epic reported an error: ${failed[0].errorMessage}`)
+          toast.error(`Epic reported an error: ${failed[0].errorMessage}`)
         }
 
         handleLoad()
@@ -295,21 +350,8 @@ export function useInventoryData() {
     }
   }, [accountId])
 
-  const handleLoad = () => {
-    if (!selected) {
-      return
-    }
-
-    updateLoading(true)
-    window.electronAPI.requestInventory([selected])
-  }
-
-  /** Switching account in the title bar reloads the page's contents. */
-  useEffect(() => {
-    if (accountId) {
-      handleLoad()
-    }
-  }, [accountId])
+  /** Refetches; the current vault stays on screen until the new one lands. */
+  const handleLoad = reload
 
   /**
    * One tab at a time. The old control was four independent toggles, which
@@ -442,7 +484,7 @@ export function useInventoryData() {
         if (response.errorMessage) {
           /** Stop the queue rather than repeating a failure item by item. */
           setQueue([])
-          toast(`Epic rejected that: ${response.errorMessage}`)
+          toast.error(`Epic rejected that: ${response.errorMessage}`)
           handleLoad()
 
           return
@@ -457,7 +499,7 @@ export function useInventoryData() {
           return
         }
 
-        toast(actionToasts[response.kind] ?? 'Item updated')
+        toast.success(actionToasts[response.kind] ?? 'Item updated')
         handleLoad()
       }
     )
@@ -481,17 +523,13 @@ export function useInventoryData() {
   }
 
   return {
-    account: selected ?? null,
     activeKind,
     allRows,
     countsByKind,
     confirmOpen,
-    errorMessage: entry?.errorMessage ?? null,
     filters,
-    hasLoaded: entry !== undefined,
     isDatabaseLoading,
     isDisabledRecycle,
-    isLoading,
     isRecycling,
     alterationPools,
     isActing: isActing || queueLength > 0,

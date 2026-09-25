@@ -1,10 +1,10 @@
 {
   "history": {
-    "note": "Uwaga: Jest to historia tymczasowa.",
+    "note": "Działania automatyzacji i nagrody z ostatnich 30 dni. Zachowywane po ponownym uruchomieniu.",
     "empty": "Historia zdobytych nagród"
   },
   "summary": {
-    "note": "Uwaga: To podsumowanie opiera się na twojej historii tymczasowej.",
+    "note": "Działania i nagrody wszystkich automatyzacji z ostatnich 30 dni.",
     "empty": "Podsumowanie historii zdobytych nagród",
     "all-accounts": "Podsumowanie wszystkich kont"
   }

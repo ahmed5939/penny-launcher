@@ -1,9 +1,12 @@
 import type { ReactNode } from 'react'
 import type { ItemRecordMap } from '../../kernel/core/item-database'
 
-import { ImageOff, Star, Zap } from 'lucide-react'
+import { ImageOff, Star } from 'lucide-react'
 
 import { itemBadge, resolveItemArt } from './item-icon'
+import { artboardStyle, BadgeMark, itemBadgeMarks, rarityInk } from './artboard'
+
+import { getItemRecord } from '../../state/items/database'
 
 import { rarities, raritiesColor, RarityType } from '../../config/constants/resources'
 
@@ -35,10 +38,12 @@ export function ItemCard({
   name,
   onClick,
   overlay,
+  personality,
   portrait,
   power,
   quantity,
   records,
+  setBonus,
   subtitle,
   templateId,
   tier,
@@ -57,16 +62,25 @@ export function ItemCard({
   onClick?: () => void
   /** Anything else to draw over the artboard. */
   overlay?: ReactNode
+  /** Survivors: drawn as the site's corner marks. */
+  personality?: string | null
   portrait?: string | null
   power?: number | null
   quantity?: number
   records?: ItemRecordMap
+  setBonus?: string | null
   subtitle?: ReactNode
   templateId: string
   tier?: number
   title?: string
 }) {
   const art = resolveItemArt(templateId, records, portrait)
+  const marks = itemBadgeMarks({
+    personality,
+    record: records ? getItemRecord(records, templateId) : null,
+    setBonus,
+    templateId,
+  })
   /*
    * Every tier gets its colour here, Common included — the site does the
    * same. The vault's restraint ladder (nothing below Rare) is for a shelf of
@@ -83,8 +97,13 @@ export function ItemCard({
     <Element
       className={cn(
         'item-card group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-border/70 bg-card/70 text-left',
-        'transition-[transform,border-color,box-shadow] duration-200',
-        onClick && 'cursor-pointer hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+        'transition-colors',
+        /*
+         * A tile, not a web card: it lights up under the pointer and dims
+         * while pressed, without lifting or throwing a shadow, and keeps the
+         * arrow cursor and the app-wide focus rectangle.
+         */
+        onClick && 'hover:border-primary/40 hover:bg-accent/30 active:bg-accent/20',
         className
       )}
       onClick={onClick}
@@ -109,18 +128,13 @@ export function ItemCard({
 
       {/* Artboard. */}
       <span
-        className="relative m-2 mb-0 grid aspect-square place-items-center overflow-hidden rounded-lg ring-1 ring-inset"
-        style={{
-          background: accent
-            ? `linear-gradient(135deg, color-mix(in srgb, ${accent} 45%, transparent), color-mix(in srgb, ${accent} 18%, hsl(var(--card))) 55%, hsl(var(--surface)))`
-            : 'linear-gradient(135deg, hsl(var(--muted) / 0.7), hsl(var(--surface)))',
-          boxShadow: `inset 0 0 0 1px ${accent ? `color-mix(in srgb, ${accent} 40%, transparent)` : 'hsl(var(--border) / 0.6)'}`,
-        }}
+        className="relative m-2 mb-0 grid aspect-square place-items-center overflow-hidden rounded-lg"
+        style={artboardStyle(art.rarity)}
       >
         {art.imgUrl ? (
           <img
             alt=""
-            className="size-full object-contain p-2 drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)] transition-transform duration-500 ease-out group-hover:scale-105"
+            className="size-full object-contain p-2 drop-shadow-[0_6px_10px_rgba(0,0,0,0.45)] transition-transform duration-200 ease-out group-hover:scale-[1.03]"
             decoding="async"
             loading="lazy"
             src={art.imgUrl}
@@ -130,8 +144,8 @@ export function ItemCard({
         )}
 
         {typeof power === 'number' && power > 0 && (
-          <span className={cn(itemBadge, 'bottom-1.5 right-1.5 backdrop-blur-sm')}>
-            <Zap className="size-2.5 text-muted-foreground" />
+          <span className={cn(itemBadge, 'bottom-1.5 right-1.5 gap-1 rounded px-1.5 py-0.5 backdrop-blur-sm')}>
+            <span className="text-muted-foreground">PL</span>
             <span className="figure">{power}</span>
           </span>
         )}
@@ -150,13 +164,20 @@ export function ItemCard({
             ×{compact(quantity)}
           </span>
         )}
+        {marks.length > 0 && (
+          <span className="absolute left-1.5 top-1.5 z-10 flex flex-col gap-0.5">
+            {marks.map((entry) => (
+              <BadgeMark key={entry.src} mark={entry} />
+            ))}
+          </span>
+        )}
         {overlay}
       </span>
 
       {/* Caption. */}
       <span className="flex min-w-0 flex-1 flex-col gap-1 px-3 pb-3 pt-2.5">
         <span className="flex items-baseline justify-between gap-2">
-          <span className="micro-label truncate" style={accent ? { color: accent } : undefined}>
+          <span className="truncate text-2xs font-semibold uppercase leading-none tracking-wider text-muted-foreground" style={accent ? { color: rarityInk(accent) } : undefined}>
             {eyebrow ?? rarityName ?? 'Item'}
           </span>
           {typeof level === 'number' && (
@@ -165,13 +186,13 @@ export function ItemCard({
             </span>
           )}
         </span>
-        <span className="line-clamp-2 text-[0.8125rem] font-semibold leading-snug text-foreground">{label}</span>
-        {subtitle && <span className="truncate text-[0.6875rem] text-muted-foreground">{subtitle}</span>}
+        <span className="line-clamp-2 text-ui font-semibold leading-snug text-foreground">{label}</span>
+        {subtitle && <span className="truncate text-caption text-muted-foreground">{subtitle}</span>}
         {badges && <span className="mt-1 flex flex-wrap gap-1">{badges}</span>}
       </span>
 
       {footer && (
-        <span className="mt-auto flex items-center gap-2 border-t border-border/50 px-3 py-2 text-[0.6875rem] text-muted-foreground">
+        <span className="mt-auto flex items-center gap-2 border-t border-border/50 px-3 py-2 text-caption text-muted-foreground">
           {footer}
         </span>
       )}

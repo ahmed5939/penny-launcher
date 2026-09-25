@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 import { keepFoliageNormals } from './-blueprint-atmosphere'
 import { loadTexturedLibrary } from './-blueprint-build-library'
+import { WALKABLE } from './-blueprint-walk'
 
 import outpostSkyboxUrl from '../../../../assets/outpost-game/backdrops/Skybox_Outpost.glb?url'
 import homebaseSkyboxUrl from '../../../../assets/outpost-game/backdrops/Skybox_Outpost_HomeBase.glb?url'
@@ -162,6 +163,8 @@ function placeBackdrops(backdrops: Array<Backdrop>, group: THREE.Group, isDispos
           // Far scenery neither casts nor needs the base's shadow map.
           mesh.castShadow = !distant
           mesh.receiveShadow = !distant
+          // Rocks, cliffs and trunks block walk mode; leaves and grass don't.
+          if (!distant && !((material as THREE.MeshStandardMaterial).alphaTest > 0)) mesh.userData[WALKABLE] = true
           group.add(mesh)
         }
       }

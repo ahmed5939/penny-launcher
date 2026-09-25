@@ -61,7 +61,7 @@ export function PanelHeader({
    */
   const titleClassName = cn(
     'font-semibold leading-tight',
-    compact ? 'min-w-0 truncate text-[0.8125rem]' : 'text-sm'
+    compact ? 'min-w-0 truncate text-ui' : 'text-sm'
   )
   const titleNode =
     as === 'div' ? (
@@ -73,7 +73,7 @@ export function PanelHeader({
   return (
     <header
       className={cn(
-        'border-b border-border/60',
+        'border-b border-border/30',
         compact
           ? 'flex flex-wrap items-center gap-2 px-4 py-3'
           : 'flex items-start gap-3 px-5 py-4',
@@ -100,7 +100,7 @@ export function PanelHeader({
         <div className={cn('min-w-0', compact ? 'shrink' : 'flex-1')}>
           {titleNode}
           {description && (
-            <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">
+            <p className="mt-1 text-ui leading-relaxed text-muted-foreground">
               {description}
             </p>
           )}

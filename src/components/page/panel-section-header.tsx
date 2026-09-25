@@ -22,7 +22,7 @@ export function PanelSectionHeader({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-2 border-b border-border/60 px-4 py-2.5',
+        'flex flex-wrap items-center gap-2 border-b border-border/30 px-4 py-2.5',
         className
       )}
     >

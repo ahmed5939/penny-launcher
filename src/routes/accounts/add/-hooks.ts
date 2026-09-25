@@ -77,7 +77,7 @@ export function useBaseSetupForm({
         //   data.currentAccount
         // )
 
-        toast(
+        toast.success(
           t('success', {
             name: data.currentAccount.displayName,
           })
@@ -86,9 +86,9 @@ export function useBaseSetupForm({
         const cuystomKeys: Array<string> = [LauncherAuthError.login]
 
         if (cuystomKeys.includes(error)) {
-          toast(t(LauncherAuthError.login))
+          toast.error(t(LauncherAuthError.login))
         } else {
-          toast(error ?? t('error'))
+          toast.error(error ?? t('error'))
         }
       }
 
@@ -141,7 +141,7 @@ export function useAerialImport() {
 
             const plural = response.imported === 1 ? '' : 's'
 
-            toast(
+            toast.success(
               response.skipped > 0
                 ? `Imported ${response.imported} account${plural} from Aerial Launcher — ${response.skipped} already linked`
                 : `Imported ${response.imported} account${plural} from Aerial Launcher`
@@ -149,17 +149,17 @@ export function useAerialImport() {
             break
           }
           case 'nothing-new':
-            toast(
+            toast.info(
               response.skipped > 0
                 ? 'Every Aerial Launcher account is already linked'
                 : 'No accounts found in Aerial Launcher'
             )
             break
           case 'no-file':
-            toast('No Aerial Launcher data was found on this computer')
+            toast.warning('No Aerial Launcher data was found on this computer')
             break
           default:
-            toast('Could not read the Aerial Launcher accounts file')
+            toast.error('Could not read the Aerial Launcher accounts file')
         }
       }
     )

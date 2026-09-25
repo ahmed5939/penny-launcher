@@ -27,7 +27,7 @@ export function AccountToolbar({
 }) {
   return (
     <div className={cn('flex flex-wrap items-center gap-3', className)}>
-      <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
+      <span className="min-w-0 flex-1 truncate text-ui font-medium">
         {parseCustomDisplayName(account)}
       </span>
       {actions && (

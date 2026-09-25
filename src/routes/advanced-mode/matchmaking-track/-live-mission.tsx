@@ -2,18 +2,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import type { MatchmakingTrackStatus } from '../../../types/data/advanced-mode/matchmaking'
 import type { WorldInfoMission } from '../../../types/data/advanced-mode/world-info'
 
-import { UpdateIcon } from '@radix-ui/react-icons'
-import {
-  Clock,
-  ExternalLink,
-  Globe2,
-  MapPin,
-  MapPinOff,
-  RefreshCw,
-  Shield,
-  UserRound,
-  Users,
-} from 'lucide-react'
+import { ExternalLink, MapPinOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useDocumentVisible } from '../../../hooks/ui/document-visibility'
 import { useTranslation } from 'react-i18next'
@@ -27,8 +16,14 @@ import {
 } from '../../../config/constants/fortnite/world-info'
 import { pennyDBProfileURL } from '../../../config/fortnite/links'
 
-import { Button } from '../../../components/ui/button'
-import { Panel, PanelBody } from '../../../components/page'
+import {
+  Panel,
+  PanelBody,
+  RefreshButton,
+  StatusPill,
+  zoneArt,
+  type ZoneArt,
+} from '../../../components/page'
 
 import {
   useCurrentWorldInfoData,
@@ -37,7 +32,6 @@ import {
 
 import { parseResource } from '../../../lib/parsers/resources'
 import { numberWithCommaSeparator } from '../../../lib/parsers/numbers'
-import { cn } from '../../../lib/utils'
 
 /**
  * The in-game names Epic never sends over the wire — the session only
@@ -104,88 +98,86 @@ function namedRewards(items: RawRewardItems) {
     )
 }
 
-function StatBlock({
-  children,
-  icon: Icon,
-  label,
-}: {
-  children: ReactNode
-  icon: typeof MapPin
-  label: string
-}) {
+/** A figure over its caption, the way the Home hero states today's numbers. */
+function Figure({ children, label }: { children: ReactNode; label: string }) {
   return (
-    <div className="flex gap-3 items-center">
-      <span className="flex flex-shrink-0 items-center justify-center rounded-full bg-surface/80 border border-border/60 size-9">
-        <Icon className="size-4 text-primary" />
-      </span>
-      <div>
-        <div className="text-[0.625rem] text-muted-foreground uppercase tracking-[0.2em]">
-          {label}
-        </div>
-        <div className="font-medium">{children}</div>
-      </div>
+    <div className="flex min-w-0 flex-col-reverse">
+      <dd className="figure truncate text-title font-semibold leading-tight text-foreground">
+        {children}
+      </dd>
+      <dt className="mb-1 text-caption text-foreground/60">{label}</dt>
     </div>
   )
 }
 
-function SectionLabel({
+function Section({
   children,
-  className,
-  icon: Icon,
+  label,
 }: {
   children: ReactNode
-  className?: string
-  icon?: typeof Users
+  label: ReactNode
 }) {
   return (
-    <div
-      className={cn(
-        'flex gap-1.5 items-center text-xs uppercase tracking-[0.15em]',
-        className
-      )}
-    >
-      {Icon && <Icon className="size-3.5" />}
+    <section className="min-w-0">
+      <p className="section-label mb-2.5">{label}</p>
       {children}
-    </div>
+    </section>
   )
 }
 
 function RewardNames({
   rewards,
-  className,
 }: {
   rewards: ReturnType<typeof namedRewards>
-  className?: string
 }) {
   return (
-    <div className="flex flex-wrap gap-y-1 items-center mt-2">
-      {rewards.map((reward, index) => (
-        <span
-          className="flex items-center"
+    <ul className="flex flex-wrap gap-1.5">
+      {rewards.map((reward) => (
+        <li
+          className="flex items-center gap-1.5 rounded-md bg-muted/40 py-1 pl-1 pr-2.5 text-ui"
           key={reward.itemType}
         >
-          {index > 0 && (
-            <span className="bg-border/80 h-4 mx-3 w-px" />
+          <img
+            alt=""
+            className="size-6 object-contain"
+            decoding="async"
+            loading="lazy"
+            src={reward.imgUrl}
+          />
+          <span className="truncate">{reward.name}</span>
+          {reward.quantity > 1 && (
+            <span className="figure text-xs text-muted-foreground">
+              ×{numberWithCommaSeparator(reward.quantity)}
+            </span>
           )}
-          <span
-            className={cn('flex gap-1.5 items-center', className)}
-          >
-            <img decoding="async" loading="lazy"
-              src={reward.imgUrl}
-              className="size-5 object-contain"
-              alt=""
-            />
-            {reward.name}
-            {reward.quantity > 1 && (
-              <span className="text-muted-foreground text-xs">
-                ×{numberWithCommaSeparator(reward.quantity)}
-              </span>
-            )}
-          </span>
-        </span>
+        </li>
       ))}
-    </div>
+    </ul>
   )
+}
+
+/** PennyDB only sends reward names, so these render without icons. */
+function PlainRewards({ rewards }: { rewards: Array<string> }) {
+  return (
+    <ul className="flex flex-wrap gap-1.5">
+      {rewards.map((reward, index) => (
+        <li
+          className="rounded-md bg-muted/40 px-2.5 py-1 text-ui"
+          key={`${reward}-${index}`}
+        >
+          {reward}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** The four base zones have key art; everything else plays on a plain fill. */
+const theaterArt: Partial<Record<string, ZoneArt>> = {
+  [World.Stonewood]: 'stonewood',
+  [World.Plankerton]: 'plankerton',
+  [World.CannyValley]: 'canny-valley',
+  [World.TwinePeaks]: 'twine-peaks',
 }
 
 function useSessionClock(lastUpdated: string | null) {
@@ -240,24 +232,32 @@ export function LiveMissionCard({
 
   const session = status.playing ? status.session : null
   const zone = session?.zone ?? null
+  /**
+   * PennyDB's live `what_mission_data` is preferred for everything it
+   * names; Epic's session fills in rewards with icons, modifiers and region.
+   */
+  const pennydb = status.mission
+  const theaterId = zone?.theaterId ?? pennydb?.theaterId ?? null
 
   const mission: WorldInfoMission | null = zone
     ? worldInfo.get(zone.theaterId as World)?.get(zone.theaterMissionId) ??
       null
     : null
-  const isHestiaLobby = session !== null && mission === null
+  const isHestiaLobby = session !== null && mission === null && !pennydb
 
-  const theaterName = zone
-    ? i18n.exists(zone.theaterId, {
-        ns: 'zones',
-      })
-      ? t(zone.theaterId, {
+  const theaterName =
+    pennydb?.zone ??
+    (zone
+      ? i18n.exists(zone.theaterId, {
           ns: 'zones',
         })
-      : rawWorldInfo?.theaters?.find(
-          (theater) => theater.uniqueId === zone.theaterId
-        )?.displayName?.en ?? t('ventures', { ns: 'zones' })
-    : null
+        ? t(zone.theaterId, {
+            ns: 'zones',
+          })
+        : rawWorldInfo?.theaters?.find(
+            (theater) => theater.uniqueId === zone.theaterId
+          )?.displayName?.en ?? t('ventures', { ns: 'zones' })
+      : null)
 
   const missionTypeId = mission?.ui.mission.zone.type.id ?? null
   const missionName = missionTypeId
@@ -269,304 +269,267 @@ export function LiveMissionCard({
    * zone is part of the mission's identity there, unlike normal missions.
    */
   const title =
-    missionTypeId === 'storm-shield' && theaterName
+    pennydb?.name ??
+    (missionTypeId === 'storm-shield' && theaterName
       ? `${theaterName} ${missionName}`
-      : missionName
+      : missionName)
   const powerLevel =
-    mission && mission.ui.powerLevel > 0
+    pennydb?.difficulty ??
+    (mission && mission.ui.powerLevel > 0
       ? mission.ui.powerLevel
-      : session?.minDifficulty ?? null
-  const zoneColor = zone
-    ? zoneColors[zone.theaterId] ?? WorldColor.Ventures
+      : session?.minDifficulty ?? null)
+  const zoneColor = theaterId
+    ? zoneColors[theaterId] ?? WorldColor.Ventures
     : WorldColor.Ventures
-  const zoneLetter = zone
-    ? zoneLetters[zone.theaterId] ?? WorldLetter.Ventures
+  const zoneLetter = theaterId
+    ? zoneLetters[theaterId] ?? WorldLetter.Ventures
     : WorldLetter.Ventures
-  const sessionTime = useSessionClock(session?.lastUpdated ?? null)
+  const sessionTime = useSessionClock(
+    pennydb?.startedAt ?? session?.lastUpdated ?? null
+  )
 
+  /** Epic's resolved rewards carry icons; PennyDB's names are the fallback. */
   const missionRewards = mission
     ? namedRewards(mission.raw.mission.missionRewards.items)
     : []
   const alertRewards = mission?.raw.alert
     ? namedRewards(mission.raw.alert.missionAlertRewards.items)
     : []
+  const pennydbRewards =
+    missionRewards.length === 0 ? pennydb?.rewards ?? [] : []
+  const pennydbAlerts = alertRewards.length === 0 ? pennydb?.alerts ?? [] : []
+  const squad =
+    session && session.players.length > 0
+      ? session.players.map((member) => ({
+          key: member.id,
+          name: member.displayName ?? member.id,
+        }))
+      : (pennydb?.players ?? []).map((name) => ({ key: name, name }))
   const modifiers = mission?.ui.mission.modifiers ?? []
 
   const handleOpenPennyDB = (name: string) => () => {
     window.electronAPI.openExternalURL(pennyDBProfileURL(name))
   }
 
+  const launched = pennydb
+    ? pennydb.launched
+    : Boolean(session?.started && !isHestiaLobby)
+  const art = theaterId ? theaterArt[theaterId] : undefined
+
+  const player = (
+    <div className="min-w-0">
+      <button
+        className="flex max-w-full items-center gap-1.5 text-title font-semibold hover:text-primary"
+        onClick={handleOpenPennyDB(displayName)}
+        title={t('matchmaking-track.live.pennydb')}
+        type="button"
+      >
+        <span className="truncate">{displayName}</span>
+        <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
+      </button>
+      <p className="truncate font-mono text-caption text-muted-foreground">
+        {accountId}
+      </p>
+    </div>
+  )
+
+  if (!status.playing) {
+    return (
+      <Panel>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4">
+          <div className="min-w-0 flex-1">{player}</div>
+          <StatusPill tone="idle">
+            {t('matchmaking-track.live.status.offline')}
+          </StatusPill>
+          <RefreshButton
+            label={t('matchmaking-track.live.refresh')}
+            loading={isTracking}
+            onClick={onRefresh}
+          />
+        </div>
+        <div className="flex items-start gap-3 border-t border-border/30 px-5 py-4">
+          <MapPinOff className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <p className="text-ui font-medium">
+              {t('matchmaking-track.live.status.not-playing', {
+                name: displayName,
+              })}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t('matchmaking-track.live.status.not-playing-hint')}
+            </p>
+          </div>
+        </div>
+      </Panel>
+    )
+  }
+
   return (
     <Panel
-      className="border-l-2 border-l-[color:var(--zone-color)]"
       style={
         {
           '--zone-color': zoneColor,
         } as CSSProperties
       }
     >
-      <PanelBody className="relative px-6 py-5">
-        {/* accent line running along the top, PennyDB-style */}
-        <div
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/60 via-primary/20 to-transparent pointer-events-none"
-        />
-
-        <div className="flex items-center gap-3 border-b border-border/60 pb-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-surface/80 text-muted-foreground">
-            <UserRound className="size-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <button
-              className="flex max-w-full items-center gap-1.5 font-semibold hover:text-primary"
-              onClick={handleOpenPennyDB(displayName)}
-              title={t('matchmaking-track.live.pennydb')}
-            >
-              <span className="truncate">{displayName}</span>
-              <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
-            </button>
-            <div className="truncate font-mono text-[0.6875rem] text-muted-foreground">
-              {accountId}
-            </div>
-          </div>
-          <div
-            className={cn(
-              'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-              status.playing
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                : 'border-border/70 bg-surface/60 text-muted-foreground'
-            )}
-          >
-            <span
-              className={cn(
-                'size-1.5 rounded-full',
-                status.playing ? 'bg-emerald-400' : 'bg-muted-foreground/50'
-              )}
+      {/*
+        The mission as the game would frame it: the zone's key art behind the
+        mission name, the numbers that matter along its foot.
+      */}
+      <div className="relative overflow-hidden">
+        {art ? (
+          <>
+            <img
+              alt=""
+              className="absolute inset-0 size-full object-cover object-[center_40%] opacity-70"
+              decoding="async"
+              src={zoneArt[art]}
             />
-            {status.playing
-              ? t(
-                  isHestiaLobby
-                    ? 'matchmaking-track.live.status.in-lobby'
-                    : 'matchmaking-track.live.status.active'
-                )
-              : t('matchmaking-track.live.status.offline')}
-          </div>
-        </div>
-
-        {!status.playing ? (
-          <div className="flex items-center gap-4 py-5">
-            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface/70 text-muted-foreground">
-              <MapPinOff className="size-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="font-medium">
-              {t('matchmaking-track.live.status.not-playing', {
-                name: displayName,
-              })}
-              </div>
-              <div className="mt-0.5 text-sm text-muted-foreground">
-                {t('matchmaking-track.live.status.not-playing-hint')}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onRefresh}
-              disabled={isTracking}
-            >
-              {isTracking ? (
-                <UpdateIcon className="animate-spin h-4" />
-              ) : (
-                <>
-                  <RefreshCw className="mr-1.5 size-3.5" />
-                  {t('matchmaking-track.live.refresh')}
-                </>
-              )}
-            </Button>
-          </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-card/10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-card/80 via-card/20 to-transparent" />
+          </>
         ) : (
-          <div className="divide-y divide-border/60 [&>*]:py-5 [&>*:last-child]:pb-0">
-            {/* header */}
-            <div className="flex gap-4 items-center">
-              <div className="relative flex-shrink-0">
-                <span className="flex items-center justify-center rounded-xl border bg-surface/80 size-14 border-[color:var(--zone-color)]/50">
-                  {mission ? (
-                    <img decoding="async" loading="lazy"
-                      src={mission.ui.mission.zone.type.imageUrl}
-                      className="ink-glyph size-10"
-                      alt=""
-                    />
-                  ) : (
-                    <span className="font-bold text-xl uppercase text-[color:var(--zone-color)]">
-                      {zoneLetter}
-                    </span>
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    'absolute -right-1 -top-1 rounded-full ring-2 ring-background size-2.5',
-                    session?.started && !isHestiaLobby
-                      ? 'animate-pulse bg-green-400'
-                      : 'bg-amber-400'
-                  )}
+          <div className="absolute inset-0 bg-muted/30" />
+        )}
+
+        <div className="relative flex min-h-56 flex-col justify-between gap-6 px-6 pb-5 pt-5">
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+            <div className="min-w-0 flex-1">{player}</div>
+            <StatusPill
+              pulse={launched}
+              tone={launched ? 'active' : 'warning'}
+            >
+              {launched
+                ? t('matchmaking-track.live.status.launched')
+                : t('matchmaking-track.live.status.in-lobby')}
+            </StatusPill>
+            <RefreshButton
+              label={t('matchmaking-track.live.refresh')}
+              loading={isTracking}
+              onClick={onRefresh}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
+            <div className="flex min-w-0 items-center gap-4">
+              {mission ? (
+                <img
+                  alt=""
+                  className="ink-glyph size-14 shrink-0 drop-shadow"
+                  decoding="async"
+                  loading="lazy"
+                  src={mission.ui.mission.zone.type.imageUrl}
                 />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium text-primary text-xs uppercase tracking-[0.2em]">
-                  {'// '}
-                  {t('matchmaking-track.live.eyebrow')}
-                </div>
-                <h2 className="font-bold text-2xl truncate">{title}</h2>
-              </div>
-              <div className="flex flex-shrink-0 gap-2 items-center">
-                <span
-                  className={cn(
-                    'rounded-full border px-3 py-1 text-xs font-medium',
-                    session?.started && !isHestiaLobby
-                      ? 'border-primary/40 bg-primary/10 text-primary'
-                      : 'border-amber-500/40 bg-amber-500/10 text-amber-400'
-                  )}
-                >
-                  {session?.started && !isHestiaLobby
-                    ? t('matchmaking-track.live.status.launched')
-                    : t('matchmaking-track.live.status.in-lobby')}
+              ) : (
+                <span className="figure shrink-0 text-display font-bold text-[color:var(--zone-color)]">
+                  {zoneLetter}
                 </span>
-                <Button
-                  className="p-0 size-7"
-                  variant="ghost"
-                  onClick={onRefresh}
-                  disabled={isTracking}
-                  aria-label={t('matchmaking-track.live.refresh')}
-                >
-                  {isTracking ? (
-                    <UpdateIcon className="animate-spin h-4" />
-                  ) : (
-                    <RefreshCw className="size-4 text-muted-foreground" />
-                  )}
-                </Button>
-              </div>
+              )}
+              <p className="min-w-0 truncate text-display-sm font-bold leading-tight tracking-tight">
+                {title}
+              </p>
             </div>
 
-            {/* zone / difficulty / region */}
-            <div className="flex flex-wrap gap-x-10 gap-y-4 items-center">
+            <dl className="flex shrink-0 flex-wrap gap-x-8 gap-y-3">
               {theaterName && (
-                <StatBlock
-                  icon={MapPin}
-                  label={t('matchmaking-track.live.zone')}
-                >
+                <Figure label={t('matchmaking-track.live.zone')}>
                   {theaterName}
-                </StatBlock>
+                </Figure>
               )}
               {powerLevel !== null && (
-                <StatBlock
-                  icon={Shield}
-                  label={t('matchmaking-track.live.difficulty')}
-                >
+                <Figure label={t('matchmaking-track.live.difficulty')}>
                   {powerLevel}
-                </StatBlock>
+                </Figure>
               )}
               {session?.region && (
-                <StatBlock
-                  icon={Globe2}
-                  label={t('matchmaking-track.live.region')}
-                >
+                <Figure label={t('matchmaking-track.live.region')}>
                   {session.region}
-                </StatBlock>
+                </Figure>
               )}
-            </div>
-
-            {/* squad + rewards */}
-            <div className="space-y-5">
-              <div>
-                <SectionLabel
-                  className="text-primary"
-                  icon={Users}
-                >
-                  {t('matchmaking-track.live.squad', {
-                    total: session?.totalPlayers ?? 0,
-                  })}
-                </SectionLabel>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {session?.players.map((player) => (
-                    <button
-                      className="flex gap-1.5 items-center rounded-md border border-border/60 bg-surface/60 px-2.5 py-1 text-sm hover:border-primary/40 hover:bg-accent/50 transition-colors"
-                      key={player.id}
-                      onClick={handleOpenPennyDB(
-                        player.displayName ?? player.id
-                      )}
-                      title={t('matchmaking-track.live.pennydb')}
-                    >
-                      <span className="max-w-40 truncate">
-                        {player.displayName ?? player.id}
-                      </span>
-                      <ExternalLink
-                        className="stroke-muted-foreground"
-                        size={12}
-                      />
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {missionRewards.length > 0 && (
-                <div>
-                  <SectionLabel className="text-emerald-400">
-                    {t('matchmaking-track.live.mission-rewards')}
-                  </SectionLabel>
-                  <RewardNames
-                    rewards={missionRewards}
-                    className="text-primary"
-                  />
-                </div>
+              {sessionTime && (
+                <Figure label={t('matchmaking-track.live.session')}>
+                  {sessionTime}
+                </Figure>
               )}
-
-              {alertRewards.length > 0 && (
-                <div>
-                  <SectionLabel className="text-amber-400">
-                    {t('matchmaking-track.live.alert-rewards')}
-                  </SectionLabel>
-                  <RewardNames
-                    rewards={alertRewards}
-                    className="text-amber-200"
-                  />
-                </div>
-              )}
-
-              {modifiers.length > 0 && (
-                <div>
-                  <SectionLabel className="text-muted-foreground">
-                    {t('matchmaking-track.live.modifiers')}
-                  </SectionLabel>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {modifiers.map((modifier) => (
-                      <img decoding="async" loading="lazy"
-                        src={modifier.imageUrl}
-                        className="size-6"
-                        key={modifier.id}
-                        alt=""
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* session clock */}
-            {sessionTime && (
-              <div>
-                <StatBlock
-                  icon={Clock}
-                  label={t('matchmaking-track.live.session')}
-                >
-                  <span className="text-primary">
-                    {t('matchmaking-track.live.session-time', {
-                      time: sessionTime,
-                    })}
-                  </span>
-                </StatBlock>
-              </div>
-            )}
+            </dl>
           </div>
+        </div>
+      </div>
+
+      <PanelBody className="grid gap-6 py-5 lg:grid-cols-2">
+        <Section
+          label={t('matchmaking-track.live.squad', {
+            total: session?.totalPlayers ?? squad.length,
+          })}
+        >
+          <ul className="flex flex-wrap gap-1.5">
+            {squad.map((member) => (
+              <li key={member.key}>
+                <button
+                  className="flex items-center gap-1.5 rounded-md bg-muted/40 px-2.5 py-1 text-ui transition-colors hover:bg-accent/50"
+                  onClick={handleOpenPennyDB(member.name)}
+                  title={t('matchmaking-track.live.pennydb')}
+                  type="button"
+                >
+                  <span className="max-w-40 truncate">{member.name}</span>
+                  <ExternalLink className="size-3 text-muted-foreground" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Section>
+
+        {modifiers.length > 0 && (
+          <Section label={t('matchmaking-track.live.modifiers')}>
+            <div className="flex flex-wrap gap-1">
+              {modifiers.map((modifier) => (
+                <img
+                  alt=""
+                  className="size-7"
+                  decoding="async"
+                  key={modifier.id}
+                  loading="lazy"
+                  src={modifier.imageUrl}
+                />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {missionRewards.length > 0 && (
+          <Section label={t('matchmaking-track.live.mission-rewards')}>
+            <RewardNames rewards={missionRewards} />
+          </Section>
+        )}
+
+        {pennydbRewards.length > 0 && (
+          <Section label={t('matchmaking-track.live.mission-rewards')}>
+            <PlainRewards rewards={pennydbRewards} />
+          </Section>
+        )}
+
+        {alertRewards.length > 0 && (
+          <Section
+            label={
+              <span className="text-warning">
+                {t('matchmaking-track.live.alert-rewards')}
+              </span>
+            }
+          >
+            <RewardNames rewards={alertRewards} />
+          </Section>
+        )}
+
+        {pennydbAlerts.length > 0 && (
+          <Section
+            label={
+              <span className="text-warning">
+                {t('matchmaking-track.live.alert-rewards')}
+              </span>
+            }
+          >
+            <PlainRewards rewards={pennydbAlerts} />
+          </Section>
         )}
       </PanelBody>
     </Panel>

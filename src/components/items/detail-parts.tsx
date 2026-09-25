@@ -7,6 +7,7 @@ import { Children } from 'react'
 import { Zap } from 'lucide-react'
 
 import { resolveItemArt } from './item-icon'
+import { artboardStyle } from './artboard'
 import { DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
 
 import { rarityStyle, rarityTypeFromName } from '../page/rarity'
@@ -57,8 +58,7 @@ export function DetailHeader({
   return (
     <DialogHeader>
       <div className="flex items-start gap-4">
-        <span className={cn('relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-xl border-2', accent ? 'border-[color:var(--rarity)]' : 'border-border/60')} style={rarityStyle(accent)}>
-          {art.frame && <img alt="" aria-hidden className="absolute inset-0 size-full object-cover" decoding="async" src={art.frame} />}
+        <span className="relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-xl" style={{ ...rarityStyle(accent), ...artboardStyle(type) }}>
           {art.imgUrl && <img alt="" className={cn('relative size-full object-contain', dimmed && 'opacity-50 grayscale')} decoding="async" src={art.largeImgUrl ?? art.imgUrl} />}
         </span>
         <div className="min-w-0 flex-1 text-left">

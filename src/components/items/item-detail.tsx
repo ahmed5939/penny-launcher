@@ -7,6 +7,7 @@ import type { RatingTables } from '../../config/constants/fortnite/power'
 
 import {
   ArrowUp,
+  ExternalLink,
   Recycle,
   RefreshCw,
   Sparkles,
@@ -14,12 +15,15 @@ import {
   Wrench,
   Zap,
 } from 'lucide-react'
+import type { ReactNode } from 'react'
+
 import { useState } from 'react'
 
 import { Button } from '../ui/button'
 import { evolutionOptions } from './evolution-options'
 
 import { ItemIcon, resolveItemArt } from './item-icon'
+import { Artboard, BadgeMark, itemBadgeMarks } from './artboard'
 import {
   Dialog,
   DialogContent,
@@ -37,6 +41,8 @@ import {
 import { getItemRecord } from '../../state/items/database'
 
 import { computeItemPower } from '../../config/constants/fortnite/power'
+import { rarities, raritiesColor, RarityType } from '../../config/constants/resources'
+import { pennyDBSchematicUrl } from '../../services/endpoints/pennydb'
 
 import { cn } from '../../lib/utils'
 
@@ -103,7 +109,7 @@ export type ItemDetailSubject = {
   templateId: string
   /**
    * The owned copy's GUID. Every modification targets this, so its absence
-   * is what marks a compendium entry as read-only.
+   * is what marks a codex entry as read-only.
    */
   itemId?: string
   /** From the account's own copy, when this is an owned item. */
@@ -116,6 +122,15 @@ export type ItemDetailSubject = {
   portrait?: string | null
   /** `Alteration:` ids rolled on this copy. */
   alterations?: Array<string>
+  /** A power the caller already knows, over the one read from the tables. */
+  power?: number | null
+}
+
+/** What a screen knows about one rolled perk beyond its id. */
+export type PerkDetail = {
+  /** Beats the database name — legacy perks are often missing from it. */
+  name?: string
+  tags?: ReactNode
 }
 
 /**
@@ -127,14 +142,21 @@ export type ItemDetailSubject = {
  */
 export function ItemDetailDialog({
   alterationPools,
+  badges,
+  children,
   isBusy,
   onAction,
   onOpenChange,
+  perkDetails,
   ratings,
   records,
   subject,
 }: {
   alterationPools?: Record<string, Array<AlterationSlotPool>>
+  /** Extra chips in the title strip, after the name. */
+  badges?: ReactNode
+  /** A screen's own findings, after everything the item itself says. */
+  children?: ReactNode
   /** An action is in flight — every button waits. */
   isBusy?: boolean
   /**
@@ -143,6 +165,8 @@ export function ItemDetailDialog({
    */
   onAction?: (request: ItemActionRequest) => void
   onOpenChange: (open: boolean) => void
+  /** Lined up with `subject.alterations`. */
+  perkDetails?: Array<PerkDetail | undefined>
   ratings?: RatingTables
   records: ItemRecordMap
   subject: ItemDetailSubject | null
@@ -152,105 +176,179 @@ export function ItemDetailDialog({
     ? resolveItemArt(subject.templateId, records, subject.portrait)
     : null
   const power =
-    subject && typeof subject.level === 'number'
+    typeof subject?.power === 'number'
+      ? subject.power
+      : subject && typeof subject.level === 'number'
+        ? computeItemPower({
+            level: subject.level,
+            tables: ratings,
+            templateId: subject.templateId,
+          })
+        : null
+  const tier = subject ? (subject.tier ?? record?.tier ?? 0) : 0
+  /**
+   * A codex entry has no copy and so no level — what it can reach is the
+   * useful number instead: its power at the level cap of the tier shown.
+   */
+  const maxLevel = subject && power === null && typeof subject.level !== 'number'
+    ? levelCapForTier(tier)
+    : null
+  const maxPower =
+    subject && maxLevel !== null
       ? computeItemPower({
-          level: subject.level,
+          level: maxLevel,
           tables: ratings,
           templateId: subject.templateId,
         })
       : null
+  const metaLine = [record?.subType, record?.displayTier]
+    .filter(Boolean)
+    .join(' · ')
+  const rarityColor = art
+    ? (raritiesColor[art.rarity as RarityType] ?? raritiesColor[RarityType.Common])
+    : raritiesColor[RarityType.Common]
+  const marks = subject
+    ? itemBadgeMarks({
+        personality: subject.personality,
+        record,
+        setBonus: subject.setBonus,
+        templateId: subject.templateId,
+      })
+    : []
 
   return (
     <Dialog
       onOpenChange={onOpenChange}
       open={subject !== null}
     >
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="max-h-[88vh] gap-0 overflow-y-auto p-0 sm:max-w-4xl">
         {subject && art && (
           <>
-            <DialogHeader>
-              <div className="flex items-start gap-4">
-                <span
-                  className={cn(
-                    'relative grid size-24 shrink-0 place-items-center overflow-hidden rounded-xl border-2',
-                    art.accent
-                      ? 'border-[color:var(--rarity)]'
-                      : 'border-border/60'
-                  )}
-                  style={rarityStyle(art.accent)}
-                >
-                  {art.frame && (
-                    <img decoding="async" loading="lazy"
-                      alt=""
-                      aria-hidden
-                      className="absolute inset-0 size-full object-cover"
-                      src={art.frame}
-                    />
-                  )}
-                  <img decoding="async" loading="lazy"
-                    alt=""
-                    className="relative size-full object-contain"
-                    src={art.largeImgUrl ?? art.imgUrl}
-                  />
-                </span>
-
-                <div className="min-w-0 flex-1 text-left">
-                  <DialogTitle className="text-left text-lg leading-tight">
-                    {art.name}
-                  </DialogTitle>
-                  <p
-                    className={cn(
-                      'micro-label mt-1.5',
-                      art.accent && 'text-[color:var(--rarity)]'
-                    )}
-                    style={rarityStyle(art.accent)}
-                  >
-                    {[
-                      record?.rarity,
-                      record?.subType,
-                      record?.displayTier,
-                      (subject.tier ?? record?.tier ?? 0) > 0 &&
-                        `Tier ${subject.tier ?? record?.tier}`,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
-                  {power !== null && (
-                    <p className="mt-2 flex items-center gap-1.5 leading-none">
-                      <Zap className="size-4 text-muted-foreground" />
-                      <span className="figure text-base font-bold">
-                        {power}
-                      </span>
-                      <span className="micro-label">Power</span>
-                    </p>
-                  )}
-                  <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                    {typeof subject.level === 'number' && (
-                      <span>
-                        Level <span className="figure">{subject.level}</span>
-                      </span>
-                    )}
-                    {subject.personality && (
-                      <span>{subject.personality}</span>
-                    )}
-                    {subject.setBonus && <span>{subject.setBonus}</span>}
-                  </p>
-                </div>
-              </div>
-
-              {record?.description && (
-                <DialogDescription className="mt-3 whitespace-pre-line text-left leading-relaxed">
-                  {record.description}
-                </DialogDescription>
-              )}
+            {/* Title strip: rarity pill and name, as the site heads it. */}
+            <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-border/60 px-5 py-3.5 pr-12 text-left">
+              <span
+                className="shrink-0 rounded-full border px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider"
+                style={{
+                  background: `color-mix(in srgb, ${rarityColor} 18%, transparent)`,
+                  borderColor: `color-mix(in srgb, ${rarityColor} 70%, transparent)`,
+                  color: rarityColor,
+                }}
+              >
+                {record?.rarity ?? rarities[art.rarity as RarityType] ?? 'Item'}
+              </span>
+              <DialogTitle className="truncate text-left text-title font-bold uppercase tracking-wide">
+                {art.name}
+              </DialogTitle>
+              {badges && <span className="flex shrink-0 flex-wrap gap-1.5">{badges}</span>}
             </DialogHeader>
 
-            {subject.lockedReason && (
-              <Callout tone="warning">
-                {subject.lockedReason === 'favorite'
-                  ? 'Favourited in game — protected from recycling.'
-                  : 'Assigned to a squad or hero loadout — protected from recycling.'}
-              </Callout>
+            {/* Power and tier stars — dropped when there is neither. */}
+            {(power !== null || tier > 0 || metaLine) && (
+              <div className="flex items-center gap-4 border-b border-border/60 px-5 py-2.5">
+                {power !== null && (
+                  <span className="flex items-center gap-1.5 text-primary">
+                    <Zap className="size-4" />
+                    <span className="figure text-base font-bold">{power}</span>
+                  </span>
+                )}
+                {tier > 0 && (
+                  <span aria-label={`Tier ${tier}`} className="flex gap-0.5 text-primary" role="img">
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <Star
+                        className={cn('size-3.5', index < tier ? 'fill-current' : 'opacity-25')}
+                        key={index}
+                      />
+                    ))}
+                  </span>
+                )}
+                <span className="ml-auto truncate text-xs font-semibold text-muted-foreground">
+                  {metaLine}
+                </span>
+              </div>
+            )}
+
+            <div className="grid gap-5 p-5 md:grid-cols-[17rem_minmax(0,1fr)]">
+              {/* Left: the art and its facts. */}
+              <div className="space-y-2.5">
+                <Artboard
+                  className="aspect-square w-full rounded-xl"
+                  rarity={art.rarity}
+                  style={{ boxShadow: `inset 0 0 0 2px ${rarityColor}` }}
+                >
+                  {(art.largeImgUrl ?? art.imgUrl) && (
+                    <img
+                      alt=""
+                      className={cn(
+                        'absolute inset-0 size-full drop-shadow-[0_8px_14px_rgba(0,0,0,0.5)]',
+                        subject.templateId.startsWith('Hero:') ? 'object-cover object-top' : 'object-contain p-3'
+                      )}
+                      decoding="async"
+                      src={art.largeImgUrl ?? art.imgUrl}
+                    />
+                  )}
+                  {marks.length > 0 && (
+                    <span className="absolute left-2 top-2 flex flex-col gap-1">
+                      {marks.map((entry) => (
+                        <BadgeMark className="size-6" key={entry.src} mark={entry} />
+                      ))}
+                    </span>
+                  )}
+                </Artboard>
+
+                {power !== null && (
+                  <FactBlock label="Power level">
+                    <span className="flex items-center gap-1.5 text-primary">
+                      <Zap className="size-4" />
+                      <span className="figure">{power}</span>
+                    </span>
+                  </FactBlock>
+                )}
+                {maxPower !== null && (
+                  <FactBlock label={`Power at level ${maxLevel}`}>
+                    <span className="flex items-center gap-1.5 text-primary">
+                      <Zap className="size-4" />
+                      <span className="figure">{maxPower}</span>
+                    </span>
+                  </FactBlock>
+                )}
+                <FactBlock color={rarityColor} label="Rarity" tinted>
+                  <span className="uppercase" style={{ color: rarityColor }}>
+                    {record?.rarity ?? rarities[art.rarity as RarityType] ?? 'Unknown'}
+                  </span>
+                </FactBlock>
+                {(typeof subject.level === 'number' || subject.personality || subject.setBonus) && (
+                  <FactBlock label={typeof subject.level === 'number' ? 'Level' : 'Traits'}>
+                    <span className="flex flex-wrap items-baseline gap-x-3">
+                      {typeof subject.level === 'number' && <span className="figure">{subject.level}</span>}
+                      {subject.personality && (
+                        <span className="text-xs font-medium text-muted-foreground">{subject.personality}</span>
+                      )}
+                      {subject.setBonus && (
+                        <span className="text-xs font-medium text-muted-foreground">{subject.setBonus}</span>
+                      )}
+                    </span>
+                  </FactBlock>
+                )}
+                {subject.lockedReason && (
+                  <Callout tone="warning">
+                    {subject.lockedReason === 'favorite'
+                      ? 'Favourited in game — protected from recycling.'
+                      : 'Assigned to a squad or hero loadout — protected from recycling.'}
+                  </Callout>
+                )}
+              </div>
+
+              {/* Right: what the item does, and what you can do to it. */}
+              <div className="min-w-0 space-y-4">
+            {record?.description ? (
+              <div className="border-l-2 border-primary/60 pl-3">
+                <p className="section-label mb-1">Description</p>
+                <DialogDescription className="whitespace-pre-line text-left text-ui italic leading-relaxed">
+                  {record.description}
+                </DialogDescription>
+              </div>
+            ) : (
+              <DialogDescription className="sr-only">{art.name}</DialogDescription>
             )}
 
             {onAction && subject.itemId && (
@@ -271,6 +369,7 @@ export function ItemDetailDialog({
                   {subject.alterations.map((alteration, index) => (
                     <PerkRow
                       alteration={alteration}
+                      detail={perkDetails?.[index]}
                       isBusy={isBusy}
                       key={`${alteration}-${index}`}
                       onAction={subject.itemId ? onAction : undefined}
@@ -335,13 +434,13 @@ export function ItemDetailDialog({
               />
             )}
 
-            {record && record.abilities.length > 0 && (
+            {record && (record.abilities?.length ?? 0) > 0 && (
               <Section
                 icon={Sparkles}
                 title="Abilities"
               >
                 <ul className="flex flex-wrap gap-2">
-                  {record.abilities.map((ability) => {
+                  {record.abilities?.map((ability) => {
                     const known = getItemRecord(records, ability)
 
                     return (
@@ -362,7 +461,7 @@ export function ItemDetailDialog({
               </Section>
             )}
 
-            {record && Object.keys(record.craftingCost).length > 0 && (
+            {record && Object.keys(record.craftingCost ?? {}).length > 0 && (
               <CostSection
                 icon={Wrench}
                 cost={record.craftingCost}
@@ -371,7 +470,7 @@ export function ItemDetailDialog({
               />
             )}
 
-            {record && Object.keys(record.tierUpCost).length > 0 && (
+            {record && Object.keys(record.tierUpCost ?? {}).length > 0 && (
               <CostSection
                 icon={Star}
                 cost={record.tierUpCost}
@@ -380,7 +479,7 @@ export function ItemDetailDialog({
               />
             )}
 
-            {record?.recycle && (
+            {record?.recycle && record.recycle.amount > 0 && (
               <Section
                 icon={Recycle}
                 title="Recycles for"
@@ -400,13 +499,63 @@ export function ItemDetailDialog({
               </Section>
             )}
 
-            <p className="select-all break-all rounded-lg bg-muted/40 px-3 py-2 font-mono text-[0.625rem] text-muted-foreground ring-1 ring-inset ring-border/60">
-              {subject.templateId}
-            </p>
+            {children}
+
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 select-all break-all rounded-lg bg-muted/40 px-3 py-2 font-mono text-2xs text-muted-foreground ring-1 ring-inset ring-border/60">
+                {subject.templateId}
+              </p>
+              {subject.templateId.startsWith('Schematic:') && (
+                <Button
+                  onClick={() => window.electronAPI.openExternalURL(pennyDBSchematicUrl(art.name))}
+                  size="sm"
+                  title="Every variant of this schematic on PennyDB"
+                  variant="secondary"
+                >
+                  <ExternalLink className="size-3.5" />
+                  View on PennyDB
+                </Button>
+              )}
+            </div>
+              </div>
+            </div>
           </>
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * One fact under the art, as the site stacks them: a label over a figure,
+ * a bar down the left in the accent — or, for rarity, a wash in its colour.
+ */
+function FactBlock({
+  children,
+  color,
+  label,
+  tinted,
+}: {
+  children: ReactNode
+  color?: string
+  label: string
+  tinted?: boolean
+}) {
+  return (
+    <div
+      className="rounded-md border-l-[3px] border-primary/70 bg-muted/40 px-3 py-2"
+      style={
+        color
+          ? {
+              background: tinted ? `color-mix(in srgb, ${color} 22%, transparent)` : undefined,
+              borderLeftColor: color,
+            }
+          : undefined
+      }
+    >
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="text-lg font-bold leading-snug">{children}</div>
+    </div>
   )
 }
 
@@ -591,8 +740,12 @@ function UpgradeActions({
  * One perk slot: what is rolled, what upgrading it costs, and — when the
  * game data knows the slot's pool — what else could go there.
  */
+/** Perk rarities, lowest first — how far a perk has been upgraded. */
+const perkRanks = ['common', 'uncommon', 'rare', 'epic', 'legendary']
+
 function PerkRow({
   alteration,
+  detail,
   isBusy,
   onAction,
   pool,
@@ -601,6 +754,7 @@ function PerkRow({
   subject,
 }: {
   alteration: string
+  detail?: PerkDetail
   isBusy?: boolean
   onAction?: (request: ItemActionRequest) => void
   pool?: AlterationSlotPool
@@ -617,20 +771,36 @@ function PerkRow({
     .map((option) => alterationAtCurrentTier(option, alteration))
     .filter((option) => option.toLowerCase() !== alteration.toLowerCase())
 
+  const rank = perkRanks.indexOf((perkRecord?.rarity ?? '').toLowerCase()) + 1
+  const edge = accent ?? 'hsl(var(--muted-foreground) / 0.5)'
+
   return (
-    <li className="panel px-3 py-2">
+    <li
+      className="panel border-l-[3px] px-3 py-2"
+      style={{ ...rarityStyle(accent), borderLeftColor: edge }}
+    >
       <div className="flex items-start gap-2">
-        <span
-          className={cn(
-            'mt-1.5 size-1.5 shrink-0 rounded-full',
-            accent ? 'bg-[color:var(--rarity)]' : 'bg-muted-foreground/50'
-          )}
-          style={rarityStyle(accent)}
-        />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold">
-            {displayAlteration(records, alteration)}
+          <p className="text-ui font-semibold">
+            {detail?.name ?? displayAlteration(records, alteration)}
           </p>
+          {detail?.tags && (
+            <span className="mt-1 flex flex-wrap gap-1">{detail.tags}</span>
+          )}
+          {/* The site's rarity pips: one lit per step the perk has climbed. */}
+          {rank > 0 && (
+            <span aria-label={`${perkRecord?.rarity} perk`} className="mt-1.5 flex gap-1" role="img">
+              {perkRanks.map((name, index) => (
+                <span
+                  className="h-0.5 flex-1 rounded-full"
+                  key={name}
+                  style={{
+                    background: index < rank ? edge : 'hsl(var(--muted-foreground) / 0.2)',
+                  }}
+                />
+              ))}
+            </span>
+          )}
 
           {Object.keys(upgrade).length > 0 && (
             <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
@@ -770,7 +940,7 @@ function PerkBlock({
       title={label}
     >
       <div className="panel px-3 py-2">
-        <p className="text-[0.8125rem] font-semibold">{perk.name}</p>
+        <p className="text-ui font-semibold">{perk.name}</p>
         {perk.description && (
           <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
             {perk.description}

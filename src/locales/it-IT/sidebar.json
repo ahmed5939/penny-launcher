@@ -3,20 +3,17 @@
     "title": "Operazioni STW",
     "options": {
       "auto-kick": "Auto-caccia",
-      "taxi-service": "Servizio Taxi",
-      "party": "Party",
       "expeditions": "Spedizioni",
       "squad-presets": "Squadre Sopravvissuti",
       "inventory": "Deposito",
-      "compendium": "Compendio",
+      "codex": "Codex",
       "quests": "Registro Missioni",
       "loadouts": "Equipaggiamenti Eroi",
       "timeline": "Cronologia Eventi",
       "shop": "Negozio STW",
       "xp-boosts": "Incrementi PE",
       "auto-pin-urns": "Fissa missioni automaticamente",
-      "auto-llamas": "Auto-lama",
-      "endurance": "Endurance"
+      "auto-llamas": "Auto-lama"
     },
     "auto-kick-status": {
       "issue": "Errore",

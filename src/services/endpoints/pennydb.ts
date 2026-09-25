@@ -104,11 +104,17 @@ export type PennyDBProfileResponse = {
   live_ventures_quests?: Record<string, unknown>
   live_wargames_quests?: Record<string, unknown>
   live_weekly_quests?: Record<string, unknown>
+  /** Live, not cached: "Player is not currently in a mission" when idle. */
   what_mission_data?: {
     difficulty?: string
     mission_playing?: string
     players?: Record<string, string>
     zone?: string
+    /** e.g. "4:57 mins". */
+    session_time?: string
+    mission_rewards?: Array<string>
+    mission_alerts?: Array<unknown>
+    launched_mission?: boolean
   }
 }
 
@@ -127,6 +133,21 @@ export function getPennyDBProfile(displayName: string) {
 /** The public page a profile lives on, for "open in browser" links. */
 export function pennyDBProfileUrl(displayName: string) {
   return `https://pennydb.net/profile/${encodeURIComponent(displayName)}`
+}
+
+/**
+ * A schematic's page on the site. Same slug rule as the site's own
+ * `schematicSlug`, so every variant of a name lands on its one page.
+ */
+export function pennyDBSchematicUrl(name: string) {
+  const slug = name
+    .normalize('NFKC')
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-|-$/g, '')
+
+  return `https://pennydb.net/schematics/${encodeURIComponent(slug)}`
 }
 
 export const pennyDBMissionZones = [

@@ -40,10 +40,11 @@ Everything a tool page needs is exported from `src/components/page`
 
 Every tool page, top to bottom:
 
-1. `PageHeader` with `section` (the nav area: "Save the World", "Automate",
-   …), `icon` (the same icon as its nav entry), `title`, a one- or
-   two-sentence `description` saying what the page is for, `status` badges
-   and page-wide `actions` (usually `RefreshButton`).
+1. `PageHeader`: the page title over the game's zone key art, bled to the
+   pane edges (`art="twine-peaks"` etc.; picked from the title when
+   omitted), a one- or two-sentence `description`, `status` badges and
+   page-wide `actions` (usually `RefreshButton`). It must be the page's first
+   element — it pulls itself up and out to the pane edges.
 2. The gate: no account → error → loading (see §3).
 3. `StatRow` — up to four numbers that answer "how am I doing?" first.
 4. Panels. Filters sit in a `FilterBar` directly under the `PanelHeader` of
@@ -87,7 +88,22 @@ const resource = useAccountResource((id) => window.electronAPI.requestThing(id),
 - Never present an estimate as fact. Unknown is "unavailable", not 0; a
   derived level is "at least level 11".
 
-## 5. Colour and type
+## 5. Look: a game client, not a dashboard
+
+- Group by tone, not by outline. A `Panel` is a fill one step off the page
+  with no border; don't wrap every group in a bordered card.
+- Stats are a line of figures (`StatRow`), not a row of boxed KPI tiles.
+- Icons stand alone. No tinted icon squares, no gradient orbs, blurred
+  blobs or watermarks, no uppercase letter-spaced eyebrows.
+- Game art leads: zone art in headers, item art on cards, rarity as the
+  colour system.
+- Behave like a Windows window, not a web page. Controls and in-app links
+  keep the arrow cursor. Menus fade and slide from their anchor, and dialogs
+  settle from 105%; nothing pops from `zoom-in-95`. Right-click menus are
+  native (`popupContextMenu`). Ctrl+wheel, pinch, file drops and link drags
+  do nothing unless a component claims them (`src/lib/native-input.ts`).
+
+## 6. Colour and type
 
 - Colour comes from theme tokens (`text-primary`, `text-warning`,
   `bg-muted`, `border-border`…) or a named palette in config:
@@ -102,9 +118,18 @@ const resource = useAccountResource((id) => window.electronAPI.requestThing(id),
   notable/selected, `neutral` a plain label.
 - Type ranks: `micro-label` for captions and eyebrows, `section-label` for
   dialog sections, `figure` for every number (tabular), `text-xs` for
-  hints. Sizes in rem; never `text-[Npx]`.
+  hints.
+- Sizes come from the named scale in `tailwind.config.js`, never
+  `text-[…]`: `text-3xs` (9px, badges on art), `text-2xs` (10px),
+  `text-caption` (11px), `text-xs` (12px, hints), `text-ui` (13px, dense
+  body text and list rows), `text-sm` (14px), `text-title` (15px, small
+  headings), `text-display-sm` / `text-display` / `text-display-lg` (22 /
+  28 / 32px, page and hero titles). A new size goes in the config and in
+  `cn`'s tailwind-merge list (`src/lib/utils.ts`), not in a page.
+- Status colour is a token (`text-success`, `bg-warning/10`,
+  `border-destructive/30`), never the Tailwind palette (`text-amber-400`).
 
-## 6. Actions and safety
+## 7. Actions and safety
 
 - Read-only tools say so (`ToolBadges readOnly`) and have no mutating
   control anywhere in their tree.
@@ -117,7 +142,7 @@ const resource = useAccountResource((id) => window.electronAPI.requestThing(id),
   (`RecycleCeilingPicker`: "Rare and below"), default off, and use the same
   control on every page they appear.
 
-## 7. Accessibility
+## 8. Accessibility
 
 - Every control has an accessible name (`Picker label`, `SearchField
   label`, `aria-label` on icon-only buttons).
@@ -128,7 +153,7 @@ const resource = useAccountResource((id) => window.electronAPI.requestThing(id),
 - Progress is a `ProgressBar` (`role="progressbar"` with values).
 - `AnimatedNumber` respects `prefers-reduced-motion`.
 
-## 8. Adding a page
+## 9. Adding a page
 
 1. Route under `src/routes/<area>/<name>/` with a thin `-page.tsx` that
    re-exports the view; feature logic under `src/features/<name>/`.
@@ -137,4 +162,9 @@ const resource = useAccountResource((id) => window.electronAPI.requestThing(id),
    and its label in `src/locales/en-US/sidebar.json`.
 3. Pure model + tests first; main-process reader in `src/kernel/core/`;
    preload action; then the view from the kit.
-4. `npx vitest run src/components/page` must pass.
+4. `npx vitest run src/components/page` must pass. Besides the kit rules
+   above it fails on: `text-[…]` sizes, Tailwind palette colours, a raw
+   `Input` search, a hand-built refresh (`RefreshCw` outside
+   `RefreshButton`), a bare `<h2>`, red-text errors, and a `toast()`
+   without a tone (`toast.success` / `.error` / `.warning` / `.info`).
+   Allow-lists in the test hold only files with a stated reason.

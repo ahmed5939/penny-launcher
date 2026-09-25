@@ -19,7 +19,7 @@ export function LauncherNotifications() {
   useEffect(() => {
     const listener = window.electronAPI.onNotificationLauncher(
       async (data) => {
-        toast(
+        toast[data.status ? 'success' : 'error'](
           t(
             data.status
               ? 'launch-game.notifications.success'

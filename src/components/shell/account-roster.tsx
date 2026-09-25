@@ -72,8 +72,8 @@ export function AccountRoster({
       {accounts.length === 0 ? (
         <Link
           to="/accounts/add/$type"
-          params={{ type: 'authorization-code' }}
-          className="flex h-8 items-center gap-2 rounded-lg px-2 text-[0.8125rem] text-muted-foreground hover:bg-accent/30 hover:text-foreground"
+          params={{ type: 'quick-login' }}
+          className="flex h-8 items-center gap-2 rounded-lg px-2 text-ui text-muted-foreground hover:bg-accent/30 hover:text-foreground"
         >
           <UserPlus className="size-4 shrink-0 opacity-75" />
           <span className="truncate">
@@ -117,7 +117,7 @@ export function AccountRoster({
                   <div
                     className={cn(
                       'relative flex h-8 items-center gap-1.5 rounded-lg px-1.5',
-                      'text-[0.8125rem] text-muted-foreground',
+                      'text-ui text-muted-foreground',
                       !isInvalid && 'hover:bg-accent/30 hover:text-foreground',
                       isCurrent && 'bg-accent/70 font-medium text-foreground',
                       isInvalid && 'opacity-45 grayscale',
@@ -155,7 +155,7 @@ export function AccountRoster({
                         <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
                       )}
                       {isValid && !isCurrent && (
-                        <ShieldCheck className="size-3.5 shrink-0 text-emerald-500" />
+                        <ShieldCheck className="size-3.5 shrink-0 text-success" />
                       )}
                       {isCurrent && (
                         <Check className="size-3.5 shrink-0 text-primary" />
@@ -194,7 +194,7 @@ export function AccountRoster({
 
           {accounts.length > 1 && (
             <div className="mt-1 flex items-center gap-1 px-1">
-              <span className="figure mr-auto px-1 text-[0.625rem] text-muted-foreground">
+              <span className="figure mr-auto px-1 text-2xs text-muted-foreground">
                 {t('form.multi.select.counter', {
                   selected: members.length,
                   total: accounts.length,
@@ -231,7 +231,7 @@ export function AccountGlyph({
   return (
     <span
       className={cn(
-        'grid size-5 shrink-0 place-items-center rounded-md text-[0.5625rem] font-semibold uppercase text-white',
+        'grid size-5 shrink-0 place-items-center rounded-md text-3xs font-semibold uppercase text-white',
         selected ? 'ring-1 ring-primary/70' : 'opacity-90',
       )}
       style={{ backgroundColor: `hsl(${accountHue(accountId)} 42% 36%)` }}
@@ -252,7 +252,7 @@ function ScopeAction({
 }) {
   return (
     <Button
-      className="h-6 gap-1 px-1.5 text-[0.625rem] font-medium text-muted-foreground"
+      className="h-6 gap-1 px-1.5 text-2xs font-medium text-muted-foreground"
       disabled={disabled}
       size="sm"
       variant="ghost"

@@ -1,18 +1,20 @@
 import type { ItemRecord, ItemRecordMap } from '../../kernel/core/item-database'
-import type { FinderItem, FinderSourceId, RareItemScan, ScannedProfile } from './types'
+import type { FinderItem, FinderPerk, FinderSourceId, RareItemScan, ScannedProfile } from './types'
 import type { ChipTone } from '../../components/page'
 
-import { useMemo, useState } from 'react'
-import { AlertTriangle, Radar, ShieldQuestion, Sparkles, Star } from 'lucide-react'
+import type { ComponentProps } from 'react'
 
-import { getItemRecord, useItemDatabaseStore } from '../../state/items/database'
+import { useMemo, useState } from 'react'
+import { AlertTriangle, MapPin, Radar, ShieldQuestion, Sparkles } from 'lucide-react'
+
+import { useItemDatabaseStore } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
 import { SOURCES } from './sources'
 
-import { Dialog, DialogContent } from '../../components/ui/dialog'
-import { ItemCard, ItemCardGrid } from '../../components/items/item-card'
-import { DetailHeader, DetailSection, PerkSlotRow } from '../../components/items/detail-parts'
-import { AccountResourceGate, Callout, Chip, EmptyState, FilterBar, PageHeader, PageTabs, Pager, Panel, PanelBody, PanelHeader, PanelSectionHeader, Picker, RefreshButton, SearchField, StatRow, StatTile, ToolBadges, accentByRarity, paginate, rarityTypeFromName, useAccountResource } from '../../components/page'
+import { ItemDetailDialog } from '../../components/items/item-detail'
+import { ItemTile } from '../../components/items/item-tile'
+import { DetailSection } from '../../components/items/detail-parts'
+import { AccountResourceGate, Callout, Chip, EmptyState, FilterBar, KeyValue, PageHeader, PageTabs, Pager, Panel, PanelBody, PanelHeader, PanelSectionHeader, Picker, RefreshButton, SearchField, StatRow, StatTile, ToolBadges, paginate, useAccountResource } from '../../components/page'
 
 const PAGE_SIZE = 48
 
@@ -27,10 +29,10 @@ type SortKey = 'power' | 'rarity' | 'name'
  * Backpack & Storage pages are for.
  */
 const views: Array<{ id: ViewId; label: string; title: string; description: string }> = [
-  { id: 'aoe', label: 'AOE weapons', title: 'AOE weapons', description: 'Legacy Knockback AOE weapons and schematics across the whole account, grouped by where each copy lives.' },
-  { id: 'historical', label: 'Historical', title: 'Historical weapons & traps', description: 'Perks that were legitimately obtainable once and are outside today’s rules — Discharger reload speed, Vindertech five-headshots, and the others the user evidenced. Unverified slot positions are noted.' },
-  { id: 'modded', label: 'Modded', title: 'Modded weapons & traps', description: 'Confirmed modded rolls, plus candidates whose perks fall outside the extracted rules and have no other explanation. The two are labelled separately.' },
-  { id: 'location', label: 'By location', title: 'By location', description: 'One inventory at a time, with every weapon and trap it holds. Filter by status to see only what stands out.' },
+  { id: 'aoe', label: 'AOE weapons', title: 'AOE weapons', description: 'Legacy Knockback AOE weapons and schematics, grouped by where each copy lives.' },
+  { id: 'historical', label: 'Historical', title: 'Historical weapons & traps', description: 'Perks you could once roll legitimately and no longer can — Discharger reload speed, Vindertech five-headshots and the like.' },
+  { id: 'modded', label: 'Modded', title: 'Modded weapons & traps', description: 'Confirmed modded rolls, and candidates whose perks fit no rule. Each is labelled.' },
+  { id: 'location', label: 'By location', title: 'By location', description: 'Every weapon and trap in one inventory. Filter by status to see what stands out.' },
 ]
 
 const locationLabel: Record<FinderSourceId, string> = {
@@ -50,6 +52,11 @@ const statusFilters: Array<{ value: StatusFilter; label: string }> = [
   { value: 'review', label: 'Needs review' },
   { value: 'all', label: 'Everything checked' },
 ]
+
+/** The perk a copy is on this page for — the AOE, legacy or historical roll. */
+function standoutPerk(item: FinderItem) {
+  return item.perks.find((perk) => perk.aoe) ?? item.perks.find((perk) => perk.legacy) ?? null
+}
 
 /** The one word that matters about a copy, in the tone the vault uses for it. */
 function headline(item: FinderItem): { label: string; tone: ChipTone } {
@@ -96,6 +103,7 @@ export function RareItemFinderPage() {
    * the previous account's scan returns late.
    */
   const resource = useAccountResource((accountId) => window.electronAPI.requestRareItemScan(accountId), {
+    cacheKey: 'stw.rare-item-finder',
     fallbackError: 'The scan could not be completed. Rescan to retry.',
     owner: (result) => result.accountId,
   })
@@ -104,7 +112,7 @@ export function RareItemFinderPage() {
     <div className="space-y-5">
       <PageHeader
         actions={<RefreshButton disabled={!resource.accountId} label="Rescan" loading={resource.loading} onClick={resource.refresh} />}
-        description="Legacy, hybrid, historical, Knockback AOE and modded weapons and traps, across inventory schematics, the Collection Book, the backpack and storage. Nothing here changes an item."
+        description="Finds legacy, historical, Knockback AOE and modded weapons and traps across your schematics, Collection Book, backpack and storage. Read-only."
         icon={Radar}
         section="Save the World"
         status={<ToolBadges beta readOnly />}
@@ -124,6 +132,8 @@ export function RareItemFinderPage() {
 
 function Results({ scan: current }: { scan: RareItemScan }) {
   const records = useTileRecords(useItemDatabaseStore((s) => s.records), current)
+  const alterationPools = useItemDatabaseStore((s) => s.alterationPools)
+  const ratings = useItemDatabaseStore((s) => s.ratings)
   const [view, setView] = useState<ViewId>('aoe')
   const [location, setLocation] = useState<FinderSourceId>('campaign')
   const [query, setQuery] = useState('')
@@ -208,7 +218,7 @@ function Results({ scan: current }: { scan: RareItemScan }) {
       <PageTabs label="Views" onValueChange={(next) => { setView(next); setPage(0) }} tabs={tabs} value={view}>
         <Panel>
           <PanelHeader
-            actions={<span className="micro-label">{profile?.status === 'success' ? `${displayed.length.toLocaleString()} shown · ${(profile.scannedCount ?? 0).toLocaleString()} checked` : null}</span>}
+            actions={profile?.status === 'success' ? <span className="text-xs text-muted-foreground"><span className="figure text-foreground">{displayed.length.toLocaleString()}</span> found · <span className="figure">{(profile.scannedCount ?? 0).toLocaleString()}</span> checked</span> : null}
             description={activeView.description}
             title={activeView.title}
           />
@@ -236,7 +246,7 @@ function Results({ scan: current }: { scan: RareItemScan }) {
                     actions={
                       <>
                         {original?.malformedItems ? <Chip tone="warning">{original.malformedItems} unreadable</Chip> : null}
-                        <span className="micro-label">
+                        <span className="text-xs text-muted-foreground">
                           {original?.status === 'success' ? `${inLocation.length} ${inLocation.length === 1 ? 'copy' : 'copies'}` : original?.status === 'error' ? 'Not read' : 'Not scanned'}
                         </span>
                       </>
@@ -294,128 +304,129 @@ function Results({ scan: current }: { scan: RareItemScan }) {
         {current.rulesVersion}. Slot checks use the extracted 42.10 rules read with 42.00 mappings; historical slot tables and server hotfixes are not included, so a mismatch is a reason to look, not proof of modification. Copies are listed per location and never merged.
       </p>
 
-      <Dialog onOpenChange={(open) => { if (!open) setDetail(null) }} open={detail !== null}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
-          {detail && <Detail item={detail} records={records} />}
-        </DialogContent>
-      </Dialog>
+      <FinderItemDialog alterationPools={alterationPools} item={detail} onClose={() => setDetail(null)} ratings={ratings} records={records} />
     </>
   )
 }
 
+/** Tiles the width of the codex's, so the finder reads as the same grid. */
+const tileGrid = 'grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-3'
+
 function TileGrid({ items, onInspect, records }: { items: Array<FinderItem>; onInspect: (item: FinderItem) => void; records: ItemRecordMap }) {
   return (
-    <ItemCardGrid>
+    <div className={tileGrid}>
       {items.map((item) => {
         const { label, tone } = headline(item)
         return (
-          <ItemCard
-            badges={<Chip tone={tone}>{label}</Chip>}
-            favorite={item.favorite}
-            footer={<span className="truncate">{locationLabel[item.sourceId]} · {item.perks.length} perk{item.perks.length === 1 ? '' : 's'}</span>}
+          <ItemTile
+            className="w-full"
+            footer={standoutPerk(item)?.name ?? locationLabel[item.sourceId]}
             key={item.key}
             level={item.level}
+            locked={item.favorite}
             name={item.name}
             onClick={() => onInspect(item)}
             power={item.power}
             quantity={item.quantity}
             records={records}
-            subtitle={item.kind === 'trap' ? 'Trap' : 'Weapon'}
+            status={<Chip tone={tone}>{label}</Chip>}
             templateId={item.templateId}
             tier={item.tier}
-            title={`${item.name} · ${label} · ${locationLabel[item.sourceId]}`}
+            title={[item.name, label, standoutPerk(item)?.name, locationLabel[item.sourceId]].filter(Boolean).join(' · ')}
           />
         )
       })}
-    </ItemCardGrid>
+    </div>
   )
 }
 
-/** The perk's own rarity colour, as the item dialog on every other page draws it. */
-function perkAccent(records: ItemRecordMap, id: string) {
-  const type = rarityTypeFromName(getItemRecord(records, id)?.rarity)
-  return type ? (accentByRarity[type] ?? null) : null
-}
+/**
+ * The item dialog every other screen opens, read-only, with what the scan
+ * found layered on: the verdict in the title strip, a tag on each perk that
+ * made it, and the slot-rule check underneath.
+ */
+function FinderItemDialog({ alterationPools, item, onClose, ratings, records }: {
+  alterationPools: ComponentProps<typeof ItemDetailDialog>['alterationPools']
+  item: FinderItem | null
+  onClose: () => void
+  ratings: ComponentProps<typeof ItemDetailDialog>['ratings']
+  records: ItemRecordMap
+}) {
+  const perks = useMemo(() => [...(item?.perks ?? [])].sort((a, b) => a.slot - b.slot), [item])
+  const verdict = item ? headline(item) : null
+  const reviewNotes = item
+    ? item.reviewReasons.filter((reason) => !item.slotAudit.findings.some((f) => f.message === reason))
+    : []
 
-function Detail({ item, records }: { item: FinderItem; records: ItemRecordMap }) {
-  const { label, tone } = headline(item)
-  const finding = (codes: Array<string>, perk: FinderItem['perks'][number]) =>
-    item.slotAudit.findings.find((f) => codes.includes(f.code) && f.slot === perk.slot && f.perkId === perk.id.toLowerCase())
+  const finding = (codes: Array<string>, perk: FinderPerk) =>
+    item?.slotAudit.findings.find((f) => codes.includes(f.code) && f.slot === perk.slot && f.perkId === perk.id.toLowerCase())
+
+  const perkDetails = perks.map((perk) => {
+    const historical = finding(['historical_perk', 'historical_slot_unverified'], perk)
+    const mismatch = finding(['disallowed_slot', 'defender_on_schematic'], perk)
+    const tags: Array<{ text: string; tone: ChipTone }> = []
+    if (mismatch) tags.push({ text: perk.defender ? 'Defender perk on a schematic' : 'Outside current rules', tone: 'danger' })
+    if (historical) tags.push({ text: historical.code === 'historical_slot_unverified' ? 'Historical · slot unverified' : 'Historical · no longer selectable', tone: 'success' })
+    if (perk.aoe) tags.push({ text: 'AOE', tone: 'accent' })
+    else if (perk.legacy) tags.push({ text: 'Legacy', tone: 'accent' })
+    if (item?.hybrid && perk.modern) tags.push({ text: 'Modern', tone: 'neutral' })
+    if (!perk.known) tags.push({ text: 'Unknown perk', tone: 'warning' })
+    return {
+      name: perk.name,
+      tags: tags.length ? tags.map((tag) => <Chip key={tag.text} tone={tag.tone}>{tag.text}</Chip>) : undefined,
+    }
+  })
 
   return (
-    <>
-      <DetailHeader
-        badges={
-          <>
-            <Chip tone={tone}>{label}</Chip>
-            {item.modded && item.aoe && <Chip tone="accent">AOE weapon</Chip>}
-            {item.hybrid && (item.modded || item.aoe) && <Chip tone="accent">Legacy hybrid</Chip>}
-          </>
-        }
-        description={item.description}
-        facts={
-          <>
-            <span>Level <span className="figure">{item.level}</span></span>
-            {item.quantity > 1 && <span>×<span className="figure">{item.quantity}</span></span>}
-            <span>{locationLabel[item.sourceId]} · {SOURCES.find((s) => s.id === item.sourceId)?.schematic ? 'schematic' : 'crafted copy'}</span>
-            {item.favorite && <span className="inline-flex items-center gap-1"><Star className="size-3" /> Favourited</span>}
-          </>
-        }
-        meta={[item.kind === 'trap' ? 'Trap' : 'Weapon', item.tier > 0 && `Tier ${item.tier}`]}
-        name={item.name}
-        power={item.power}
-        rarity={item.rarity === 'unknown' ? null : item.rarity[0].toUpperCase() + item.rarity.slice(1)}
-        records={records}
-        templateId={item.templateId}
-      />
+    <ItemDetailDialog
+      alterationPools={alterationPools}
+      badges={item && verdict && (
+        <>
+          <Chip tone={verdict.tone}>{verdict.label}</Chip>
+          {item.modded && item.aoe && <Chip tone="accent">AOE weapon</Chip>}
+          {item.hybrid && (item.modded || item.aoe) && <Chip tone="accent">Legacy hybrid</Chip>}
+        </>
+      )}
+      onOpenChange={(open) => { if (!open) onClose() }}
+      perkDetails={perkDetails}
+      ratings={ratings}
+      records={records}
+      subject={item && {
+        alterations: perks.map((perk) => perk.id),
+        level: item.level,
+        lockedReason: item.favorite ? 'favorite' : null,
+        power: item.power,
+        templateId: item.templateId,
+        tier: item.tier,
+      }}
+    >
+      {item && (
+        <>
+          <DetailSection icon={ShieldQuestion} title={`Slot rule check · ${item.slotAudit.build}`}>
+            <ul className="space-y-1.5">
+              {item.slotAudit.findings.length ? (
+                item.slotAudit.findings.map((f, i) => (
+                  <li className="panel px-3 py-2 text-xs leading-relaxed" key={i}>{f.message}</li>
+                ))
+              ) : (
+                <li className="panel px-3 py-2 text-xs leading-relaxed text-muted-foreground">Every perk fits the extracted slot rules. That is consistent with a normal roll; it does not prove one.</li>
+              )}
+            </ul>
+            {/* The findings above are folded into the reasons too; only the rest is new. */}
+            {reviewNotes.length > 0 && <p className="text-xs text-muted-foreground">{reviewNotes.join(' · ')}</p>}
+          </DetailSection>
 
-      <DetailSection icon={Sparkles} title="Perks on this copy">
-        {item.perks.length ? (
-          <ul className="space-y-1.5">
-            {item.perks.map((perk, index) => {
-              const historical = finding(['historical_perk', 'historical_slot_unverified'], perk)
-              const mismatch = finding(['disallowed_slot', 'defender_on_schematic'], perk)
-              const tags: Array<{ text: string; tone: ChipTone }> = []
-              if (mismatch) tags.push({ text: perk.defender ? 'Defender perk on a schematic' : 'Outside current rules', tone: 'danger' })
-              if (historical) tags.push({ text: historical.code === 'historical_slot_unverified' ? 'Historical · slot unverified' : 'Historical · no longer selectable', tone: 'success' })
-              if (perk.aoe) tags.push({ text: 'AOE', tone: 'accent' })
-              else if (perk.legacy) tags.push({ text: 'Legacy', tone: 'accent' })
-              if (item.hybrid && perk.modern) tags.push({ text: 'Modern', tone: 'neutral' })
-              if (!perk.known) tags.push({ text: 'Unknown perk', tone: 'warning' })
-              return (
-                <PerkSlotRow
-                  accent={perkAccent(records, perk.id)}
-                  id={perk.id}
-                  index={perk.slot}
-                  key={index}
-                  title={perk.name}
-                >
-                  {tags.map((tag) => <Chip key={tag.text} tone={tag.tone}>{tag.text}</Chip>)}
-                </PerkSlotRow>
-              )
-            })}
-          </ul>
-        ) : (
-          <p className="text-sm text-muted-foreground">This copy has no perk entries.</p>
-        )}
-      </DetailSection>
-
-      <DetailSection icon={ShieldQuestion} title={`Slot rule check · ${item.slotAudit.build}`}>
-        <ul className="space-y-1.5">
-          {item.slotAudit.findings.length ? (
-            item.slotAudit.findings.map((f, i) => (
-              <li className="panel px-3 py-2 text-xs leading-relaxed" key={i}>{f.message}</li>
-            ))
-          ) : (
-            <li className="panel px-3 py-2 text-xs leading-relaxed text-muted-foreground">Every perk fits the extracted slot rules. That is consistent with a normal roll; it does not prove one.</li>
-          )}
-        </ul>
-        {item.reviewReasons.length > 0 && <p className="text-xs text-muted-foreground">{item.reviewReasons.join(' · ')}</p>}
-      </DetailSection>
-
-      <p className="select-all break-all rounded-lg bg-muted/40 px-3 py-2 font-mono text-[0.625rem] text-muted-foreground ring-1 ring-inset ring-border/60">
-        {item.templateId} · {item.itemId}
-      </p>
-    </>
+          <DetailSection icon={MapPin} title="Where this copy is">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <KeyValue
+                label="Location"
+                value={`${locationLabel[item.sourceId]} · ${SOURCES.find((source) => source.id === item.sourceId)?.schematic ? 'schematic' : 'crafted copy'}${item.quantity > 1 ? ` · ×${item.quantity}` : ''}`}
+              />
+              <KeyValue copyable label="Copy id" value={item.itemId} />
+            </div>
+          </DetailSection>
+        </>
+      )}
+    </ItemDetailDialog>
   )
 }

@@ -60,10 +60,8 @@ export function useSearch({ files }: { files: Array<WorldInfoFileData> }) {
         })
       : files
 
-  const onChangeSearchValue: ChangeEventHandler<HTMLInputElement> = (
-    event
-  ) => {
-    setSearchValue(event.currentTarget.value.replace(/\s+/g, ' '))
+  const onChangeSearchValue = (value: string) => {
+    setSearchValue(value.replace(/\s+/g, ' '))
   }
 
   return {
@@ -90,7 +88,7 @@ export function useCurrentActions() {
       async (status) => {
         setIsSaving(false)
 
-        toast(
+        toast[status ? 'success' : 'error'](
           status
             ? t('notifications.save.success')
             : t('notifications.save.error')
@@ -110,7 +108,7 @@ export function useCurrentActions() {
   useEffect(() => {
     const listener = window.electronAPI.deleteWorldInfoFileNotification(
       async ({ filename, status }) => {
-        toast(
+        toast[status ? 'success' : 'error'](
           status
             ? t('notifications.delete.success', {
                 filename,
@@ -135,7 +133,7 @@ export function useCurrentActions() {
     const listener = window.electronAPI.exportWorldInfoFileNotification(
       async ({ status }) => {
         if (status !== 'canceled') {
-          toast(
+          toast[status === 'success' ? 'success' : 'error'](
             status === 'success'
               ? t('notifications.export.success')
               : t('notifications.export.error')
@@ -152,7 +150,7 @@ export function useCurrentActions() {
   useEffect(() => {
     const listener = window.electronAPI.openWorldInfoFileNotification(
       async ({ filename, status }) => {
-        toast(
+        toast[status ? 'success' : 'error'](
           status
             ? t('notifications.open.success', {
                 filename,
@@ -176,7 +174,7 @@ export function useCurrentActions() {
   useEffect(() => {
     const listener = window.electronAPI.renameWorldInfoFileNotification(
       async (status) => {
-        toast(
+        toast[status ? 'success' : 'error'](
           status
             ? t('notifications.rename.success')
             : t('notifications.rename.error')

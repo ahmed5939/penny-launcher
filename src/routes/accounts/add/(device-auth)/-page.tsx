@@ -31,10 +31,6 @@ export function DeviceAuthPage() {
         className="w-full max-w-md"
       >
         <Panel>
-          <p className="border-b border-border/60 px-5 py-3 text-[0.8125rem] leading-relaxed text-muted-foreground">
-            Three values from a device auth you already saved — account ID,
-            device ID, and secret.
-          </p>
           <PanelBody className="grid gap-4">
             <FormField
               control={form.control}
@@ -82,7 +78,7 @@ export function DeviceAuthPage() {
           <PanelFooter>
             <Button
               type="submit"
-              className="w-full"
+              className="ml-auto min-w-32"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

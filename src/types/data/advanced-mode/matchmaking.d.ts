@@ -95,9 +95,30 @@ export type MatchmakingTrackStatusPlayer = {
   displayName: string | null
 }
 
+/**
+ * PennyDB's `what_mission_data`, which names the mission, zone and rewards
+ * the way the game shows them — Epic's session only carries ids.
+ */
+export type MatchmakingPennyDBMission = {
+  name: string
+  zone: string | null
+  theaterId: string | null
+  difficulty: number | null
+  /** Derived from PennyDB's elapsed "m:ss mins" so the clock can tick. */
+  startedAt: string | null
+  launched: boolean
+  players: Array<string>
+  rewards: Array<string>
+  alerts: Array<string>
+}
+
 export type MatchmakingTrackStatus = {
-  accountId: string
+  /** What the renderer asked for, so stale answers can be dropped. */
+  query: string
+  /** Resolved via Epic, then PennyDB; null when neither knows the player. */
+  player: { id: string; displayName: string } | null
   playing: boolean
+  mission: MatchmakingPennyDBMission | null
   session: {
     zone: MatchmakingZoneInstance | null
     players: Array<MatchmakingTrackStatusPlayer>

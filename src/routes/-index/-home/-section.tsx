@@ -52,7 +52,7 @@ export function AlertsSection({
         <>
           {title}
           {showCount && (
-            <span className="figure ml-2 whitespace-nowrap text-[0.6875rem] font-normal normal-case tracking-normal text-muted-foreground/50">
+            <span className="figure ml-2 whitespace-nowrap text-caption font-normal normal-case tracking-normal text-muted-foreground/50">
               {t('information.missions', {
                 total: data.size,
               })}

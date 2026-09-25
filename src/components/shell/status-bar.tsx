@@ -1,34 +1,18 @@
 import packageJson from '../../../package.json'
 import { useEffect, useState } from 'react'
 
-import { AutomationStatusType } from '../../config/constants/automation'
 
 import { StatusDot } from '../page'
 
 import { useAccountScope, usePrimaryAccount } from '../../hooks/accounts/scope'
-import { useGetTaxiServiceDataStatus } from '../../hooks/stw-operations/taxi-service'
 
 import { cn, parseCustomDisplayName } from '../../lib/utils'
 
-/**
- * The status bar.
- *
- * Auto-kick, the taxi service and auto-llamas run whether or not you are
- * looking at their page — they were previously represented by coloured dots
- * inside a dropdown menu, which is to say they were invisible. Every desktop
- * app puts its always-running state in a strip along the bottom, and this is
- * also the natural second home for the scope: a global selection that acts on
- * several accounts at once should never be more than a glance away.
- *
- * Everything in the strip is a caption at `micro-label` rank, so the one
- * thing that changes with what you do — the scope — is the only thing on the
- * line carrying weight and colour.
- */
+/** Connection status and current account scope. */
 export function StatusBar() {
   const [isOnline, setOnline] = useState(() => navigator.onLine)
   const { members } = useAccountScope()
   const primary = usePrimaryAccount()
-  const { status: taxi } = useGetTaxiServiceDataStatus()
 
   useEffect(() => {
     const online = () => setOnline(true)
@@ -59,20 +43,14 @@ export function StatusBar() {
     >
       <span className="flex items-center gap-1.5">
         <span className="micro-label">Scope</span>
-        <span className="text-[0.6875rem] font-semibold text-brand-teal">
+        <span className="text-caption font-semibold text-brand-teal">
           {scopeLabel}
         </span>
       </span>
 
       {/* Auto-kick is temporarily disabled, so its service dot is hidden. */}
       <span className="contents max-[700px]:hidden">
-        <Divider />
-        <Service
-          label="Taxi"
-          status={taxi}
-        />
-
-        <Divider />
+<Divider />
         <span
           className={cn(
             'micro-label flex items-center gap-1.5',
@@ -84,7 +62,7 @@ export function StatusBar() {
         </span>
       </span>
 
-      <span className="figure ml-auto text-[0.6875rem] text-muted-foreground">
+      <span className="figure ml-auto text-caption text-muted-foreground">
         v{packageJson.version}
       </span>
     </footer>
@@ -93,33 +71,4 @@ export function StatusBar() {
 
 function Divider() {
   return <span className="h-3 w-px shrink-0 bg-border/60" />
-}
-
-/**
- * A background service. `null` means "not running", which is a state worth
- * showing rather than hiding — the common support question about this app is
- * "why did my auto-kick stop".
- */
-function Service({
-  label,
-  status,
-}: {
-  label: string
-  status: AutomationStatusType | null
-}) {
-  return (
-    <span className="micro-label flex items-center gap-1.5">
-      <StatusDot
-        tone={
-          status === null
-            ? 'idle'
-            : status === AutomationStatusType.ISSUE
-              ? 'warning'
-              : 'active'
-        }
-      />
-      {label}
-      {status === null && <span className="opacity-60">off</span>}
-    </span>
-  )
 }

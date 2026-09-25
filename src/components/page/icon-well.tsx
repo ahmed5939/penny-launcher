@@ -7,7 +7,12 @@ export type IconWellSize = 'sm' | 'md' | 'lg'
 export type IconWellTone = 'neutral' | 'accent'
 
 /**
- * The tinted square an icon sits in.
+ * An icon at a fixed footprint.
+ *
+ * It used to sit in a tinted, ringed square — the tile every generated admin
+ * template puts beside every heading, and the main thing that made this app
+ * read as a dashboard. Now the glyph stands on its own; the footprint stays
+ * so rows keep their alignment.
  *
  * Ten-plus screens drew their own, and no two agreed: gradient chips, tinted
  * fills with no ring, `rounded-full` circles, a fake inset top-highlight. Two
@@ -45,11 +50,9 @@ export function IconWell({
   return (
     <span
       className={cn(
-        'grid shrink-0 place-items-center ring-1 ring-inset',
+        'grid shrink-0 place-items-center',
         box,
-        tone === 'accent'
-          ? 'bg-primary/10 text-primary ring-primary/20'
-          : 'bg-muted/40 text-muted-foreground ring-border/60',
+        tone === 'accent' ? 'text-primary' : 'text-muted-foreground',
         className
       )}
     >

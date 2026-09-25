@@ -24,7 +24,7 @@ export {
 export { Kbd } from './kbd'
 export { KeyValue } from './key-value'
 export { ListRow } from './list-row'
-export { PageHeader } from './page-header'
+export { PageHeader, zoneArt, type ZoneArt } from './page-header'
 export { Panel, PanelBody, PanelFooter, PanelHeader } from './panel'
 export { PanelSectionHeader } from './panel-section-header'
 export { ProgressBar } from './progress'

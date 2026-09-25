@@ -1,20 +1,17 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
-import { History, Radar, Search, Users } from 'lucide-react'
+import { History, LoaderCircle, Radar, Search, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Combobox } from '../../../components/ui/extended/combobox'
 import { Button } from '../../../components/ui/button'
-import { PageHeader, Panel, PanelBody } from '../../../components/page'
+import { PageHeader, Panel, PanelBody, PanelHeader } from '../../../components/page'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { PlatformIcon } from '../../../components/friends/platform-icon'
 
 import { LiveMissionCard } from './-live-mission'
 
-import { useSearchUser } from '../../stw-operations/xpboosts/-hooks'
+import { useState } from 'react'
 
-import { useMatchmakingPlayersPath } from '../../../hooks/advanced-mode/matchmaking'
-import { useInputPaddingButton } from '../../../hooks/ui/inputs'
 import { useCurrentActions, usePlayerSuggestions } from './-hooks'
 
 
@@ -40,75 +37,57 @@ export function RouteComponent() {
 function Content() {
   const { t } = useTranslation(['advanced-mode', 'general'])
 
-  const { updateRecentlyPlayers } = useMatchmakingPlayersPath()
+  const [input, setInput] = useState('')
+  /**
+   * Suggestions follow typing only. Submitting, picking one, Escape or
+   * leaving the field closes them, and they stay closed until the next
+   * keystroke — otherwise the in-flight prefix search reopens the list.
+   */
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false)
   const {
-    inputSearchButtonIsDisabled,
-    inputSearchDisplayName,
-    searchUserIsSubmitting,
-    searchedUser,
+    isTracking,
+    options,
+    players,
+    status,
 
-    handleChangeSearchDisplayName,
-    handleManualChangeSearchDisplayName,
-    handleSearchUser,
-  } = useSearchUser({
-    callback: (value) => {
-      if (value.data?.lookup) {
-        updateRecentlyPlayers(value.data.lookup)
-      }
-    },
-  })
+    customFilter,
+    handleRefresh,
+    track,
+  } = useCurrentActions()
   const {
     clear: clearSuggestions,
     isSearching: suggestionsAreLoading,
     results: suggestions,
   } = usePlayerSuggestions({
-    disabled: searchUserIsSubmitting,
-    query: inputSearchDisplayName,
+    disabled: !suggestionsOpen,
+    query: input,
   })
-  const {
-    isTracking,
-    options,
-    status,
+  const isSearching = isTracking && status === null
+  const searchIsDisabled = isSearching || input.trim() === ''
 
-    autoCompletePlayer,
-    customFilter,
-    handleRefresh,
-  } = useCurrentActions({
-    searchedUser,
-    handleManualChangeSearchDisplayName,
-  })
-
-  const [$updateInput, $updateButton] = useInputPaddingButton()
+  const submit = (query: string, label = query) => {
+    setSuggestionsOpen(false)
+    clearSuggestions()
+    setInput(label)
+    track(query)
+  }
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="max-w-4xl space-y-5">
       <Panel className="overflow-visible">
-        <PanelBody className="relative overflow-visible p-5">
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-primary/70 via-primary/20 to-transparent"
-          />
-          <div className="mb-5 flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary">
-              <Radar className="size-5" />
-            </span>
-            <div>
-              <h2 className="font-semibold">
-                {t('matchmaking-track.form.title')}
-              </h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {t('matchmaking-track.form.description')}
-              </p>
-            </div>
-          </div>
-
+        <PanelHeader
+          compact
+          description={t('matchmaking-track.form.description')}
+          title={t('matchmaking-track.form.title')}
+        />
+        <PanelBody className="relative overflow-visible">
           <div className="space-y-3">
             <form
               onSubmit={(event) => {
                 event.preventDefault()
 
-                if (!inputSearchButtonIsDisabled) {
-                  handleSearchUser()
+                if (!searchIsDisabled) {
+                  submit(input)
                 }
               }}
             >
@@ -118,27 +97,42 @@ function Content() {
                 })}
               </Label>
               <div className="relative">
-                <div className="flex items-center relative">
-                  <Search className="absolute left-3 size-4 text-muted-foreground pointer-events-none" />
-                  <Input
-                    placeholder={t('form.search-account.input.placeholder', {
-                      ns: 'general',
-                    })}
-                    className="pr-[var(--pr-button-width)] pl-9 py-1"
-                    value={inputSearchDisplayName}
-                    onChange={handleChangeSearchDisplayName}
-                    disabled={searchUserIsSubmitting}
-                    id="global-input-search-player"
-                    ref={$updateInput}
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder={t('form.search-account.input.placeholder', {
+                        ns: 'general',
+                      })}
+                      className="pl-9 pr-9"
+                      value={input}
+                      onChange={(event) => {
+                        setInput(event.target.value)
+                        setSuggestionsOpen(true)
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          setSuggestionsOpen(false)
+                        }
+                      }}
+                      onBlur={() => {
+                        // Lets a click on a suggestion land before closing.
+                        window.setTimeout(() => setSuggestionsOpen(false), 150)
+                      }}
+                      disabled={isSearching}
+                      id="global-input-search-player"
+                    />
+                    {suggestionsAreLoading && suggestionsOpen && (
+                      <LoaderCircle className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
                   <Button
                     type="submit"
-                    className="absolute h-8 px-2 py-1.5 right-1 text-sm w-28"
-                    disabled={inputSearchButtonIsDisabled}
-                    ref={$updateButton}
+                    className="w-28 shrink-0"
+                    disabled={searchIsDisabled}
                   >
-                    {searchUserIsSubmitting ? (
-                      <UpdateIcon className="animate-spin h-4" />
+                    {isSearching ? (
+                      <LoaderCircle className="size-4 animate-spin" />
                     ) : (
                       t('actions.search', {
                         ns: 'general',
@@ -147,8 +141,8 @@ function Content() {
                   </Button>
                 </div>
 
-                {suggestions.length > 0 && !searchUserIsSubmitting && (
-                  <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-xl">
+                {suggestionsOpen && suggestions.length > 0 && (
+                  <div className="absolute z-20 mt-1 w-[calc(100%-7.5rem)] overflow-hidden rounded-lg border border-border bg-popover shadow-xl">
                     <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-xs text-muted-foreground">
                       <Users className="size-3.5" />
                       {t('matchmaking-track.form.suggestions', {
@@ -161,12 +155,10 @@ function Content() {
                           type="button"
                           className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                           key={`${result.accountId}:${result.platform}`}
-                          onClick={() => {
-                            clearSuggestions()
-                            handleManualChangeSearchDisplayName(
-                              result.displayName
-                            )
-                          }}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() =>
+                            submit(result.accountId, result.displayName)
+                          }
                         >
                           <PlatformIcon
                             className="text-muted-foreground"
@@ -193,14 +185,11 @@ function Content() {
                   </div>
                 )}
 
-                {suggestionsAreLoading && !searchUserIsSubmitting && (
-                  <UpdateIcon className="absolute right-[7.5rem] top-2.5 z-10 size-4 animate-spin text-muted-foreground" />
-                )}
               </div>
             </form>
 
             {options.length > 0 && (
-              <div className="flex items-center gap-3 border-t border-border/50 pt-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
                   <History className="size-3.5" />
                   {t('matchmaking-track.form.quick-pick')}
@@ -223,44 +212,49 @@ function Content() {
                   value={[]}
                   customFilter={customFilter}
                   onChange={() => {}}
-                  onSelectItem={autoCompletePlayer}
+                  onSelectItem={(value) =>
+                    submit(
+                      value,
+                      players.find((player) => player.id === value)
+                        ?.displayName ??
+                        options.find((option) => option.value === value)
+                          ?.label.replace(/ · friend$/, '') ??
+                        value
+                    )
+                  }
                   emptyContentClassname="py-6 text-center text-sm"
-                  disabled={searchUserIsSubmitting}
-                  disabledItem={searchUserIsSubmitting}
-                  inputSearchIsDisabled={searchUserIsSubmitting}
+                  disabled={isSearching}
+                  disabledItem={isSearching}
+                  inputSearchIsDisabled={isSearching}
                   hideSelectorOnSelectItem
                 />
               </div>
             )}
 
-            {searchedUser &&
-              !searchedUser.success &&
-              !searchedUser.isPrivate && (
-                <div className="mt-2 text-center text-muted-foreground">
-                  {searchedUser.errorMessage
-                    ? searchedUser.errorMessage
-                    : t('form.player.search-empty', {
-                        ns: 'general',
-                      })}
-                </div>
-              )}
+            {status && !status.player && (
+              <p className="text-ui text-muted-foreground">
+                {t('form.player.search-empty', {
+                  ns: 'general',
+                })}
+              </p>
+            )}
           </div>
         </PanelBody>
       </Panel>
 
-      {searchedUser?.data && status && (
+      {status?.player && (
         <LiveMissionCard
-          displayName={searchedUser.data.lookup.displayName}
-          accountId={searchedUser.data.lookup.id}
+          displayName={status.player.displayName}
+          accountId={status.player.id}
           isTracking={isTracking}
           status={status}
           onRefresh={handleRefresh}
         />
       )}
 
-      {searchedUser?.data && !status && isTracking && (
-        <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground text-sm">
-          <UpdateIcon className="animate-spin h-4" />
+      {isSearching && (
+        <div className="flex items-center gap-2 px-1 py-2 text-ui text-muted-foreground" role="status">
+          <LoaderCircle className="size-4 animate-spin" />
           {t('matchmaking-track.live.loading')}
         </div>
       )}

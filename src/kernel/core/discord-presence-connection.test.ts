@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 }))
 vi.mock('node:net', () => ({ createConnection: mocks.connect }))
 vi.mock('../runtime-log', () => ({ RuntimeLog: { error: mocks.error } }))
-vi.mock('./endurance/log-watcher', () => ({
+vi.mock('./fortnite-log-watcher', () => ({
   LogWatcher: class {
     onLine() {}
     start = mocks.start

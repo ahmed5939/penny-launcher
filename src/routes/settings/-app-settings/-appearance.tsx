@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
-import { Label } from '../../../components/ui/label'
-
+import { FieldRow } from '../../../components/page'
 import {
   ThemeModeToggle,
   ThemeSwatchGrid,
@@ -17,17 +16,20 @@ export function AppearanceSettings() {
   const { t } = useTranslation(['settings'])
 
   return (
-    <div>
-      <Label>{t('app-settings.form.appearance.label')}</Label>
-      <ThemeModeToggle className="mt-2" />
-
-      <div className="mt-6">
-        <Label>{t('app-settings.form.appearance.theme.label')}</Label>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('app-settings.form.appearance.theme.note')}
-        </p>
-        <ThemeSwatchGrid className="mt-3" />
-      </div>
-    </div>
+    <>
+      <FieldRow
+        hint={t('app-settings.form.appearance.note')}
+        label={t('app-settings.form.appearance.label')}
+      >
+        <ThemeModeToggle size="sm" />
+      </FieldRow>
+      <FieldRow
+        hint={t('app-settings.form.appearance.theme.note')}
+        label={t('app-settings.form.appearance.theme.label')}
+        stacked
+      >
+        <ThemeSwatchGrid className="pt-1 lg:grid-cols-3" />
+      </FieldRow>
+    </>
   )
 }

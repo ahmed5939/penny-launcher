@@ -9,9 +9,6 @@ import {
   sectionLanding,
   visibleSectionItems,
 } from '../../config/navigation'
-import { useGetTaxiServiceDataStatus } from '../../hooks/stw-operations/taxi-service'
-import { AutomationStatusType } from '../../config/constants/automation'
-import { StatusDot } from '../page/stat'
 import { useGetAccounts } from '../../hooks/accounts'
 import { useCustomizableMenuSettingsVisibility } from '../../hooks/settings'
 import { useMediaQuery } from '../../hooks/ui/media-query'
@@ -38,7 +35,6 @@ export function AreaNavigation() {
   const hasAccount = accountsArray.some(
     (account) => account.authStatus !== 'invalid',
   )
-  const { status: taxiStatus } = useGetTaxiServiceDataStatus()
   const railRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -148,20 +144,6 @@ export function AreaNavigation() {
                         }}
                       >
                         <Icon className="size-5" />
-                        {section.key === 'automate' && taxiStatus && (
-                          <span
-                            className="absolute right-1 top-1"
-                            title={taxiStatus}
-                          >
-                            <StatusDot
-                              tone={
-                                taxiStatus === AutomationStatusType.ISSUE
-                                  ? 'warning'
-                                  : 'active'
-                              }
-                            />
-                          </span>
-                        )}
                         {isActive && (
                           <span className="absolute inset-y-2 left-0 w-[3px] rounded-r bg-primary" />
                         )}

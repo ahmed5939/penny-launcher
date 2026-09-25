@@ -1,8 +1,10 @@
+import { recordAutomationHistory } from './automation-history'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 const mock = vi.hoisted(() => ({ directory: { autoExpeditionsFilePath: '' }, query: vi.fn(), recycle: vi.fn(), expeditions: vi.fn() }))
+vi.mock('./automation-history', () => ({ recordAutomationHistory: vi.fn() }))
 vi.mock('./data-directory', () => ({ DataDirectory: { get autoExpeditionsFilePath() { return mock.directory.autoExpeditionsFilePath }, getAutoExpeditionsFile: mock.expeditions } }))
 vi.mock('./accounts', () => ({ AccountsManager: { getAccounts: () => new Map([['a', { accountId: 'a', displayName: 'Alpha' }], ['b', { accountId: 'b', displayName: 'Beta' }]]) } }))
 vi.mock('../../services/endpoints/mcp', () => ({ getQueryProfile: mock.query, setRecycleItemBatch: mock.recycle }))
@@ -35,6 +37,7 @@ describe('automation rewards ledger', () => {
     const event = (await AutomationRewards.status()).events[0]
     expect(event.recycled).toEqual([{ templateId: 'Worker:worker_r_t01', quantity: 1, itemId: 'new' }])
     expect(event.resources).toEqual([{ templateId: 'AccountResource:xp', quantity: 50 }])
+    expect(recordAutomationHistory).toHaveBeenLastCalledWith(expect.objectContaining({ source: 'Auto-llama recycling', rewards: { 'AccountResource:xp': 50 }, outcome: 'success' }))
     expect(mock.recycle).toHaveBeenCalledWith({ accountId: 'a', accessToken: 'mock', targetItemIds: ['new'] })
   })
   it('preserves receipt when recycling fails and does not claim resource gains', async () => {

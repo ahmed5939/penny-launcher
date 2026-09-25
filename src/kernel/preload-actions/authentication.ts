@@ -5,6 +5,7 @@ import type {
   AuthCallbackResponseParam,
   EpicGamesSettingsNotificationCallbackResponseParam,
   GenerateExchangeCodeNotificationCallbackResponseParam,
+  QuickLoginStatusParam,
 } from '../../types/preload'
 
 import { ipcRenderer } from 'electron'
@@ -97,6 +98,60 @@ export function responseAuthWithDevice(
     removeListener: () =>
       rendererInstance.removeListener(
         ElectronAPIEventKeys.ResponseAuthWithDevice,
+        customCallback
+      ),
+  }
+}
+
+export function createAuthWithQuickLogin() {
+  ipcRenderer.send(ElectronAPIEventKeys.CreateAuthWithQuickLogin)
+}
+
+export function cancelAuthWithQuickLogin() {
+  ipcRenderer.send(ElectronAPIEventKeys.CancelAuthWithQuickLogin)
+}
+
+export function responseQuickLoginStatus(
+  callback: (values: QuickLoginStatusParam) => Promise<void>
+) {
+  const customCallback = (
+    _: IpcRendererEvent,
+    values: QuickLoginStatusParam
+  ) => {
+    callback(values).catch(console.error)
+  }
+  const rendererInstance = ipcRenderer.on(
+    ElectronAPIEventKeys.QuickLoginStatus,
+    customCallback
+  )
+
+  return {
+    removeListener: () =>
+      rendererInstance.removeListener(
+        ElectronAPIEventKeys.QuickLoginStatus,
+        customCallback
+      ),
+  }
+}
+
+export function responseAuthWithQuickLogin(
+  callback: (values: AuthCallbackResponseParam) => Promise<void>
+) {
+  const customCallback = (
+    _: IpcRendererEvent,
+    values: AuthCallbackResponseParam
+  ) => {
+    callback(values).catch(console.error)
+  }
+  const rendererInstance = ipcRenderer.on(
+    ElectronAPIEventKeys.ResponseAuthWithQuickLogin,
+    customCallback
+  )
+
+  return {
+    removeListener: () =>
+      rendererInstance.removeListener(
+        ElectronAPIEventKeys.ResponseAuthWithQuickLogin,
         customCallback
       ),
   }

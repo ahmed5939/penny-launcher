@@ -8,7 +8,6 @@ import { Eraser, PackageOpen } from 'lucide-react'
 import { slotLabels } from '../../../config/fortnite/locker'
 
 import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../components/ui/dialog'
-import { EmptyState } from '../../../components/page'
+import { EmptyState, SearchField } from '../../../components/page'
 
 import { CosmeticTile } from './-cosmetic-tile'
 
@@ -104,8 +103,10 @@ export function SlotPicker({
           </DialogDescription>
         </DialogHeader>
 
-        <Input
-          onChange={(event) => setQuery(event.target.value)}
+        <SearchField
+          className="flex-none"
+          label="Search cosmetics"
+          onChange={setQuery}
           placeholder="Search by name"
           value={query}
         />

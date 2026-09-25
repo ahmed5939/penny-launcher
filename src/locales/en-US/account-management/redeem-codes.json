@@ -4,7 +4,7 @@
     "input": {
       "placeholder": "Set codes to redeem (use newline)."
     },
-    "redeem-button": "Redeem Codes",
-    "clear-button": "Clear Form"
+    "redeem-button": "Redeem codes",
+    "clear-button": "Clear form"
   }
 }

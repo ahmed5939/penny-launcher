@@ -13,7 +13,6 @@ import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 
 import { GoToTop } from '../../../components/go-to-top'
-import { Input } from '../../../components/ui/input'
 import { ItemDetailDialog } from '../../../components/items/item-detail'
 import { ItemTile } from '../../../components/items/item-tile'
 import {
@@ -24,6 +23,7 @@ import {
   PageHeader,
   Panel,
   PanelBody,
+  SearchField,
   Segmented,
   StatusPill,
 } from '../../../components/page'
@@ -279,15 +279,13 @@ function Content() {
           <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
             <aside className="border-b border-border/60 bg-surface/30 lg:border-b-0 lg:border-r">
               <div className="sticky top-0 z-10 border-b border-border/60 bg-background/95 p-3 backdrop-blur">
-                <label className="relative block">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    className="h-8 pl-8"
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Season, questline, modifier, or an item in its shop"
-                    value={search}
-                  />
-                </label>
+                <SearchField
+                  className="block w-full min-w-0"
+                  label="Search seasons"
+                  onChange={setSearch}
+                  placeholder="Season, questline, modifier, or an item in its shop"
+                  value={search}
+                />
               </div>
 
               <div className="max-h-80 overflow-y-auto p-2 lg:max-h-[70vh]">
@@ -303,9 +301,11 @@ function Content() {
                   ))}
                 </ol>
                 {filtered.length <= 0 && (
-                  <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                    No season matches that search.
-                  </p>
+                  <EmptyState
+                    className="border-0 bg-transparent py-8"
+                    icon={Search}
+                    title="No season matches that search."
+                  />
                 )}
               </div>
             </aside>
@@ -378,8 +378,13 @@ function SeasonListItem({
       >
         <span
           aria-hidden
-          className="h-8 w-1 shrink-0 rounded-full"
-          style={{ backgroundColor: season.color ?? '#888' }}
+          className={cn(
+            'h-8 w-1 shrink-0 rounded-full',
+            !season.color && 'bg-muted-foreground'
+          )}
+          style={
+            season.color ? { backgroundColor: season.color } : undefined
+          }
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
@@ -398,7 +403,7 @@ function SeasonListItem({
           </span>
           <span
             className={cn(
-              'mt-0.5 block truncate text-[0.65rem]',
+              'mt-0.5 block truncate text-2xs',
               isSelected ? 'text-primary/80' : 'text-muted-foreground'
             )}
           >
@@ -452,13 +457,18 @@ function SeasonDetail({
       <div className="flex flex-wrap items-center gap-3 border-b border-border/60 pb-3">
         <span
           aria-hidden
-          className="h-10 w-1 shrink-0 rounded-full"
-          style={{ backgroundColor: season.color ?? '#888' }}
+          className={cn(
+            'h-10 w-1 shrink-0 rounded-full',
+            !season.color && 'bg-muted-foreground'
+          )}
+          style={
+            season.color ? { backgroundColor: season.color } : undefined
+          }
         />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-[0.9375rem] font-semibold">{season.name}</h2>
+            <h2 className="text-title font-semibold">{season.name}</h2>
             {isCurrent && (
               <StatusPill
                 pulse
@@ -511,14 +521,15 @@ function SeasonDetail({
               season={season}
             />
           ) : (
-            <p className="text-xs text-muted-foreground">
-              The Bug List has no card for this season yet.
-            </p>
+            <EmptyState
+              className="border-0 bg-transparent py-8"
+              title="The Bug List has no card for this season yet."
+            />
           )}
 
           {availableItems.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground">
                 <Sparkles className="size-3" />
                 Available this season
               </p>
@@ -556,14 +567,14 @@ function SeasonDetail({
         <div className="space-y-4">
           {season.questlines.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground">
                 <ScrollText className="size-3" />
                 Questlines
               </p>
               <ul className="space-y-1.5">
                 {season.questlines.map((questline, index) => (
                   <li
-                    className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2"
+                    className="rounded-lg bg-muted/30 px-3 py-2.5"
                     key={`${questline.eventFlag}-${index}`}
                   >
                     <p className="text-xs font-semibold text-foreground">
@@ -588,14 +599,14 @@ function SeasonDetail({
 
           {season.events.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground">
                 <CalendarRange className="size-3" />
                 Limited-time events
               </p>
               <ul className="grid gap-2 lg:grid-cols-2">
                 {season.events.map((event, index) => (
                   <li
-                    className="rounded-lg border border-border/60 bg-surface/50 px-3 py-2"
+                    className="rounded-lg bg-muted/30 px-3 py-2.5"
                     key={`${event.eventFlag}-${index}`}
                   >
                     <p className="text-xs font-semibold text-foreground">
@@ -621,14 +632,14 @@ function SeasonDetail({
       )}
 
       {activeTab === 'shop' && (
-        <ol className="space-y-3">
+        <ol className="divide-y divide-border/40">
           {season.eventShop.map((week, index) => (
             <li
-              className="flex flex-wrap items-start gap-2"
+              className="flex flex-wrap items-start gap-2 py-2.5 first:pt-0"
               key={index}
             >
-              <span className="mt-6 w-12 shrink-0 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                Wk {index + 1}
+              <span className="mt-5 w-14 shrink-0 text-xs font-medium text-muted-foreground">
+                Week <span className="figure text-foreground">{index + 1}</span>
               </span>
               {week.map((templateId) => (
                 <ItemTile
@@ -668,19 +679,19 @@ function SeasonOverview({
         <figure>
           <img
             alt={`${season.name} loading screen`}
-            className="max-h-56 w-full rounded-lg border border-border/60 object-cover"
+            className="max-h-56 w-full rounded-xl object-cover"
             loading="lazy"
             src={extras.imageUrl}
           />
           {extras.imageCredit && (
-            <figcaption className="mt-1 text-[0.65rem] text-muted-foreground">
+            <figcaption className="mt-1 text-2xs text-muted-foreground">
               Image by {extras.imageCredit}, via The Bug List
             </figcaption>
           )}
         </figure>
       )}
 
-      <dl className="grid gap-3 rounded-lg border border-border/60 bg-surface/50 px-3 py-3 sm:grid-cols-2 lg:grid-cols-3">
+      <dl className="grid gap-x-6 gap-y-3 rounded-xl bg-muted/30 px-4 py-3.5 sm:grid-cols-2 lg:grid-cols-3">
         {extras.kind && (
           <KeyValue
             label="Season type"

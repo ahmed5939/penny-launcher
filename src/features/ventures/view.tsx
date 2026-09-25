@@ -1,16 +1,17 @@
 import type { VentureQuest, VenturesProgress } from './model'
 
 import { useMemo, useState } from 'react'
-import { CheckCircle2, Circle, Flame, Lock, Map, ScrollText, Shield, Star, Target, Zap } from 'lucide-react'
+import { CheckCircle2, Flame, Lock, Map, ScrollText, Zap } from 'lucide-react'
 
 import { useItemDatabaseStore, getItemRecord } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
 import { chainNames, levelFloor, nextZone, ventureObjectiveProgress, ventureSeasonNames, ventureZones, zonesUnlocked } from './model'
 import { fortStats } from '../../config/constants/fortnite/fort'
-import { raritiesColor, RarityType } from '../../config/constants/resources'
+import { images } from '../../images'
 
 import { Button } from '../../components/ui/button'
-import { AccountResourceGate, AnimatedNumber, Chip, EmptyState, PageHeader, Panel, PanelBody, PanelHeader, ProgressBar, RefreshButton, Segmented, StatRow, StatTile, ToolBadges, useAccountResource } from '../../components/page'
+import { ItemIcon } from '../../components/items/item-icon'
+import { AccountResourceGate, AnimatedNumber, Chip, EmptyState, FilterBar, PageHeader, Panel, PanelBody, PanelHeader, ProgressBar, RefreshButton, Segmented, ToolBadges, useAccountResource } from '../../components/page'
 
 import { cn } from '../../lib/utils'
 
@@ -20,6 +21,7 @@ const stateLabel = { claimed: 'Completed', completed: 'Ready to claim', active: 
 export function VenturesPage() {
   useRequestItemDatabase()
   const resource = useAccountResource((accountId) => window.electronAPI.requestVentures(accountId), {
+    cacheKey: 'stw.ventures',
     fallbackError: 'Could not load Ventures progress. Refresh to retry.',
     owner: (result) => result.accountId,
   })
@@ -44,185 +46,222 @@ export function VenturesPage() {
 function Progress({ current }: { current: VenturesProgress }) {
   const records = useItemDatabaseStore((s) => s.records)
   const [chain, setChain] = useState<'all' | keyof typeof chainNames>('all')
-  const [showDone, setShowDone] = useState(true)
+  const [showDone, setShowDone] = useState(false)
   const xp = current.xp
   const unlocked = zonesUnlocked(xp)
   const next = nextZone(xp)
   const floor = levelFloor(xp)
-  const prevTotal = next ? (ventureZones[ventureZones.indexOf(next) - 1]?.totalXp ?? 0) : (ventureZones[ventureZones.length - 1]?.totalXp ?? 0)
+  const prevTotal = next ? (ventureZones[ventureZones.indexOf(next) - 1]?.totalXp ?? 0) : 0
 
   const quests = current.quests
   const done = quests.filter((q) => q.state === 'claimed').length
-  const earned = quests.filter((q) => q.state === 'claimed').reduce((n, q) => n + q.xp, 0)
   const pending = quests.filter((q) => q.state !== 'claimed').reduce((n, q) => n + q.xp, 0)
+  const chains = useMemo(
+    () =>
+      Object.keys(chainNames).flatMap((key) => {
+        const steps = quests.filter((q) => q.chain === key)
+        if (steps.length === 0) return []
+        return [{ key, steps, current: steps.find((q) => q.state !== 'claimed') ?? null }]
+      }),
+    [quests]
+  )
   const visibleQuests = useMemo(
     () => quests.filter((q) => (chain === 'all' || q.chain === chain) && (showDone || q.state !== 'claimed')),
     [quests, chain, showDone]
   )
-  const maxFort = current.fort ? Math.max(1, ...Object.values(current.fort)) : 1
+  const fortTotal = current.fort ? Object.values(current.fort).reduce((a, b) => a + b, 0) : null
 
   return (
     <>
-          <StatRow>
-            <StatTile
-              accent={raritiesColor[RarityType.Legendary]}
-              hint={xp === null ? undefined : current.level !== null ? <>Level <span className="figure text-foreground">{current.level}</span></> : floor !== null && floor > 0 ? <>At least level <span className="figure text-foreground">{floor}</span></> : 'Level not reported by Epic'}
-              icon={Star}
-              label="Season XP"
-              value={xp === null ? <span className="text-base text-muted-foreground">None yet</span> : <AnimatedNumber value={xp} />}
-            />
-            <StatTile
-              hint={next ? <><span className="figure text-foreground">{(next.totalXp - (xp ?? 0)).toLocaleString()}</span> XP to PL {next.powerLevel} · level {next.level}</> : 'Every zone is open.'}
-              icon={Map}
-              label="Zones unlocked"
-              tone={next ? 'default' : 'success'}
-              value={<>{unlocked ?? '—'}<span className="text-sm text-muted-foreground">/{ventureZones.length}</span></>}
-            >
-              {next && <ProgressBar className="mt-2.5" total={next.totalXp - prevTotal} value={(xp ?? 0) - prevTotal} />}
-            </StatTile>
-            <StatTile
-              hint={<><span className="figure text-foreground">{earned.toLocaleString()}</span> XP claimed · <span className="figure text-foreground">{pending.toLocaleString()}</span> left</>}
-              icon={ScrollText}
-              label="Seasonal quests"
-              value={current.season ? <>{done}<span className="text-sm text-muted-foreground">/{quests.length}</span></> : '—'}
-            >
-              <ProgressBar className="mt-2.5" total={quests.length} value={done} />
-            </StatTile>
-            <StatTile
-              hint={current.fort ? 'Across the four stats this season.' : undefined}
-              icon={Flame}
-              label="Ventures F.O.R.T."
-              value={current.fort ? Object.values(current.fort).reduce((a, b) => a + b, 0).toLocaleString() : <span className="text-base text-muted-foreground">None yet</span>}
-            />
-          </StatRow>
-
-          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,1fr)]">
-            {/* Zone ladder — the site's "Zone Unlocks" strip. */}
-            <Panel>
-              <PanelHeader description="Each zone opens at a Ventures level; the XP shown is the season total that level needs." icon={Map} title="Zone unlocks" />
-              <PanelBody>
-                <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-                  {ventureZones.map((zone, index) => {
-                    const open = xp !== null && xp >= zone.totalXp
-                    const isNext = next?.level === zone.level
-                    return (
-                      <li
-                        className={cn('relative overflow-hidden rounded-lg border px-3 py-2.5', open ? 'border-success/40 bg-success/5' : isNext ? 'border-primary/40 bg-primary/5' : 'border-border/60 opacity-60')}
-                        key={zone.level}
-                      >
-                        <span aria-hidden className={cn('absolute inset-x-0 top-0 h-0.5', open ? 'bg-success' : isNext ? 'bg-primary' : 'bg-border')} />
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="micro-label">Zone {index + 1} · Lv {zone.level}</span>
-                          {open ? <CheckCircle2 className="size-3.5 text-success" /> : <Lock className="size-3.5 text-muted-foreground" />}
-                        </div>
-                        <p className={cn('figure mt-1 text-lg font-bold leading-none', open ? 'text-success' : isNext ? 'text-primary' : '')}>PL {zone.powerLevel}</p>
-                        <p className="micro-label mt-1.5"><span className="figure">{zone.totalXp.toLocaleString()}</span> XP</p>
-                      </li>
-                    )
-                  })}
-                </ol>
-              </PanelBody>
-            </Panel>
-
-            {/* F.O.R.T. bars. */}
-            <Panel>
-              <PanelHeader description="Ventures survivors and research, separate from the main campaign." icon={Shield} title="Ventures F.O.R.T." />
-              <PanelBody className="space-y-2">
-                {current.fort ? (
-                  fortStats.map(({ key, label, color }) => {
-                    const value = current.fort![key]
-                    return (
-                      <div className="rounded-lg border border-border/60 px-3 py-2" key={key} style={{ boxShadow: `inset 3px 0 0 ${color}` }}>
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="micro-label" style={{ color }}>{label}</span>
-                          <span className="figure text-sm font-semibold" style={{ color }}>{value.toLocaleString()}</span>
-                        </div>
-                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted/70" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={maxFort}>
-                          <div className="h-full rounded-full" style={{ width: `${Math.min(100, (value / maxFort) * 100)}%`, background: color }} />
-                        </div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <p className="text-sm text-muted-foreground">This account has no Ventures F.O.R.T. stats in its profile yet.</p>
-                )}
-              </PanelBody>
-            </Panel>
+      {/* The season at a glance: XP, where it gets you next, and the ladder it climbs. */}
+      <Panel>
+        <div className="flex flex-wrap items-center gap-x-10 gap-y-4 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <img alt="" className="size-12 shrink-0 object-contain" draggable={false} src={images.phoenixxp} />
+            <div>
+              <p className="text-xs text-muted-foreground">{current.season ? ventureSeasonNames[current.season] : 'Ventures'} · season XP</p>
+              <p className="figure text-display-sm font-bold leading-tight">{xp === null ? '—' : <AnimatedNumber value={xp} />}</p>
+              <p className="text-xs text-muted-foreground">
+                {xp === null ? 'No Ventures XP yet' : current.level !== null ? <>Level <span className="figure text-foreground">{current.level}</span></> : floor ? <>Level <span className="figure text-foreground">{floor}</span>+</> : 'Level not reported by Epic'}
+              </p>
+            </div>
           </div>
 
-          {/* Quest chains. */}
-          <Panel>
-            <PanelHeader
-              actions={
+          <div className="min-w-56 flex-1">
+            <p className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+              {next ? (
                 <>
-                  <Segmented onChange={setChain} options={[{ value: 'all', label: 'All' }, ...Object.entries(chainNames).map(([value, label]) => ({ value: value as keyof typeof chainNames, label }))]} value={chain} />
-                  <Button onClick={() => setShowDone((v) => !v)} size="sm" variant="ghost">{showDone ? 'Hide completed' : 'Show completed'}</Button>
+                  <span>Next zone <span className="figure font-semibold text-primary"><Zap className="inline size-3 fill-current" />{next.powerLevel}</span> at level <span className="figure text-foreground">{next.level}</span></span>
+                  <span><span className="figure text-foreground">{(next.totalXp - (xp ?? 0)).toLocaleString()}</span> XP to go</span>
                 </>
-              }
-              description="Five chains of twelve for the season most recently recorded in this account’s quests. Includes claimed quests and live progress."
-              icon={ScrollText}
-              title={current.season ? `${ventureSeasonNames[current.season]} quest chains` : 'Seasonal quest chains'}
-            />
-            {visibleQuests.length === 0 ? (
-              <PanelBody>
-                <EmptyState className="border-0 bg-transparent py-8" description={!current.season ? 'No seasonal Ventures quests were returned in this campaign profile. Play Ventures and refresh to load your quest progress.' : showDone ? 'No quests in this chain.' : 'Every quest in this chain has been claimed.'} icon={ScrollText} title={!current.season ? 'No seasonal quest data' : showDone ? 'Nothing here' : 'All done'} />
-              </PanelBody>
-            ) : (
-              <ul className="divide-y divide-border/50">
-                {visibleQuests.map((q) => <QuestRow key={q.templateId} quest={q} records={records} />)}
-              </ul>
-            )}
-          </Panel>
+              ) : (
+                <span className="text-success">Every zone is open</span>
+              )}
+            </p>
+            <ProgressBar className="mt-1.5" total={next ? next.totalXp - prevTotal : 1} value={next ? (xp ?? 0) - prevTotal : 1} />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              <span className="figure text-foreground">{unlocked ?? 0}</span>/{ventureZones.length} zones · <span className="figure text-foreground">{done}</span>/{quests.length} quests · <span className="figure text-foreground">{pending.toLocaleString()}</span> quest XP left
+            </p>
+          </div>
 
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Zone thresholds come from player-collected level totals and may drift by a hotfix; the level itself is only shown when Epic reports it. Quest XP is from the bundled reward table. Nothing here claims, rerolls or spends.
-          </p>
+          <div className="flex items-end gap-5">
+            {current.fort ? (
+              <>
+                {fortStats.map(({ key, label, color }) => (
+                  <div key={key}>
+                    <p className="text-xs" style={{ color }}>{label}</p>
+                    <p className="figure text-title font-semibold">{current.fort![key].toLocaleString()}</p>
+                  </div>
+                ))}
+                <div className="border-l border-border/40 pl-5">
+                  <p className="text-xs text-muted-foreground">F.O.R.T.</p>
+                  <p className="figure text-title font-semibold">{fortTotal!.toLocaleString()}</p>
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">No Ventures F.O.R.T. yet</p>
+            )}
+          </div>
+        </div>
+
+        {/* Zone ladder as one track: filled up to the XP you have. */}
+        <ol className="grid grid-cols-5 gap-x-1 gap-y-3 border-t border-border/30 px-5 py-3.5 lg:grid-cols-10">
+          {ventureZones.map((zone, index) => {
+            const open = xp !== null && xp >= zone.totalXp
+            const isNext = next?.level === zone.level
+            const from = ventureZones[index - 1]?.totalXp ?? 0
+            const fill = open ? 100 : isNext && xp !== null ? Math.max(0, Math.min(100, ((xp - from) / (zone.totalXp - from)) * 100)) : 0
+            return (
+              <li key={zone.level} title={`${zone.totalXp.toLocaleString()} XP`}>
+                <div className="h-1 overflow-hidden rounded-full bg-muted/70">
+                  <div className={cn('h-full rounded-full', open ? 'bg-success' : 'bg-primary')} style={{ width: `${fill}%` }} />
+                </div>
+                <p className={cn('figure mt-1.5 flex items-center gap-1 text-ui font-semibold leading-none', open ? 'text-success' : isNext ? 'text-primary' : 'text-muted-foreground/70')}>
+                  {open ? <CheckCircle2 className="size-3" /> : isNext ? <Zap className="size-3 fill-current" /> : <Lock className="size-3" />}
+                  {zone.powerLevel}
+                </p>
+                <p className="mt-0.5 text-2xs text-muted-foreground">Lvl <span className="figure">{zone.level}</span></p>
+              </li>
+            )
+          })}
+        </ol>
+      </Panel>
+
+      {/* What you're working on: the live step of each chain. */}
+      <Panel>
+        <PanelHeader compact icon={Flame} title="Current quests" />
+        {chains.length === 0 ? (
+          <PanelBody>
+            <EmptyState className="border-0 bg-transparent py-8" description="No seasonal Ventures quests in this campaign profile. Play Ventures, then refresh." icon={ScrollText} title="No seasonal quest data" />
+          </PanelBody>
+        ) : (
+          <ul className="grid lg:grid-cols-2 2xl:grid-cols-3">
+            {chains.map((c) => <ChainCard chain={c.key} current={c.current} key={c.key} records={records} steps={c.steps} />)}
+          </ul>
+        )}
+      </Panel>
+
+      {/* Every step, for looking ahead. Compact: the game's boilerplate descriptions add nothing. */}
+      {quests.length > 0 && (
+        <Panel>
+          <PanelHeader
+            actions={<Button onClick={() => setShowDone((v) => !v)} size="sm" variant="ghost">{showDone ? 'Hide completed' : `Show completed (${done})`}</Button>}
+            compact
+            icon={ScrollText}
+            title="All quests"
+          />
+          <FilterBar>
+            <Segmented onChange={setChain} options={[{ value: 'all', label: 'All chains' }, ...Object.entries(chainNames).map(([value, label]) => ({ value: value as keyof typeof chainNames, label }))]} value={chain} />
+            <span className="text-xs text-muted-foreground"><span className="figure text-foreground">{visibleQuests.length}</span> shown</span>
+          </FilterBar>
+          {visibleQuests.length === 0 ? (
+            <PanelBody>
+              <EmptyState className="border-0 bg-transparent py-8" description="Every quest in this chain has been claimed." icon={ScrollText} title="All done" />
+            </PanelBody>
+          ) : (
+            <ul className="grid md:grid-cols-2 2xl:grid-cols-3">
+              {visibleQuests.map((q) => <QuestRow key={q.templateId} quest={q} records={records} />)}
+            </ul>
+          )}
+        </Panel>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Zone thresholds are player-collected and may drift after a hotfix. F.O.R.T. is Ventures-only. Read-only: nothing here claims or spends.
+      </p>
     </>
   )
 }
 
-function QuestRow({ quest, records }: { quest: VentureQuest; records: ReturnType<typeof useItemDatabaseStore.getState>['records'] }) {
+type Records = ReturnType<typeof useItemDatabaseStore.getState>['records']
+
+/** One chain: its live step with objectives, and how far along the chain you are. */
+function ChainCard({ chain, current, records, steps }: { chain: string; current: VentureQuest | null; records: Records; steps: Array<VentureQuest> }) {
+  const claimed = steps.filter((q) => q.state === 'claimed').length
+  const quest = current ?? steps[steps.length - 1]
   const record = getItemRecord(records, quest.templateId)
   const objectives = (record?.objectives ?? []).map((o) => ({ ...o, completed: ventureObjectiveProgress(quest, o.backendName, o.count) }))
-  const completedAt = quest.state === 'claimed' && quest.lastChange ? new Date(quest.lastChange) : null
-  const hasCompletionDate = completedAt !== null && Number.isFinite(completedAt.getTime())
-  const total = objectives.reduce((n, o) => n + o.count, 0)
-  const doneCount = objectives.reduce((n, o) => n + Math.min(o.count, o.completed), 0)
-  const Icon = quest.state === 'claimed' ? CheckCircle2 : quest.state === 'completed' ? Target : quest.state === 'active' ? Circle : Lock
+  const chainName = chainNames[chain] ?? 'Seasonal'
   return (
-    <li className={cn('flex items-start gap-3 px-5 py-3', quest.state === 'not-started' && 'opacity-60')}>
-      <Icon className={cn('mt-0.5 size-4 shrink-0', quest.state === 'claimed' ? 'text-success' : quest.state === 'completed' ? 'text-primary' : 'text-muted-foreground')} />
+    <li className={cn('flex gap-3 border-b border-border/30 px-4 py-3.5', current?.state === 'completed' && 'bg-primary/5')}>
+      <ItemIcon className={cn(!current && 'opacity-60')} records={records} size="large" templateId={quest.templateId} />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="micro-label">{chainNames[quest.chain] ?? quest.chain} · {quest.step}/12</span>
-          <span className="text-sm font-semibold">{record?.name ?? quest.templateId.replace('Quest:', '')}</span>
-          <Chip tone={stateTone[quest.state]}>{stateLabel[quest.state]}</Chip>
+        <p className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>{chainName} · <span className="figure text-foreground">{claimed}</span>/{steps.length}</span>
+          {current ? current.state !== 'not-started' && <Chip tone={stateTone[current.state]}>{stateLabel[current.state]}</Chip> : <Chip tone="success">Chain complete</Chip>}
+        </p>
+        <div aria-hidden className="mt-1.5 flex gap-0.5">
+          {steps.map((q) => (
+            <span className={cn('h-1 flex-1 rounded-full', q.state === 'claimed' ? 'bg-success' : q === current ? 'bg-primary' : 'bg-muted/70')} key={q.templateId} />
+          ))}
         </div>
-        {record?.description && <p className="mt-0.5 text-xs text-muted-foreground">{record.description}</p>}
-        {hasCompletionDate && (
-          <p className="mt-1 text-xs text-success">Completed <time dateTime={quest.lastChange!}>{completedAt.toLocaleDateString()}</time></p>
-        )}
-        {quest.state !== 'not-started' && objectives.length > 0 && (
-          <div className="mt-2 space-y-1.5">
-            {objectives.map((o) => (
-              <div key={o.backendName}>
-                <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className="truncate text-muted-foreground">{o.description ?? o.backendName}</span>
-                  <span className="figure shrink-0">{Math.min(o.count, o.completed)}/{o.count}</span>
-                </div>
-                <ProgressBar className="mt-1" total={o.count} value={o.completed} />
-              </div>
-            ))}
-          </div>
-        )}
-        {quest.state === 'active' && objectives.length === 0 && quest.objectives.length > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">Progress counters: {quest.objectives.map((o) => `${o.backendName} ${o.completed}`).join(' · ')}</p>
+        {current ? (
+          <>
+            <p className="mt-2 truncate text-ui font-semibold leading-tight">{record?.name ?? `${chainName} quest ${current.step}`}</p>
+            {objectives.length > 0 && current.state !== 'not-started' ? (
+              <ul className="mt-1.5 space-y-1.5">
+                {objectives.map((o) => (
+                  <li key={o.backendName}>
+                    <p className="flex items-baseline justify-between gap-2 text-xs">
+                      <span className="min-w-0 flex-1 text-muted-foreground">{o.description ?? 'Objective'}</span>
+                      <span className="figure shrink-0">{Math.min(o.count, o.completed).toLocaleString()} / {o.count.toLocaleString()}</span>
+                    </p>
+                    <ProgressBar className="mt-1" total={o.count} value={o.completed} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              objectives[0]?.description && <p className="mt-1 text-xs text-muted-foreground">{objectives[0].description}</p>
+            )}
+            <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+              <img alt="" className="size-4" draggable={false} src={images.phoenixxp} />
+              <span className="figure text-foreground">{current.xp.toLocaleString()}</span> XP
+            </p>
+          </>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">All {steps.length} steps claimed.</p>
         )}
       </div>
-      <div className="shrink-0 text-right">
-        <p className="flex items-center justify-end gap-1 text-sm font-semibold"><Zap className="size-3 text-muted-foreground" /><span className="figure">{quest.xp.toLocaleString()}</span></p>
-        <p className="micro-label">XP{quest.state === 'active' && total > 0 ? ` · ${Math.round((doneCount / total) * 100)}%` : ''}</p>
+    </li>
+  )
+}
+
+/** A single line per quest for the full list. */
+function QuestRow({ quest, records }: { quest: VentureQuest; records: Records }) {
+  const record = getItemRecord(records, quest.templateId)
+  const chainName = chainNames[quest.chain] ?? 'Seasonal'
+  const objective = record?.objectives?.[0]?.description
+  return (
+    <li className="flex items-center gap-3 border-b border-border/30 px-4 py-2">
+      <ItemIcon className={cn(quest.state === 'not-started' && 'opacity-50 grayscale')} records={records} size="small" templateId={quest.templateId} />
+      <div className="min-w-0 flex-1">
+        <p className={cn('truncate text-ui font-medium leading-tight', quest.state === 'not-started' && 'text-muted-foreground')}>{record?.name ?? `${chainName} quest ${quest.step}`}</p>
+        <p className="truncate text-xs text-muted-foreground" title={objective}>
+          {chainName} <span className="figure">{quest.step}</span>{objective && <> · {objective}</>}
+        </p>
       </div>
+      {quest.state === 'claimed' ? <CheckCircle2 aria-label="Completed" className="size-3.5 shrink-0 text-success" /> : quest.state !== 'not-started' && <Chip tone={stateTone[quest.state]}>{stateLabel[quest.state]}</Chip>}
+      <span className="figure w-14 shrink-0 text-right text-xs text-muted-foreground">{quest.xp.toLocaleString()}</span>
     </li>
   )
 }

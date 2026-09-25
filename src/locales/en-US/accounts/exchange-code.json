@@ -4,7 +4,7 @@
       "input": {
         "placeholder": "Generated code will be displayed here"
       },
-      "submit-button": "Generate Exchange Code"
+      "submit-button": "Generate exchange code"
     }
   },
   "notifications": {

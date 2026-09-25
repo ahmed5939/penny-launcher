@@ -37,9 +37,7 @@ export function NavRow({
       <Icon className="size-4 shrink-0 opacity-75" />
       <span className="flex-1 truncate">{label}</span>
       {item.beta && (
-        <span className="">
-          <BetaBadge />
-        </span>
+        <BetaBadge className="rounded-md px-1 py-0 text-2xs" />
       )}
       {status != null && (
         <StatusDot
@@ -50,7 +48,7 @@ export function NavRow({
   )
 
   const className = cn(
-    'relative flex h-8 items-center gap-2.5 rounded-lg px-2 text-[0.8125rem]',
+    'relative flex h-8 items-center gap-2 rounded-lg px-2 text-xs',
     'text-muted-foreground',
     !isDisabled && 'hover:bg-accent/30 hover:text-foreground',
     isActive && 'bg-accent/70 font-medium text-foreground',

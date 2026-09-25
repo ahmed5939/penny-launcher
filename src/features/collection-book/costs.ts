@@ -64,3 +64,14 @@ export function bookCosts(items: BookItem[], path: 'ore'|'crystal') {
   }
   return {invested,remaining,unknown,unknownInvested,upgradeIds,upgrades,choices,count:items.length}
 }
+/** What one upgrade step costs: levels `from`→`to` within the current star cap. Null when the item or curve is unknown. */
+export function levelStepCost(templateId: string, from: number, to: number, rules: CostRules = costRules): Costs | null {
+  const id = templateId.toLowerCase(), rule = rules.rules[id]
+  if (!rule) return null
+  try { return levels(rule, id, from, to, rules) } catch { return null }
+}
+/** The item's star tier (1–5) and the evolutions open from here, each with its cost. */
+export function evolutionStep(templateId: string, rules: CostRules = costRules) {
+  const rule = rules.rules[templateId.toLowerCase()]
+  return rule ? { tier: rule.tier, cap: Math.min(rule.tier * 10, 50), next: rule.next.filter((e) => rules.rules[e.to]?.tier === rule.tier + 1) } : null
+}

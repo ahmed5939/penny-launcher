@@ -3,20 +3,17 @@
     "title": "STW 操作",
     "options": {
       "auto-kick": "自动踢出",
-      "taxi-service": "出租车服务",
-      "party": "队伍",
       "expeditions": "远征",
       "squad-presets": "幸存者小队",
       "inventory": "仓库",
-      "compendium": "图鉴",
+      "codex": "图鉴",
       "quests": "任务日志",
       "loadouts": "英雄配置",
       "timeline": "活动时间线",
       "shop": "STW 商店",
       "xp-boosts": "经验加成",
       "auto-pin-urns": "自动固定任务",
-      "auto-llamas": "自动羊驼",
-      "endurance": "耐力"
+      "auto-llamas": "自动羊驼"
     },
     "auto-kick-status": {
       "issue": "未生效",

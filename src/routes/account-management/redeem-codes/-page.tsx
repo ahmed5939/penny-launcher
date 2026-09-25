@@ -1,23 +1,18 @@
+import type { ChipTone } from '../../../components/page'
+
 import { UpdateIcon } from '@radix-ui/react-icons'
 import { Ticket } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMemo } from 'react'
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '../../../components/ui/accordion'
 import { Button } from '../../../components/ui/button'
 import { Textarea } from '../../../components/ui/textarea'
 import {
-  FieldGroup,
-  FieldRow,
+  Chip,
   PageHeader,
   Panel,
-  PanelBody,
   PanelFooter,
+  PanelHeader,
   ProgressBar,
 } from '../../../components/page'
 
@@ -29,7 +24,8 @@ import {
 import { useGetAccounts } from '../../../hooks/accounts'
 import { useRedeemCodesData } from './-hooks'
 
-import { cn, parseCustomDisplayName } from '../../../lib/utils'
+import { parseRedeemCodes } from '../../../lib/parsers/texts'
+import { parseCustomDisplayName } from '../../../lib/utils'
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar', 'account-management'])
@@ -40,9 +36,7 @@ export function RouteComponent() {
         icon={Ticket}
         section={t('account-management.title')}
         title={t('account-management.options.redeem-codes')}
-        description={t('redeem-codes.description', {
-          ns: 'account-management',
-        })}
+        description="Paste one code per line and redeem them on every account in the title-bar scope."
       />
       <Content />
     </>
@@ -57,78 +51,100 @@ function Content() {
     isDisabledForm,
     isLoading,
     notifications,
+    parsedSelectedAccounts,
 
     handleClearForm,
     handleRedeem,
     handleUpdateCodes,
   } = useRedeemCodesData()
 
+  const codeCount = useMemo(() => parseRedeemCodes(codes).length, [codes])
+  const accountNames = parsedSelectedAccounts.map((account) => account.label)
+
   return (
     <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-      {/*
-        Still a real form — codes have to come from somewhere — but the
-        account half of it is gone; the titlebar picker answers that.
-      */}
       <Panel>
-        <PanelBody>
-          <FieldGroup>
-            <FieldRow
-              label={t('redeem-codes.form.input.placeholder')}
-              stacked
-            >
-              <Textarea
-                className="min-h-32 resize-none"
-                placeholder={t('redeem-codes.form.input.placeholder')}
-                value={codes}
-                onChange={handleUpdateCodes}
-                disabled={isLoading}
-              />
-            </FieldRow>
-          </FieldGroup>
-        </PanelBody>
+        <PanelHeader
+          compact
+          icon={Ticket}
+          title="Codes"
+          actions={
+            codeCount > 0 && (
+              <span className="text-xs text-muted-foreground">
+                <span className="figure">{codeCount}</span>{' '}
+                {codeCount === 1 ? 'code' : 'codes'}
+              </span>
+            )
+          }
+        />
+        <Textarea
+          aria-label="Codes to redeem, one per line"
+          className="min-h-40 resize-none rounded-none border-0 bg-transparent px-4 py-3 font-mono text-ui focus-visible:ring-0 focus-visible:ring-offset-0"
+          placeholder={'XXXXX-XXXXX-XXXXX-XXXXX\nOne code per line'}
+          value={codes}
+          onChange={handleUpdateCodes}
+          disabled={isLoading}
+        />
         <PanelFooter>
+          {/* Who the codes land on, beside the button that spends them. */}
+          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+            {accountNames.length === 0 ? (
+              'Pick accounts in the title bar first.'
+            ) : (
+              <>
+                On{' '}
+                <span className="font-medium text-foreground">
+                  {accountNames.length === 1
+                    ? accountNames[0]
+                    : `${accountNames.length} accounts`}
+                </span>
+              </>
+            )}
+          </span>
           <Button
-            className="flex-1"
+            onClick={handleClearForm}
+            variant="ghost"
+          >
+            {t('redeem-codes.form.clear-button')}
+          </Button>
+          <Button
+            className="min-w-32"
             onClick={handleRedeem}
             disabled={isDisabledForm}
           >
             {isLoading ? (
               <UpdateIcon className="animate-spin" />
             ) : (
-              <span className="truncate">
-                {t('redeem-codes.form.redeem-button')}
-              </span>
+              t('redeem-codes.form.redeem-button')
             )}
-          </Button>
-          <Button
-            className="flex-1"
-            onClick={handleClearForm}
-            variant="secondary"
-          >
-            <span className="truncate">
-              {t('redeem-codes.form.clear-button')}
-            </span>
           </Button>
         </PanelFooter>
       </Panel>
 
       {notifications.length > 0 && (
-        <Accordion
-          className="flex flex-col gap-2"
-          type="multiple"
-        >
+        <div className="space-y-3">
           {notifications.map((item) => (
             <ResponseItem
               data={item}
               key={item.account.accountId}
             />
           ))}
-        </Accordion>
+        </div>
       )}
     </div>
   )
 }
 
+const statusTones: Record<RedeemCodesStatus, ChipTone> = {
+  [RedeemCodesStatus.ERROR]: 'danger',
+  [RedeemCodesStatus.LOADING]: 'neutral',
+  [RedeemCodesStatus.NOT_FOUND]: 'warning',
+  [RedeemCodesStatus.OWNED]: 'success',
+  [RedeemCodesStatus.SUCCESS]: 'success',
+  [RedeemCodesStatus.USED]: 'warning',
+}
+
+/** One account's results: how many landed, then each code with its answer. */
 function ResponseItem({ data }: { data: RedeemCodesData }) {
   const { i18n, t } = useTranslation(['general'])
 
@@ -154,60 +170,44 @@ function ResponseItem({ data }: { data: RedeemCodesData }) {
   ).length
 
   return (
-    <AccordionItem
-      className="panel border-b"
-      value={data.account.accountId}
-    >
-      <AccordionTrigger className="gap-3 px-4 py-2.5 font-normal hover:no-underline [&>svg]:shrink-0">
-        <span className="min-w-0 flex-1 truncate text-left text-[0.8125rem] font-medium">
-          {parseCustomDisplayName(accountList[data.account.accountId])}
-        </span>
-        {/* "3/8" alone made you compare two numbers; the bar shows it. */}
-        <ProgressBar
-          className="w-16 shrink-0"
-          total={codes.length}
-          value={successCounter}
-        />
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {successCounter}/{codes.length}
-        </span>
-      </AccordionTrigger>
-      <AccordionContent className="px-4 pb-3">
-        <ul className="divide-y divide-border/40">
-          {codes.map((code, index) => (
-            <li
-              className="flex items-center justify-between gap-3 py-1.5"
-              key={`${code.value}-${index}`}
-            >
-              <span className="min-w-0 truncate font-mono text-xs">
-                {code.value}
-              </span>
-              <span
-                className={cn(
-                  'shrink-0 rounded-full px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide',
-                  {
-                    'bg-destructive/15 text-destructive':
-                      code.status === RedeemCodesStatus.ERROR,
-                    'bg-muted text-muted-foreground':
-                      code.status === RedeemCodesStatus.LOADING ||
-                      [
-                        RedeemCodesStatus.NOT_FOUND,
-                        RedeemCodesStatus.USED,
-                      ].includes(code.status),
-                    'bg-success/15 text-success': [
-                      RedeemCodesStatus.OWNED,
-                      RedeemCodesStatus.SUCCESS,
-                    ].includes(code.status),
-                  }
-                )}
-              >
+    <Panel>
+      <PanelHeader
+        as="div"
+        compact
+        title={parseCustomDisplayName(accountList[data.account.accountId])}
+        actions={
+          <>
+            <ProgressBar
+              className="w-16"
+              total={codes.length}
+              value={successCounter}
+            />
+            <span className="figure text-xs text-muted-foreground">
+              {successCounter}/{codes.length}
+            </span>
+          </>
+        }
+      />
+      <ul className="divide-y divide-border/30 px-4 py-1">
+        {codes.map((code, index) => (
+          <li
+            className="flex items-center justify-between gap-3 py-2"
+            key={`${code.value}-${index}`}
+          >
+            <span className="min-w-0 truncate font-mono text-xs">
+              {code.value}
+            </span>
+            {code.status === RedeemCodesStatus.LOADING ? (
+              <UpdateIcon className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
+            ) : (
+              <Chip tone={statusTones[code.status] ?? 'danger'}>
                 {statusesText[code.status] ??
                   statusesText[RedeemCodesStatus.ERROR]}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </AccordionContent>
-    </AccordionItem>
+              </Chip>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Panel>
   )
 }

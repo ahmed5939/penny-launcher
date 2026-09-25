@@ -1,6 +1,7 @@
-import type { QuestEntry } from '../../../kernel/core/quests'
+import type { QuestEntry, QuestsPayload } from '../../../kernel/core/quests'
+import type { AccountData } from '../../../types/accounts'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   getItemRecord,
@@ -8,7 +9,9 @@ import {
 } from '../../../state/items/database'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
-import { useGetSelectedAccount } from '../../../hooks/accounts'
+import { useAccountListStore } from '../../../state/accounts/list'
+
+import { useAccountResource } from '../../../components/page'
 
 import { toast } from '../../../lib/notifications'
 
@@ -74,34 +77,72 @@ function prettifyTemplateId(templateId: string) {
     .join(' ')
 }
 
-export function useQuestsData() {
-  useRequestItemDatabase()
+/** How long to wait for the main process before giving up on a reply. */
+const REPLY_TIMEOUT_MS = 60_000
 
-  const { selected } = useGetSelectedAccount()
-  const accountId = selected?.accountId ?? null
-
-  const records = useItemDatabaseStore((state) => state.records)
-
-  const [quests, setQuests] = useState<Array<QuestEntry>>([])
-  const [rerolls, setRerolls] = useState(0)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [isLoading, setLoading] = useState(false)
-  const [isPinning, setPinning] = useState(false)
-  const [hasLoaded, setHasLoaded] = useState(false)
-
-  useEffect(() => {
+/**
+ * The quests IPC is fire-and-forget: a request goes out and the reply comes
+ * back on a shared channel. This turns the next reply for one account into a
+ * promise, so the page can load through `useAccountResource`. The listener is
+ * registered before anything is sent, so a fast reply cannot be missed.
+ */
+function nextQuestsReply(accountId: string) {
+  return new Promise<QuestsPayload>((resolve, reject) => {
     const listener = window.electronAPI.responseQuests(async (response) => {
-      setLoading(false)
-      setHasLoaded(true)
-      setQuests(response.quests)
-      setRerolls(response.rerolls)
-      setErrorMessage(response.errorMessage ?? null)
+      if (response.accountId !== accountId) return
+      finish()
+      if (response.errorMessage) reject(new Error(`${response.errorMessage}. Try Refresh.`))
+      else resolve(response)
     })
-
-    return () => {
+    const timer = window.setTimeout(() => {
+      finish()
+      reject(new Error('Epic did not answer in time. Try Refresh.'))
+    }, REPLY_TIMEOUT_MS)
+    function finish() {
+      window.clearTimeout(timer)
       listener.removeListener()
     }
-  }, [])
+  })
+}
+
+/**
+ * The IPC still takes the whole account record; the page only knows the id.
+ * Looked up at call time so a token refresh is always the current one.
+ */
+function accountById(accountId: string): AccountData {
+  const account = useAccountListStore.getState().accounts[accountId]
+  if (!account) throw new Error('This account is no longer signed in to Penny.')
+  return account
+}
+
+/**
+ * Loads the quest log for the selected account and pins quests on it.
+ *
+ * Pinning replies twice: a pin notification, then — because the main process
+ * re-reads the profile after every pin — a fresh quest log. The wait for that
+ * second reply starts before the pin is sent and is handed to the next load,
+ * so a pin refreshes the list without a second request to Epic.
+ */
+export function useQuestsResource() {
+  const pinReply = useRef<{ accountId: string; reply: Promise<QuestsPayload> } | null>(null)
+  const [isPinning, setPinning] = useState(false)
+
+  const resource = useAccountResource(
+    async (accountId) => {
+      const pending = pinReply.current
+      pinReply.current = null
+      if (pending && pending.accountId === accountId) return pending.reply
+      const reply = nextQuestsReply(accountId)
+      window.electronAPI.requestQuests(accountById(accountId))
+      return reply
+    },
+    {
+      cacheKey: 'stw.quests',
+      fallbackError: 'Could not read the quest log. Try Refresh.',
+      owner: (result) => result.accountId,
+    }
+  )
+  const { refresh } = resource
 
   useEffect(() => {
     const listener = window.electronAPI.notificationQuestsPin(
@@ -109,30 +150,59 @@ export function useQuestsData() {
         setPinning(false)
 
         if (response.errorMessage) {
-          toast(`Could not update pins: ${response.errorMessage}`)
+          toast.error(`Could not update pins: ${response.errorMessage}`)
         }
+
+        if (pinReply.current?.accountId === response.accountId) refresh()
       }
     )
 
     return () => {
       listener.removeListener()
     }
-  }, [])
+  }, [refresh])
 
-  const handleLoad = () => {
-    if (!selected) {
+  /*
+   * From the raw list rather than the display views, because the log hides
+   * the profile's bookkeeping quests and pinning writes the whole set back —
+   * anything dropped from the display still has to survive the round trip.
+   */
+  const togglePin = (data: QuestsPayload, itemId: string) => {
+    if (isPinning) {
       return
     }
 
-    setLoading(true)
-    window.electronAPI.requestQuests(selected)
+    const pinnedIds = data.quests
+      .filter((quest) => quest.pinned)
+      .map((quest) => quest.itemId)
+    const next = pinnedIds.includes(itemId)
+      ? pinnedIds.filter((value) => value !== itemId)
+      : [...pinnedIds, itemId]
+
+    let account: AccountData
+    try {
+      account = accountById(data.accountId)
+    } catch (error) {
+      toast.error(`Could not update pins: ${(error as Error).message}`)
+      return
+    }
+
+    const reply = nextQuestsReply(data.accountId)
+    // Only the load that picks this up reports a failure.
+    reply.catch(() => undefined)
+    pinReply.current = { accountId: data.accountId, reply }
+    setPinning(true)
+    window.electronAPI.pinQuests(account, next)
   }
 
-  useEffect(() => {
-    if (accountId) {
-      handleLoad()
-    }
-  }, [accountId])
+  return { isPinning, resource, togglePin }
+}
+
+/** The quest log as the page shows it: named, paired with its targets, grouped. */
+export function useQuestViews(quests: Array<QuestEntry>) {
+  useRequestItemDatabase()
+
+  const records = useItemDatabaseStore((state) => state.records)
 
   /**
    * The profile only counts progress; the objective's target and wording
@@ -238,41 +308,12 @@ export function useQuestsData() {
     return [...groups.entries()]
   }, [views])
 
-  /*
-   * From the raw list rather than `views`, because the log hides the profile's
-   * bookkeeping quests and pinning writes the whole set back — anything
-   * dropped from the display still has to survive the round trip.
-   */
-  const pinnedIds = quests
-    .filter((quest) => quest.pinned)
-    .map((quest) => quest.itemId)
-
-  const handleTogglePin = (itemId: string) => {
-    if (!selected || isPinning) {
-      return
-    }
-
-    const next = pinnedIds.includes(itemId)
-      ? pinnedIds.filter((value) => value !== itemId)
-      : [...pinnedIds, itemId]
-
-    setPinning(true)
-    window.electronAPI.pinQuests(selected, next)
-  }
+  const pinnedCount = quests.filter((quest) => quest.pinned).length
 
   return {
-    account: selected ?? null,
-    errorMessage,
     grouped,
-    hasLoaded,
-    isLoading,
-    isPinning,
-    pinnedCount: pinnedIds.length,
+    pinnedCount,
     records,
-    rerolls,
     total: views.length,
-
-    handleLoad,
-    handleTogglePin,
   }
 }

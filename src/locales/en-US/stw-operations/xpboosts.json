@@ -1,22 +1,22 @@
 {
-  "description": "Manage XP Boosts of the selected accounts.",
+  "description": "Manage XP boosts of the selected accounts.",
   "form": {
-    "label": "Amount of XP Boosts to send (limited to {{limit}})",
+    "label": "Amount of XP boosts to send (limited to {{limit}})",
     "input": {
       "placeholder": "Example: 123"
     },
-    "refetch": "Refetch Boosts Data",
-    "see-boosts": "See Boosts",
-    "send-boosts": "Send Boosts"
+    "refetch": "Refresh",
+    "see-boosts": "See boosts",
+    "send-boosts": "Send boosts"
   },
   "top-search": {
     "description": "Display basic information about a player."
   },
   "sidebar": {
-    "title": "Which XP Boosts do you want to use?",
+    "title": "Which XP boosts do you want to use?",
     "personal": {
       "description": "All of these accounts will use XP boosts:",
-      "submit-button": "Consume {{total}} XP Boost/s on each account"
+      "submit-button": "Consume {{total}} XP boost/s on each account"
     },
     "teammate": {
       "note": "Some boosts might not send if your ping is not stable.",
@@ -31,7 +31,7 @@
       "title": "Summary of {{total}} account/s"
     },
     "options": {
-      "description": "Teammate XP Boosts to use:",
+      "description": "Teammate XP boosts to use:",
       "information": "{{current}}/{{total}} of a total of {{amount}}"
     }
   },

@@ -5,6 +5,8 @@ import type {
 } from '../../kernel/core/item-database'
 import type { RatingTables } from '../../config/constants/fortnite/power'
 
+export type { ItemRecord, ItemRecordMap }
+
 import { create } from 'zustand'
 
 export type ItemDatabaseState = {

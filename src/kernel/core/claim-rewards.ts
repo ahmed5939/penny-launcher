@@ -1,3 +1,4 @@
+import { recordAutomationHistory } from '../startup/automation-history'
 import { RuntimeLog } from '../runtime-log'
 import type {
   MCPClaimDifficultyIncreaseRewardsResponse,
@@ -33,12 +34,7 @@ export class ClaimRewards {
   ) {
     ClaimRewards.core(accounts).then((response) => {
       if (response) {
-        MainWindow.instance.webContents.send(
-          useGlobalNotification
-            ? ElectronAPIEventKeys.ClaimRewardsClientGlobalSyncNotification
-            : ElectronAPIEventKeys.ClaimRewardsClientNotification,
-          response,
-        )
+        response.forEach((entry) => recordAutomationHistory({ ...entry, source: 'Auto-claim', description: 'Mission and quest rewards claimed', outcome: 'success' }))
       }
 
       MainWindow.instance.webContents.send(
@@ -190,7 +186,11 @@ export class ClaimRewards {
                                 ],
                               }
 
-                              setSetPinnedQuests(data).catch(() => {})
+                              setSetPinnedQuests(data).then((response) => {
+                                if (newItems.some((id) => !currentPinned.includes(id)) && response.data.profileChanges?.length) {
+                                  recordAutomationHistory({ accountId: account.accountId, source: 'Auto-pin quests', description: 'Pinned replacement quests', outcome: 'success' })
+                                }
+                              }).catch(() => {})
                             })
                             .catch(() => {})
                         }
@@ -290,7 +290,7 @@ export class ClaimRewards {
         item.status === 'fulfilled' ? item.value : null,
       )
       const newNotifications = records.filter(
-        (item) => item !== null && Object.keys(item.rewards).length > 0,
+        (item) => item !== null && (Object.keys(item.rewards).length > 0 || item.accolades.totalMissionXPRedeemed > 0 || item.accolades.totalQuestXPRedeemed > 0),
       ) as Array<RewardsNotification>
 
       return newNotifications.length > 0 ? newNotifications : null

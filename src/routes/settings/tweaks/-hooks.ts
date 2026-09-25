@@ -155,7 +155,7 @@ export function useFileTweaksData() {
             ? api.toggleDevStairs()
             : api.toggleAirStrike())
 
-        toast(result.message)
+        toast[result.success ? 'success' : 'error'](result.message)
 
         if (key === 'devStairs') {
           /**
@@ -165,7 +165,7 @@ export function useFileTweaksData() {
           await refreshPatchStatus('devBuilds')
         }
       } catch {
-        toast('Patch failed — the file may be in use. Close Fortnite and retry.')
+        toast.error('Patch failed — the file may be in use. Close Fortnite and retry.')
       } finally {
         await refreshPatchStatus(key)
         store().setPatchLoading(null)
@@ -198,13 +198,13 @@ export function useFileTweaksData() {
           heightHex
         )
 
-        toast(result.message)
+        toast[result.success ? 'success' : 'error'](result.message)
 
         if (result.success) {
           store().patchTrapLocally(guid, heightHex)
         }
       } catch {
-        toast(
+        toast.error(
           'Patch failed — the trap data may live in a compressed block.'
         )
       } finally {
@@ -219,13 +219,13 @@ export function useFileTweaksData() {
 
     try {
       const result = await window.electronAPI.revertTrapHeight(guid)
-      toast(result.message)
+      toast[result.success ? 'success' : 'error'](result.message)
 
       if (result.success) {
         store().unpatchTrapLocally(guid)
       }
     } catch {
-      toast('Revert failed.')
+      toast.error('Revert failed.')
     } finally {
       store().setBusyTrapGuid(null)
     }
@@ -236,7 +236,7 @@ export function useFileTweaksData() {
 
     try {
       const result = await window.electronAPI.revertAllTrapHeights()
-      toast(result.message)
+      toast[result.success ? 'success' : 'error'](result.message)
 
       if (result.success) {
         const data = await window.electronAPI.fetchTrapsData()
@@ -244,7 +244,7 @@ export function useFileTweaksData() {
         store().clearTrapStatuses()
       }
     } catch {
-      toast('Revert all failed.')
+      toast.error('Revert all failed.')
     } finally {
       store().setBusyTrapGuid(null)
     }
@@ -255,7 +255,7 @@ export function useFileTweaksData() {
 
     try {
       const result = await window.electronAPI.applyBaseHeight(uuValue)
-      toast(result.message)
+      toast[result.success ? 'success' : 'error'](result.message)
 
       if (result.success) {
         store().setBaseStatus({
@@ -265,7 +265,7 @@ export function useFileTweaksData() {
         })
       }
     } catch {
-      toast('B.A.S.E. patch failed.')
+      toast.error('B.A.S.E. patch failed.')
     } finally {
       store().setBaseBusy(false)
     }
@@ -276,7 +276,7 @@ export function useFileTweaksData() {
 
     try {
       const result = await window.electronAPI.revertBaseHeight()
-      toast(result.message)
+      toast[result.success ? 'success' : 'error'](result.message)
 
       if (result.success) {
         store().setBaseStatus({
@@ -286,7 +286,7 @@ export function useFileTweaksData() {
         })
       }
     } catch {
-      toast('B.A.S.E. revert failed.')
+      toast.error('B.A.S.E. revert failed.')
     } finally {
       store().setBaseBusy(false)
     }
@@ -294,7 +294,7 @@ export function useFileTweaksData() {
 
   const handleGenerateWorkerPower = useCallback(async () => {
     if (!primaryAccount) {
-      toast('Select an account first.')
+      toast.warning('Select an account first.')
       return
     }
 
@@ -308,10 +308,10 @@ export function useFileTweaksData() {
       store().setWorkerPower(result)
 
       if (!result.success) {
-        toast(result.error ?? 'Worker Power generation failed.')
+        toast.error(result.error ?? 'Worker Power generation failed.')
       }
     } catch {
-      toast('Worker Power generation failed.')
+      toast.error('Worker Power generation failed.')
     } finally {
       store().setWorkerPowerLoading(false)
     }

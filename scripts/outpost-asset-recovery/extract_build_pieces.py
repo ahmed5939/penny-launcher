@@ -87,7 +87,8 @@ class TexturedMeshExporter:
         for key in self.keys:
             if key.endswith('.uasset') and ('/Textures/' in key or '/Materials/' in key or '/PBW/' in key
                                             or '/Models/' in key or '/Meshes/' in key or 'Trap' in key
-                                            or '/Environments/' in key or key.split('/')[-1].startswith(('S_', 'SM_'))):
+                                            or '/Environments/' in key or key.split('/')[-1].startswith(('S_', 'SM_'))
+                                            or '/Characters/' in key or '/Accessories/' in key):
                 try:
                     package = self.provider.LoadPackage(key)
                     exports = self.field(package, 'ExportMap')
@@ -230,6 +231,26 @@ class TexturedMeshExporter:
                         if reference is not None and reference.IsImport:
                             resolved = self.resolve(package, reference.Index)
                 names.append(resolved)
+        return names
+
+    def slot_materials_skeletal(self, package, mesh_export):
+        """Material package per SkeletalMaterials slot (natively serialized)."""
+        names = []
+        for material in getattr(mesh_export, 'SkeletalMaterials', None) or []:
+            reference = material.Material
+            resolved = None
+            try:
+                index = reference.Index if hasattr(reference, 'Index') else reference.ResolvedObject.Index
+                if index < 0:
+                    resolved = self.resolve(package, index)
+            except Exception:
+                resolved = None
+            if resolved is None:
+                try:
+                    resolved = str(material.MaterialSlotName.Text)
+                except Exception:
+                    resolved = None
+            names.append(resolved)
         return names
 
     def mesh(self, key, name, lod_index=0, fallbacks=(), scenery=False):

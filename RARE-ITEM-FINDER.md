@@ -20,7 +20,7 @@ Native Save the World page (`/stw-operations/rare-item-finder`), ported on
   as a parameter. The 34 classification tests were ported to vitest and pass;
   the adapter/service tests were replaced by `src/kernel/core/rare-item-finder.test.ts`.
 - `rare-item-finder-assets/slot-rules.json` (20 MB) ships as a forge
-  `extraResource`, like `endurance-assets`, and is loaded only while a scan
+  `extraResource` and is loaded only while a scan
   runs. The smaller dictionaries live in `src/features/rare-item-finder/data/`.
 - Live item-database records take priority for names/artwork/ratings; the
   bundled `item-metadata.json` snapshot is the fallback, as before.

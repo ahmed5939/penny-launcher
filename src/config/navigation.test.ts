@@ -41,12 +41,12 @@ describe('navigation', () => {
     // Auto-kick (/stw-operations/automation) is temporarily out of the rail:
     // the party endpoints it relies on no longer work while a match runs.
     expect(destinations).not.toContain('/stw-operations/automation')
-    expect(destinations).toContain('/stw-operations/taxi-service')
+    expect(destinations).not.toContain('/stw-operations/taxi-service')
     expect(destinations).toContain('/stw-operations/auto-llamas')
     expect(destinations).toContain('/stw-operations/auto-daily-reroll')
     expect(destinations).not.toContain('/stw-operations/auto-update-quests')
     expect(destinations).toContain('/stw-operations/urns')
-    expect(destinations).toContain('/stw-operations/party')
+    expect(destinations).not.toContain('/stw-operations/party')
   })
 
   it('keeps STW tools and account admin reachable', () => {
@@ -72,10 +72,10 @@ describe('navigation', () => {
     expect(betaItems.map((item) => item.to)).toEqual([
       '/stw-operations/backpack',
       '/stw-operations/collection-book',
-      '/stw-operations/ventures',
       '/stw-operations/rare-item-finder',
-      '/stw-operations/leaderboards',
+      '/stw-operations/ventures',
       '/stw-operations/outpost',
+      '/stw-operations/leaderboards',
       '/account-management/locker',
       '/account-management/sprites',
     ])
@@ -104,7 +104,7 @@ describe('isMenuOptionVisible', () => {
   })
 
   it('hides a tool when its own flag is false', () => {
-    expect(isMenuOptionVisible({ taxiService: false }, 'taxiService')).toBe(
+    expect(isMenuOptionVisible({ autoLlamas: false }, 'autoLlamas')).toBe(
       false,
     )
   })
@@ -130,7 +130,7 @@ describe('area navigation', () => {
     ['/', 'home'],
     ['/stw-operations/missions', 'stw'],
     ['/stw-operations/endurance', undefined],
-    ['/stw-operations/taxi-service', 'automate'],
+    ['/stw-operations/taxi-service', undefined],
     ['/accounts/add/device-auth', 'accounts'],
     ['/account-management/history', 'accounts'],
     ['/account', 'accounts'],
@@ -148,7 +148,7 @@ describe('area navigation', () => {
     expect(matchesNavPath('/plugins-extra', '/plugins')).toBe(false)
   })
 
-  it('keeps Home and Missions visible and Endurance in Add-ons', () => {
+  it('keeps Home and Missions visible and removed tools out of navigation', () => {
     expect(
       navSections.find((section) => section.key === 'home')?.can,
     ).toBeUndefined()
@@ -164,7 +164,7 @@ describe('area navigation', () => {
       visibleSectionItems(
         automate,
         (key) =>
-          !['taxiService', 'party', 'autoLlamas', 'autoPinUrns', 'autoDailyReroll', 'expeditions'].includes(key),
+          !['autoLlamas', 'autoPinUrns', 'autoDailyReroll', 'expeditions'].includes(key),
       ),
     ).toEqual([])
   })
@@ -199,8 +199,9 @@ describe('area navigation', () => {
 
   it('does not route to a hidden Missions landing', () => {
     const visible = stw.items.filter((item) => item.can !== 'currentAlerts')
+    // The commander profile sits right under Missions, so it takes over.
     expect(sectionLanding(stw, visible, true)?.to).toBe(
-      '/stw-operations/schematics',
+      '/stw-operations/profile',
     )
     expect(sectionLanding(stw, [], true)).toBeUndefined()
   })

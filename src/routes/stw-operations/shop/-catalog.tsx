@@ -1,30 +1,30 @@
+import type { ShopActions, useShopCatalog } from './-hooks'
 import type {
   ShopCatalogOffer,
   ShopCatalogStorefront,
   ShopOffer,
 } from '../../../kernel/core/shop'
-import type { SegmentedOption } from '../../../components/page'
+import type { PickerOption } from '../../../components/page'
 
-import { UpdateIcon } from '@radix-ui/react-icons'
-import { Compass, ExternalLink, RefreshCw, Search, Store } from 'lucide-react'
+import { Compass, ExternalLink, Search, Store } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
-import { Input } from '../../../components/ui/input'
 import {
   Callout,
-  Chip,
   EmptyState,
+  FilterBar,
   Panel,
   PanelBody,
   PanelHeader,
-  Segmented,
+  Picker,
+  SearchField,
   StatRow,
   StatTile,
 } from '../../../components/page'
 
-import { useShopCatalog } from './-hooks'
+import { BuyButton } from './-offer-parts'
 
 import { pennyDbLinks } from '../../../config/about/links'
 
@@ -44,36 +44,35 @@ function formatLimits(offer: ShopCatalogOffer) {
   )
 }
 
-function purchaseLimit(offer: ShopOffer) {
-  return (
-    [
-      offer.dailyLimit,
-      offer.weeklyLimit,
-      offer.monthlyLimit,
-      offer.eventLimit,
-    ].find((limit) => limit > 0) ?? 0
-  )
-}
-
-export function ShopCatalog() {
-  const {
-    account,
+export function ShopCatalog({
+  accountOffers,
+  actions,
+  catalog: {
     catalog,
     catalogLoading,
     catalogSection,
-    handleLoadCatalog,
-    handlePurchase,
-    offersById,
-    purchasingOfferId,
     updateCatalogSection,
-  } = useShopCatalog()
-
+  },
+  hasAccount,
+}: {
+  /** The selected account's own Epic offers, when loaded; Buy needs a match. */
+  accountOffers: Array<ShopOffer> | null
+  actions: ShopActions
+  catalog: ReturnType<typeof useShopCatalog>
+  hasAccount: boolean
+}) {
+  const { handlePurchase, purchasingOfferId } = actions
   const [search, setSearch] = useState('')
 
+  const offersById = useMemo(
+    () => new Map((accountOffers ?? []).map((offer) => [offer.offerId, offer])),
+    [accountOffers]
+  )
+
   const storefronts = catalog?.storefronts ?? []
-  const sectionOptions = useMemo<Array<SegmentedOption<string>>>(
+  const storefrontOptions = useMemo<Array<PickerOption>>(
     () => [
-      { label: 'All', value: 'all' },
+      { label: 'All storefronts', value: 'all' },
       ...storefronts.map((storefront) => ({
         label: storefront.label,
         value: storefront.id,
@@ -113,120 +112,110 @@ export function ShopCatalog() {
 
   return (
     <>
+      {storefronts.length > 0 && (
+        <StatRow className="lg:grid-cols-2">
+          <StatTile
+            icon={Store}
+            label="Storefronts"
+            value={storefronts.length}
+          />
+          <StatTile
+            icon={Compass}
+            label="On the shelves"
+            value={totalOffers}
+          />
+        </StatRow>
+      )}
+
       <Panel id="shop-catalog-card">
         <PanelHeader
-          compact
-          as="div"
-          title="Public catalog"
           actions={
-            <>
-              <Button
-                onClick={() =>
-                  window.electronAPI.openExternalURL(pennyDbLinks.stwShop)
-                }
-                size="sm"
-                variant="ghost"
-              >
-                <ExternalLink className="size-3.5" />
-                Penny DB
-              </Button>
-              <Button
-                disabled={catalogLoading}
-                onClick={handleLoadCatalog}
-                size="sm"
-                variant="ghost"
-              >
-                {catalogLoading ? (
-                  <UpdateIcon className="animate-spin" />
-                ) : (
-                  <>
-                    <RefreshCw className="size-3.5" />
-                    Refresh
-                  </>
-                )}
-              </Button>
-            </>
+            <Button
+              onClick={() =>
+                window.electronAPI.openExternalURL(pennyDbLinks.stwShop)
+              }
+              size="sm"
+              variant="ghost"
+            >
+              <ExternalLink className="size-3.5" />
+              Penny DB
+            </Button>
           }
+          compact
+          icon={Compass}
+          title="Public catalog"
         />
-        <PanelBody className="space-y-3">
-          <Callout
-            title="Read-only catalog"
-            tone="info"
-          >
-            Names, prices, limits and images come from Penny DB. Purchases still
-            go through this account's Epic catalog when the same offer is there
-            — never through Penny DB.
-          </Callout>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-8"
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search llamas and storefronts…"
-              value={search}
+        <FilterBar>
+          <SearchField
+            label="Search the catalog"
+            onChange={setSearch}
+            placeholder="Search llamas and storefronts…"
+            value={search}
+          />
+          <Picker
+            disabled={storefronts.length <= 0}
+            label="Storefront"
+            onChange={updateCatalogSection}
+            options={storefrontOptions}
+            value={
+              storefrontOptions.some(
+                (option) => option.value === catalogSection
+              )
+                ? catalogSection
+                : 'all'
+            }
+          />
+        </FilterBar>
+        {catalog?.errorMessage ? (
+          <PanelBody role="alert">
+            <Callout
+              title="Could not read the public catalog"
+              tone="danger"
+            >
+              {catalog.errorMessage}. Try Refresh.
+            </Callout>
+          </PanelBody>
+        ) : catalogLoading && storefronts.length <= 0 ? (
+          <div role="status">
+            <EmptyState
+              className="border-0 bg-transparent py-8"
+              description="Asking Penny DB for the current llamas and storefronts."
+              icon={Compass}
+              title="Loading the catalog…"
             />
           </div>
-        </PanelBody>
+        ) : visible.length <= 0 && catalog ? (
+          <EmptyState
+            className="border-0 bg-transparent py-8"
+            description="Try another storefront, or clear the search."
+            icon={Search}
+            title="Nothing on this shelf"
+          />
+        ) : (
+          <p className="px-5 py-2.5 text-xs text-muted-foreground">
+            {hasAccount
+              ? "Offers that are also in this account's Epic catalog can be bought here."
+              : 'Choose an account in the title bar to buy matching offers.'}
+          </p>
+        )}
       </Panel>
 
-      {catalog?.errorMessage && (
-        <Callout
-          title="Could not read the public catalog"
-          tone="danger"
-        >
-          {catalog.errorMessage}
-        </Callout>
-      )}
-
-      {storefronts.length > 0 && (
-        <>
-          <StatRow className="lg:grid-cols-2">
-            <StatTile
-              icon={Store}
-              label="Storefronts"
-              value={storefronts.length}
-            />
-            <StatTile
-              icon={Compass}
-              label="On the shelves"
-              value={totalOffers}
-            />
-          </StatRow>
-
-          <Segmented
-            onChange={updateCatalogSection}
-            options={sectionOptions}
-            value={catalogSection}
-          />
-        </>
-      )}
-
-      {catalogLoading && storefronts.length <= 0 ? (
-        <EmptyState
-          description="Asking Penny DB for the current llamas and storefronts."
-          icon={Compass}
-          title="Loading catalog"
+      {visible.map((storefront) => (
+        <StorefrontShelf
+          hasAccount={hasAccount}
+          key={storefront.id}
+          offersById={offersById}
+          onPurchase={handlePurchase}
+          purchasingOfferId={purchasingOfferId}
+          storefront={storefront}
         />
-      ) : visible.length > 0 ? (
-        <div className="space-y-6">
-          {visible.map((storefront) => (
-            <StorefrontShelf
-              hasAccount={account !== null}
-              key={storefront.id}
-              offersById={offersById}
-              onPurchase={handlePurchase}
-              purchasingOfferId={purchasingOfferId}
-              storefront={storefront}
-            />
-          ))}
-        </div>
-      ) : catalog && !catalog.errorMessage ? (
-        <EmptyState
-          description="Try another shelf, or clear the search."
-          icon={Store}
-          title="Nothing on this shelf"
-        />
-      ) : null}
+      ))}
+
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Names, prices, limits and images come from Penny DB. Purchases go
+        through this account&apos;s Epic catalog when the same offer is there —
+        never through Penny DB.
+      </p>
 
       <GoToTop containerId="shop-catalog-card" />
     </>
@@ -247,14 +236,19 @@ function StorefrontShelf({
   storefront: ShopCatalogStorefront
 }) {
   return (
-    <section className="space-y-3">
-      <div className="flex items-baseline gap-2">
-        <h2 className="text-sm font-semibold">{storefront.label}</h2>
-        <span className="text-[0.65rem] text-muted-foreground">
-          {storefront.offers.length}
-        </span>
-      </div>
-      <div className="grid gap-3 xl:grid-cols-2">
+    <Panel>
+      <PanelHeader
+        actions={
+          <span className="text-xs text-muted-foreground">
+            <span className="figure">{storefront.offers.length}</span>{' '}
+            {storefront.offers.length === 1 ? 'offer' : 'offers'}
+          </span>
+        }
+        compact
+        icon={Store}
+        title={storefront.label}
+      />
+      <PanelBody className="grid gap-3 xl:grid-cols-2">
         {storefront.offers.map((offer) => (
           <CatalogCard
             catalogOffer={offer}
@@ -269,8 +263,8 @@ function StorefrontShelf({
             onPurchase={onPurchase}
           />
         ))}
-      </div>
-    </section>
+      </PanelBody>
+    </Panel>
   )
 }
 
@@ -289,98 +283,75 @@ function CatalogCard({
   mcpOffer: ShopOffer | null
   onPurchase: (offer: ShopOffer) => void
 }) {
-  const soldOut =
-    mcpOffer !== null &&
-    purchaseLimit(mcpOffer) > 0 &&
-    mcpOffer.purchased >= purchaseLimit(mcpOffer)
-
+  /* A store tile, the same shape as the account shop's. */
   return (
-    <Panel>
-      <header className="flex items-start gap-3 border-b border-border/60 px-4 py-3">
+    <article className="flex flex-col gap-3 rounded-xl bg-muted/25 p-4">
+      <header className="flex items-start gap-3">
         {catalogOffer.imageUrl ? (
           <img
             alt=""
-            className="size-14 shrink-0 rounded-md bg-muted/40 object-contain p-1"
+            className="size-16 shrink-0 rounded-lg bg-muted/40 object-contain p-1"
             loading="lazy"
             onError={hideBrokenImage}
             src={catalogOffer.imageUrl}
           />
         ) : (
-          <div className="size-14 shrink-0 rounded-md bg-muted/40" />
+          <div className="size-16 shrink-0 rounded-lg bg-muted/40" />
         )}
-
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[0.8125rem] font-medium">
+          <p className="truncate text-ui font-semibold leading-tight">
             {catalogOffer.name}
           </p>
-          <p className="mt-0.5 text-[0.65rem] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             {formatLimits(catalogOffer)}
           </p>
+          {catalogOffer.description && (
+            <p className="mt-1.5 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+              {catalogOffer.description}
+            </p>
+          )}
         </div>
-
         <div className="shrink-0 text-right">
-          <p className="flex items-center justify-end gap-1.5 text-sm font-semibold tabular-nums">
+          <p className="flex items-center justify-end gap-1.5">
             {catalogOffer.currencyImageUrl && (
               <img
                 alt=""
-                className="size-4 object-contain"
+                className="size-5 object-contain"
                 loading="lazy"
                 onError={hideBrokenImage}
                 src={catalogOffer.currencyImageUrl}
               />
             )}
-            {catalogOffer.price.toLocaleString()}
+            <span className="figure text-lg font-bold leading-none">
+              {catalogOffer.price.toLocaleString()}
+            </span>
           </p>
-          <p className="text-[0.6rem] text-muted-foreground">
-            {catalogOffer.currencyLabel || '—'}
-          </p>
+          {!catalogOffer.currencyImageUrl && (
+            <p className="text-xs text-muted-foreground">
+              {catalogOffer.currencyLabel || '—'}
+            </p>
+          )}
         </div>
       </header>
 
-      <PanelBody className="space-y-3">
-        {catalogOffer.description && (
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {catalogOffer.description}
-          </p>
-        )}
-
+      <div className="mt-auto">
         {mcpOffer ? (
-          <Button
-            className="w-full"
-            disabled={
-              isPurchaseLocked ||
-              isPurchasing ||
-              !mcpOffer.affordable ||
-              mcpOffer.fulfillmentOwned ||
-              soldOut ||
-              mcpOffer.currency === 'RealMoney'
+          <BuyButton
+            isPurchaseLocked={isPurchaseLocked}
+            isPurchasing={isPurchasing}
+            offer={mcpOffer}
+            onPurchase={() =>
+              onPurchase({ ...mcpOffer, title: catalogOffer.name })
             }
-            onClick={() => onPurchase({ ...mcpOffer, title: catalogOffer.name })}
-            size="sm"
-            variant={mcpOffer.affordable ? 'default' : 'secondary'}
-          >
-            {isPurchasing ? (
-              <UpdateIcon className="animate-spin" />
-            ) : soldOut ? (
-              'Purchased · limit reached'
-            ) : mcpOffer.fulfillmentOwned ? (
-              'Already claimed'
-            ) : mcpOffer.currency === 'RealMoney' ? (
-              'Real money only'
-            ) : mcpOffer.affordable ? (
-              `Buy for ${mcpOffer.finalPrice.toLocaleString()} ${mcpOffer.currencyLabel}`
-            ) : (
-              `Not enough ${mcpOffer.currencyLabel}`
-            )}
-          </Button>
+          />
         ) : (
-          <Chip className="w-fit">
+          <p className="text-xs text-muted-foreground">
             {hasAccount
               ? "View only · not in this account's catalog"
               : 'View only · pick an account to buy matching offers'}
-          </Chip>
+          </p>
         )}
-      </PanelBody>
-    </Panel>
+      </div>
+    </article>
   )
 }

@@ -1,13 +1,13 @@
 {
-  "description": "Select an account and manage your devices auth created. User Agent, Creation and Last Access are displayed with information on: Location, IP Address and Date.",
+  "description": "Select an account and manage the device auths created for it. User agent, creation and last access are shown, with location, IP address and date.",
   "form": {
-    "submit-button": "Request Devices Auth"
+    "submit-button": "Request device auths"
   },
   "results": {
-    "title": "Devices Found: <1>{{total}}</1>",
+    "title": "Devices found: <1>{{total}}</1>",
     "item": {
       "created": "Created",
-      "last-access": "Last Access"
+      "last-access": "Last access"
     }
   },
   "notifications": {

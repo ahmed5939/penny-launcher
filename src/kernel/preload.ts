@@ -18,7 +18,6 @@ import * as autoDailyRerollActions from './preload-actions/auto-daily-reroll'
 import * as autoPinUrnsActions from './preload-actions/auto-pin-urns'
 import * as automationsActions from './preload-actions/automation'
 import * as customizableMenuActions from './preload-actions/customizable-menu'
-import * as enduranceActions from './preload-actions/endurance'
 import * as eventActions from './preload-actions/events'
 import * as expeditionsActions from './preload-actions/expeditions'
 import * as fnLaunchActions from './preload-actions/fn-launch'
@@ -54,7 +53,6 @@ import * as serverStatusActions from './preload-actions/server-status'
 import * as settingsActions from './preload-actions/settings'
 import * as shopActions from './preload-actions/shop'
 import * as squadsActions from './preload-actions/squads'
-import * as taxiservicesActions from './preload-actions/taxi-service'
 import * as timelineActions from './preload-actions/timeline'
 import * as vbucksInformationActions from './preload-actions/vbucks-information'
 import * as xpBoostsActions from './preload-actions/xpboosts'
@@ -90,7 +88,6 @@ export const availableElectronAPIs = {
   ...automationsActions,
   ...customizableMenuActions,
   ...autoPinUrnsActions,
-  ...enduranceActions,
   ...eventActions,
   ...expeditionsActions,
   ...fnLaunchActions,
@@ -127,7 +124,6 @@ export const availableElectronAPIs = {
   ...settingsActions,
   ...shopActions,
   ...squadsActions,
-  ...taxiservicesActions,
   ...timelineActions,
   ...vbucksInformationActions,
   ...xpBoostsActions,

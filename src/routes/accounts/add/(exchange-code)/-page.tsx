@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { exampleCode } from '../../../../config/constants/examples'
 
 import { InputSecret } from '../../../../components/ui/extended/form/input-secret'
-import { SeparatorWithTitle } from '../../../../components/ui/extended/separator'
 import { Button } from '../../../../components/ui/button'
 import {
   Panel,
@@ -30,18 +29,8 @@ export function ExchangeCodePage() {
   const { form, isSubmitting, selected, onSubmit } = useSetupForm()
 
   return (
-    <div className="flex w-full max-w-md flex-col gap-6">
-      {selected && (
-        <>
-          <GenerateExchangeCodePage />
-          <SeparatorWithTitle>
-            {t('separators.or', {
-              ns: 'general',
-            })}
-          </SeparatorWithTitle>
-        </>
-      )}
-
+    <div className="flex w-full max-w-md flex-col gap-4">
+      {/* Adding is what this page is for, so the paste box leads. */}
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
@@ -82,7 +71,7 @@ export function ExchangeCodePage() {
             <PanelFooter>
               <Button
                 type="submit"
-                className="w-full"
+                className="ml-auto min-w-32"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -97,6 +86,8 @@ export function ExchangeCodePage() {
           </Panel>
         </form>
       </Form>
+
+      {selected && <GenerateExchangeCodePage />}
     </div>
   )
 }

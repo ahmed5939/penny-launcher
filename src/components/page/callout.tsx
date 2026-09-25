@@ -60,7 +60,7 @@ export function Callout({
   return (
     <div
       className={cn(
-        'flex gap-3 rounded-xl border px-4 py-3.5 text-[0.8125rem] leading-relaxed',
+        'flex gap-3 rounded-xl border px-4 py-3.5 text-ui leading-relaxed',
         shell,
         className
       )}

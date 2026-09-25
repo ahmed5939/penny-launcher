@@ -14,15 +14,15 @@
   },
   "form": {
     "credentials": {
-      "account-id": "Account Id",
-      "device-id": "Device Id",
+      "account-id": "Account ID",
+      "device-id": "Device ID",
       "secret": "Secret",
       "login": {
-        "label": "Paste Your Code",
+        "label": "Paste your code",
         "input": {
           "placeholder": "Example: {{code}}"
         },
-        "get-code": "<0>Get Code</0> <1 />"
+        "get-code": "<0>Get code</0> <1 />"
       }
     },
     "accounts": {
@@ -55,20 +55,20 @@
     "search-account": {
       "label": "Search player by accountId or display name (epic, xbl or psn)",
       "input": {
-        "placeholder": "Example: Sample"
+        "placeholder": "Example: sample"
       }
     }
   },
   "information": {
-    "account-id": "Account Id:",
-    "power-level": "Power Level:",
-    "commander-level": "Commander Level:",
+    "account-id": "Account ID:",
+    "power-level": "Power level:",
+    "commander-level": "Commander level:",
     "boosted-xp": "Boosted XP:",
-    "days-logged-in": "Days Logged In:",
-    "collection-book-level": "Collection Book Level:",
-    "personal-xp-boosts": "Personal XP Boosts:",
-    "teammate-xp-boosts": "Teammate XP Boosts:",
-    "founder-status": "Founder Status:"
+    "days-logged-in": "Days logged in:",
+    "collection-book-level": "Collection Book level:",
+    "personal-xp-boosts": "Personal XP boosts:",
+    "teammate-xp-boosts": "Teammate XP boosts:",
+    "founder-status": "Founder status:"
   },
   "version": {
     "title": "Penny {{version}} is available",
@@ -76,7 +76,7 @@
     "action": "Open release"
   },
   "community-info": {
-    "message": "Join our <2>Discord Community<1/></2> to know more about what's coming on next updates!!!"
+    "message": "Join our <2>Discord community<1/></2> to hear what's coming in the next updates."
   },
   "founder": {
     "non-founder": "Non-Founder",
@@ -96,7 +96,7 @@
     }
   },
   "close-game": {
-    "button": "Close Game"
+    "button": "Close game"
   },
   "separators": {
     "or": "Or"
@@ -107,7 +107,7 @@
   "statuses": {
     "error": "Error",
     "loading": "Loading",
-    "not-found": "Not Found",
+    "not-found": "Not found",
     "owned": "Owned",
     "claimed": "Claimed",
     "used": "Used"
@@ -228,30 +228,30 @@
   "credits": "Credits",
   "current": "Current",
   "date": "Date",
-  "first-claim": "First Claim: {{date}}",
-  "go-to-current-alerts": "Go To Current Alerts",
-  "go-to-top": "Go To Top",
+  "first-claim": "First claim: {{date}}",
+  "go-to-current-alerts": "Go to current alerts",
+  "go-to-top": "Go to top",
   "history": "History",
-  "hide-information": "Hide Information",
+  "hide-information": "Hide information",
   "note": "Note",
-  "show-information": "Show Hiden Information",
+  "show-information": "Show hidden information",
   "ip-address": "IP Address",
   "is-running": "App is running",
   "is-not-running": "App is not running",
-  "last-played": "Last Played At: {{date}}",
+  "last-played": "Last played at: {{date}}",
   "location": "Location",
   "missions": "Missions",
   "no-item-found": "No item found",
   "no-options": "No options",
   "no-placeholder-select-options": "Select options",
   "placeholder": "Placeholder",
-  "public-stats": "Note: This user has \"Public Game Stats\" disabled, more information can't be displayed.",
+  "public-stats": "Note: this user has \"Public game stats\" disabled, so more information can't be shown.",
   "settings": "Settings",
   "summary": "Summary",
-  "unknown-user": "Unknown User",
+  "unknown-user": "Unknown user",
   "unknown": "Unknown",
-  "update-information": "Update Information",
-  "user-agent": "User Agent",
-  "generate-screenshot": "Generate Screenshot",
-  "under-translation": "(Under Translation)"
+  "update-information": "Update information",
+  "user-agent": "User agent",
+  "generate-screenshot": "Generate screenshot",
+  "under-translation": "(Under translation)"
 }

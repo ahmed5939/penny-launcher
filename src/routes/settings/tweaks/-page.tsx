@@ -38,8 +38,13 @@ import {
   Chip,
   PageHeader,
   Panel,
+  PanelBody,
+  PanelHeader,
+  Segmented,
   StatusPill,
 } from '../../../components/page'
+
+import { cn } from '../../../lib/utils'
 
 import { useFileTweaksData } from './-hooks'
 
@@ -219,7 +224,7 @@ export function RouteComponent() {
             <BetaBadge />
           </span>
         }
-        description="Patch Fortnite's game files directly — dev builds, dev stairs, airstrike and trap heights. Every patch re-seals the .utoc so the container verifies as a clean install."
+        description="Patch Fortnite's game files: dev builds, dev stairs, airstrike and trap heights."
       />
 
       {isLocked ? (
@@ -230,49 +235,55 @@ export function RouteComponent() {
             title="This edits game files on disk"
             tone="warning"
           >
-            Close Fortnite before patching. If anything looks wrong in game,
-            use "Verify" in the Epic Games Launcher to restore every file.
-            Server-side checks can still flag the effects themselves even
-            with a re-sealed container — test on your own accounts only.
+            Close Fortnite first. To undo everything, run Verify in the Epic
+            Games Launcher. Server checks can still flag the effects — test on
+            your own accounts only.
           </Callout>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        {(
-          [
-            {
-              chunk: 'pakchunk10',
-              description:
-                'Unlocks developer-build movement features by breaking an asset name.',
-              key: 'devBuilds',
-              title: 'Dev Builds',
-            },
-            {
-              chunk: 'pakchunk30',
-              description:
-                'Restores the removed buildable stairs. Turns Dev Builds off while active.',
-              key: 'devStairs',
-              title: 'DevStairs',
-            },
-            {
-              chunk: 'pakchunk30',
-              description:
-                'Extends the airstrike impact radius to cover the whole map.',
-              key: 'airStrike',
-              title: 'AirStrike',
-            },
-          ] as const
-        ).map((card) => (
-          <PatchCard
-            description={card.description}
-            isLoading={patchLoading === card.key}
-            key={card.key}
-            onRefresh={() => refreshPatchStatus(card.key)}
-            onToggle={() => handleTogglePatch(card.key)}
-            status={patchStatuses[card.key]}
-            title={card.title}
-          />
-        ))}
-      </div>
+      <Panel>
+        <PanelHeader
+          compact
+          description="Every patch re-seals the .utoc so the container verifies as a clean install."
+          title="Game file patches"
+        />
+        <div className="divide-y divide-border/30 px-5">
+          {(
+            [
+              {
+                chunk: 'pakchunk10',
+                description:
+                  'Developer-build movement, by breaking one asset name.',
+                key: 'devBuilds',
+                title: 'Dev Builds',
+              },
+              {
+                chunk: 'pakchunk30',
+                description:
+                  'The removed buildable stairs. Turns Dev Builds off while on.',
+                key: 'devStairs',
+                title: 'DevStairs',
+              },
+              {
+                chunk: 'pakchunk30',
+                description: 'Airstrike impact radius covers the whole map.',
+                key: 'airStrike',
+                title: 'AirStrike',
+              },
+            ] as const
+          ).map((card) => (
+            <PatchRow
+              chunk={card.chunk}
+              description={card.description}
+              isLoading={patchLoading === card.key}
+              key={card.key}
+              onRefresh={() => refreshPatchStatus(card.key)}
+              onToggle={() => handleTogglePatch(card.key)}
+              status={patchStatuses[card.key]}
+              title={card.title}
+            />
+          ))}
+        </div>
+      </Panel>
 
       <TrapHeightSection
         baseBusy={baseBusy}
@@ -340,14 +351,14 @@ function LockScreen({ onUnlock }: { onUnlock: (key: string) => Promise<boolean> 
   }
 
   return (
-    <Panel className="mx-auto mt-8 max-w-md p-6">
+    <Panel className="mt-8 max-w-md p-6">
       <div className="flex items-center gap-2">
-        <Lock className="size-4 text-primary" />
-        <p className="text-sm font-semibold">Restricted</p>
+        <Lock className="size-4 text-muted-foreground" />
+        <p className="text-title font-semibold">Restricted</p>
       </div>
       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        These tools patch game files and are for the maintainer's own
-        testing. Enter the access key to unlock for this session.
+        Game file patching for the maintainer's own testing. Enter the access
+        key to unlock this session.
       </p>
       <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
         <Input
@@ -361,10 +372,7 @@ function LockScreen({ onUnlock }: { onUnlock: (key: string) => Promise<boolean> 
           value={key}
         />
         {isWrong && (
-          <p className="flex items-center gap-1.5 text-xs text-destructive">
-            <TriangleAlert className="size-3.5" />
-            Wrong key
-          </p>
+          <Callout tone="danger">Wrong key. Check it and try again.</Callout>
         )}
         <Button className="w-full" disabled={isWorking || key.length === 0} type="submit">
           {isWorking ? <LoaderCircle className="size-4 animate-spin" /> : (
@@ -377,7 +385,9 @@ function LockScreen({ onUnlock }: { onUnlock: (key: string) => Promise<boolean> 
   )
 }
 
-function PatchCard({
+/** One patch: what it does on the left, its state and switch on the right. */
+function PatchRow({
+  chunk,
   description,
   isLoading,
   onRefresh,
@@ -385,6 +395,7 @@ function PatchCard({
   status,
   title,
 }: {
+  chunk: string
   description: string
   isLoading: boolean
   onRefresh: () => void
@@ -392,44 +403,33 @@ function PatchCard({
   status?: { activated: boolean; error?: string; found: boolean }
   title: string
 }) {
-  return (
-    <Panel className="flex flex-col gap-3 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-            {description}
-          </p>
-        </div>
+  const active = Boolean(status?.found && status.activated)
 
-        {isLoading ? (
-          <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
-        ) : status?.found ? (
-          status.activated ? (
-            <StatusPill tone="active">Active</StatusPill>
-          ) : (
-            <StatusPill tone="idle">Off</StatusPill>
-          )
-        ) : (
-          <StatusPill tone="danger">Not found</StatusPill>
+  return (
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3.5">
+      <div className="min-w-0 flex-1 basis-60">
+        <p className="flex items-center gap-2 text-ui font-medium">
+          {title}
+          <span className="figure text-xs font-normal text-muted-foreground">
+            {chunk}
+          </span>
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        {status?.error && (
+          <p className="mt-1 text-xs text-warning">{status.error}</p>
         )}
       </div>
 
-      {status?.error && <p className="text-xs text-warning">{status.error}</p>}
-
-      <div className="mt-auto flex items-center gap-2">
-        <Button
-          className="flex-1"
-          disabled={isLoading || (Boolean(status) && !status?.found)}
-          onClick={onToggle}
-          size="sm"
-        >
-          {isLoading
-            ? 'Working…'
-            : status?.found && status.activated
-              ? 'Deactivate'
-              : 'Activate'}
-        </Button>
+      <div className="flex shrink-0 items-center gap-2">
+        {isLoading ? (
+          <LoaderCircle className="size-4 animate-spin text-muted-foreground" />
+        ) : status?.found ? (
+          <StatusPill tone={active ? 'active' : 'idle'}>
+            {active ? 'Active' : 'Off'}
+          </StatusPill>
+        ) : (
+          <StatusPill tone="danger">Not found</StatusPill>
+        )}
         <Button
           aria-label={`Re-scan ${title}`}
           disabled={isLoading}
@@ -439,8 +439,16 @@ function PatchCard({
         >
           <RefreshCw className="size-3.5" />
         </Button>
+        <Button
+          className="w-28"
+          disabled={isLoading || (Boolean(status) && !status?.found)}
+          onClick={onToggle}
+          variant={active ? 'secondary' : 'default'}
+        >
+          {isLoading ? 'Working…' : active ? 'Deactivate' : 'Activate'}
+        </Button>
       </div>
-    </Panel>
+    </div>
   )
 }
 
@@ -476,35 +484,31 @@ function TrapHeightSection({
   trapsLoading: boolean
 }) {
   return (
-    <Panel className="flex flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Hammer className="size-4 text-primary" />
-          <div>
-            <p className="text-sm font-semibold">Trap height modifier</p>
-            <p className="text-xs text-muted-foreground">
-              Changes where traps sit on their tile, in pakchunk11.
-            </p>
-          </div>
-        </div>
-
-        {trapsData && trapsData.modified.length > 0 && (
-          <Button
-            disabled={baseBusy || busyTrapGuid !== null}
-            onClick={onRevertAll}
-            size="sm"
-            variant="destructive"
-          >
-            <RefreshCw className="size-3.5" />
-            Revert all ({trapsData.modified.length})
-          </Button>
-        )}
-      </div>
-
+    <Panel>
+      <PanelHeader
+        actions={
+          trapsData && trapsData.modified.length > 0 ? (
+            <Button
+              disabled={baseBusy || busyTrapGuid !== null}
+              onClick={onRevertAll}
+              size="sm"
+              variant="destructive"
+            >
+              <RefreshCw className="size-3.5" />
+              Revert all ({trapsData.modified.length})
+            </Button>
+          ) : undefined
+        }
+        compact
+        description="Where traps sit on their tile, patched in pakchunk11."
+        icon={Hammer}
+        title="Trap height"
+      />
+      <PanelBody className="flex flex-col gap-4">
       {!trapsData ? (
-        <div className="flex flex-col items-center gap-3 py-8">
-          <p className="text-sm text-muted-foreground">
-            Load the trap database to start patching.
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-ui text-muted-foreground">
+            Load the trap database to pick a family.
           </p>
           <Button
             disabled={trapsLoading}
@@ -552,6 +556,7 @@ function TrapHeightSection({
           status={trapsData.base}
         />
       )}
+      </PanelBody>
     </Panel>
   )
 }
@@ -601,7 +606,7 @@ function FamilyGrid({
 
         return (
           <div key={category}>
-            <p className="micro-label mb-2">{CATEGORY_LABELS[category]}</p>
+            <p className="section-label mb-2.5">{CATEGORY_LABELS[category]}</p>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               {items.map((desc) => {
                 const info = families[desc]
@@ -610,11 +615,13 @@ function FamilyGrid({
 
                 return (
                   <button
-                    className={`group flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors ${
+                    className={cn(
+                      'group flex flex-col items-start gap-1 rounded-lg p-3 text-left transition-colors',
                       count > 0
-                        ? 'border-primary/40 bg-primary/5 hover:bg-primary/10'
-                        : 'border-border/60 hover:bg-accent/30'
-                    } ${unsupported ? 'opacity-50' : ''}`}
+                        ? 'bg-primary/10 ring-1 ring-inset ring-primary/30 hover:bg-primary/15'
+                        : 'bg-muted/30 hover:bg-accent/30',
+                      unsupported && 'opacity-50'
+                    )}
                     disabled={unsupported}
                     key={desc}
                     onClick={() => onSelect(desc)}
@@ -625,7 +632,7 @@ function FamilyGrid({
                       </span>
                       {count > 0 && <Chip tone="accent">{count}</Chip>}
                     </span>
-                    <span className="micro-label text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {unsupported
                         ? 'No height offset'
                         : `${traps.filter((trap) => trap.desc === desc).length} variants`}
@@ -875,9 +882,9 @@ function BaseCard({
   status: { currentHeight: string; found: boolean; isModified: boolean }
 }) {
   return (
-    <div className="rounded-lg border border-border/60 p-3">
+    <div className="-mx-5 -mb-4 border-t border-border/30 bg-muted/20 px-5 py-3.5">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold">B.A.S.E. height</p>
+        <p className="text-ui font-medium">B.A.S.E. height</p>
         {status.isModified ? (
           <Chip tone="accent">
             {Math.round(heightHexToUu(status.currentHeight))} UU
@@ -888,7 +895,8 @@ function BaseCard({
 
         <div className="ml-auto flex items-center gap-2">
           <Input
-            className="w-24"
+            aria-label="B.A.S.E. height in UU"
+            className="figure w-24 text-right"
             onChange={(event) => onUuChange(event.target.value)}
             value={baseUu}
           />
@@ -912,8 +920,8 @@ function BaseCard({
         </div>
       </div>
       <p className="mt-1.5 text-xs text-muted-foreground">
-        Sets the B.A.S.E. hologram projection height. The first apply scans
-        pakchunk11 and can take a while.
+        The hologram projection height. The first apply scans pakchunk11 and
+        takes a while.
       </p>
     </div>
   )
@@ -956,61 +964,45 @@ function WorkerPowerSection({
   }
 
   return (
-    <Panel className="flex flex-col gap-3 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Zap className="size-4 text-primary" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Worker power file</p>
-          <p className="text-xs text-muted-foreground">
-            Exports the campaign profile with every worker and hero set to the
-            same level, for use with external profile tools.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1 rounded-lg border border-border/60 p-1">
-          {(['high', 'low'] as const).map((value) => (
-            <button
-              className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                mode === value
-                  ? 'bg-primary/15 text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              key={value}
-              onClick={() => onChangeMode(value)}
-            >
-              {value === 'high' ? 'Level 50' : 'Level 1'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {disabled && (
-        <p className="flex items-center gap-1.5 text-xs text-warning">
-          <TriangleAlert className="size-3.5" />
-          Select an account to generate the file.
-        </p>
-      )}
+    <Panel>
+      <PanelHeader
+        actions={
+          <Segmented
+            onChange={onChangeMode}
+            options={[
+              { label: 'Level 50', value: 'high' },
+              { label: 'Level 1', value: 'low' },
+            ]}
+            value={mode}
+          />
+        }
+        compact
+        description="The campaign profile with every worker and hero at one level, for external profile tools."
+        icon={Zap}
+        title="Worker power file"
+      />
+      <PanelBody className="flex flex-col gap-3">
 
       {result && !result.success && (
-        <p className="text-xs text-destructive">{result.error}</p>
+        <Callout tone="danger">{result.error}</Callout>
       )}
 
       {result?.success && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip tone="accent">{result.workerCount ?? 0} workers</Chip>
-          <Chip tone="accent">{result.heroCount ?? 0} heroes</Chip>
-          <Chip>{result.modified ?? 0} modified</Chip>
-          <Chip>{result.sizeMB ?? '0'} MB</Chip>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg bg-muted/30 px-4 py-3 text-xs text-muted-foreground">
+          <span><span className="figure text-ui font-semibold text-foreground">{result.workerCount ?? 0}</span> workers</span>
+          <span><span className="figure text-ui font-semibold text-foreground">{result.heroCount ?? 0}</span> heroes</span>
+          <span><span className="figure text-ui font-semibold text-foreground">{result.modified ?? 0}</span> modified</span>
+          <span><span className="figure text-ui font-semibold text-foreground">{result.sizeMB ?? '0'}</span> MB</span>
 
-          <Button className="ml-auto" onClick={download} size="sm">
+          <Button className="ml-auto" onClick={download} size="sm" variant="secondary">
             <Download className="size-3.5" />
             Download JSON
           </Button>
         </div>
       )}
 
-      <div>
-        <Button disabled={disabled || working} onClick={onGenerate} size="sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button disabled={disabled || working} onClick={onGenerate}>
           {working ? (
             <LoaderCircle className="size-3.5 animate-spin" />
           ) : result?.success ? (
@@ -1018,7 +1010,14 @@ function WorkerPowerSection({
           ) : null}
           {result?.success ? 'Regenerate' : `Generate ${mode} power file`}
         </Button>
+        {disabled && (
+          <p className="flex items-center gap-1.5 text-xs text-warning">
+            <TriangleAlert className="size-3.5" />
+            Select an account first.
+          </p>
+        )}
       </div>
+      </PanelBody>
     </Panel>
   )
 }

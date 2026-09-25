@@ -1,5 +1,4 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
-import { ExternalLink, MapPinned, RefreshCw, Zap } from 'lucide-react'
+import { ExternalLink, MapPinned, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
@@ -11,6 +10,7 @@ import {
   Panel,
   PanelBody,
   PanelHeader,
+  RefreshButton,
   Segmented,
 } from '../../../components/page'
 
@@ -80,24 +80,15 @@ export function PennyDBMissionBoard() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {updatedLabel && (
-              <span className="text-[0.7rem] text-muted-foreground">
+              <span className="text-caption text-muted-foreground">
                 {t('home.mission-board.updated', { time: updatedLabel })}
               </span>
             )}
-            <Button
-              disabled={isLoading}
+            <RefreshButton
+              label={t('home.mission-board.refresh')}
+              loading={isLoading}
               onClick={refresh}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              {isLoading ? (
-                <UpdateIcon className="animate-spin" />
-              ) : (
-                <RefreshCw className="size-3.5" />
-              )}
-              {t('home.mission-board.refresh')}
-            </Button>
+            />
             <Button
               onClick={() =>
                 window.electronAPI.openExternalURL(pennyDbLinks.stwMissions)
@@ -164,12 +155,11 @@ export function PennyDBMissionBoard() {
         {errorMessage && !isLoading && rows.length === 0 ? (
           <EmptyState
             action={
-              <Button
+              <RefreshButton
+                label={t('home.mission-board.refresh')}
+                loading={isLoading}
                 onClick={refresh}
-                variant="secondary"
-              >
-                {t('home.mission-board.refresh')}
-              </Button>
+              />
             }
             description={errorMessage}
             title={t('home.mission-board.error')}
@@ -262,7 +252,7 @@ function MissionBoardRow({ row }: { row: PennyDBBoardRow }) {
           aria-hidden
           className="absolute inset-0 bg-current opacity-[0.08]"
         />
-        <span className="figure relative text-[0.8125rem] font-bold leading-none">
+        <span className="figure relative text-ui font-bold leading-none">
           {letter}
         </span>
       </span>
@@ -278,16 +268,16 @@ function MissionBoardRow({ row }: { row: PennyDBBoardRow }) {
               src={typeIcon}
             />
           ) : (
-            <span className="text-[0.65rem] font-bold text-muted-foreground">
+            <span className="text-2xs font-bold text-muted-foreground">
               ?
             </span>
           )}
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-[0.8125rem] font-semibold leading-tight">
+          <span className="block truncate text-ui font-semibold leading-tight">
             {typeName}
           </span>
-          <span className="mt-0.5 block truncate text-[0.65rem] text-muted-foreground">
+          <span className="mt-0.5 block truncate text-2xs text-muted-foreground">
             {t(zoneLabelKeys[row.zone])}
             {row.hasAlert && (
               <>
@@ -388,12 +378,12 @@ function RewardStrip({
                 src={reward.icon}
               />
             ) : (
-              <span className="text-[0.55rem] font-bold text-muted-foreground">
+              <span className="text-3xs font-bold text-muted-foreground">
                 ?
               </span>
             )}
             {quantity > 1 && (
-              <span className="figure absolute -bottom-0.5 -right-0.5 rounded bg-background/90 px-0.5 text-[0.55rem] font-bold leading-none">
+              <span className="figure absolute -bottom-0.5 -right-0.5 rounded bg-background/90 px-0.5 text-3xs font-bold leading-none">
                 {numberWithCommaSeparator(quantity)}
               </span>
             )}
@@ -401,7 +391,7 @@ function RewardStrip({
         )
       })}
       {extra > 0 && (
-        <span className="figure shrink-0 text-[0.65rem] text-muted-foreground/70">
+        <span className="figure shrink-0 text-2xs text-muted-foreground/70">
           +{extra}
         </span>
       )}

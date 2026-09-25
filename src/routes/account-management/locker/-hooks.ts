@@ -107,7 +107,7 @@ export function useLockerPage() {
       window.electronAPI.notificationLockerEquip(async (response) => {
         setEquipping(null)
 
-        toast(
+        toast[response.errorMessage ? 'error' : 'success'](
           response.errorMessage
             ? `Could not equip ${response.itemName}: ${response.errorMessage}`
             : response.templateId
@@ -119,7 +119,7 @@ export function useLockerPage() {
         setCard(response)
 
         if (response.errorMessage) {
-          toast(`Could not draw the card: ${response.errorMessage}`)
+          toast.error(`Could not draw the card: ${response.errorMessage}`)
         }
       }),
       window.electronAPI.progressLockerCard((response) => {

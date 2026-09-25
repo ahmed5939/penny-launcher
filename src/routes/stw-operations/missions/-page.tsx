@@ -33,6 +33,7 @@ export function RouteComponent() {
         <PageHeader
           icon={Compass}
           title={t('sidebar:missions')}
+          description="Today's missions and alerts in every zone, and what each one pays. The board resets at 00:00 UTC."
           section={t('sidebar:groups.stw')}
           actions={<FetchAlertsButton />}
         />

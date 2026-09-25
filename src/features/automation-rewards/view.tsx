@@ -1,14 +1,22 @@
 import type { RecycleLevel, RewardsStatus, RewardEvent } from './model'
 import type { Reward } from '../expeditions/model'
 
+import type { ReactNode } from 'react'
+
 import { useEffect, useMemo, useState } from 'react'
 import { Download, Gift, Recycle, Sparkles, Trash2 } from 'lucide-react'
 
 import { recycleLevels, rewardTotals } from './model'
+import { expeditionKind } from '../expeditions/model'
 import resources from '../../data/resources.json'
 import ingredients from '../../data/ingredients.json'
 
 import { Button } from '../../components/ui/button'
+import { ItemIcon } from '../../components/items/item-icon'
+import { getItemRecord, useItemDatabaseStore } from '../../state/items/database'
+import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
+import { assets } from '../../lib/repository'
+import { cn } from '../../lib/utils'
 import { Callout, Chip, EmptyState, FieldRow, FilterBar, PageHeader, Pager, Panel, PanelBody, PanelHeader, Picker, StatRow, StatTile, downloadJson, paginate } from '../../components/page'
 import type { PickerOption } from '../../components/page'
 
@@ -28,7 +36,7 @@ export function RecycleCeilingPicker({ disabled, onChange, value }: { disabled?:
   return <Picker className="min-w-48" disabled={disabled} label="Recycle new rewards at or below" onChange={onChange} options={recycleCeilingOptions} value={value} />
 }
 
-export function LlamaRecycleSetting({ accountId }: { accountId: string }) {
+function useLlamaRecycling(accountId: string) {
   const [level, setLevel] = useState<RecycleLevel>('off')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(true)
@@ -52,6 +60,11 @@ export function LlamaRecycleSetting({ accountId }: { accountId: string }) {
       setBusy(false)
     }
   }
+  return { busy, error, level, update }
+}
+
+export function LlamaRecycleSetting({ accountId }: { accountId: string }) {
+  const { busy, error, level, update } = useLlamaRecycling(accountId)
   return (
     <FieldRow
       className="py-2.5"
@@ -68,12 +81,62 @@ export function LlamaRecycleSetting({ accountId }: { accountId: string }) {
   )
 }
 
+/** The llama recycling ceiling alone, for a row that already says what it is for. */
+export function LlamaRecyclePicker({ accountId }: { accountId: string }) {
+  const { busy, error, level, update } = useLlamaRecycling(accountId)
+  return (
+    <span className="flex items-center gap-2">
+      <RecycleCeilingPicker disabled={busy} onChange={(next) => void update(next)} value={level} />
+      {error && <span className="text-xs text-destructive" role="alert">{error}</span>}
+    </span>
+  )
+}
+
+/**
+ * An on/off setting drawn as the game's art that lights up when on — the
+ * automate pages' toggles, so a row of settings reads like a loadout rather
+ * than a column of switches.
+ */
+export function ArtToggle({ art, disabled, icon: Icon, label, onChange, pressed, title }: { art?: string; disabled?: boolean; icon?: typeof Gift; label: ReactNode; onChange: (pressed: boolean) => void; pressed: boolean; title?: string }) {
+  const src = art ? assets(art) : undefined
+  return (
+    <button
+      aria-pressed={pressed}
+      className={cn(
+        'flex h-9 items-center gap-2 rounded-lg py-1 pr-3 text-xs font-semibold ring-1 ring-inset transition-colors disabled:opacity-50',
+        src ? 'pl-1' : Icon ? 'pl-2.5' : 'pl-3',
+        pressed ? 'bg-primary/15 text-primary ring-primary/35' : 'bg-muted/40 text-muted-foreground ring-border/60 [&:not(:disabled)]:hover:text-foreground'
+      )}
+      disabled={disabled}
+      onClick={() => onChange(!pressed)}
+      title={title}
+      type="button"
+    >
+      {src && <img alt="" className={cn('size-7 object-contain transition', !pressed && 'opacity-60 grayscale')} draggable={false} src={src} />}
+      {!src && Icon && <Icon aria-hidden className="size-4" />}
+      {label}
+    </button>
+  )
+}
+
 export const periods = { '24 hours': 1, Week: 7, Month: 30, Year: 365, 'All time': Infinity } as const
 export type Period = keyof typeof periods
 export const periodOptions: ReadonlyArray<PickerOption<Period>> = (Object.keys(periods) as Array<Period>).map((p) => ({ value: p, label: p === '24 hours' ? 'Last 24 hours' : p === 'All time' ? 'All time' : `Last ${p.toLowerCase()}` }))
 export const withinPeriod = (timestamp: string, period: Period) => Date.parse(timestamp) >= Date.now() - periods[period] * 86_400_000
 
+/**
+ * The game's name for a reward: the live item database first ("Uncommon
+ * Survivor", "Pump Shotgun"), then the bundled resource tables, and only
+ * then the id in words. Callers that render lists should subscribe to the
+ * item database so names fill in once it loads.
+ */
 export function rewardName(id: string) {
+  // Expeditions have no database row; name them as the game does, not as the id reads.
+  if (/^Expedition:/i.test(id)) return expeditionKind(id).name
+  const record = getItemRecord(useItemDatabaseStore.getState().records, id)
+  if (record?.name) {
+    return record.rarity && /^(Worker|Survivor|Defender)/i.test(record.name) ? `${record.rarity} ${record.name.toLowerCase()}` : record.name
+  }
   const key = id.split(':').pop() ?? id
   const known = ({ ...resources, ...ingredients } as Record<string, { name: string }>)[key]
   return known?.name ?? key.replaceAll('_', ' ')
@@ -81,20 +144,23 @@ export function rewardName(id: string) {
 
 /** A titled list of item → quantity. Used for received, recycled and gained totals everywhere. */
 export function RewardTotals({ empty = 'None recorded for these filters.', icon, items, title }: { empty?: string; icon: typeof Gift; items: Reward[]; title: string }) {
+  const records = useItemDatabaseStore((state) => state.records)
+
   return (
     <Panel>
       <PanelHeader compact icon={icon} title={title} actions={<span className="micro-label">{items.reduce((n, r) => n + r.quantity, 0).toLocaleString()}</span>} />
       {items.length ? (
         <ul className="max-h-72 divide-y divide-border/50 overflow-y-auto">
           {items.map((r) => (
-            <li className="flex items-center justify-between gap-3 px-4 py-2 text-sm" key={r.templateId} title={r.templateId}>
-              <span className="min-w-0 truncate">{rewardName(r.templateId)}</span>
+            <li className="flex items-center gap-2.5 px-4 py-1.5 text-sm" key={r.templateId} title={r.templateId}>
+              <ItemIcon records={records} size="small" templateId={r.templateId} />
+              <span className="min-w-0 flex-1 truncate">{rewardName(r.templateId)}</span>
               <span className="figure shrink-0">{r.quantity.toLocaleString()}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="px-4 py-3 text-sm text-muted-foreground">{empty}</p>
+        <EmptyState className="border-0 bg-transparent py-8" icon={icon} title={empty} />
       )}
     </Panel>
   )
@@ -104,6 +170,8 @@ const statusTone = { received: 'neutral', complete: 'success', recycling: 'warni
 const statusLabel = { received: 'Received', complete: 'Complete', recycling: 'Unconfirmed', error: 'Error' } as const
 
 export function RewardsView() {
+  useRequestItemDatabase()
+  const records = useItemDatabaseStore((state) => state.records)
   const [data, setData] = useState<RewardsStatus>({ accounts: [], llamaRecycling: {}, events: [] })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -134,7 +202,19 @@ export function RewardsView() {
   const sum = (items: Reward[]) => items.reduce((n, r) => n + r.quantity, 0)
   const accountName = (id: string) => data.accounts.find((a) => a.accountId === id)?.name ?? id
   const shown = paginate(events, page, PAGE_SIZE)
-  const quantities = (e: RewardEvent, field: 'received' | 'recycled' | 'resources') => e[field].map((r) => `${r.quantity.toLocaleString()} × ${rewardName(r.templateId)}`).join(', ') || 'None'
+  const quantities = (e: RewardEvent, field: 'received' | 'recycled' | 'resources') =>
+    e[field].length ? (
+      <ul className="flex flex-wrap gap-1.5">
+        {e[field].map((r) => (
+          <li className="figure flex items-center gap-1 rounded-md bg-muted/50 py-0.5 pl-0.5 pr-2 text-xs" key={r.templateId} title={rewardName(r.templateId)}>
+            <ItemIcon records={records} size="small" templateId={r.templateId} />
+            {r.quantity.toLocaleString()}
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <span className="text-muted-foreground">None</span>
+    )
   const breakdown = data.accounts.filter((a) => events.some((e) => e.accountId === a.accountId))
 
   return (
@@ -221,20 +301,21 @@ export function RewardsView() {
                 {shown.items.map((e) => (
                   <li key={e.id}>
                     <details className="group px-5 py-3">
-                      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                        <span className="font-medium">{accountName(e.accountId)}</span>
+                      <summary className="flex list-none flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        {!/^Expedition:/i.test(e.description) && e.description.includes(':') && <ItemIcon records={records} size="small" templateId={e.description} />}
+                        <span className="font-medium">{rewardName(e.description)}</span>
+                        <span className="text-xs text-muted-foreground">{accountName(e.accountId)}</span>
                         <Chip>{e.source === 'llamas' ? 'Auto Llamas' : 'Auto Expeditions'}</Chip>
                         <Chip tone={statusTone[e.status]}>{statusLabel[e.status]}</Chip>
                         <span className="ml-auto text-xs text-muted-foreground">{new Date(e.timestamp).toLocaleString()}</span>
                       </summary>
-                      <dl className="mt-2 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-[8rem_1fr]">
-                        <dt className="text-muted-foreground">What</dt><dd>{rewardName(e.description)}</dd>
+                      <dl className="mt-2.5 grid items-center gap-x-4 gap-y-2 text-xs sm:grid-cols-[6rem_1fr]">
                         <dt className="text-muted-foreground">Received</dt><dd>{quantities(e, 'received')}</dd>
                         <dt className="text-muted-foreground">Recycled</dt><dd>{quantities(e, 'recycled')}</dd>
                         <dt className="text-muted-foreground">Gained</dt><dd>{quantities(e, 'resources')}</dd>
                       </dl>
-                      {e.error && <p className="mt-2 text-xs text-destructive">{e.error}</p>}
-                      {e.status === 'recycling' && <p className="mt-2 text-xs text-warning">Recycling was submitted but confirmation was interrupted. Counts are unverified, and it will not be retried automatically.</p>}
+                      {e.error && <Callout className="mt-2" tone="danger">{e.error}</Callout>}
+                      {e.status === 'recycling' && <Callout className="mt-2" tone="warning">Recycling was submitted but confirmation was interrupted. Counts are unverified, and it will not be retried automatically.</Callout>}
                     </details>
                   </li>
                 ))}

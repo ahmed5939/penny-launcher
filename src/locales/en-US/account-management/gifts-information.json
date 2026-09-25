@@ -1,7 +1,7 @@
 {
   "description": "Gift history on each selected account — who sent which cosmetic, and when.",
   "form": {
-    "submit-button": "Show Gifts"
+    "submit-button": "Show gifts"
   },
   "filters": {
     "search": "Search items, senders, rarities…",

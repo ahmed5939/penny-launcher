@@ -41,7 +41,7 @@ const BreadcrumbList = forwardRef<
     ref={ref}
     className={cn(
       'flex flex-wrap items-center gap-1.5 break-words',
-      'text-[0.8125rem] text-muted-foreground/70',
+      'text-ui text-muted-foreground/70',
       // The current page is the last crumb: render it as the page title.
       '[&>li:last-child]:w-full [&>li:last-child]:basis-full',
       '[&>li:last-child>span]:text-xl [&>li:last-child>span]:font-bold',

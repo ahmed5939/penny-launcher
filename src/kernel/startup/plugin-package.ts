@@ -27,6 +27,8 @@ export async function inspectPlugin(directory: string) {
   const manifestFile = files.find((file) => file.name === 'plugin.json')
   if (!manifestFile || manifestFile.content.length > 64 * 1024) throw new Error('Missing or oversized plugin.json.')
   const manifest = pluginManifestSchema.parse(JSON.parse(manifestFile.content.toString('utf8')))
+  // Previously installed copies must not reopen the removed launcher feature.
+  if (manifest.id === 'endurance') throw new Error('The Endurance add-on has been removed from Penny.')
   const entry = files.find((file) => file.name === (manifest.entry ?? 'main.js'))
   if (!entry || entry.content.length > 1024 * 1024) throw new Error('Missing entry file or entry exceeds 1 MiB.')
   const hash = createHash('sha256')

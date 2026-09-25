@@ -1,7 +1,7 @@
 import { RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '../../../components/ui/button'
+import { EmptyState, RefreshButton } from '../../../components/page'
 
 import { LoadingMissions } from '../-components/-loading'
 import { EndgameTwinePeaksSection } from './endgame-twine-peaks'
@@ -21,7 +21,6 @@ import { usePrimaryAccount } from '../../../hooks/accounts/scope'
 import { numberWithCommaSeparator } from '../../../lib/parsers/numbers'
 import { isLegendaryOrMythicSurvivor } from '../../../lib/validations/resources'
 import { assets } from '../../../lib/repository'
-import { cn } from '../../../lib/utils'
 
 export function HomeAlerts({ summaryOnly = false }: { summaryOnly?: boolean }) {
   const { t } = useTranslation(['general'])
@@ -119,23 +118,24 @@ function PreviewItem({
   quantity: number
 }) {
   return (
-    <li className="panel-interactive group relative flex items-center gap-3 overflow-hidden p-3">
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-      <div className="relative flex size-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 ring-1 ring-inset ring-primary/20">
-        <img decoding="async" loading="lazy"
-          src={imageUrl}
-          className="size-7"
-        />
-      </div>
-      <div className="relative min-w-0 flex-grow">
+    <li className="panel flex items-center gap-3.5 px-4 py-3">
+      {/* The reward's own art, large, not an icon in a tinted tile. */}
+      <img
+        alt=""
+        className="size-12 shrink-0 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
+        decoding="async"
+        loading="lazy"
+        src={imageUrl}
+      />
+      <div className="min-w-0 flex-grow">
         {isLoading ? (
-          <div className="h-[1.4rem] w-14 animate-pulse rounded bg-muted" />
+          <div className="h-7 w-16 animate-pulse rounded bg-muted" />
         ) : (
-          <div className="truncate text-lg font-bold leading-tight tabular-nums">
+          <div className="figure truncate text-display-sm font-bold leading-none">
             {numberWithCommaSeparator(quantity)}
           </div>
         )}
-        <div className="mt-0.5 text-[0.7rem] leading-tight text-muted-foreground">
+        <div className="mt-1 truncate text-xs text-muted-foreground">
           {title}
         </div>
       </div>
@@ -148,41 +148,31 @@ function AlertsEmptyState() {
   const { fetchAlerts, isDisabled, isReloading } = useFetchAlerts()
   const account = usePrimaryAccount()
 
+  /*
+   * `useFetchAlerts` exposes one disabled flag that already covers the reload
+   * in flight, so it goes to `disabled` and the reload itself to `loading`.
+   */
   return (
-    <div className="panel flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <div className="flex size-11 items-center justify-center rounded-full bg-primary/10 ring-1 ring-inset ring-primary/20">
-        <RefreshCw
-          className={cn('size-5 text-primary', {
-            'animate-spin': isReloading,
-          })}
-        />
-      </div>
-      <div>
-        <p className="font-semibold">
-          {t(
-            account
-              ? 'home.alerts.empty-title'
-              : 'home.alerts.login-title'
-          )}
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t(
-            account
-              ? 'home.alerts.empty-description'
-              : 'home.alerts.login-description'
-          )}
-        </p>
-      </div>
-      {account && (
-        <Button
-          className="mt-1"
-          disabled={isDisabled}
-          variant="secondary"
-          onClick={fetchAlerts}
-        >
-          {t('home.alerts.refresh')}
-        </Button>
+    <EmptyState
+      icon={RefreshCw}
+      title={t(
+        account ? 'home.alerts.empty-title' : 'home.alerts.login-title'
       )}
-    </div>
+      description={t(
+        account
+          ? 'home.alerts.empty-description'
+          : 'home.alerts.login-description'
+      )}
+      action={
+        account && (
+          <RefreshButton
+            disabled={isDisabled}
+            label={t('home.alerts.refresh')}
+            loading={isReloading}
+            onClick={fetchAlerts}
+          />
+        )
+      }
+    />
   )
 }

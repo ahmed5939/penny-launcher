@@ -1,0 +1,15 @@
+{
+  "captured_utc": "2026-09-25T14:46:36.819679+00:00",
+  "client_build": "++Fortnite+Release-42.20-CL-58011042-Windows",
+  "client_app_name": "Fortnite",
+  "launcher_manifest_path": "C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests\\F6AC12214F6147BEE7A2C6970388D020.item",
+  "launcher_manifest_sha256": "1683ab122124e7c966eb47060b6f205319aa64510124d1ce9541ccbdf1e44eb5",
+  "paks_path": "C:\\Program Files\\Epic Games\\Fortnite\\FortniteGame\\Content\\Paks",
+  "parser": "StwPerkAudit / CUE4Parse, GAME_UE5_8",
+  "extractor_sha256": "dea70d7590eff05b431cc1b3366dff4434fea6828d213a9c8fde5ccca93836fe",
+  "mounted_archives": 69,
+  "indexed_files": 2487575,
+  "mappings_source": "https://api.fortniteapi.com/v1/mappings/legacy",
+  "mapping_metadata_file": "mappings/source.json",
+  "notes": "Editor Build.version says 42.10; launcher manifest identifies installed Fortnite client as 42.20."
+}

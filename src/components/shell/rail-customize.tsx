@@ -38,7 +38,7 @@ export function RailCustomize({ compact = false }: { compact?: boolean }) {
             aria-label={t('sidebar:customize.title')}
             title={t('sidebar:customize.title')}
             className={cn(
-              'flex items-center gap-2 rounded-lg text-[0.8125rem] text-muted-foreground hover:bg-accent/30 hover:text-foreground',
+              'flex items-center gap-2 rounded-lg text-ui text-muted-foreground hover:bg-accent/30 hover:text-foreground',
               compact ? 'size-10 justify-center' : 'h-8 w-full px-2',
             )}
           >
@@ -50,10 +50,10 @@ export function RailCustomize({ compact = false }: { compact?: boolean }) {
         </PopoverTrigger>
         <PopoverContent align="start" side="right" className="w-64 p-0">
           <div className="border-b border-border/60 px-3 py-2.5">
-            <p className="text-[0.8125rem] font-medium">
+            <p className="text-ui font-medium">
               {t('sidebar:customize.title')}
             </p>
-            <p className="mt-0.5 text-[0.6875rem] leading-snug text-muted-foreground">
+            <p className="mt-0.5 text-caption leading-snug text-muted-foreground">
               {t('sidebar:customize.description')}
             </p>
           </div>
@@ -73,7 +73,7 @@ export function RailCustomize({ compact = false }: { compact?: boolean }) {
           <div className="border-t border-border/60 px-3 py-2">
             <Link
               to="/settings"
-              className="text-[0.6875rem] text-muted-foreground hover:text-foreground"
+              className="text-caption text-muted-foreground hover:text-foreground"
             >
               {t('sidebar:customize.open-settings')}
             </Link>
@@ -115,7 +115,7 @@ function CustomizeSection({ section }: { section: NavSection }) {
           onCheckedChange={updateMenuOption(section.can)}
         />
       ) : (
-        <p className="mb-1 text-[0.6875rem] font-medium text-muted-foreground">
+        <p className="mb-1 text-caption font-medium text-muted-foreground">
           {t(section.label)}
         </p>
       )}
@@ -173,7 +173,7 @@ function ToggleRow({
     <div className="flex items-center justify-between gap-2 py-0.5">
       <Label
         className={cn(
-          'min-w-0 flex-1 cursor-pointer truncate text-[0.75rem] leading-4',
+          'min-w-0 flex-1 truncate text-xs leading-4',
           className,
         )}
         htmlFor={id}

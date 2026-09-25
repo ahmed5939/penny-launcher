@@ -11,10 +11,11 @@ import { useTranslation } from 'react-i18next'
 
 import {
   EmptyState,
+  FilterBar,
   Panel,
-  PanelBody,
+  PanelHeader,
+  SearchField,
 } from '../../../components/page'
-import { Input } from '../../../components/ui/input'
 import { AccountItem } from './-item'
 
 import { useRegisterAccounts } from '../../../hooks/accounts'
@@ -37,33 +38,29 @@ export function AccountCustomization() {
 
   return (
     <Panel>
-      {/* The accordion trigger already names this section. */}
-      <div className="border-b border-border/60 px-5 py-3.5">
-        <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
-          {t('account-customization.description')}
-        </p>
-        <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground/60">
-          {t('account-customization.note')}
-        </p>
-      </div>
-      <PanelBody className="grid gap-3">
-        {accountsArray.length > 1 && (
-          <div className="mb-2">
-            <Input
-              className="pr-20"
-              placeholder={t('form.accounts.placeholder', {
-                ns: 'general',
-                context: !getMenuOptionVisibility('showTotalAccounts')
-                  ? 'private'
-                  : undefined,
-                total: accountsArray.length,
-              })}
-              value={searchValue}
-              onChange={onChangeSearchValue}
-            />
-          </div>
-        )}
-        {accounts.length > 0 ? (
+      <PanelHeader
+        compact
+        description={t('account-customization.description')}
+        title={t('account-customization.title')}
+      />
+      {accountsArray.length > 1 && (
+        <FilterBar>
+          <SearchField
+            label={t('form.accounts.select', { ns: 'general' })}
+            placeholder={t('form.accounts.placeholder', {
+              ns: 'general',
+              context: !getMenuOptionVisibility('showTotalAccounts')
+                ? 'private'
+                : undefined,
+              total: accountsArray.length,
+            })}
+            value={searchValue}
+            onChange={onChangeSearchValue}
+          />
+        </FilterBar>
+      )}
+      {accounts.length > 0 ? (
+        <ul className="divide-y divide-border/30 px-2 py-1">
           <DndContext
             modifiers={[restrictToFirstScrollableAncestor]}
             onDragEnd={reorderAccounts}
@@ -90,14 +87,18 @@ export function AccountCustomization() {
               })}
             </SortableContext>
           </DndContext>
-        ) : (
-          <EmptyState
-            title={t('form.accounts.search-empty', {
-              ns: 'general',
-            })}
-          />
-        )}
-      </PanelBody>
+        </ul>
+      ) : (
+        <EmptyState
+          className="border-0 bg-transparent py-8"
+          title={t('form.accounts.search-empty', {
+            ns: 'general',
+          })}
+        />
+      )}
+      <p className="border-t border-border/30 px-5 py-3 text-xs text-muted-foreground">
+        {t('account-customization.note')}
+      </p>
     </Panel>
   )
 }
@@ -112,28 +113,27 @@ function SortableItem({
   })
 
   return (
-    <div
+    <li
       ref={setNodeRef}
       className={cn(
-        'bg-background flex gap-1 items-center outline-muted-foreground/20 rounded',
+        'flex items-center gap-1 rounded-md bg-card py-1.5 pr-3 outline-1 outline-primary/40',
         data?.className,
         className
       )}
       style={style}
       {...attributes}
     >
-      <div
+      <span
+        aria-hidden
         className={cn(
-          'bg-muted-foreground/5 cursor-grab flex flex-shrink-0 h-full items-center px-2 rounded',
+          'flex cursor-grab items-center self-stretch px-1.5 text-muted-foreground/60 hover:text-foreground',
           data?.handleClassName
         )}
         {...listeners}
       >
-        <div>
-          <GripVertical />
-        </div>
-      </div>
+        <GripVertical className="size-4" />
+      </span>
       {children}
-    </div>
+    </li>
   )
 }

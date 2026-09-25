@@ -2,10 +2,24 @@ import type { ClassValue } from 'clsx'
 import type { AccountData, AccountDataRecord } from '../types/accounts'
 
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
 
 
 import { checkIfCustomDisplayNameIsValid } from './validations/properties'
+
+/*
+ * The named sizes from `tailwind.config.js`. Unregistered, tailwind-merge
+ * reads `text-ui` as a colour and drops the real colour class beside it.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [
+        { text: ['3xs', '2xs', 'caption', 'ui', 'title', 'display-sm', 'display', 'display-lg'] },
+      ],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

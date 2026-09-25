@@ -190,7 +190,7 @@ export function MissionItem({
                   loading="lazy"
                 />
               ) : (
-                <span className="figure relative text-[0.9375rem] font-bold leading-none">
+                <span className="figure relative text-title font-bold leading-none">
                   {mission.zone.letter}
                 </span>
               )}
@@ -203,14 +203,13 @@ export function MissionItem({
               instead of painting over the power figure and the payload bay.
             */}
             <span className="flex min-w-0 items-center gap-3 overflow-hidden py-2.5 pl-3 pr-2 compact:gap-2 compact:pl-2">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/40 ring-1 ring-inset ring-border/60 transition-colors group-hover/brief:ring-primary/25 compact:size-8">
-                <img
-                  src={mission.zone.type.imageUrl}
-                  alt=""
-                  className="ink-glyph size-6 object-contain compact:size-5"
-                  loading="lazy"
-                />
-              </span>
+              {/* The mission type's own glyph, standing alone — no well behind it. */}
+              <img
+                src={mission.zone.type.imageUrl}
+                alt=""
+                className="ink-glyph size-9 shrink-0 object-contain p-0.5 compact:size-8"
+                loading="lazy"
+              />
 
               <span className="flex min-w-0 flex-col gap-1.5">
                 {/*
@@ -225,7 +224,7 @@ export function MissionItem({
                   {typeLabel ?? `#${data.raw.mission.tileIndex}`}
                 </span>
 
-                <span className="mission-meta flex min-w-0 items-center gap-2 text-[0.6875rem] leading-none text-muted-foreground/70">
+                <span className="mission-meta flex min-w-0 items-center gap-2 text-caption leading-none text-muted-foreground/70">
                   {brief.meta.map((reward) => (
                     <span
                       className="flex shrink-0 items-center gap-0.5"
@@ -247,7 +246,7 @@ export function MissionItem({
                         </span>
                       )}
                       {reward.isBad && (
-                        <span className="font-semibold uppercase tracking-[0.06em] text-destructive">
+                        <span className="font-semibold text-destructive">
                           {t('sections.twine-peaks.mid')}
                         </span>
                       )}
@@ -387,17 +386,13 @@ export function MissionItem({
                     {/* Full colour here: expanded, the modifiers are the subject. */}
                     <div className="grid grid-cols-5 gap-1.5">
                       {mission.modifiers.map((modifier) => (
-                        <span
-                          className="grid size-8 place-items-center rounded-lg bg-muted/40 ring-1 ring-inset ring-border/50"
+                        <img
+                          src={modifier.imageUrl}
+                          alt=""
+                          className="size-8 object-contain"
                           key={modifier.id}
-                        >
-                          <img
-                            src={modifier.imageUrl}
-                            alt=""
-                            className="size-5 object-contain"
-                            loading="lazy"
-                          />
-                        </span>
+                          loading="lazy"
+                        />
                       ))}
                     </div>
                   </section>
@@ -408,7 +403,7 @@ export function MissionItem({
                   selectable — but they are reference material, not the reason
                   anyone opened the row, so they sit under everything else.
                 */}
-                <dl className="mt-4 space-y-1.5 border-t border-border/40 pt-3 text-[0.6875rem]">
+                <dl className="mt-4 space-y-1.5 border-t border-border/40 pt-3 text-caption">
                   <div>
                     <dt className="text-muted-foreground/50">
                       {stripColon(t('information.tile-index'))}
@@ -490,11 +485,11 @@ function ScreenshotButton({ id }: { id: string }) {
         }),
       ])
 
-      toast(t('validations.screenshot.success'))
+      toast.success(t('validations.screenshot.success'))
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      toast(t('validations.screenshot.error'))
+      toast.error(t('validations.screenshot.error'))
     }
 
     setIsLoading(false)

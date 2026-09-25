@@ -15,6 +15,23 @@ export type AuthCallbackResponseParam =
       error: string
     }
 
+/**
+ * Progress of a Quick login attempt. The device code never leaves the main
+ * process; the renderer only gets the page to open and the deadline.
+ *
+ * `waiting`: the Epic sign-in page is open and Penny is polling.
+ * `signing-in`: approved; the account is being linked.
+ * `finished`: the attempt is over — the result arrives on the response
+ * channel (`AuthCallbackResponseParam`), except for `cancelled`/`expired`.
+ */
+export type QuickLoginStatusParam =
+  | { status: 'starting' }
+  | { status: 'waiting'; verificationUri: string; expiresAt: number }
+  | { status: 'signing-in' }
+  | { status: 'cancelled' }
+  | { status: 'expired' }
+  | { status: 'finished' }
+
 export type AerialImportCallbackResponseParam = {
   /**
    * `no-file`: no Aerial Launcher data directory on this machine.

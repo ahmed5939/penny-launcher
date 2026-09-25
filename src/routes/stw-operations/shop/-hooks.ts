@@ -1,11 +1,13 @@
-import type { ShopOffer } from '../../../kernel/core/shop'
+import type { AccountResource } from '../../../components/page'
+import type { ShopEntry, ShopOffer } from '../../../kernel/core/shop'
 
 import { useShallow } from 'zustand/react/shallow'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { useItemDatabaseStore } from '../../../state/items/database'
+import { useAccountResource } from '../../../components/page'
+
+import { useAccountListStore } from '../../../state/accounts/list'
 import { useShopStore } from '../../../state/stw-operations/shop'
-import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
@@ -13,78 +15,132 @@ import { rarityLabels } from '../../../config/constants/fortnite/items'
 
 import { toast } from '../../../lib/notifications'
 
+/** How long a follow-up waits for the reply the main process sends by itself. */
+const followTimeoutMs = 15_000
+
 /**
- * IPC listeners and auto-loads for both the account shop and the public
- * catalog. Must stay mounted while this page is open so a purchase started
- * from Browse still gets the MCP response and toast.
+ * The shop IPC is fire-and-forget: the request goes out with a list of
+ * accounts and one payload per account comes back on its own channel. This
+ * turns one account's round trip into a promise for `useAccountResource`.
+ *
+ * `follow` skips the request and waits for the reply the main process
+ * already sends after a purchase, so a purchase costs one shop read rather
+ * than two. If that reply never shows, it asks after all.
  */
-export function useShopPage() {
-  useRequestItemDatabase()
+function readShop(accountId: string, follow: boolean) {
+  const account = useAccountListStore.getState().accounts[accountId]
 
-  const { selected } = useGetSelectedAccount()
-  const accountId = selected?.accountId ?? null
+  if (!account) {
+    return Promise.reject(
+      new Error('This account is no longer in the launcher. Choose another.')
+    )
+  }
 
-  const { catalog, catalogLoading, view } = useShopStore(
-    useShallow((state) => ({
-      catalog: state.catalog,
-      catalogLoading: state.catalogLoading,
-      view: state.view,
-    }))
-  )
-  const {
-    updateCatalog,
-    updateCatalogLoading,
-    updateData,
-    updateLoading,
-    updateOpening,
-    updatePurchasing,
-    updateView,
-  } = useShopStore(
-    useShallow((state) => ({
-      updateCatalog: state.updateCatalog,
-      updateCatalogLoading: state.updateCatalogLoading,
-      updateData: state.updateData,
-      updateLoading: state.updateLoading,
-      updateOpening: state.updateOpening,
-      updatePurchasing: state.updatePurchasing,
-      updateView: state.updateView,
-    }))
-  )
-
-  useEffect(() => {
+  return new Promise<ShopEntry>((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout> | undefined
     const listener = window.electronAPI.responseShop(async (response) => {
-      updateLoading(false)
-      updatePurchasing(null)
-      updateData(response)
+      const entry = response[accountId]
+
+      if (!entry) {
+        return
+      }
+
+      clearTimeout(timer)
+      listener.removeListener()
+
+      if (entry.errorMessage) {
+        reject(
+          new Error(
+            `Could not read this account's shop (${entry.errorMessage}). Try Refresh.`
+          )
+        )
+      } else {
+        resolve(entry)
+      }
     })
 
-    return () => {
-      listener.removeListener()
+    if (follow) {
+      timer = setTimeout(
+        () => window.electronAPI.requestShop([account]),
+        followTimeoutMs
+      )
+    } else {
+      window.electronAPI.requestShop([account])
     }
-  }, [])
+  })
+}
+
+export function useShopResource() {
+  const followNext = useRef(false)
+  const resource = useAccountResource(
+    (accountId) => {
+      const follow = followNext.current
+      followNext.current = false
+
+      return readShop(accountId, follow)
+    },
+    {
+      cacheKey: 'stw.shop',
+      fallbackError: "Could not read this account's shop. Try Refresh.",
+      owner: (result) => result.accountId,
+    }
+  )
+  const { refresh } = resource
+
+  /** Pick up the fresh shop the main process sends after a purchase. */
+  const followUp = useCallback(() => {
+    followNext.current = true
+    refresh()
+  }, [refresh])
+
+  return { followUp, resource }
+}
+
+export type ShopActions = ReturnType<typeof useShopActions>
+
+/**
+ * Purchases and llama opening. Mounted by the page itself, not by either
+ * view, so a purchase started from Browse still gets its response and toast
+ * after switching back.
+ */
+export function useShopActions(
+  resource: AccountResource<ShopEntry>,
+  followUp: () => void
+) {
+  const { selected } = useGetSelectedAccount()
+  const accountId = selected?.accountId ?? null
+  const { refresh } = resource
+
+  /** Offer id currently being bought, so only that button spins. */
+  const [purchasingOfferId, setPurchasing] = useState<string | null>(null)
+  const [isOpening, setOpening] = useState(false)
 
   useEffect(() => {
     const listener = window.electronAPI.notificationShopPurchase(
       async (response) => {
-        updatePurchasing(null)
+        setPurchasing(null)
 
-        toast(
+        toast[response.errorMessage ? 'error' : 'success'](
           response.errorMessage
             ? `Purchase failed: ${response.errorMessage}`
             : `Bought ${response.quantity}× ${response.offerTitle}`
         )
+
+        if (response.accountId === accountId) {
+          followUp()
+        }
       }
     )
 
     return () => {
       listener.removeListener()
     }
-  }, [])
+  }, [accountId, followUp])
 
   useEffect(() => {
     const listener = window.electronAPI.notificationShopOpen(
       async (response) => {
-        updateOpening(false)
+        setOpening(false)
 
         const opened = response.results.reduce(
           (accumulator, current) => accumulator + current.opened,
@@ -92,7 +148,7 @@ export function useShopPage() {
         )
         const failed = response.results.filter((item) => item.errorMessage)
 
-        toast(
+        toast[opened > 0 ? 'success' : 'info'](
           opened > 0
             ? `Opened ${opened} llama${opened === 1 ? '' : 's'}`
             : 'Nothing to open'
@@ -117,24 +173,79 @@ export function useShopPage() {
           .join(', ')
 
         if (lootSummary.length > 0) {
-          toast(`Loot: ${lootSummary}`)
+          toast.info(`Loot: ${lootSummary}`)
         }
 
         if (failed.length > 0) {
-          toast(`Epic reported an error: ${failed[0].errorMessage}`)
+          toast.error(`Epic reported an error: ${failed[0].errorMessage}`)
         }
 
-        if (selected) {
-          updateLoading(true)
-          window.electronAPI.requestShop([selected])
-        }
+        // Opening does not re-read the shop on its own; ask for it.
+        refresh()
       }
     )
 
     return () => {
       listener.removeListener()
     }
-  }, [accountId])
+  }, [refresh])
+
+  const handlePurchase = (offer: ShopOffer, quantity = 1) => {
+    if (!selected || purchasingOfferId !== null) {
+      return
+    }
+
+    setPurchasing(offer.offerId)
+
+    window.electronAPI.purchaseShopOffer(selected, {
+      offerId: offer.offerId,
+      title: offer.title,
+      currency: offer.currency,
+      currencySubType: offer.currencySubType,
+      finalPrice: offer.finalPrice,
+      quantity,
+    })
+  }
+
+  const handleOpenLlamas = () => {
+    if (isOpening || !selected) {
+      return
+    }
+
+    setOpening(true)
+    window.electronAPI.openLlamas([selected])
+  }
+
+  return {
+    isOpening,
+    purchasingOfferId,
+
+    handleOpenLlamas,
+    handlePurchase,
+  }
+}
+
+/**
+ * The public Penny DB catalog. Not an account resource — it is the same for
+ * everyone and needs no sign-in — so it stays in the shop store, where it
+ * survives leaving the page. Loaded the first time Browse is opened.
+ */
+export function useShopCatalog(isActive: boolean) {
+  const { catalog, catalogLoading, catalogSection } = useShopStore(
+    useShallow((state) => ({
+      catalog: state.catalog,
+      catalogLoading: state.catalogLoading,
+      catalogSection: state.catalogSection,
+    }))
+  )
+  const { updateCatalog, updateCatalogLoading, updateCatalogSection } =
+    useShopStore(
+      useShallow((state) => ({
+        updateCatalog: state.updateCatalog,
+        updateCatalogLoading: state.updateCatalogLoading,
+        updateCatalogSection: state.updateCatalogSection,
+      }))
+    )
 
   useEffect(() => {
     const listener = window.electronAPI.responseShopCatalog(
@@ -149,181 +260,33 @@ export function useShopPage() {
     }
   }, [])
 
-  /** Switching account in the title bar reloads the shop. */
-  useEffect(() => {
-    if (accountId && selected) {
-      updateLoading(true)
-      window.electronAPI.requestShop([selected])
-    }
-  }, [accountId])
-
-  useEffect(() => {
-    if (view === 'browse' && catalog === null && !catalogLoading) {
-      updateCatalogLoading(true)
-      window.electronAPI.requestShopCatalog()
-    }
-  }, [view])
-
-  return {
-    updateView,
-    view,
-  }
-}
-
-export function useShopData() {
-  const { selected } = useGetSelectedAccount()
-  const accountId = selected?.accountId ?? null
-
-  const records = useItemDatabaseStore((state) => state.records)
-
-  const { data, isLoading, isOpening, purchasingOfferId, section } =
-    useShopStore(
-      useShallow((state) => ({
-        data: state.data,
-        isLoading: state.isLoading,
-        isOpening: state.isOpening,
-        purchasingOfferId: state.purchasingOfferId,
-        section: state.section,
-      }))
-    )
-  const {
-    updateLoading,
-    updateOpening,
-    updatePurchasing,
-    updateSection,
-  } = useShopStore(
-    useShallow((state) => ({
-      updateLoading: state.updateLoading,
-      updateOpening: state.updateOpening,
-      updatePurchasing: state.updatePurchasing,
-      updateSection: state.updateSection,
-    }))
-  )
-
-  const entry = accountId ? data[accountId] : undefined
-  const offers = (entry?.offers ?? []).filter(
-    (offer) => offer.section === section
-  )
-
-  const isDisabledOpen =
-    isOpening || !accountId || (entry?.unopenedLlamas ?? 0) <= 0
-
-  const handleLoad = () => {
-    if (!selected) {
-      return
-    }
-
-    updateLoading(true)
-    window.electronAPI.requestShop([selected])
-  }
-
-  const handlePurchase = (offer: ShopOffer, quantity = 1) => {
-    if (!selected || purchasingOfferId !== null) {
-      return
-    }
-
-    updatePurchasing(offer.offerId)
-
-    window.electronAPI.purchaseShopOffer(selected, {
-      offerId: offer.offerId,
-      title: offer.title,
-      currency: offer.currency,
-      currencySubType: offer.currencySubType,
-      finalPrice: offer.finalPrice,
-      quantity,
-    })
-  }
-
-  const handleOpenLlamas = () => {
-    if (isDisabledOpen || !selected) {
-      return
-    }
-
-    updateOpening(true)
-    window.electronAPI.openLlamas([selected])
-  }
-
-  return {
-    account: selected ?? null,
-    currencies: entry?.currencies ?? [],
-    errorMessage: entry?.errorMessage ?? null,
-    expiration: entry?.expiration ?? null,
-    hasLoaded: entry !== undefined,
-    isDisabledOpen,
-    isLoading,
-    isOpening,
-    offers,
-    purchasingOfferId,
-    records,
-    section,
-    unopenedLlamas: entry?.unopenedLlamas ?? 0,
-
-    handleLoad,
-    handleOpenLlamas,
-    handlePurchase,
-    updateSection,
-  }
-}
-
-export function useShopCatalog() {
-  const { selected } = useGetSelectedAccount()
-  const accountId = selected?.accountId ?? null
-
-  const { catalog, catalogLoading, catalogSection, data, purchasingOfferId } =
-    useShopStore(
-      useShallow((state) => ({
-        catalog: state.catalog,
-        catalogLoading: state.catalogLoading,
-        catalogSection: state.catalogSection,
-        data: state.data,
-        purchasingOfferId: state.purchasingOfferId,
-      }))
-    )
-  const { updateCatalogLoading, updateCatalogSection, updatePurchasing } =
-    useShopStore(
-      useShallow((state) => ({
-        updateCatalogLoading: state.updateCatalogLoading,
-        updateCatalogSection: state.updateCatalogSection,
-        updatePurchasing: state.updatePurchasing,
-      }))
-    )
-
-  const accountOffers = accountId ? (data[accountId]?.offers ?? []) : []
-  const offersById = new Map(
-    accountOffers.map((offer) => [offer.offerId, offer])
-  )
-
   const handleLoadCatalog = () => {
     updateCatalogLoading(true)
     window.electronAPI.requestShopCatalog()
   }
 
-  const handlePurchase = (offer: ShopOffer, quantity = 1) => {
-    if (!selected || purchasingOfferId !== null) {
-      return
+  useEffect(() => {
+    if (isActive && catalog === null && !catalogLoading) {
+      handleLoadCatalog()
     }
-
-    updatePurchasing(offer.offerId)
-
-    window.electronAPI.purchaseShopOffer(selected, {
-      offerId: offer.offerId,
-      title: offer.title,
-      currency: offer.currency,
-      currencySubType: offer.currencySubType,
-      finalPrice: offer.finalPrice,
-      quantity,
-    })
-  }
+  }, [isActive])
 
   return {
-    account: selected ?? null,
     catalog,
     catalogLoading,
     catalogSection,
     handleLoadCatalog,
-    handlePurchase,
-    offersById,
-    purchasingOfferId,
     updateCatalogSection,
   }
+}
+
+export function useShopView() {
+  return useShopStore(
+    useShallow((state) => ({
+      section: state.section,
+      updateSection: state.updateSection,
+      updateView: state.updateView,
+      view: state.view,
+    }))
+  )
 }

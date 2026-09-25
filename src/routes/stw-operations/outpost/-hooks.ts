@@ -22,7 +22,7 @@ export function useOutpostData() {
 
   const handleRefresh = useCallback(async () => {
     if (!primaryAccount) {
-      toast('Select an account first.')
+      toast.warning('Select an account first.')
       return
     }
 
@@ -45,7 +45,7 @@ export function useOutpostData() {
   const handleScanBase = useCallback(
     async (zoneId: string, saveFile: string) => {
       if (!primaryAccount) {
-        toast('Select an account first.')
+        toast.warning('Select an account first.')
         return
       }
 
@@ -60,7 +60,7 @@ export function useOutpostData() {
         )
         store.setBaseData(zoneId, result)
       } catch {
-        toast('Base scan failed.')
+        toast.error('Base scan failed.')
       } finally {
         store.setLoadingZone(null)
       }

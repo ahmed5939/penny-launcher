@@ -27,12 +27,10 @@ export const customizableMenuSettingsRelations: Record<
   stwOperations: [
     'currentAlerts',
     'autoKick',
-    'taxiService',
-    'party',
     'expeditions',
     'squadPresets',
     'inventory',
-    'compendium',
+    'codex',
     'timeline',
     'quests',
     'loadouts',

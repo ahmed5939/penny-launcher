@@ -93,7 +93,8 @@ export type ZoneQuestLevel = {
   level: number
   /** The SSD itself. */
   defence: { done: boolean; doneAt: string | null }
-  quests: Array<{ name: string; done: boolean; doneAt: string | null }>
+  /** `templateId` is the profile's quest with this name, for its art; null when the account has never had it. */
+  quests: Array<{ name: string; done: boolean; doneAt: string | null; templateId: string | null }>
 }
 
 export type ZoneProgress = {
@@ -114,10 +115,12 @@ export type ZoneProgress = {
  */
 export function zoneProgress(history: QuestHistory, nameOf: (templateId: string) => string | null | undefined): Array<ZoneProgress> {
   const doneByName = new Map<string, string | null>()
+  const templateByName = new Map<string, string>()
   for (const quest of history.quests) {
-    if (!isDone(quest)) continue
     const name = nameOf(quest.templateId)
     if (!name) continue
+    if (!templateByName.has(name) || isDone(quest)) templateByName.set(name, quest.templateId)
+    if (!isDone(quest)) continue
     doneByName.set(name, doneByName.has(name) ? earliest(doneByName.get(name) ?? null, quest.changedAt) : quest.changedAt)
   }
   const shields = stormShields(history)
@@ -131,7 +134,7 @@ export function zoneProgress(history: QuestHistory, nameOf: (templateId: string)
       levels.push({
         level,
         defence: { done: defence.done, doneAt: defence.doneAt },
-        quests: names.map((name) => ({ name, done: doneByName.has(name), doneAt: doneByName.get(name) ?? null })),
+        quests: names.map((name) => ({ name, done: doneByName.has(name), doneAt: doneByName.get(name) ?? null, templateId: templateByName.get(name) ?? null })),
       })
     }
     const all = levels.flatMap((l) => l.quests)

@@ -38,7 +38,7 @@ export function ZonePagination({
     <div className="mt-2 flex items-center gap-1.5">
       {pagination.active > 1 && (
         <Button
-          className="h-9 shrink-0 rounded-xl px-3 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground"
+          className="h-9 shrink-0 rounded-xl px-3 text-caption font-semibold text-muted-foreground hover:text-foreground"
           variant="ghost"
           onClick={pagination.previous}
           disabled={isReloading}
@@ -47,7 +47,7 @@ export function ZonePagination({
         </Button>
       )}
       <Button
-        className="h-9 flex-1 rounded-xl border border-dashed border-border/70 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-primary/40 hover:bg-accent/20 hover:text-foreground disabled:opacity-40"
+        className="h-9 flex-1 rounded-xl border border-dashed border-border/70 text-caption font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:bg-accent/20 hover:text-foreground disabled:opacity-40"
         variant="ghost"
         onClick={pagination.next}
         disabled={pagination.active === totalPages || isReloading}

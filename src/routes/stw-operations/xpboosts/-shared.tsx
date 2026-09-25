@@ -3,9 +3,14 @@ import type { MCPQueryProfileChanges } from '../../../types/services/mcp'
 
 import { useTranslation } from 'react-i18next'
 
+import { KeyValue, StatRow, StatTile } from '../../../components/page'
+
 import { individualLimitBoostedXP } from '../../../config/constants/xpboosts'
 
-import { numberWithCommaSeparator } from '../../../lib/parsers/numbers'
+import {
+  compactNumber,
+  numberWithCommaSeparator,
+} from '../../../lib/parsers/numbers'
 import {
   extractBoostedXP,
   extractFounderStatus,
@@ -47,11 +52,35 @@ export function AccountBasicInformationSection({
       <div className="flex flex-shrink-0 gap-1.5 items-center text-muted-foreground">
         {title}
       </div>
-      <div className="text-white">{value}</div>
+      <div className="text-foreground">{value}</div>
     </div>
   )
 }
 
+/** The locale strings carry a trailing colon for the old inline layout. */
+function label(text: string) {
+  return text.replace(/:\s*$/, '')
+}
+
+function BoostFigure({ art, value }: { art: string; value: ReactNode }) {
+  return (
+    <span className="flex items-center gap-2">
+      <img
+        alt=""
+        className="size-7 object-contain"
+        decoding="async"
+        loading="lazy"
+        src={assets(art)}
+      />
+      {value}
+    </span>
+  )
+}
+
+/**
+ * A player's record as a line of figures, the boosts drawn with the game's
+ * own boost art. Used by the look-up tab and the send sheet.
+ */
 export function SearchedUserData({
   accountId,
   boostedXP,
@@ -83,84 +112,73 @@ export function SearchedUserData({
   )
 
   return (
-    <>
-      <AccountBasicInformationSection
-        title={t('information.account-id')}
-        value={accountId}
-      />
-      {/* <AccountBasicInformationSection
-        title={t('information.power-level')}
-        value="⚡130"
-      /> */}
-      <AccountBasicInformationSection
-        title={t('information.commander-level')}
-        value={numberWithCommaSeparator(commanderLevel)}
-      />
-      <AccountBasicInformationSection
-        title={t('information.boosted-xp')}
-        value={
-          <div className="space-x-1.5">
-            <span>{numberWithCommaSeparator(extractedBoostedXP)}</span>
-            <span>
-              ({numberWithCommaSeparator(individualBoosts)} {t('boosts')})
-            </span>
-          </div>
-        }
-      />
-      <AccountBasicInformationSection
-        title={t('information.days-logged-in')}
-        value={numberWithCommaSeparator(daysLoggedIn)}
-      />
-      <AccountBasicInformationSection
-        title={t('information.collection-book-level')}
-        value={numberWithCommaSeparator(collectionBookLevel)}
-      />
-      {!hideXPBoostsData && (
-        <>
-          <AccountBasicInformationSection
-            title={
-              <>
-                <figure className="size-5">
-                  <img decoding="async" loading="lazy"
-                    src={assets('smallxpboost')}
-                    className="size-[18px]"
-                  />
-                </figure>
-                {t('information.personal-xp-boosts')}
-              </>
-            }
-            value={numberWithCommaSeparator(personalXPBoosts)}
-          />
-          <AccountBasicInformationSection
-            title={
-              <>
-                <figure className="size-5">
-                  <img decoding="async" loading="lazy"
-                    src={assets('smallxpboost_gift')}
-                    className="size-[18px]"
-                  />
-                </figure>
-                {t('information.teammate-xp-boosts')}
-              </>
-            }
-            value={numberWithCommaSeparator(teammateXPBoosts)}
-          />
-        </>
-      )}
-      <AccountBasicInformationSection
-        title={
+    <div className="space-y-4">
+      <StatRow className="gap-x-8">
+        {!hideXPBoostsData && (
           <>
-            <figure className="size-5">
-              <img decoding="async" loading="lazy"
-                src={assets('eventcurrency_founders')}
-                className="size-[18px]"
-              />
-            </figure>
-            {t('information.founder-status')}
+            <StatTile
+              label={label(t('information.teammate-xp-boosts'))}
+              tone="primary"
+              value={
+                <BoostFigure
+                  art="smallxpboost_gift"
+                  value={numberWithCommaSeparator(teammateXPBoosts)}
+                />
+              }
+            />
+            <StatTile
+              label={label(t('information.personal-xp-boosts'))}
+              value={
+                <BoostFigure
+                  art="smallxpboost"
+                  value={numberWithCommaSeparator(personalXPBoosts)}
+                />
+              }
+            />
           </>
-        }
-        value={t(`founder.${extractFounderStatus(founderStatus)}`)}
-      />
-    </>
+        )}
+        <StatTile
+          hint={`${numberWithCommaSeparator(individualBoosts)} ${t('boosts')}`}
+          label={label(t('information.boosted-xp'))}
+          value={compactNumber(extractedBoostedXP)}
+        />
+        <StatTile
+          label={label(t('information.commander-level'))}
+          value={numberWithCommaSeparator(commanderLevel)}
+        />
+        <StatTile
+          label={label(t('information.collection-book-level'))}
+          value={numberWithCommaSeparator(collectionBookLevel)}
+        />
+        <StatTile
+          label={label(t('information.days-logged-in'))}
+          value={numberWithCommaSeparator(daysLoggedIn)}
+        />
+        <StatTile
+          label={label(t('information.founder-status'))}
+          value={
+            <BoostFigure
+              art="eventcurrency_founders"
+              value={
+                <span className="text-base">
+                  {t(`founder.${extractFounderStatus(founderStatus)}`)}
+                </span>
+              }
+            />
+          }
+        />
+      </StatRow>
+      <dl>
+        <KeyValue
+          copyable
+          label={label(t('information.account-id'))}
+          value={
+            <span className="select-text break-all font-mono text-xs">
+              {accountId}
+            </span>
+          }
+        />
+      </dl>
+    </div>
   )
 }

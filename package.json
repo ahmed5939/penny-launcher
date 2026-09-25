@@ -105,7 +105,6 @@
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.162.0",
-    "uiohook-napi": "^1.5.5",
     "update-electron-app": "^3.0.0",
     "use-mask-input": "^3.4.0",
     "zod": "^3.23.8",

@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 
-import { addWindSway, keepFoliageNormals } from './-blueprint-atmosphere'
+import { keepFoliageNormals } from './-blueprint-atmosphere'
 import { isConifer, isPlant, PROP_CONTAINER, PROP_ROCK, PROP_TREE } from './-blueprint-geometry'
 
 import natureUrl from '../../../../assets/outpost-game/nature/nature.glb?url'
@@ -24,7 +24,6 @@ type Archetype = {
   models: Array<string>
   /** Height in build tiles before the save's own scale is applied. */
   height: number
-  sway: number
   shadows: boolean
 }
 
@@ -33,28 +32,24 @@ const ARCHETYPES = {
     height: 2.3,
     models: ['CommonTree_1', 'CommonTree_2', 'CommonTree_3', 'CommonTree_4', 'CommonTree_5'],
     shadows: true,
-    sway: 0.035,
   },
   bush: {
     height: 0.5,
     models: ['Bush_Common_Flowers', 'Plant_1_Big', 'Fern_1'],
     shadows: true,
-    sway: 0.12,
   },
   conifer: {
     height: 2.9,
     models: ['Pine_1', 'Pine_2', 'Pine_3', 'Pine_4', 'Pine_5'],
     shadows: true,
-    sway: 0.03,
   },
-  dead: { height: 2.2, models: ['DeadTree_1', 'DeadTree_4'], shadows: true, sway: 0.01 },
+  dead: { height: 2.2, models: ['DeadTree_1', 'DeadTree_4'], shadows: true },
   ground: {
     height: 0.2,
     models: ['Grass_Wispy_Short', 'Grass_Wispy_Tall', 'Grass_Common_Tall', 'Grass_Common_Tall', 'Flower_3_Group', 'Plant_1'],
     shadows: false,
-    sway: 0.35,
   },
-  rock: { height: 0.62, models: ['Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3'], shadows: true, sway: 0 },
+  rock: { height: 0.62, models: ['Rock_Medium_1', 'Rock_Medium_2', 'Rock_Medium_3'], shadows: true },
 } satisfies Record<string, Archetype>
 
 export type ArchetypeName = keyof typeof ARCHETYPES
@@ -189,7 +184,6 @@ export type NaturePlacement = {
 export function buildNatureMeshes(
   library: NatureLibrary,
   placements: Array<NaturePlacement>,
-  windTime: { value: number },
   track: <T extends { dispose: () => void }>(resource: T) => T
 ) {
   const groups = new Map<string, Array<NaturePlacement>>()
@@ -222,7 +216,6 @@ export function buildNatureMeshes(
       const material = track(part.material.clone())
 
       if (material.alphaTest > 0) keepFoliageNormals(material)
-      if (archetype.sway > 0) addWindSway(material, windTime, archetype.sway)
       const mesh = new THREE.InstancedMesh(part.geometry, material, group.length)
 
       group.forEach((placement, index) => {

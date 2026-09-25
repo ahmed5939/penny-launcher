@@ -164,10 +164,10 @@ const config: ForgeConfig = {
      * stay as real files on disk so users can inspect their README and source
      * before choosing to install them.
      */
-    extraResource: ['./plugins', './endurance-assets', './rare-item-finder-assets'],
+    extraResource: ['./plugins', './rare-item-finder-assets'],
   },
   /**
-   * Both native dependencies ship Node-API prebuilds: sharp and uiohook-napi.
+   * Sharp ships Node-API prebuilds.
    * Node-API binaries are independent of Electron's module ABI, so rebuilding
    * them is unnecessary and makes Forge fall back to a local node-gyp
    * toolchain. An explicit empty allow-list is important: omitting
@@ -191,7 +191,7 @@ const config: ForgeConfig = {
   ],
   plugins: [
     /**
-     * sharp and uiohook-napi (used by the endurance plugin) load native
+     * Native dependencies load native
      * .node binaries, which cannot run from inside the asar archive.
      */
     new AutoUnpackNativesPlugin({}),

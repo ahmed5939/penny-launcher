@@ -8,6 +8,13 @@ import { RuntimeLog } from '../runtime-log'
 
 import { getQueryProfileAthena, getQueryProfileMainProfile } from '../../services/endpoints/mcp'
 import { findUsersByAccountIds } from '../../services/endpoints/lookup'
+import {
+  type CosmeticsCatalog,
+  getCosmeticsCatalog,
+  prettifyCosmeticId,
+  resolveCosmetic,
+  splitTemplateId,
+} from './locker-catalog'
 
 /**
  * Gift history — who gifted cosmetics to an account, and when.
@@ -52,109 +59,65 @@ export type GiftsInformationEntry = {
 
 export type GiftsInformationPayload = Record<string, GiftsInformationEntry>
 
-type CosmeticsCatalogue = Map<
-  string,
-  { name: string; image: string | null; type: string | null; rarity: string | null }
->
-
-/** Re-downloaded roughly daily; the catalogue only moves when Fortnite patches. */
-const cosmeticsCacheMaxAgeMs = 24 * 60 * 60 * 1000
-
-let cosmeticsCatalogue: CosmeticsCatalogue | null = null
-let cosmeticsCatalogueFetchedAt = 0
-let cosmeticsCatalogueRequest: Promise<CosmeticsCatalogue | null> | null = null
-
-function prettifyTemplateId(templateId: string) {
-  const leaf = templateId.split(':').pop() ?? templateId
-
-  return leaf
-    .split('_')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-}
-
-async function getCatalogue(): Promise<CosmeticsCatalogue | null> {
-  if (
-    cosmeticsCatalogue &&
-    Date.now() - cosmeticsCatalogueFetchedAt < cosmeticsCacheMaxAgeMs
-  ) {
-    return cosmeticsCatalogue
-  }
-
-  if (!cosmeticsCatalogueRequest) {
-    cosmeticsCatalogueRequest = (async () => {
-      try {
-        const response = await fetch(
-          'https://fortnite-api.com/v2/cosmetics/br',
-          { signal: AbortSignal.timeout(15_000) }
-        )
-
-        if (!response.ok) {
-          return null
-        }
-
-        const body = (await response.json()) as {
-          data?: Array<{
-            id?: string
-            name?: string
-            type?: { displayValue?: string }
-            rarity?: { displayValue?: string }
-            images?: { smallIcon?: string; icon?: string }
-          }>
-        }
-        const catalogue: CosmeticsCatalogue = new Map()
-
-        body.data?.forEach((cosmetic) => {
-          if (!cosmetic.id) {
-            return
-          }
-
-          catalogue.set(cosmetic.id.toLowerCase(), {
-            name: cosmetic.name || cosmetic.id,
-            image: cosmetic.images?.smallIcon ?? cosmetic.images?.icon ?? null,
-            type: cosmetic.type?.displayValue ?? null,
-            rarity: cosmetic.rarity?.displayValue ?? null,
-          })
-        })
-
-        cosmeticsCatalogue = catalogue
-        cosmeticsCatalogueFetchedAt = Date.now()
-
-        return catalogue
-
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
-        RuntimeLog.error('caught:core/gifts-information.ts', error)
-
-        return null
-      } finally {
-        cosmeticsCatalogueRequest = null
-      }
-    })()
-  }
-
-  return cosmeticsCatalogueRequest
-}
-
+/**
+ * Names and art come from the locker's shared catalogue, which spans every
+ * fortnite-api document — a gifted jam track (`SparksSong:`), instrument or
+ * car part is not in the BR list, and resolving against that alone left them
+ * as a prettified slug with no picture.
+ */
 function toCosmetic(
-  catalogue: CosmeticsCatalogue | null,
+  catalog: CosmeticsCatalog | null,
   templateId: string,
   creationTime: string | null
 ): GiftsInformationCosmetic {
-  const cosmeticId = templateId.split(':')[1] ?? null
-  const entry = cosmeticId
-    ? catalogue?.get(cosmeticId.toLowerCase())
-    : undefined
+  const { backendType, id } = splitTemplateId(templateId)
+  const cosmeticId = id || null
+
+  if (!catalog) {
+    return {
+      templateId,
+      cosmeticId,
+      name: prettifyCosmeticId(id),
+      image: null,
+      type: null,
+      rarity: null,
+      creationTime,
+    }
+  }
+
+  const meta = resolveCosmetic(catalog, templateId)
+  const key = id.toLowerCase()
+
+  /*
+   * The page shows Epic's display strings ("Outfit", "Icon Series"), which
+   * `CosmeticMeta` folds away, so they are read off the raw entry. Jam
+   * tracks have no type or rarity of their own.
+   */
+  const raw =
+    catalog.br.get(key) ??
+    catalog.br.get(key.split(':')[0]) ??
+    catalog.instruments.get(key) ??
+    catalog.cars.get(key)
+  const isTrack = backendType === 'SparksSong' && meta.resolved
 
   return {
     templateId,
     cosmeticId,
-    name: entry?.name ?? prettifyTemplateId(templateId),
-    image: entry?.image ?? null,
-    type: entry?.type ?? null,
-    rarity: entry?.rarity ?? null,
+    name: meta.name,
+    image: meta.imageUrl,
+    type: isTrack ? 'Jam Track' : (raw?.type?.displayValue ?? null),
+    rarity: isTrack ? null : (raw?.rarity?.displayValue ?? null),
     creationTime,
+  }
+}
+
+async function getCatalog() {
+  try {
+    return await getCosmeticsCatalog()
+  } catch (error) {
+    RuntimeLog.error('caught:core/gifts-information.ts', error)
+
+    return null
   }
 }
 
@@ -211,7 +174,7 @@ export class GiftsInformation {
           accessToken,
           accountId: account.accountId,
         }),
-        getCatalogue(),
+        getCatalog(),
       ])
 
       const giftHistory =

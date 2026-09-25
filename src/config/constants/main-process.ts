@@ -103,6 +103,11 @@ export enum ElectronAPIEventKeys {
   CreateAuthWithDevice = 'auth:create:device',
   ResponseAuthWithDevice = 'auth:create:device:response',
 
+  CreateAuthWithQuickLogin = 'auth:create:quick',
+  CancelAuthWithQuickLogin = 'auth:create:quick:cancel',
+  QuickLoginStatus = 'auth:create:quick:status',
+  ResponseAuthWithQuickLogin = 'auth:create:quick:response',
+
   ImportAccountsFromAerial = 'accounts:import-from-aerial',
   ResponseImportAccountsFromAerial = 'accounts:import-from-aerial:response',
 
@@ -140,25 +145,13 @@ export enum ElectronAPIEventKeys {
   XPBoostsConsumeTeammate = 'xpboosts:consume:teammate',
   XPBoostsConsumeTeammateNotification = 'xpboosts:consume:teammate:notification',
   XPBoostsConsumeTeammateProgressionNotification = 'xpboosts:consume:teammate:progression:notification',
-
-  /**
-   * Party
-   */
-
-  PartyClaimAction = 'party:claim',
   PartyClaimActionNotification = 'party:claim:notification',
-  PartyKickAction = 'party:kick',
   PartyKickActionNotification = 'party:kick:notification',
   PartyKickActionGlobalNotification = 'party:kick:global:notification',
-  PartyLeaveAction = 'party:leave',
-  PartyLeaveActionNotification = 'party:leave:notification',
 
   ClaimRewardsClientNotification = 'claim-rewards:client:notification',
   ClaimRewardsClientGlobalSyncNotification = 'claim-rewards:client:global:sync:notification',
   ClaimRewardsClientGlobalAutoClaimedNotification = 'claim-rewards:client:global-auto-claimed:notification',
-
-  PartyLoadFriends = 'party:load:friends',
-  PartyLoadFriendsNotification = 'party:load:friends:notification',
   PartyAddNewFriendAction = 'party:friend:add',
   PartyAddNewFriendActionNotification = 'party:friend:add:notification',
   PartyInviteAction = 'party:invite',
@@ -243,30 +236,6 @@ export enum ElectronAPIEventKeys {
   AutomationServiceRemoveNotification = 'automation:service:remove:notification',
   AutomationServiceActionUpdate = 'automation:service:action:update',
   AutomationServiceActionUpdateNotification = 'automation:service:action:update:notification',
-
-  /**
-   * Taxi Service
-   */
-
-  TaxiServiceServiceRequestData = 'taxi-service:service:request:data',
-  TaxiServiceServiceAddAccounts = 'taxi-service:service:add',
-  // TaxiServiceServiceAddAccountsNotification = 'taxi-service:service:add:notification',
-  TaxiServiceServiceResponseData = 'taxi-service:service:response:data',
-  TaxiServiceServiceStart = 'taxi-service:service:start',
-  TaxiServiceServiceStartNotification = 'taxi-service:service:start:notification',
-  TaxiServiceServiceReload = 'taxi-service:service:reload',
-  TaxiServiceServiceReloadNotification = 'taxi-service:service:reload:notification',
-  TaxiServiceServiceRemove = 'taxi-service:service:remove',
-  TaxiServiceServiceRemoveNotification = 'taxi-service:service:remove:notification',
-  TaxiServiceServiceActionUpdate = 'taxi-service:service:action:update',
-  TaxiServiceServiceActionUpdateNotification = 'taxi-service:service:action:update:notification',
-
-  TaxiServiceWhitelistAdd = 'taxi-service:whitelist:add',
-  TaxiServiceWhitelistRemove = 'taxi-service:whitelist:remove',
-
-  TaxiServiceServiceLog = 'taxi-service:service:log',
-
-  TaxiServiceServiceNotifications = 'taxi-service:service:notifications',
 
   /**
    * Urns
@@ -499,16 +468,4 @@ export enum ElectronAPIEventKeys {
   PluginOpen = 'plugins:open',
   PluginNavigate = 'plugins:navigate',
   PluginAccountScopeSync = 'plugins:account-scope:sync',
-
-  /**
-   * Endurance
-   */
-
-  EnduranceStatusRequest = 'endurance:status:request',
-  EnduranceStart = 'endurance:start',
-  EnduranceStop = 'endurance:stop',
-  EnduranceConfigUpdate = 'endurance:config:update',
-  EnduranceCalibrateStart = 'endurance:calibrate:start',
-  EnduranceCalibrateCancel = 'endurance:calibrate:cancel',
-  EnduranceNotification = 'endurance:notification',
 }

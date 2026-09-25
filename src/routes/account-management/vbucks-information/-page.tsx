@@ -1,15 +1,18 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
 import dayjs from 'dayjs'
 import { Coins } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import Masonry from 'react-responsive-masonry'
 
-import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
+import { Skeleton } from '../../../components/ui/skeleton'
 import {
+  AnimatedNumber,
   Chip,
+  EmptyState,
+  KeyValue,
   PageHeader,
   Panel,
+  RefreshButton,
 } from '../../../components/page'
 
 import type {
@@ -57,27 +60,13 @@ function bundleCounts(
     .sort((a, b) => b.amount - a.amount)
 }
 
+/**
+ * The wallet, the way the game shows it: the V-Bucks coin large beside the
+ * balance, then one card per account in the title-bar scope. Balances fetch
+ * themselves when the scope changes, so Refresh is the only control.
+ */
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar', 'account-management'])
-
-  return (
-    <>
-      <PageHeader
-        icon={Coins}
-        section={t('account-management.title')}
-        title={t('account-management.options.vbucks-information')}
-        description={t('vbucks-information.description', {
-          ns: 'account-management',
-        })}
-      />
-      <Content />
-    </>
-  )
-}
-
-function Content() {
-  const { t } = useTranslation(['account-management', 'general'])
-
   const {
     data,
     handleGetInfo,
@@ -87,132 +76,179 @@ function Content() {
   } = useVBucksInformationData()
 
   return (
-    <>
-      {/* The account question is answered by the titlebar picker. */}
-      <div className="flex items-center border-b border-border/60 pb-3">
-        <Button
-          className="ml-auto min-w-40"
-          onClick={handleGetInfo}
-          disabled={isDisabledForm}
-        >
-          {isLoading ? (
-            <UpdateIcon className="animate-spin" />
-          ) : (
-            t('vbucks-information.form.submit-button')
-          )}
-        </Button>
-      </div>
+    <div
+      className="space-y-6"
+      id="vbucks-card"
+    >
+      <PageHeader
+        actions={
+          <RefreshButton
+            disabled={isDisabledForm}
+            loading={isLoading}
+            onClick={handleGetInfo}
+          />
+        }
+        description="Every account in the title-bar scope: balance, where it came from and what was bought."
+        icon={Coins}
+        section={t('account-management.title')}
+        title={t('account-management.options.vbucks-information')}
+      />
 
-      {data.length > 0 && (
+      {data.length > 0 ? (
         <>
-          {/*
-            The grand total was centred display type floating between two
-            cards. It reads better as a banner that owns the results below.
-          */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/[0.06] px-5 py-4">
-            <span className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {t('vbucks-information.results.title', {
-                total: data.length,
-              })}
-            </span>
-            <span className="flex items-center gap-1.5 text-3xl font-bold tabular-nums">
-              <img decoding="async" loading="lazy"
-                src={vbucksImageUrl}
-                className="size-7"
-                alt="vbucks"
-              />
-              {numberWithCommaSeparator(vbucksSummary)}
-            </span>
-          </div>
+          <WalletHero
+            accounts={data.length}
+            total={vbucksSummary}
+          />
 
           <Masonry
-            columnsCount={3}
+            columnsCount={data.length === 1 ? 1 : data.length === 2 ? 2 : 3}
             gutter="0.75rem"
           >
             {data.map((item) => (
-              <AccountInfo
+              <AccountWallet
                 data={item}
                 key={item.accountId}
               />
             ))}
           </Masonry>
         </>
+      ) : isLoading ? (
+        <div
+          className="flex items-center gap-4"
+          role="status"
+        >
+          <span className="sr-only">Loading balances…</span>
+          <Skeleton className="size-16 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+        </div>
+      ) : (
+        <EmptyState
+          description="Pick one or more accounts in the title bar and their balances load here."
+          icon={Coins}
+          title="No accounts in scope"
+        />
       )}
 
-      <GoToTop containerId="selector-card" />
-    </>
+      <GoToTop containerId="vbucks-card" />
+    </div>
   )
 }
 
-function AccountInfo({ data }: { data: VBucksInformationData }) {
+function WalletHero({ accounts, total }: { accounts: number; total: number }) {
+  return (
+    <div className="flex items-center gap-5">
+      <img
+        alt=""
+        className="size-20 shrink-0 object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.4)]"
+        decoding="async"
+        src={vbucksImageUrl}
+      />
+      <div className="min-w-0">
+        <p className="figure text-display-lg font-bold leading-none">
+          <AnimatedNumber value={total} />
+        </p>
+        <p className="mt-2 text-ui text-muted-foreground">
+          V-Bucks
+          {accounts > 1 && (
+            <>
+              {' across '}
+              <span className="figure">{accounts}</span> accounts
+            </>
+          )}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function AccountWallet({ data }: { data: VBucksInformationData }) {
   const { account, breakdown, details, total } = useParseAccountInfo({ data })
+  const bundles = breakdown ? bundleCounts(breakdown.purchaseHistory) : []
 
   return (
-    <Panel key={data.accountId}>
-      <header className="border-b border-border/60 px-4 py-3">
-        <p className="truncate text-[0.8125rem] font-medium">
-          {parseCustomDisplayName(account)}
-        </p>
-        <p className="mt-1 flex items-center gap-1.5 text-xl font-bold tabular-nums">
-          <img decoding="async" loading="lazy"
-            src={vbucksImageUrl}
-            className="size-5"
-            alt="vbucks"
-          />
-          {numberWithCommaSeparator(total)}
-        </p>
+    <Panel>
+      <header className="flex items-center gap-3 px-4 pb-3 pt-4">
+        <img
+          alt=""
+          className="size-10 shrink-0 object-contain"
+          decoding="async"
+          loading="lazy"
+          src={vbucksImageUrl}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="figure text-display-sm font-bold leading-none">
+            {numberWithCommaSeparator(total)}
+          </p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {parseCustomDisplayName(account)}
+          </p>
+        </div>
       </header>
 
       {breakdown && (
-        <div className="border-b border-border/40 px-4 py-3">
-          <div className="grid grid-cols-3 gap-2">
-            <BreakdownStat
+        <>
+          {/* Three figures in a line — where the balance came from. */}
+          <dl className="grid grid-cols-3 gap-3 px-4 pb-3">
+            <Figure
               label="Purchased"
               value={breakdown.purchased}
             />
-            <BreakdownStat
+            <Figure
               label="Earned"
               value={breakdown.earned}
             />
-            <BreakdownStat
+            <Figure
               label="Complimentary"
               value={breakdown.complimentary}
             />
-          </div>
+          </dl>
 
-          <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-            <p>
-              Platform: <span className="text-foreground">{breakdown.currentPlatform}</span>
-            </p>
-            <p>
-              Gifts today:{' '}
-              <span className="text-foreground">
-                {breakdown.giftsAllowed
-                  ? breakdown.giftsRemaining !== null
-                    ? `${breakdown.giftsRemaining} remaining`
-                    : 'Allowed'
-                  : 'Not allowed'}
-              </span>
-            </p>
+          <dl className="grid grid-cols-2 gap-3 border-t border-border/40 px-4 py-3">
+            <KeyValue
+              label="Platform"
+              value={breakdown.currentPlatform}
+            />
+            <KeyValue
+              label="Gifts today"
+              value={
+                breakdown.giftsAllowed ? (
+                  breakdown.giftsRemaining !== null ? (
+                    <span>
+                      <span className="figure">{breakdown.giftsRemaining}</span> left
+                    </span>
+                  ) : (
+                    'Allowed'
+                  )
+                ) : (
+                  <span className="text-muted-foreground">Not allowed</span>
+                )
+              }
+            />
             {breakdown.creatorCode && (
-              <p>
-                Creator code: <span className="text-foreground">{breakdown.creatorCode}</span>
-              </p>
+              <KeyValue
+                className="col-span-2"
+                label="Creator code"
+                value={breakdown.creatorCode}
+              />
             )}
-          </div>
+          </dl>
 
           {breakdown.sources.length > 0 && (
-            <ul className="mt-3 space-y-1 border-t border-border/40 pt-2">
+            <ul className="divide-y divide-border/30 border-t border-border/40 px-4 py-1">
               {breakdown.sources.map((source) => (
                 <li
-                  className="flex items-center justify-between gap-3 text-xs"
+                  className="flex items-center justify-between gap-3 py-1.5 text-xs"
                   key={`${source.type}-${source.platform}`}
                 >
                   <span className="min-w-0 truncate text-muted-foreground">
                     {source.platform}
                     {source.count > 1 && ` ×${source.count}`}
                   </span>
-                  <span className="shrink-0 font-semibold tabular-nums">
+                  <span className="figure shrink-0 font-semibold">
                     {numberWithCommaSeparator(source.amount)}
                   </span>
                 </li>
@@ -221,29 +257,30 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
           )}
 
           {breakdown.purchaseHistory.length > 0 && (
-            <div className="mt-3 border-t border-border/40 pt-2">
-              <p className="micro-label text-muted-foreground">
-                Purchase history · {breakdown.purchaseCount}{' '}
+            <div className="border-t border-border/40 px-4 py-3">
+              <p className="text-ui font-medium">
+                <span className="figure">{breakdown.purchaseCount}</span>{' '}
                 {breakdown.purchaseCount === 1 ? 'purchase' : 'purchases'}
               </p>
 
-              {bundleCounts(breakdown.purchaseHistory).length > 0 && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  {bundleCounts(breakdown.purchaseHistory).map(
-                    ({ amount, count }) => (
-                      <Chip key={amount} tone={count > 1 ? 'accent' : 'neutral'}>
-                        {bundleLabel(amount)}
-                        {count > 1 && ` ×${count}`}
-                      </Chip>
-                    ),
-                  )}
+              {bundles.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {bundles.map(({ amount, count }) => (
+                    <Chip
+                      key={amount}
+                      tone={count > 1 ? 'accent' : 'neutral'}
+                    >
+                      {bundleLabel(amount)}
+                      {count > 1 && ` ×${count}`}
+                    </Chip>
+                  ))}
                 </div>
               )}
 
-              <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto pr-1">
+              <ul className="mt-2 max-h-56 divide-y divide-border/30 overflow-y-auto pr-1">
                 {breakdown.purchaseHistory.map((purchase, index) => (
                   <li
-                    className="flex items-center justify-between gap-3 text-xs"
+                    className="flex items-center justify-between gap-3 py-1.5 text-xs"
                     key={`${purchase.date ?? 'unknown'}-${index}`}
                   >
                     <span className="min-w-0 truncate text-muted-foreground">
@@ -252,7 +289,7 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
                         : 'Unknown date'}
                       {purchase.platform && ` · ${purchase.platform}`}
                     </span>
-                    <span className="shrink-0 font-semibold tabular-nums">
+                    <span className="figure shrink-0 font-semibold">
                       {numberWithCommaSeparator(purchase.amount)}
                     </span>
                   </li>
@@ -260,20 +297,20 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
               </ul>
             </div>
           )}
-        </div>
+        </>
       )}
 
       {details.length > 0 && (
-        <ul className="divide-y divide-border/40">
+        <ul className="divide-y divide-border/30 border-t border-border/40 bg-surface/40 px-4 py-1">
           {details.map(([templateId, currency]) => (
             <li
-              className="flex items-center justify-between gap-3 px-4 py-2 text-xs"
+              className="flex items-center justify-between gap-3 py-1.5 text-xs"
               key={templateId}
             >
               <span className="min-w-0 truncate text-muted-foreground">
                 {currency.platform} {currency.template}
               </span>
-              <span className="shrink-0 font-semibold tabular-nums">
+              <span className="figure shrink-0 font-semibold">
                 {numberWithCommaSeparator(currency.quantity)}
               </span>
             </li>
@@ -284,19 +321,13 @@ function AccountInfo({ data }: { data: VBucksInformationData }) {
   )
 }
 
-function BreakdownStat({
-  label,
-  value,
-}: {
-  label: string
-  value: number
-}) {
+function Figure({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-border/60 px-2 py-1.5 text-center">
-      <p className="text-sm font-semibold tabular-nums">
+    <div className="min-w-0">
+      <dt className="micro-label">{label}</dt>
+      <dd className="figure mt-1 text-sm font-bold">
         {numberWithCommaSeparator(value)}
-      </p>
-      <p className="micro-label text-muted-foreground">{label}</p>
+      </dd>
     </div>
   )
 }

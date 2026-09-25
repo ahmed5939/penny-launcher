@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { availableLanguages } from '../../../config/constants/settings'
 import { Language } from '../../../locales/resources'
 
-import { Label } from '../../../components/ui/label'
+import { FieldRow } from '../../../components/page'
 import {
   Select,
   SelectContent,
@@ -22,10 +22,10 @@ export function LanguageSelector() {
   const { language, updateLanguage } = useLanguage()
 
   return (
-    <div>
-      <Label htmlFor="app-settings-language">
-        {t('app-settings.form.language.label')}
-      </Label>
+    <FieldRow
+      hint={t('app-settings.form.language.note')}
+      label={t('app-settings.form.language.label')}
+    >
       <Select
         onValueChange={(language: Language) => {
           window.electronAPI.changeAppLanguage(language)
@@ -36,7 +36,8 @@ export function LanguageSelector() {
         value={language ?? undefined}
       >
         <SelectTrigger
-          className="mt-2"
+          aria-label={t('app-settings.form.language.label')}
+          className="w-56"
           id="app-settings-language"
         >
           <SelectValue
@@ -59,6 +60,6 @@ export function LanguageSelector() {
           ))}
         </SelectContent>
       </Select>
-    </div>
+    </FieldRow>
   )
 }

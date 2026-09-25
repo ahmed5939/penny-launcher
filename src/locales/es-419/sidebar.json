@@ -3,20 +3,17 @@
     "title": "Operaciones STW",
     "options": {
       "auto-kick": "Auto-expulsar",
-      "taxi-service": "Servicio de Taxi",
-      "party": "Grupo",
       "expeditions": "Expediciones",
       "squad-presets": "Escuadras de Supervivientes",
       "inventory": "Bóveda",
-      "compendium": "Compendio",
+      "codex": "Códice",
       "quests": "Registro de Misiones",
       "loadouts": "Equipos de Héroes",
       "timeline": "Cronología de Eventos",
       "shop": "Tienda STW",
       "xp-boosts": "Potenciadores",
       "auto-pin-urns": "Fijar misiones automáticamente",
-      "auto-llamas": "Auto-llamas",
-      "endurance": "Endurance"
+      "auto-llamas": "Auto-llamas"
     },
     "auto-kick-status": {
       "issue": "Revisar",

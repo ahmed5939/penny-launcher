@@ -17,7 +17,6 @@ import {
 import { LoadAccounts } from './bootstrap/components/load-accounts'
 import { LoadAutoLlamas } from './bootstrap/components/load-auto-llamas'
 import { LoadAutomation } from './bootstrap/components/load-automation'
-import { LoadFriends } from './bootstrap/components/load-friends'
 import { LoadItemDatabase } from './bootstrap/components/load-item-database'
 import { LoadPennyDBMissions } from './bootstrap/components/load-pennydb-missions'
 import { LoadSettings } from './bootstrap/components/load-settings'
@@ -30,14 +29,23 @@ import { useAccountScopeStore } from './state/accounts/scope'
 
 import 'dayjs/locale/es'
 import { localeReady } from './locale'
+import { installNativeInput } from './lib/native-input'
 
 dayjs.extend(localizedFormat)
 dayjs.extend(relativeTime)
 dayjs.extend(timezone)
 dayjs.extend(utc)
 
+installNativeInput()
+
 const root = createRoot(document.getElementById('app')!)
-const router = createRouter({ routeTree })
+const router = createRouter({
+  routeTree,
+  // Start loading a page's code and loaders on hover/focus, so the click
+  // lands on something already warm. 50ms skips pointer fly-overs.
+  defaultPreload: 'intent',
+  defaultPreloadDelay: 50,
+})
 
 // Add-ons request routes through the main process. Keep that bridge inside
 // TanStack Router so packaged file:// URLs are never manipulated directly.
@@ -138,7 +146,6 @@ function DeferredBootstrap() {
     <>
       {stage >= 1 && (
         <>
-          <LoadFriends />
           <LoadHomeWorldInfo />
         </>
       )}

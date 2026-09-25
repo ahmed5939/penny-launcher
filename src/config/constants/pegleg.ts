@@ -30,11 +30,16 @@ export const peglegResourcesBaseURL = `https://raw.githubusercontent.com/${pegle
  * It is the 95 faces the game picks from when it rolls a survivor, and a
  * survivor's profile item points at one through its `portrait` attribute —
  * without it every unnamed survivor in the account is the same silhouette.
+ *
+ * `Ammo` and `WorldItem` are tiny (17 and 6 rows) and are the only source of
+ * the ammunition and wood/stone/metal names and icons the backpack, storage
+ * and reward screens show.
  */
 export const peglegNamedItemFiles = [
   'Ability',
   'AccountResource',
   'Alteration',
+  'Ammo',
   'CardPack',
   'Defender',
   'Gadget',
@@ -46,6 +51,7 @@ export const peglegNamedItemFiles = [
   'Trap',
   'Worker',
   'WorkerPortrait',
+  'WorldItem',
 ] as const
 
 /**

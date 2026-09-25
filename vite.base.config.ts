@@ -22,7 +22,6 @@ export const external = [
   'ps-list',
   'sharp',
   'stanza',
-  'uiohook-napi',
 ]
 
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {

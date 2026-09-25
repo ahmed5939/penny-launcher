@@ -1,30 +1,21 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
-import {
-  Activity,
-  Bell,
-  ChevronDown,
-  Gauge,
-  MapPin,
-  ShieldCheck,
-  Wrench,
-} from 'lucide-react'
+import { Activity, Bell, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
 import { BetaBadge } from '../../../components/navigation/beta-badge'
-import { Button } from '../../../components/ui/button'
 import { Switch } from '../../../components/ui/switch'
 import {
   Callout,
   Chip,
+  FieldGroup,
+  FieldRow,
   PageHeader,
   Panel,
   PanelBody,
   PanelHeader,
-  StatRow,
-  StatTile,
+  RefreshButton,
   StatusDot,
   StatusPill,
   type StatusTone,
@@ -33,6 +24,8 @@ import {
 import type { EpicComponentStatus } from '../../../kernel/core/server-status'
 
 import { useServerStatusData } from './-hooks'
+
+import { cn } from '../../../lib/utils'
 
 dayjs.extend(relativeTime)
 
@@ -103,40 +96,12 @@ export function RouteComponent() {
             <BetaBadge />
           </span>
         }
-        description="Live health of every Epic Games service, with incident history. Auto-refreshes every 3 minutes."
-        status={
-          overall ? (
-            <StatusPill
-              pulse={overall.tone === 'active'}
-              tone={overall.tone}
-            >
-              {overall.label}
-            </StatusPill>
-          ) : isUnknown ? (
-            <StatusPill tone="idle">Unknown</StatusPill>
-          ) : isDown ? (
-            <StatusPill tone="danger">Down</StatusPill>
-          ) : (
-            <StatusPill
-              pulse
-              tone="active"
-            >
-              Operational
-            </StatusPill>
-          )
-        }
+        description="Whether Fortnite is up, the health of every Epic service and recent incidents."
         actions={
-          <Button
-            className="min-w-32"
+          <RefreshButton
+            loading={isLoading}
             onClick={handleCheck}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <UpdateIcon className="animate-spin" />
-            ) : (
-              'Check again'
-            )}
-          </Button>
+          />
         }
       />
 
@@ -149,205 +114,290 @@ export function RouteComponent() {
         </Callout>
       )}
 
-      {summary && summary.total > 0 && (
-        <StatRow className="lg:grid-cols-5">
-          <StatTile
-            tone="success"
-            value={summary.operational}
-            label="Operational"
-          />
-          <StatTile
-            tone="warning"
-            value={summary.degraded}
-            label="Degraded"
-          />
-          <StatTile
-            tone="danger"
-            value={summary.partialOutage}
-            label="Partial outage"
-          />
-          <StatTile
-            tone="danger"
-            value={summary.majorOutage}
-            label="Major outage"
-          />
-          <StatTile
-            tone="default"
-            value={summary.maintenance}
-            label="Maintenance"
-          />
-        </StatRow>
-      )}
+      <NowPanel
+        diagnostics={diagnostics}
+        entries={entries}
+        headline={
+          overall ??
+          (isUnknown
+            ? { label: 'Status unknown', tone: 'idle' }
+            : isDown
+              ? { label: 'Fortnite is down', tone: 'danger' }
+              : { label: 'Fortnite is up', tone: 'active' })
+        }
+        lastCheckedAt={lastCheckedAt}
+        summary={summary}
+      />
 
-      {diagnostics && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Panel className="flex items-center gap-3 p-4">
-            <MapPin className="size-5 text-primary" />
-            <div>
-              <p className="text-sm font-semibold">Detected Epic region</p>
-              <p className="text-xs text-muted-foreground">
-                {[diagnostics.city, diagnostics.subdivision, diagnostics.country]
-                  .filter(Boolean)
-                  .join(', ') || diagnostics.continent || 'Unavailable'}
-              </p>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="min-w-0 space-y-6">
+          {groups.length > 0 && (
+            <div className="grid items-start gap-6 lg:grid-cols-2">
+              {groups.map((group) => {
+                const degraded = group.children.some(
+                  (child) =>
+                    child.status === 'partial_outage' ||
+                    child.status === 'major_outage'
+                )
+                const warn = !degraded && (
+                  group.status === 'degraded_performance' ||
+                  group.children.some(
+                    (child) => child.status === 'degraded_performance'
+                  )
+                )
+
+                return (
+                  <Panel key={group.id}>
+                    <PanelHeader
+                      title={group.name}
+                      actions={
+                        <StatusPill
+                          tone={
+                            degraded ? 'danger' : warn ? 'warning' : 'active'
+                          }
+                          variant="dot"
+                        >
+                          {degraded
+                            ? 'Issues'
+                            : warn
+                              ? 'Degraded'
+                              : 'Operational'}
+                        </StatusPill>
+                      }
+                      compact
+                    />
+                    <ul className="px-5 py-2">
+                      {group.children.map((child) => (
+                        <ComponentLine
+                          key={child.id}
+                          name={child.name}
+                          status={child.status}
+                        />
+                      ))}
+                    </ul>
+                  </Panel>
+                )
+              })}
             </div>
-          </Panel>
-          <Panel className="flex items-center gap-3 p-4">
-            <Gauge className="size-5 text-primary" />
-            <div>
-              <p className="text-sm font-semibold">Epic API latency</p>
-              <p className="text-xs text-muted-foreground">
-                {diagnostics.latencyMs} ms · {latencyLabel(diagnostics.latencyMs)}
-              </p>
-            </div>
-          </Panel>
+          )}
+
+          {standalone.length > 0 && (
+            <Panel>
+              <PanelHeader
+                title="Other Epic services"
+                compact
+              />
+              <ul className="grid gap-x-8 px-5 py-2 sm:grid-cols-2 lg:grid-cols-3">
+                {standalone.map((component) => (
+                  <ComponentLine
+                    key={component.id}
+                    name={component.name}
+                    status={component.status}
+                  />
+                ))}
+              </ul>
+            </Panel>
+          )}
         </div>
-      )}
 
-      {entries.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="min-w-0 space-y-6">
+          <IncidentHistory incidents={incidents} />
+          <NotificationRules />
+        </div>
+      </div>
+    </>
+  )
+}
+
+/** One component: its name, and its state as a dot and a word. */
+function ComponentLine({
+  name,
+  status,
+}: {
+  name: string
+  status: EpicComponentStatus
+}) {
+  const quiet = status === 'operational'
+
+  return (
+    <li className="flex items-center justify-between gap-3 py-1.5">
+      <span className="min-w-0 truncate text-ui text-foreground/90">
+        {name}
+      </span>
+      <span className="flex shrink-0 items-center gap-2">
+        <StatusDot tone={componentTones[status]} />
+        <span
+          className={cn(
+            'text-xs',
+            quiet ? 'text-muted-foreground' : 'font-medium text-foreground'
+          )}
+        >
+          {componentLabels[status]}
+        </span>
+      </span>
+    </li>
+  )
+}
+
+type ServerStatus = ReturnType<typeof useServerStatusData>
+
+/**
+ * The answer first: is Fortnite up, in one line you can read from across the
+ * room, then what backs it — the game service, how many Epic components are
+ * healthy, where Epic thinks you are and how fast it answers.
+ */
+function NowPanel({
+  diagnostics,
+  entries,
+  headline,
+  lastCheckedAt,
+  summary,
+}: {
+  diagnostics: ServerStatus['diagnostics']
+  entries: ServerStatus['entries']
+  headline: { label: string; tone: StatusTone }
+  lastCheckedAt: ServerStatus['lastCheckedAt']
+  summary: ServerStatus['summary']
+}) {
+  const issues = summary
+    ? summary.degraded + summary.partialOutage + summary.majorOutage
+    : 0
+  const region = diagnostics
+    ? [diagnostics.city, diagnostics.subdivision, diagnostics.country]
+        .filter(Boolean)
+        .join(', ') ||
+      diagnostics.continent ||
+      'Unavailable'
+    : null
+
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center gap-x-10 gap-y-4 px-5 py-5">
+        <div className="min-w-0 flex-1 basis-72">
+          <p
+            className={cn(
+              'flex items-center gap-3 text-display-sm font-semibold leading-tight',
+              headlineText[headline.tone]
+            )}
+          >
+            <StatusDot
+              className="size-2.5"
+              pulse={headline.tone === 'active'}
+              tone={headline.tone}
+            />
+            {headline.label}
+          </p>
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            {lastCheckedAt
+              ? `Checked ${dayjs(lastCheckedAt).format('LT')} · rechecks every 3 minutes`
+              : 'Rechecks every 3 minutes'}
+          </p>
+        </div>
+
+        <dl className="flex flex-wrap gap-x-8 gap-y-3">
           {entries.map((entry) => (
-            <Panel
-              className="p-4"
+            <Figure
               key={entry.serviceId}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">
-                    {serviceLabels[entry.serviceId] ?? entry.serviceId}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Game service availability
-                  </p>
-                </div>
-                {entry.status === 'UP' ? (
-                  <StatusPill tone="active">Up</StatusPill>
-                ) : entry.status === 'DOWN' ? (
-                  <StatusPill tone="danger">Down</StatusPill>
-                ) : (
-                  <StatusPill tone="idle">Unknown</StatusPill>
-                )}
-              </div>
+              label={serviceLabels[entry.serviceId] ?? entry.serviceId}
+              tone={
+                entry.status === 'UP'
+                  ? 'text-success'
+                  : entry.status === 'DOWN'
+                    ? 'text-destructive'
+                    : undefined
+              }
+              value={
+                entry.status === 'UP'
+                  ? 'Up'
+                  : entry.status === 'DOWN'
+                    ? 'Down'
+                    : 'Unknown'
+              }
+            />
+          ))}
+          {summary && summary.total > 0 && (
+            <Figure
+              label="Components healthy"
+              tone={issues > 0 ? 'text-warning' : undefined}
+              value={`${summary.operational} / ${summary.total}`}
+            />
+          )}
+          {diagnostics && (
+            <Figure
+              label={latencyLabel(diagnostics.latencyMs)}
+              value={`${diagnostics.latencyMs} ms`}
+            />
+          )}
+          {region && <Figure label="Epic region" value={region} />}
+        </dl>
+      </div>
 
+      {entries.some((entry) => entry.message || entry.banned) && (
+        <div className="space-y-3 border-t border-border/30 px-5 py-4">
+          {entries.map((entry) => (
+            <div className="space-y-3" key={entry.serviceId}>
               {entry.message && (
-                <p className="mt-3 border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
+                <p className="text-ui leading-relaxed text-muted-foreground">
                   {entry.message}
                 </p>
               )}
-
               {entry.banned && (
-                <p className="mt-2 text-xs font-medium text-destructive">
+                <Callout tone="danger">
                   This account is banned from the service.
-                </p>
+                </Callout>
               )}
-            </Panel>
+            </div>
           ))}
         </div>
       )}
 
-      {groups.length > 0 && (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {groups.map((group) => {
-            const degraded = group.children.some(
-              (child) =>
-                child.status === 'partial_outage' ||
-                child.status === 'major_outage'
-            )
-            const warn = !degraded && (
-              group.status === 'degraded_performance' ||
-              group.children.some(
-                (child) => child.status === 'degraded_performance'
-              )
-            )
-
-            return (
-              <Panel key={group.id}>
-                <PanelHeader
-                  icon={ShieldCheck}
-                  title={group.name}
-                  actions={
-                    <StatusPill
-                      tone={
-                        degraded ? 'danger' : warn ? 'warning' : 'active'
-                      }
-                      pulse={!degraded && !warn}
-                    >
-                      {degraded
-                        ? 'Issues'
-                        : warn
-                          ? 'Degraded'
-                          : 'Operational'}
-                    </StatusPill>
-                  }
-                  compact
-                />
-                <PanelBody className="py-2">
-                  <ul className="divide-y divide-border/40">
-                    {group.children.map((child) => (
-                      <li
-                        className="flex items-center justify-between gap-3 py-2"
-                        key={child.id}
-                      >
-                        <span className="min-w-0 truncate text-[0.8125rem] text-foreground/90">
-                          {child.name}
-                        </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <StatusDot tone={componentTones[child.status]} />
-                          <span className="micro-label text-muted-foreground">
-                            {componentLabels[child.status]}
-                          </span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </PanelBody>
-              </Panel>
-            )
-          })}
-        </div>
-      )}
-
-      {standalone.length > 0 && (
-        <Panel>
-          <PanelHeader
-            icon={ShieldCheck}
-            title="Other Epic services"
-            compact
-          />
-          <PanelBody>
-            <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-              {standalone.map((component) => (
-                <div
-                  className="flex items-center justify-between gap-3 py-1"
-                  key={component.id}
-                >
-                  <span className="min-w-0 truncate text-[0.8125rem] text-foreground/90">
-                    {component.name}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-2">
-                    <StatusDot tone={componentTones[component.status]} />
-                    <span className="micro-label text-muted-foreground">
-                      {componentLabels[component.status]}
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </PanelBody>
-        </Panel>
-      )}
-
-      <IncidentHistory incidents={incidents} />
-
-      {lastCheckedAt && (
-        <p className="text-xs text-muted-foreground">
-          Last checked {dayjs(lastCheckedAt).format('LT')} · next check in 3
-          minutes
+      {summary && issues + summary.maintenance > 0 && (
+        <p className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border/30 px-5 py-2.5 text-xs text-muted-foreground">
+          {summary.degraded > 0 && (
+            <span className="text-warning">{summary.degraded} degraded</span>
+          )}
+          {summary.partialOutage > 0 && (
+            <span className="text-destructive">
+              {summary.partialOutage} partial outage
+            </span>
+          )}
+          {summary.majorOutage > 0 && (
+            <span className="text-destructive">
+              {summary.majorOutage} major outage
+            </span>
+          )}
+          {summary.maintenance > 0 && (
+            <span>{summary.maintenance} in maintenance</span>
+          )}
         </p>
       )}
+    </Panel>
+  )
+}
 
-      <NotificationRules />
-    </>
+const headlineText: Record<StatusTone, string> = {
+  active: 'text-foreground',
+  danger: 'text-destructive',
+  idle: 'text-foreground',
+  warning: 'text-warning',
+}
+
+function Figure({
+  label,
+  tone,
+  value,
+}: {
+  label: string
+  tone?: string
+  value: string
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="micro-label">{label}</dt>
+      <dd className={cn('figure mt-1.5 truncate text-title font-semibold', tone)}>
+        {value}
+      </dd>
+    </div>
   )
 }
 
@@ -397,9 +447,7 @@ function IncidentHistory({
   return (
     <Panel>
       <PanelHeader
-        icon={Wrench}
-        title="Incident history"
-        description="Unresolved incidents first, plus anything resolved in the last two weeks."
+        title="Incidents"
         actions={
           incidents.length > 0 ? (
             <Chip tone="neutral">
@@ -412,8 +460,8 @@ function IncidentHistory({
       />
       <PanelBody className="py-2">
         {incidents.length === 0 ? (
-          <p className="py-3 text-sm text-muted-foreground">
-            No incidents on record. Epic's status page is quiet.
+          <p className="py-3 text-ui text-muted-foreground">
+            Nothing in the last two weeks. Epic's status page is quiet.
           </p>
         ) : (
           <ul className="divide-y divide-border/40">
@@ -430,10 +478,10 @@ function IncidentHistory({
                     onClick={() => toggle(incident.id)}
                   >
                     <ChevronDown
-                      className={`size-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                      className={cn('size-4 shrink-0 text-muted-foreground transition-transform', !isOpen && '-rotate-90')}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[0.8125rem] font-medium text-foreground/90">
+                      <span className="block truncate text-ui font-medium text-foreground/90">
                         {incident.name}
                       </span>
                       <span className="mt-0.5 block truncate text-xs text-muted-foreground">
@@ -455,14 +503,14 @@ function IncidentHistory({
                   </button>
 
                   {isOpen && incident.updates.length > 0 && (
-                    <div className="space-y-3 border-l border-border/50 pb-4 pl-4 ml-2">
+                    <div className="ml-2 space-y-3 border-l border-border/50 pb-4 pl-4">
                       {[...incident.updates].reverse().map((update) => (
                         <div key={update.id}>
                           <p className="micro-label text-muted-foreground">
                             {update.status || 'update'} ·{' '}
                             {dayjs(update.createdAt).format('MMM D, LT')}
                           </p>
-                          <p className="mt-1 text-[0.8125rem] leading-relaxed text-foreground/80">
+                          <p className="mt-1 text-ui leading-relaxed text-foreground/80">
                             {update.body}
                           </p>
                         </div>
@@ -514,29 +562,28 @@ function NotificationRules() {
   }
 
   return (
-    <Panel className="p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Bell className="size-4 text-primary" />
-        <p className="text-sm font-semibold">Notification rules</p>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Rule label="Service goes down" checked={rules.serverDown} onChange={(value) => toggle('serverDown', value)} />
-        <Rule label="Service recovers" checked={rules.serverRecovered} onChange={(value) => toggle('serverRecovered', value)} />
-        <Rule label="New friend requests" checked={rules.friendRequests} onChange={(value) => toggle('friendRequests', value)} />
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Rules are evaluated whenever server status or the friends list refreshes.
-      </p>
+    <Panel>
+      <PanelHeader
+        compact
+        icon={Bell}
+        title="Notify me when"
+      />
+      <PanelBody>
+        <FieldGroup>
+          <Rule label="A service goes down" checked={rules.serverDown} onChange={(value) => toggle('serverDown', value)} />
+          <Rule label="A service recovers" checked={rules.serverRecovered} onChange={(value) => toggle('serverRecovered', value)} />
+          <Rule label="A friend request arrives" checked={rules.friendRequests} onChange={(value) => toggle('friendRequests', value)} />
+        </FieldGroup>
+      </PanelBody>
     </Panel>
   )
 }
 
 function Rule({ checked, label, onChange }: { checked: boolean; label: string; onChange: (value: boolean) => void }) {
   return (
-    <label className="flex items-center justify-between gap-3 rounded-lg border border-border/60 px-3 py-2 text-xs">
-      {label}
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </label>
+    <FieldRow className="py-3" label={label}>
+      <Switch aria-label={label} checked={checked} onCheckedChange={onChange} />
+    </FieldRow>
   )
 }
 

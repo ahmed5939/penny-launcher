@@ -65,8 +65,8 @@ describe('quest history', () => {
     }), 'acc')
     const stonewood = zoneProgress(history, (id) => names[id])[0]
     expect(stonewood.levels[0].quests).toEqual([
-      { name: 'Before and After Science', done: true, doneAt: '2024-01-05T00:00:00Z' },
-      { name: 'Ride the Lightning', done: false, doneAt: null },
+      { name: 'Before and After Science', done: true, doneAt: '2024-01-05T00:00:00Z', templateId: 'Quest:a' },
+      { name: 'Ride the Lightning', done: false, doneAt: null, templateId: 'Quest:b' },
     ])
     expect(stonewood.levels[0].defence.done).toBe(true)
     expect(stonewood.questsDone).toBe(1)

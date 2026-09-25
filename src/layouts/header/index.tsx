@@ -1,6 +1,6 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { useShallow } from 'zustand/react/shallow'
-import { Contact, Rocket, Square, Search } from 'lucide-react'
+import { Contact, FolderOpen, Rocket, Square, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../components/ui/button'
@@ -9,6 +9,7 @@ import { Sheet, SheetContent } from '../../components/ui/sheet'
 import { AccountSwitcher } from '../../components/shell/account-switcher'
 import { OverflowMenu } from '../../components/shell/overflow-menu'
 import { useGameAction } from '../../hooks/ui/game-action'
+import { useGameInstall } from '../../hooks/game-install'
 import { HistoryMenu } from '../../components/menu/history'
 import { Kbd } from '../../components/page'
 import { PennyAvatar } from '../../components/branding/penny-portrait'
@@ -38,6 +39,7 @@ import { cn } from '../../lib/utils'
  */
 export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { t } = useTranslation(['general'])
+  const onHome = useRouterState({ select: (state) => state.location.pathname === '/' })
 
   return (
     <header
@@ -51,7 +53,7 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
         title="Penny"
       >
         <PennyAvatar className="size-[22px] shadow-[0_0_10px_hsl(var(--primary)/0.45)] transition-transform group-hover:scale-105" />
-        <span className="brand-text text-[0.9375rem] font-bold leading-none tracking-tight max-[760px]:hidden">
+        <span className="brand-text text-title font-bold leading-none tracking-tight max-[760px]:hidden">
           Penny
         </span>
       </Link>
@@ -82,7 +84,8 @@ export function Header({ onOpenPalette }: { onOpenPalette: () => void }) {
       <div className="not-draggable-region ml-auto flex items-center gap-1 pr-1">
         <AccountSwitcher />
 
-        <LaunchGameButton />
+        {/* Home has the big Play button; two launch buttons on one screen is one too many. */}
+        {!onHome && <LaunchGameButton />}
 
         <FriendsToggle />
 
@@ -100,7 +103,22 @@ function LaunchGameButton() {
   const { isRunning, canLaunch, launch, close } = useGameAction({
     autoLoad: true,
   })
+  const { status } = useGameInstall({ autoLoad: false })
   const label = isRunning ? t('close-game.button') : t('launch-game.button')
+
+  // A greyed-out Launch says nothing about why. When the game is not found,
+  // say so and go to Home, where the hero offers the fix.
+  if (!isRunning && status && !status.install.found) {
+    return (
+      <Button asChild size="sm" title={t('home.game.missing-title')} variant="secondary">
+        <Link to="/">
+          <FolderOpen className="size-4" />
+          <span className="max-[700px]:hidden">Set up game</span>
+        </Link>
+      </Button>
+    )
+  }
+
   return (
     <Button
       type="button"
@@ -159,7 +177,7 @@ function FriendsToggle() {
       {total > 0 && (
         <span
           className={cn(
-            'figure rounded-lg px-1 text-[0.625rem] font-semibold',
+            'figure rounded-lg px-1 text-2xs font-semibold',
             isOpen ? 'bg-primary/20' : 'bg-muted',
           )}
         >

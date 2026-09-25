@@ -7,7 +7,6 @@ import {
   Backpack,
   Hammer,
   CalendarRange,
-  Car,
   Cog,
   Coins,
   Compass,
@@ -18,6 +17,7 @@ import {
   Globe,
   History,
   LayoutDashboard,
+  Library,
   Monitor,
   Pin,
   Puzzle,
@@ -25,7 +25,6 @@ import {
   Radar,
   ScrollText,
   Shield,
-  ShieldHalf,
   Shirt,
   Store,
   Swords,
@@ -33,9 +32,13 @@ import {
   Trash2,
   Trophy,
   UserPlus,
+  UserRound,
   Users,
-  UsersRound,
   Zap,
+  Crown,
+  Gamepad2,
+  HeartPulse,
+  Target,
 } from 'lucide-react'
 
 /**
@@ -54,6 +57,12 @@ export type MenuKey = keyof CustomizableMenuSettings
 export type NavItem = {
   /** Still settling — a small badge, not a quarantine. */
   beta?: boolean
+  /**
+   * Translation key of a sub-heading inside the section, the way the
+   * PennyDB profile splits Save the World into Overview, Roster, Inventory
+   * and Activity. Consecutive items share it.
+   */
+  group?: string
   /** Account administration shown after the everyday tools. */
   secondary?: boolean
   /** Customisable-menu key controlling visibility. */
@@ -67,7 +76,7 @@ export type NavItem = {
   needsAccount?: boolean
   params?: Record<string, string>
   /** Live status source, if this tool runs in the background. */
-  status?: 'auto-kick' | 'taxi-service'
+  status?: 'auto-kick'
   to: string
 }
 
@@ -116,23 +125,6 @@ export const navSections: Array<NavSection> = [
     icon: Zap,
     can: 'stwOperations',
     items: [
-      // Auto-kick is temporarily disabled: the party endpoints it relies on
-      // no longer work while a match is running. Restore the entry
-      // (icon: UserX, status: 'auto-kick', to: '/stw-operations/automation')
-      // once kicking works in-game again.
-      {
-        can: 'taxiService',
-        icon: Car,
-        label: 'sidebar:stw-operations.options.taxi-service',
-        status: 'taxi-service',
-        to: '/stw-operations/taxi-service',
-      },
-      {
-        can: 'party',
-        icon: Users,
-        label: 'sidebar:stw-operations.options.party',
-        to: '/stw-operations/party',
-      },
       {
         can: 'expeditions',
         icon: Compass,
@@ -176,38 +168,65 @@ export const navSections: Array<NavSection> = [
     can: 'stwOperations',
     items: [
       {
+        group: 'sidebar:groups.stw-overview',
         can: 'currentAlerts',
         icon: Compass,
         label: 'sidebar:missions',
         to: '/stw-operations/missions',
       },
+      {
+        group: 'sidebar:groups.stw-overview',
+        icon: UserRound,
+        label: 'sidebar:stw-operations.options.profile',
+        needsAccount: true,
+        to: '/stw-operations/profile',
+      },
+      {
+        group: 'sidebar:groups.stw-roster',
+        can: 'inventory',
+        icon: Crown,
+        label: 'sidebar:stw-operations.options.heroes',
+        to: '/stw-operations/heroes',
+      },
+      {
+        group: 'sidebar:groups.stw-roster',
+        can: 'inventory',
+        icon: HeartPulse,
+        label: 'sidebar:stw-operations.options.survivors',
+        to: '/stw-operations/survivors',
+      },
+      {
+        group: 'sidebar:groups.stw-roster',
+        can: 'inventory',
+        icon: Target,
+        label: 'sidebar:stw-operations.options.defenders',
+        to: '/stw-operations/defenders',
+      },
+      {
+        group: 'sidebar:groups.stw-roster',
+        can: 'squadPresets',
+        icon: Users,
+        label: 'sidebar:stw-operations.options.squad-presets',
+        to: '/stw-operations/squads',
+      },
+      {
+        group: 'sidebar:groups.stw-roster',
+        can: 'loadouts',
+        icon: Gamepad2,
+        label: 'sidebar:stw-operations.options.loadouts',
+        to: '/stw-operations/loadouts',
+      },
       // Four pages rather than one vault with tabs. They share the
       // `inventory` menu toggle so existing menu preferences still apply.
       {
+        group: 'sidebar:groups.stw-inventory',
         can: 'inventory',
         icon: Hammer,
         label: 'sidebar:stw-operations.options.schematics',
         to: '/stw-operations/schematics',
       },
       {
-        can: 'inventory',
-        icon: Swords,
-        label: 'sidebar:stw-operations.options.heroes',
-        to: '/stw-operations/heroes',
-      },
-      {
-        can: 'inventory',
-        icon: ShieldHalf,
-        label: 'sidebar:stw-operations.options.defenders',
-        to: '/stw-operations/defenders',
-      },
-      {
-        can: 'inventory',
-        icon: UsersRound,
-        label: 'sidebar:stw-operations.options.survivors',
-        to: '/stw-operations/survivors',
-      },
-      {
+        group: 'sidebar:groups.stw-inventory',
         beta: true,
         icon: Backpack,
         label: 'sidebar:stw-operations.options.backpack-storage',
@@ -215,12 +234,7 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/backpack',
       },
       {
-        can: 'loadouts',
-        icon: Users,
-        label: 'sidebar:stw-operations.options.loadouts',
-        to: '/stw-operations/loadouts',
-      },
-      {
+        group: 'sidebar:groups.stw-inventory',
         beta: true,
         icon: BookOpen,
         label: 'sidebar:stw-operations.options.collection-book',
@@ -228,13 +242,7 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/collection-book',
       },
       {
-        beta: true,
-        icon: Map,
-        label: 'sidebar:stw-operations.options.ventures',
-        needsAccount: true,
-        to: '/stw-operations/ventures',
-      },
-      {
+        group: 'sidebar:groups.stw-inventory',
         beta: true,
         icon: Radar,
         label: 'sidebar:stw-operations.options.rare-item-finder',
@@ -242,42 +250,36 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/rare-item-finder',
       },
       {
-        can: 'squadPresets',
-        icon: Swords,
-        label: 'sidebar:stw-operations.options.squad-presets',
-        to: '/stw-operations/squads',
+        group: 'sidebar:groups.stw-inventory',
+        can: 'codex',
+        icon: Library,
+        label: 'sidebar:stw-operations.options.codex',
+        to: '/stw-operations/codex',
       },
       {
+        group: 'sidebar:groups.stw-activity',
         can: 'quests',
         icon: ScrollText,
         label: 'sidebar:stw-operations.options.quests',
         to: '/stw-operations/quests',
       },
       {
-        can: 'shop',
-        icon: Store,
-        label: 'sidebar:stw-operations.options.shop',
-        to: '/stw-operations/shop',
-      },
-      {
+        group: 'sidebar:groups.stw-activity',
         beta: true,
-        icon: Trophy,
-        label: 'stw-operations:leaderboards.title',
-        to: '/stw-operations/leaderboards',
+        icon: Map,
+        label: 'sidebar:stw-operations.options.ventures',
+        needsAccount: true,
+        to: '/stw-operations/ventures',
       },
       {
-        can: 'timeline',
-        icon: CalendarRange,
-        label: 'sidebar:stw-operations.options.timeline',
-        to: '/stw-operations/timeline',
+        group: 'sidebar:groups.stw-activity',
+        can: 'xpBoosts',
+        icon: Zap,
+        label: 'sidebar:stw-operations.options.xp-boosts',
+        to: '/stw-operations/xpboosts',
       },
       {
-        can: 'compendium',
-        icon: BookOpen,
-        label: 'sidebar:stw-operations.options.compendium',
-        to: '/stw-operations/compendium',
-      },
-      {
+        group: 'sidebar:groups.stw-activity',
         beta: true,
         can: 'outpost',
         icon: Shield,
@@ -286,10 +288,25 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/outpost',
       },
       {
-        can: 'xpBoosts',
-        icon: Zap,
-        label: 'sidebar:stw-operations.options.xp-boosts',
-        to: '/stw-operations/xpboosts',
+        group: 'sidebar:groups.stw-activity',
+        can: 'shop',
+        icon: Store,
+        label: 'sidebar:stw-operations.options.shop',
+        to: '/stw-operations/shop',
+      },
+      {
+        group: 'sidebar:groups.stw-activity',
+        beta: true,
+        icon: Trophy,
+        label: 'stw-operations:leaderboards.title',
+        to: '/stw-operations/leaderboards',
+      },
+      {
+        group: 'sidebar:groups.stw-activity',
+        can: 'timeline',
+        icon: CalendarRange,
+        label: 'sidebar:stw-operations.options.timeline',
+        to: '/stw-operations/timeline',
       },
     ],
   },
@@ -301,13 +318,13 @@ export const navSections: Array<NavSection> = [
     can: 'accountManagement',
     items: [
       {
-        // One entry for all three sign-in methods; the page switches between
+        // One entry for every sign-in method; the page switches between
         // them in place. The legacy per-method toggles still gate it together.
         canAny: ['authorizationCode', 'exchangeCode', 'deviceAuth'],
         secondary: true,
         icon: UserPlus,
         label: 'sidebar:add-account',
-        params: { type: 'authorization-code' },
+        params: { type: 'quick-login' },
         to: '/accounts/add/$type',
       },
       {

@@ -116,12 +116,12 @@ export function useGameUserSettings() {
     setSaving(false)
 
     if (!result.success) {
-      toast(result.error ?? t('game-settings.status.save-error'))
+      toast.error(result.error ?? t('game-settings.status.save-error'))
 
       return
     }
 
-    toast(t('game-settings.status.saved'))
+    toast.success(t('game-settings.status.saved'))
     await load()
   }
 
@@ -133,12 +133,12 @@ export function useGameUserSettings() {
     setSaving(false)
 
     if (!result.success) {
-      toast(result.error ?? t('game-settings.status.restore-error'))
+      toast.error(result.error ?? t('game-settings.status.restore-error'))
 
       return
     }
 
-    toast(t('game-settings.status.restored'))
+    toast.success(t('game-settings.status.restored'))
     await load()
   }
 

@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
  */
 export function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-lg bg-muted/40 px-1.5 font-display text-[0.6875rem] font-semibold leading-none text-muted-foreground ring-1 ring-inset ring-border/60">
+    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded-lg bg-muted/40 px-1.5 font-display text-caption font-semibold leading-none text-muted-foreground ring-1 ring-inset ring-border/60">
       {children}
     </kbd>
   )

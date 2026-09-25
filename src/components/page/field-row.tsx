@@ -42,7 +42,7 @@ export function FieldRow({
     return (
       <div className={cn('space-y-2 py-4 first:pt-0 last:pb-0', className)}>
         {label && (
-          <p className="text-[0.8125rem] font-medium leading-none">
+          <p className="text-ui font-medium leading-none">
             {label}
           </p>
         )}
@@ -65,7 +65,7 @@ export function FieldRow({
     >
       <div className="min-w-0 flex-1 basis-48">
         {label && (
-          <p className="text-[0.8125rem] font-medium leading-none">
+          <p className="text-ui font-medium leading-none">
             {label}
           </p>
         )}

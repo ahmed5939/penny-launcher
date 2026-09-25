@@ -74,25 +74,25 @@ function ScreenshotGeneration() {
         }),
       ])
 
-      toast(t('validations.screenshot.success'))
+      toast.success(t('validations.screenshot.success'))
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      toast(t('validations.screenshot.error'))
+      toast.error(t('validations.screenshot.error'))
     }
 
     setIsLoading(false)
   }
 
   return (
-    <div className="mt-6 flex justify-end">
+    <div className="mt-4 flex justify-end">
       {/*
         A secondary command, not the screen's action: the payoff here is the
         record below it, so the button matches the mission list's command bar
         rather than competing with the search form above.
       */}
       <Button
-        className="h-8 shrink-0 gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.12em]"
+        className="h-8 shrink-0 gap-2 text-caption font-semibold"
         size="sm"
         variant="secondary"
         onClick={handleGeneration}

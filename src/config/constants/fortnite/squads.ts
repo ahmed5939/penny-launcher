@@ -70,3 +70,28 @@ export const squadLabelsById = survivorSquads.reduce(
   },
   {} as Record<string, string>
 )
+
+/**
+ * Which F.O.R.T. stat each attribute feeds. Scavenging (Gadgeteers, Scouting
+ * Party) is Resistance and Synthesis (Corps of Engineering, The Think Tank)
+ * is Tech — the attribute names read the other way round, which is how the
+ * squads page once had them swapped.
+ */
+export const squadAttributeStats = {
+  arms: 'offense',
+  medicine: 'fortitude',
+  scavenging: 'resistance',
+  synthesis: 'technology',
+} as const satisfies Record<SquadDefinition['attribute'], string>
+
+/** The lead job that doubles a lead's power in each squad, as the profile spells it. */
+export const squadLeadJobs: Record<string, string> = {
+  Squad_Attribute_Arms_CloseAssaultSquad: 'IsMartialArtist',
+  Squad_Attribute_Arms_FireTeamAlpha: 'IsSoldier',
+  Squad_Attribute_Medicine_EMTSquad: 'IsDoctor',
+  Squad_Attribute_Medicine_TrainingTeam: 'IsTrainer',
+  Squad_Attribute_Scavenging_Gadgeteers: 'IsGadgeteer',
+  Squad_Attribute_Scavenging_ScoutingParty: 'IsExplorer',
+  Squad_Attribute_Synthesis_CorpsofEngineering: 'IsEngineer',
+  Squad_Attribute_Synthesis_TheThinkTank: 'IsInventor',
+}

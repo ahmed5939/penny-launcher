@@ -9,9 +9,14 @@ import type { AuthenticationByDeviceProperties } from '../../types/authenticatio
 import type {
   EpicGamesSettingsNotificationCallbackResponseParam,
   GenerateExchangeCodeNotificationCallbackResponseParam,
+  QuickLoginStatusParam,
 } from '../../types/preload'
 
+import { isAxiosError } from 'axios'
+import { shell } from 'electron'
+
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
+import { nintendoSwitchGameClient } from '../../config/fortnite/clients'
 
 import { MainWindow } from '../startup/windows/main'
 import { AccountsManager } from '../startup/accounts'
@@ -19,11 +24,15 @@ import { DataDirectory } from '../startup/data-directory'
 import { Unlock } from './unlock'
 
 import {
+  createAccessTokenUsingClientCredentials,
   createDeviceAuthCredentials,
+  createDeviceAuthorization,
   getAccessTokenUsingAuthorizationCode,
   getAccessTokenUsingDeviceAuth,
+  getAccessTokenUsingDeviceCode,
   getAccessTokenUsingExchangeCode,
   getExchangeCodeUsingAccessToken,
+  getExchangeCodeUsingDeviceCodeToken,
   oauthVerify,
 } from '../../services/endpoints/oauth'
 
@@ -120,16 +129,28 @@ export class Authentication {
   }
 
   static async exchange(code: string) {
+    await Authentication.linkWithExchangeCode(
+      code,
+      ElectronAPIEventKeys.ResponseAuthWithExchange
+    )
+  }
+
+  /**
+   * Turns an exchange code into a linked account: default-client tokens,
+   * fresh device auth credentials, saved, then reported on `key`. Shared by
+   * the exchange code form and Quick login.
+   */
+  static async linkWithExchangeCode(
+    code: string,
+    key: ElectronAPIEventKeys
+  ) {
     try {
       const responseExchange = await getAccessTokenUsingExchangeCode(code)
       const responseDevice =
-        await Authentication.generateDeviceAuthCredencials(
-          ElectronAPIEventKeys.ResponseAuthWithExchange,
-          {
-            accessToken: responseExchange.data.access_token,
-            accountId: responseExchange.data.account_id,
-          }
-        )
+        await Authentication.generateDeviceAuthCredencials(key, {
+          accessToken: responseExchange.data.access_token,
+          accountId: responseExchange.data.account_id,
+        })
 
       const accountData = {
         accessToken: responseExchange.data.access_token,
@@ -148,29 +169,23 @@ export class Authentication {
       accountDataSchema.parse(accountData)
 
       if (responseDevice) {
-        await Authentication.registerAccount(
-          ElectronAPIEventKeys.ResponseAuthWithExchange,
-          accountData
-        )
+        await Authentication.registerAccount(key, accountData)
         await Authentication.createStoreAccess(accountData)
 
         return
       }
     } catch (error) {
       return Authentication.responseError({
-        key: ElectronAPIEventKeys.ResponseAuthWithExchange,
+        key,
         error,
       })
     }
 
-    MainWindow.instance.webContents.send(
-      ElectronAPIEventKeys.ResponseAuthWithExchange,
-      {
-        accessToken: null,
-        data: null,
-        error: LauncherAuthError.login,
-      }
-    )
+    MainWindow.instance.webContents.send(key, {
+      accessToken: null,
+      data: null,
+      error: LauncherAuthError.login,
+    })
   }
 
   static async generateExchangeCode(account: AccountData) {
@@ -451,7 +466,7 @@ export class Authentication {
     return null
   }
 
-  private static responseError({
+  static responseError({
     error,
     key,
   }: {
@@ -467,4 +482,279 @@ export class Authentication {
         LauncherAuthError.login,
     })
   }
+}
+
+/**
+ * Quick login: Epic's device code grant, the same flow Penny's Discord bot
+ * uses for `/login` → Quick.
+ *
+ * A Switch-client bootstrap token opens a device authorization; the user
+ * approves it on epicgames.com while Penny polls; the resulting Switch token
+ * is swapped for an exchange code, which links the account exactly like the
+ * exchange code form does (default client, fresh device auth). Nothing to
+ * paste, and no password ever passes through Penny.
+ *
+ * One attempt at a time: starting again or cancelling aborts the previous
+ * poll. The device code stays in this process and is never logged.
+ */
+export class QuickLogin {
+  private static attempt: AbortController | null = null
+
+  static cancel() {
+    if (!QuickLogin.attempt) {
+      return
+    }
+
+    QuickLogin.attempt.abort()
+    QuickLogin.attempt = null
+    QuickLogin.status({ status: 'cancelled' })
+  }
+
+  static async start() {
+    QuickLogin.attempt?.abort()
+
+    const attempt = new AbortController()
+    const { signal } = attempt
+    const isCurrent = () => QuickLogin.attempt === attempt && !signal.aborted
+
+    QuickLogin.attempt = attempt
+    QuickLogin.status({ status: 'starting' })
+
+    try {
+      const bootstrap = await createAccessTokenUsingClientCredentials({
+        authorization: nintendoSwitchGameClient.auth,
+      })
+
+      if (!isCurrent()) {
+        return
+      }
+
+      const { data: authorization } = await createDeviceAuthorization(
+        bootstrap.data.access_token,
+        { signal }
+      )
+      const verificationUri = QuickLogin.safeVerificationUri(
+        authorization.verification_uri_complete
+      )
+
+      if (!authorization.device_code || !verificationUri) {
+        throw new Error('Epic returned an incomplete device authorization')
+      }
+
+      const expiresInSeconds = Math.min(
+        authorization.expires_in > 0 ? authorization.expires_in : 300,
+        quickLoginMaxSeconds
+      )
+      const expiresAt = Date.now() + expiresInSeconds * 1_000
+
+      void shell.openExternal(verificationUri)
+      QuickLogin.status({ status: 'waiting', verificationUri, expiresAt })
+
+      const switchToken = await QuickLogin.poll({
+        deviceCode: authorization.device_code,
+        expiresAt,
+        intervalSeconds:
+          authorization.interval > 0
+            ? authorization.interval
+            : quickLoginDefaultIntervalSeconds,
+        signal,
+      })
+
+      if (!isCurrent()) {
+        return
+      }
+
+      if (!switchToken) {
+        QuickLogin.attempt = null
+        QuickLogin.status({ status: 'expired' })
+
+        return
+      }
+
+      QuickLogin.status({ status: 'signing-in' })
+
+      const exchange = await getExchangeCodeUsingDeviceCodeToken(
+        switchToken,
+        { signal }
+      )
+
+      if (!isCurrent()) {
+        return
+      }
+
+      if (!exchange.data.code) {
+        throw new Error('Epic returned no exchange code')
+      }
+
+      // Past this point the account is being written; cancel is a no-op.
+      QuickLogin.attempt = null
+
+      await Authentication.linkWithExchangeCode(
+        exchange.data.code,
+        ElectronAPIEventKeys.ResponseAuthWithQuickLogin
+      )
+    } catch (error) {
+      if (!isCurrent()) {
+        return
+      }
+
+      QuickLogin.attempt = null
+      RuntimeLog.error(
+        'caught:core/authentication.ts quick login',
+        QuickLogin.describeError(error)
+      )
+      Authentication.responseError({
+        key: ElectronAPIEventKeys.ResponseAuthWithQuickLogin,
+        error,
+      })
+    }
+
+    QuickLogin.status({ status: 'finished' })
+  }
+
+  /**
+   * Resolves with the Switch access token once the user approves, or null
+   * when the attempt expires or is aborted. Denial and other terminal errors
+   * throw.
+   */
+  private static async poll({
+    deviceCode,
+    expiresAt,
+    intervalSeconds,
+    signal,
+  }: {
+    deviceCode: string
+    expiresAt: number
+    intervalSeconds: number
+    signal: AbortSignal
+  }) {
+    let interval = intervalSeconds
+
+    while (!signal.aborted) {
+      await wait(interval * 1_000, signal)
+
+      if (signal.aborted || Date.now() >= expiresAt) {
+        return null
+      }
+
+      try {
+        const response = await getAccessTokenUsingDeviceCode(deviceCode, {
+          signal,
+        })
+
+        if (!response.data.access_token) {
+          throw new Error('Epic returned no access token')
+        }
+
+        return response.data.access_token
+      } catch (error) {
+        if (signal.aborted) {
+          return null
+        }
+
+        if (!isAxiosError(error)) {
+          throw error
+        }
+
+        // No response: a network blip, not an answer. Keep going until the
+        // deadline.
+        if (!error.response) {
+          continue
+        }
+
+        const errorCode =
+          (error.response.data as Partial<CommonErrorResponse> | undefined)
+            ?.errorCode ?? ''
+
+        if (
+          errorCode.endsWith('authorization_pending') ||
+          errorCode === 'errors.com.epicgames.not_found'
+        ) {
+          continue
+        }
+
+        if (errorCode.endsWith('slow_down')) {
+          interval += 5
+
+          continue
+        }
+
+        if (errorCode.includes('expired')) {
+          return null
+        }
+
+        throw error
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Only ever hand the OS an https epicgames.com page.
+   */
+  private static safeVerificationUri(value: unknown) {
+    if (typeof value !== 'string') {
+      return null
+    }
+
+    try {
+      const url = new URL(value)
+      const host = url.hostname.toLowerCase()
+
+      if (
+        url.protocol === 'https:' &&
+        (host === 'epicgames.com' || host.endsWith('.epicgames.com'))
+      ) {
+        return url.toString()
+      }
+    } catch {
+      // Not a URL.
+    }
+
+    return null
+  }
+
+  /**
+   * Axios errors carry the request (Authorization header, device code) —
+   * log only what explains the failure.
+   */
+  private static describeError(error: unknown) {
+    if (isAxiosError(error)) {
+      const data = error.response?.data as
+        | Partial<CommonErrorResponse>
+        | undefined
+
+      return {
+        message: error.message,
+        status: error.response?.status,
+        errorCode: data?.errorCode,
+      }
+    }
+
+    return error instanceof Error ? error.message : String(error)
+  }
+
+  private static status(value: QuickLoginStatusParam) {
+    MainWindow.instance.webContents.send(
+      ElectronAPIEventKeys.QuickLoginStatus,
+      value
+    )
+  }
+}
+
+const quickLoginDefaultIntervalSeconds = 10
+const quickLoginMaxSeconds = 15 * 60
+
+function wait(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      clearTimeout(timer)
+      signal.removeEventListener('abort', done)
+      resolve()
+    }
+    const timer = setTimeout(done, ms)
+
+    signal.addEventListener('abort', done, { once: true })
+  })
 }

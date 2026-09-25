@@ -10,7 +10,7 @@ afterEach(() => { vi.clearAllTimers(); vi.useRealTimers() })
 it('shares concurrent reads, reuses warm data, then releases it and reloads from disk', async () => {
   vi.useFakeTimers()
   mocks.readFile.mockResolvedValue(JSON.stringify({
-    version: 8, fetchedAt: new Date().toISOString(), records: { example: {} }, ratings: {}, alterationPools: {},
+    version: 10, fetchedAt: new Date().toISOString(), records: { example: {} }, ratings: {}, alterationPools: {},
   }))
   const { ItemDatabase } = await import('./item-database')
   await Promise.all([ItemDatabase.request(), ItemDatabase.request()])

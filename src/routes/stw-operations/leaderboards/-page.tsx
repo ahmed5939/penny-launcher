@@ -1,14 +1,13 @@
 import type { LucideIcon } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import type {
   LeaderboardMetric,
   LeaderboardRow,
 } from '../../../kernel/core/leaderboard-parse'
-import { UpdateIcon } from '@radix-ui/react-icons'
 import { ExternalLink, Search, Trophy } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { BetaBadge } from '../../../components/navigation/beta-badge'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import { Skeleton } from '../../../components/ui/skeleton'
@@ -19,12 +18,17 @@ import {
   PageHeader,
   Panel,
   PanelBody,
+  PanelSectionHeader,
+  RefreshButton,
+  SearchField,
+  ToolBadges,
 } from '../../../components/page'
 import {
   isLinkablePennyDBDisplayName,
 } from '../../../kernel/core/leaderboard-parse'
 
 import { pennyDbLinks } from '../../../config/about/links'
+import { raritiesColor, RarityType } from '../../../config/constants/resources'
 import {
   leaderboardDefinitionByMetric,
   leaderboardGroups,
@@ -108,26 +112,16 @@ export function RouteComponent() {
       <PageHeader
         icon={Trophy}
         section={t('sidebar:stw-operations.title')}
-        title={
-          <span className="flex items-center gap-2">
-            {t('leaderboards.title')}
-            <BetaBadge />
-          </span>
-        }
+        status={<ToolBadges beta />}
+        title={t('leaderboards.title')}
         description={t('leaderboards.description')}
         actions={
           <>
-            <Button
+            <RefreshButton
+              label={t('leaderboards.refresh')}
+              loading={isLoading}
               onClick={handleRefresh}
-              disabled={isLoading}
-              variant="outline"
-            >
-              {isLoading ? (
-                <UpdateIcon className="animate-spin" />
-              ) : (
-                t('leaderboards.refresh')
-              )}
-            </Button>
+            />
             <Button
               onClick={() =>
                 window.electronAPI.openExternalURL(
@@ -161,25 +155,22 @@ export function RouteComponent() {
                   <p className="mb-2 text-xs font-semibold text-muted-foreground">
                     {t('leaderboards.metric.label')}
                   </p>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      aria-label={t('leaderboards.search')}
-                      className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30"
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder={t('leaderboards.search')}
-                      type="search"
-                      value={query}
-                    />
-                  </div>
+                  <SearchField
+                    className="block w-full min-w-0"
+                    label={t('leaderboards.search')}
+                    onChange={setQuery}
+                    placeholder={t('leaderboards.search')}
+                    value={query}
+                  />
                 </div>
 
                 <div className="max-h-80 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-2 lg:max-h-none">
                 {visibleGroups.map((group) => (
                   <section key={group.label}>
-                    <h2 className="px-2 pb-1 text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
-                      {group.label}
-                    </h2>
+                    <PanelSectionHeader
+                      className="border-b-0 px-2 pb-1 pt-0"
+                      title={group.label}
+                    />
                     <div className="space-y-0.5">
                       {group.metrics.map((definition) => {
                         const active = definition.metric === metric
@@ -206,9 +197,11 @@ export function RouteComponent() {
                   </section>
                 ))}
                   {visibleGroups.length === 0 && (
-                    <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                      {t('leaderboards.no-metrics')}
-                    </p>
+                    <EmptyState
+                      className="border-0 bg-transparent py-8"
+                      icon={Search}
+                      title={t('leaderboards.no-metrics')}
+                    />
                   )}
                 </div>
               </div>
@@ -217,15 +210,13 @@ export function RouteComponent() {
             <div className="min-w-0 space-y-4 p-4">
               {activeMetric && (
                 <div className="flex flex-wrap items-center gap-3 border-b border-border/60 pb-3">
-                  <span className="flex size-10 items-center justify-center rounded-xl border border-border/60 bg-surface/70 p-2">
-                    {typeof activeMetric.icon === 'string' ? (
-                      <img alt="" className="size-full object-contain" src={activeMetric.icon} />
-                    ) : (
-                      <activeMetric.icon className="size-5 shrink-0 text-primary" />
-                    )}
-                  </span>
+                  {typeof activeMetric.icon === 'string' ? (
+                    <img alt="" className="size-10 shrink-0 object-contain" src={activeMetric.icon} />
+                  ) : (
+                    <activeMetric.icon className="size-7 shrink-0 text-primary" />
+                  )}
                   <div className="min-w-0 flex-1">
-                    <h2 className="truncate text-sm font-semibold">{activeMetric.label}</h2>
+                    <h2 className="truncate text-title font-semibold">{activeMetric.label}</h2>
                     <p className="text-xs text-muted-foreground">
                       {rows.length > 0
                         ? t('leaderboards.ranked-count', {
@@ -234,19 +225,13 @@ export function RouteComponent() {
                         : t('leaderboards.top-commanders')}
                     </p>
                   </div>
-                  <div className="relative w-full sm:w-56">
-                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                      aria-label={t('leaderboards.search-players')}
-                      className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/30"
-                      onChange={(event) =>
-                        setPlayerQuery(event.target.value)
-                      }
-                      placeholder={t('leaderboards.search-players')}
-                      type="search"
-                      value={playerQuery}
-                    />
-                  </div>
+                  <SearchField
+                    className="w-full min-w-0 flex-none sm:w-56"
+                    label={t('leaderboards.search-players')}
+                    onChange={setPlayerQuery}
+                    placeholder={t('leaderboards.search-players')}
+                    value={playerQuery}
+                  />
                 </div>
               )}
 
@@ -300,7 +285,14 @@ export function RouteComponent() {
                 )
               ) : (
                 <div>
-                  <div className="flex items-center gap-3 border-b border-border/60 px-2 pb-1.5 text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">
+                  {!playerQuery.trim() && rows.length >= 3 && (
+                    <Podium
+                      linkedDisplayNames={linkedDisplayNames}
+                      metric={metric}
+                      rows={rows.slice(0, 3)}
+                    />
+                  )}
+                  <div className="flex items-center gap-3 border-b border-border/60 px-2 pb-1.5 text-xs font-medium text-muted-foreground">
                     <span className="w-8 shrink-0 text-center">
                       {t('leaderboards.columns.rank')}
                     </span>
@@ -312,11 +304,13 @@ export function RouteComponent() {
                     </span>
                   </div>
                   {visibleRows.length <= 0 ? (
-                    <p className="px-2 py-8 text-center text-xs text-muted-foreground">
-                      {t('leaderboards.no-players', {
+                    <EmptyState
+                      className="border-0 bg-transparent py-8"
+                      icon={Search}
+                      title={t('leaderboards.no-players', {
                         query: playerQuery.trim(),
                       })}
-                    </p>
+                    />
                   ) : (
                     <ul className="divide-y divide-border/40">
                       {visibleRows.map((row) => (
@@ -348,22 +342,103 @@ function leaderboardRowId(rank: number) {
   return `leaderboard-row-${rank}`
 }
 
+/** Gold, silver and bronze, borrowed from the rarity palette. */
+const medalColors: Record<number, string> = {
+  1: raritiesColor[RarityType.Mythic],
+  2: raritiesColor[RarityType.Common],
+  3: raritiesColor[RarityType.Legendary],
+}
+
+function medalStyle(color: string | undefined): CSSProperties | undefined {
+  if (!color) return undefined
+
+  return {
+    backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
+    boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 30%, transparent)`,
+    color,
+  }
+}
+
+/**
+ * The top three, as a game's results screen shows them: first in the middle
+ * and tallest, the medal colour carried by the figure rather than a box.
+ */
+function Podium({
+  linkedDisplayNames,
+  metric,
+  rows,
+}: {
+  linkedDisplayNames: Set<string>
+  metric: LeaderboardMetric
+  rows: Array<LeaderboardRow>
+}) {
+  const [first, second, third] = rows
+  const order = [second, first, third].filter(Boolean)
+
+  return (
+    <ol
+      aria-label="Top three"
+      className="mb-3 grid grid-cols-3 items-end gap-2"
+    >
+      {order.map((row) => {
+        const color = medalColors[row.rank]
+        const isLinked = linkedDisplayNames.has(row.displayName.toLowerCase())
+
+        return (
+          <li
+            className={cn(
+              'flex min-w-0 flex-col items-center gap-1 rounded-xl px-3 text-center',
+              row.rank === 1 ? 'pb-4 pt-5' : 'pb-3 pt-3'
+            )}
+            key={`${row.profileId}-${row.rank}`}
+            style={{
+              backgroundImage: `linear-gradient(to top, color-mix(in srgb, ${color} 14%, transparent), transparent)`,
+            }}
+          >
+            <Trophy
+              className={row.rank === 1 ? 'size-6' : 'size-5'}
+              style={{ color }}
+            />
+            <span
+              className="figure text-xs font-semibold"
+              style={{ color }}
+            >
+              #{row.rank}
+            </span>
+            <span
+              className={cn(
+                'w-full truncate text-ui font-semibold',
+                isLinked && 'text-primary'
+              )}
+              title={row.displayName}
+            >
+              {row.displayName}
+            </span>
+            <span
+              className={cn(
+                'figure font-bold leading-none',
+                row.rank === 1 ? 'text-xl' : 'text-base'
+              )}
+            >
+              {formatLeaderboardValue(row.value, metric)}
+            </span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 function RankBadge({ rank }: { rank: number }) {
-  const medalClass =
-    rank === 1
-      ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30'
-      : rank === 2
-        ? 'bg-slate-300/15 text-slate-200 ring-1 ring-inset ring-slate-300/30'
-        : rank === 3
-          ? 'bg-orange-400/15 text-orange-300 ring-1 ring-inset ring-orange-400/30'
-          : 'text-muted-foreground'
+  const medal = medalColors[rank]
 
   return (
     <span
       className={cn(
         'flex h-7 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold tabular-nums',
-        medalClass
+        !medal && 'text-muted-foreground'
       )}
+      style={medalStyle(medal)}
     >
       {rank}
     </span>
@@ -413,7 +488,7 @@ function LeaderboardEntry({
   return (
     <li
       className={cn(
-        'flex items-center gap-3 px-2 py-1.5 text-[0.8125rem] font-medium text-foreground/90',
+        'flex items-center gap-3 px-2 py-1.5 text-ui font-medium text-foreground/90',
         isLinked &&
           'rounded-lg bg-primary/10 ring-1 ring-inset ring-primary/20'
       )}
