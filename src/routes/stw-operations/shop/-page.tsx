@@ -154,7 +154,7 @@ const balanceGroups: Array<{ label: string; match: (id: string) => boolean }> = 
   { label: 'Currencies', match: (id) => /:(currency_|eventcurrency_|campaign_event_currency|voucher_)/.test(id) },
   { label: 'PERK-UP!', match: (id) => id.includes(':reagent_alteration_') },
   { label: 'Evolution materials', match: (id) => id.includes(':reagent_') },
-  { label: 'XP', match: (id) => /:(heroxp|personnelxp|schematicxp|phoenixxp)$/.test(id) },
+  { label: 'XP', match: (id) => /:(hero|personnel|people|schematic|phoenix)xp(_reward)?$/.test(id) },
 ]
 
 function groupBalances(currencies: ReadonlyArray<ShopCurrency>) {

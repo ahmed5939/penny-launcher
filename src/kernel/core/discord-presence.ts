@@ -4,6 +4,12 @@ import { randomUUID } from 'node:crypto'
 
 import { discordApplicationId } from '../../config/discord'
 import { LogWatcher } from './fortnite-log-watcher'
+import {
+  type IslandIdentity,
+  IslandDirectory,
+  isIslandCode,
+  islandPageUrl,
+} from './island-directory'
 import { RuntimeLog } from '../runtime-log'
 
 // Use byte views to bridge the Node 20 Buffer types and newer TS typed arrays.
@@ -74,15 +80,110 @@ export function classifyFortniteLogLine(
   return null
 }
 
+// The local player's island, logged when the party's selection changes and
+// again whenever the lobby re-reads it. Anchored to the start of the line so
+// Discover art prefetches, Product.FNE lists, link-entry errors and the
+// indented "has updated matchmaking info" blocks (party members, possibly
+// someone else's pick) never count as a selection.
+const SELECTION_LINES = [
+  /^(?:\[[^\]]*\])*MatchmakingLog: (?:\[\w+\] )?Link id changing from .* to \[Mnemonic=\[([^\]]*)\]/,
+  /^(?:\[[^\]]*\])*LogMatchmakingUtility: (?:\[\w+\] )?LinkId: 'Mnemonic=\[([^\]]*)\]/,
+]
+
+/**
+ * Pulls the selected link mnemonic out of a FortniteGame.log line, or null
+ * when the line is not one of the selection lines.
+ */
+export function extractIslandSelection(
+  line: string,
+): { mnemonic: string } | null {
+  for (const pattern of SELECTION_LINES) {
+    const match = line.match(pattern)
+
+    if (match) {
+      return { mnemonic: match[1].trim() }
+    }
+  }
+
+  return null
+}
+
+export type FortniteSelection =
+  | { kind: 'stw' }
+  | { kind: 'island'; code: string }
+  | { kind: 'playlist'; id: string }
+  | { kind: 'none' }
+
+/**
+ * `campaign` is Save the World, a `1234-5678-9012` code is a creator island,
+ * an empty mnemonic is a reset, and anything else (`playlist_*`) is one of
+ * Epic's own modes.
+ */
+export function classifyLinkMnemonic(mnemonic: string): FortniteSelection {
+  const value = mnemonic.trim().toLowerCase()
+
+  if (!value || value === 'none') {
+    return { kind: 'none' }
+  }
+
+  if (value === 'campaign') {
+    return { kind: 'stw' }
+  }
+
+  if (isIslandCode(value)) {
+    return { kind: 'island', code: value }
+  }
+
+  return { kind: 'playlist', id: value }
+}
+
+export type PresenceIsland = Pick<IslandIdentity, 'code' | 'title' | 'imageUrl'>
+
+// Discord rejects an activity whose details are under 2 or over 128
+// characters, so an odd title falls back to the code or gets clipped.
+function islandDetails(island: Pick<PresenceIsland, 'code' | 'title'>) {
+  const title = island.title?.trim() ?? ''
+
+  if (title.length < 2) {
+    return `Island ${island.code}`
+  }
+
+  return title.length > 128
+    ? `${title.slice(0, 127).replace(/[\uD800-\uDBFF]$/, '')}…`
+    : title
+}
+
+// Discord fetches external https art itself. Anything else would get the
+// whole SET_ACTIVITY rejected, so the app icon stays instead.
+function islandArtUrl(value: string | null) {
+  if (!value || value.length > 256) {
+    return null
+  }
+
+  try {
+    return new URL(value).protocol === 'https:' ? value : null
+  } catch {
+    return null
+  }
+}
+
 export function discordActivityCopy(input: {
   accountName: string | null
   gameRunning: boolean
+  island?: Pick<PresenceIsland, 'code' | 'title'> | null
   mode: DiscordPresenceMode
 }) {
   if (!input.gameRunning) {
     return {
       details: 'In launcher',
       state: input.accountName ?? 'No account selected',
+    }
+  }
+
+  if (input.island) {
+    return {
+      details: islandDetails(input.island),
+      state: input.accountName ?? input.island.code,
     }
   }
 
@@ -107,20 +208,61 @@ export function discordActivityCopy(input: {
 }
 
 /**
+ * The SET_ACTIVITY body. Only a creator island adds art and a button, and the
+ * button links the island's public page — never anything about the account.
+ */
+export function discordActivity(input: {
+  accountName: string | null
+  gameRunning: boolean
+  island: PresenceIsland | null
+  mode: DiscordPresenceMode
+  startedAt: number
+}) {
+  const island = input.gameRunning ? input.island : null
+  const copy = discordActivityCopy({
+    accountName: input.accountName,
+    gameRunning: input.gameRunning,
+    island,
+    mode: input.gameRunning ? input.mode : 'launcher',
+  })
+  const art = island ? islandArtUrl(island.imageUrl) : null
+
+  return {
+    details: copy.details,
+    state: copy.state,
+    timestamps: { start: Math.floor(input.startedAt / 1000) },
+    ...(island && art
+      ? { assets: { large_image: art, large_text: island.code } }
+      : {}),
+    ...(island
+      ? {
+          buttons: [
+            { label: 'View island', url: islandPageUrl(island.code) },
+          ],
+        }
+      : {}),
+    instance: false,
+  }
+}
+
+/**
  * Discord Rich Presence, owned by the launcher process.
  *
  * Connects to the local Discord client over a named pipe / UNIX socket and
  * publishes Penny's activity. When Fortnite is running we only *read*
- * FortniteGame.log to distinguish STW from BR — we never inject, overlay, or
- * write into the game.
+ * FortniteGame.log to distinguish STW from BR and to name the creator island
+ * the player picked — we never inject, overlay, or write into the game.
  */
 export class DiscordPresence {
   private static accountName: string | null = null
   private static enabled = true
   private static gameRunning = false
   private static incoming = Buffer.alloc(0)
+  private static island: PresenceIsland | null = null
   private static logWatcher: LogWatcher | null = null
   private static mode: DiscordPresenceMode = 'launcher'
+  /** Once the game has logged a selection, it outranks the line heuristics. */
+  private static selectionSeen = false
   private static startedAt = Date.now()
   private static socket: Socket | null = null
   private static ready = false
@@ -185,12 +327,7 @@ export class DiscordPresence {
     const watcher = new LogWatcher()
 
     watcher.onLine((line) => {
-      const next = classifyFortniteLogLine(line)
-
-      if (next && next !== DiscordPresence.mode) {
-        DiscordPresence.mode = next
-        DiscordPresence.publish()
-      }
+      DiscordPresence.readLogLine(line)
     })
 
     void watcher
@@ -207,6 +344,101 @@ export class DiscordPresence {
   private static stopLogWatcher() {
     DiscordPresence.logWatcher?.stop()
     DiscordPresence.logWatcher = null
+    // The island only means anything while its log is being followed; a
+    // game exit, disable or suspend forgets it.
+    DiscordPresence.island = null
+    DiscordPresence.selectionSeen = false
+  }
+
+  private static readLogLine(line: string) {
+    const selection = extractIslandSelection(line)
+
+    if (selection) {
+      DiscordPresence.select(classifyLinkMnemonic(selection.mnemonic))
+
+      return
+    }
+
+    // Friends' presence and plugin lists name BR playlists all session long,
+    // so the heuristics only stand in until the game logs a real selection.
+    if (DiscordPresence.selectionSeen) {
+      return
+    }
+
+    const next = classifyFortniteLogLine(line)
+
+    if (next && next !== DiscordPresence.mode) {
+      DiscordPresence.mode = next
+      DiscordPresence.publish()
+    }
+  }
+
+  private static select(selection: FortniteSelection) {
+    DiscordPresence.selectionSeen = true
+
+    const code = selection.kind === 'island' ? selection.code : null
+    const mode: DiscordPresenceMode =
+      selection.kind === 'stw'
+        ? 'stw'
+        : selection.kind === 'none'
+          ? DiscordPresence.mode
+          : 'br'
+
+    if (
+      mode === DiscordPresence.mode &&
+      code === (DiscordPresence.island?.code ?? null)
+    ) {
+      return
+    }
+
+    DiscordPresence.mode = mode
+
+    if (!code) {
+      DiscordPresence.island = null
+      DiscordPresence.publish()
+
+      return
+    }
+
+    // Publish the code straight away; the title follows when it arrives.
+    const known = IslandDirectory.peek(code)
+
+    DiscordPresence.island = {
+      code,
+      title: known?.title ?? null,
+      imageUrl: known?.imageUrl ?? null,
+    }
+    DiscordPresence.publish()
+    DiscordPresence.describeIsland(code)
+  }
+
+  private static describeIsland(code: string) {
+    void IslandDirectory.lookup(code)
+      .then((identity) => {
+        const current = DiscordPresence.island
+
+        // The player may have picked something else, or quit, meanwhile.
+        if (current?.code !== code) {
+          return
+        }
+
+        const next = {
+          code,
+          title: identity.title ?? current.title,
+          imageUrl: identity.imageUrl ?? current.imageUrl,
+        }
+
+        if (
+          next.title === current.title &&
+          next.imageUrl === current.imageUrl
+        ) {
+          return
+        }
+
+        DiscordPresence.island = next
+        DiscordPresence.publish()
+      })
+      .catch(() => {})
   }
 
   private static ipcPath(id: number) {
@@ -370,23 +602,18 @@ export class DiscordPresence {
 
     if (!DiscordPresence.ready) return
 
-    const copy = discordActivityCopy({
-      accountName: DiscordPresence.accountName,
-      gameRunning: DiscordPresence.gameRunning,
-      mode: DiscordPresence.gameRunning ? DiscordPresence.mode : 'launcher',
-    })
-
     DiscordPresence.write(1, {
       cmd: 'SET_ACTIVITY',
       nonce: randomUUID(),
       args: {
         pid: process.pid,
-        activity: {
-          details: copy.details,
-          state: copy.state,
-          timestamps: { start: Math.floor(DiscordPresence.startedAt / 1000) },
-          instance: false,
-        },
+        activity: discordActivity({
+          accountName: DiscordPresence.accountName,
+          gameRunning: DiscordPresence.gameRunning,
+          island: DiscordPresence.island,
+          mode: DiscordPresence.mode,
+          startedAt: DiscordPresence.startedAt,
+        }),
       },
     })
   }

@@ -77,6 +77,7 @@ import {
   TRAP_WALL,
   forwardVector,
   trapCentre,
+  trapKey,
 } from './-blueprint-geometry'
 
 /**
@@ -99,6 +100,8 @@ const OPEN_SEA_REACH = 3000
 
 type HoverInfo = {
   category: number
+  /** The trap's variant, from `trapKey`. */
+  key: string
   name: string
   x: number
   y: number
@@ -762,7 +765,7 @@ function createRenderer() {
 }
 
 function BlueprintScene({
-  amplifierSlots,
+  amplifierPads,
   cinematic,
   iconByTrapName,
   layout,
@@ -783,8 +786,8 @@ function BlueprintScene({
   walkingRef,
   zoneId,
 }: {
-  /** Occupied amplifier slots; each is drawn at the map's matching spot. */
-  amplifierSlots?: Array<string>
+  /** Pads with an amplifier on them; each is drawn at the map's matching spot. */
+  amplifierPads?: Array<number>
   /** Post-processing (ambient occlusion, bloom) and water/particle motion while drawing. */
   cinematic: boolean
   iconByTrapName: Map<string, string | undefined>
@@ -820,7 +823,7 @@ function BlueprintScene({
   /** Shows or hides the grid and Storm Shield without a rebuild. */
   const layersRef = useRef<((layers: { grid: boolean; shield: boolean }) => void) | null>(null)
   const layersStateRef = useRef({ grid: showGrid, shield: showShield })
-  const amplifierKey = (amplifierSlots ?? []).join('|')
+  const amplifierKey = (amplifierPads ?? []).join('|')
 
   useEffect(() => {
     selectedTrapRef.current = selectedTrap
@@ -844,7 +847,7 @@ function BlueprintScene({
       return
     }
     const selectedTrap = selectedTrapRef.current
-    const amplifierSlots = amplifierKey ? amplifierKey.split('|') : []
+    const amplifierPads = amplifierKey ? amplifierKey.split('|').map(Number) : []
 
     onRendererMode(
       renderer.capabilities.isWebGL2 ? 'WebGL 2' : 'WebGL 1 compatibility'
@@ -1594,9 +1597,8 @@ function BlueprintScene({
     )
 
     // The Storm Shield device and any placed amplifiers, as the game models.
-    const amplifierSpots = (amplifierSlots ?? [])
-      .filter((slot) => /^\d+$/.test(slot))
-      .map((slot) => terrain?.amplifiers?.[Number(slot)])
+    const amplifierSpots = amplifierPads
+      .map((pad) => terrain?.amplifiers?.[pad])
       .filter((spot): spot is Array<number> => Boolean(spot))
     const outpostPlacements: Array<{ models: Array<string>; spot: Array<number> }> = [
       ...(terrain?.stormShield ? [{ models: ['stormshield', 'stormshieldtop'], spot: terrain.stormShield }] : []),
@@ -1648,6 +1650,7 @@ function BlueprintScene({
     }
 
     const pickables: Array<THREE.InstancedMesh> = []
+    /** Each instance's trap variant (`trapKey`), for picking and selection. */
     const namesByMesh = new Map<string, Array<string>>()
     const iconGeometry = track(new THREE.PlaneGeometry(0.46, 0.46))
     const mountGeometry = track(new THREE.PlaneGeometry(0.58, 0.58))
@@ -1659,8 +1662,11 @@ function BlueprintScene({
     const iconMeshes: Array<{ mesh: THREE.InstancedMesh; names: Array<string> }> = []
     const disposeTrapMaterial = (material: THREE.Material) => track(material)
     const mountsByCategory = new Map<number, Array<OutpostLayout['traps'][number]>>()
-    /** Icon art and backing plates, hidden where the real trap model stands. */
-    const artMeshes: Array<{ mesh: THREE.InstancedMesh; names: Array<string> }> = []
+    /**
+     * Icon art and backing plates, hidden where the real trap model stands.
+     * Models are looked up by display name, not the variant key.
+     */
+    const artMeshes: Array<{ mesh: THREE.InstancedMesh; trapNames: Array<string> }> = []
 
     for (const [url, traps] of iconGroups) {
       const material = disposeTrapMaterial(
@@ -1686,16 +1692,17 @@ function BlueprintScene({
 
       const mesh = new THREE.InstancedMesh(iconGeometry, material, traps.length)
       const names: Array<string> = []
+      const trapNames: Array<string> = []
 
       traps.forEach((trap, index) => {
-        const name = layout.trapNames[trap[4]] ?? 'Unknown trap'
         const placement = trapPlacement(
           trap,
           toScene,
           0.03
         )
 
-        names[index] = name
+        names[index] = trapKey(layout, trap)
+        trapNames[index] = layout.trapNames[trap[4]] ?? ''
         dummy.position.copy(placement.position)
         dummy.quaternion.copy(placement.quaternion)
         dummy.scale.setScalar(1)
@@ -1713,7 +1720,7 @@ function BlueprintScene({
       scene.add(mesh)
       pickables.push(mesh)
       namesByMesh.set(mesh.uuid, names)
-      artMeshes.push({ mesh, names })
+      artMeshes.push({ mesh, trapNames })
       iconMeshes.push({ mesh, names })
     }
 
@@ -1754,13 +1761,14 @@ function BlueprintScene({
         traps.length
       )
       const names: Array<string> = []
+      const trapNames: Array<string> = []
 
       traps.forEach((trap, index) => {
-        const name = layout.trapNames[trap[4]] ?? 'Unknown trap'
         const mountPlacement = trapPlacement(trap, toScene, 0.012)
         const framePlacement = trapPlacement(trap, toScene, 0.02)
 
-        names[index] = name
+        names[index] = trapKey(layout, trap)
+        trapNames[index] = layout.trapNames[trap[4]] ?? ''
         dummy.position.copy(mountPlacement.position)
         dummy.quaternion.copy(mountPlacement.quaternion)
         dummy.scale.setScalar(1)
@@ -1777,7 +1785,7 @@ function BlueprintScene({
       mount.computeBoundingSphere()
       frame.computeBoundingSphere()
       scene.add(mount, frame)
-      artMeshes.push({ mesh: mount, names })
+      artMeshes.push({ mesh: mount, trapNames })
       pickables.push(mount, frame)
       namesByMesh.set(mount.uuid, names)
       namesByMesh.set(frame.uuid, names)
@@ -1797,7 +1805,7 @@ function BlueprintScene({
     let currentSelection = selectedTrap
     const applySelection = (name: string | null) => {
       currentSelection = name
-      const selected = visibleTraps.filter((trap) => layout.trapNames[trap[4]] === name)
+      const selected = visibleTraps.filter((trap) => trapKey(layout, trap) === name)
 
       for (const { mesh, names } of iconMeshes) {
         names.forEach((trapName, index) => {
@@ -1869,8 +1877,8 @@ function BlueprintScene({
             scene.add(mesh)
           }
         }
-        for (const { mesh, names } of artMeshes) {
-          if (names.every((name) => models.has(trapModelKey(name)))) mesh.visible = false
+        for (const { mesh, trapNames } of artMeshes) {
+          if (trapNames.every((name) => models.has(trapModelKey(name)))) mesh.visible = false
         }
         renderer.shadowMap.needsUpdate = true
         requestDraw()
@@ -2118,18 +2126,16 @@ function BlueprintScene({
 
       if (!hit || hit.instanceId === undefined) return null
 
-      const names = namesByMesh.get(hit.object.uuid)
-      const name = names?.[hit.instanceId]
+      const key = namesByMesh.get(hit.object.uuid)?.[hit.instanceId]
 
-      if (!name) return null
+      if (!key) return null
 
-      const category = visibleTraps.find(
-        (trap) => layout.trapNames[trap[4]] === name
-      )?.[3]
+      const trap = visibleTraps.find((entry) => trapKey(layout, entry) === key)
 
       return {
-        category: category ?? 3,
-        name,
+        category: trap?.[3] ?? 3,
+        key,
+        name: (trap && layout.trapNames[trap[4]]) ?? 'Unknown trap',
         x: event.clientX - rect.left,
         y: event.clientY - rect.top,
       }
@@ -2146,7 +2152,7 @@ function BlueprintScene({
 
       if (hit) {
         onHover(hit)
-        lastHover = hit.name
+        lastHover = hit.key
       } else if (lastHover !== null) {
         lastHover = null
         onHover(null)
@@ -2165,7 +2171,7 @@ function BlueprintScene({
 
       const hit = pickTrap(event)
 
-      if (hit) onSelectTrap(hit.name === currentSelection ? null : hit.name)
+      if (hit) onSelectTrap(hit.key === currentSelection ? null : hit.key)
     }
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown)
@@ -2286,15 +2292,15 @@ function LegendSwatch({
 const ignoreRendererMode = () => {}
 
 export function Blueprint3D({
-  amplifierSlots,
+  amplifierPads,
   layout,
   onSelectTrap,
   selectedTrap,
   traps,
   zoneId,
 }: {
-  /** Occupied amplifier slots for the zone (`"00"`, `"01"` …). */
-  amplifierSlots?: Array<string>
+  /** Pads with an amplifier on them, as indexes into the zone's pad spots. */
+  amplifierPads?: Array<number>
   layout: OutpostLayout
   onSelectTrap: (name: string | null) => void
   selectedTrap: string | null
@@ -2357,11 +2363,11 @@ export function Blueprint3D({
     () => new Map(traps.map((trap) => [trap.displayName, trap.iconKey])),
     [traps]
   )
-  const trapsByName = useMemo(
-    () => new Map(traps.map((trap) => [trap.displayName, trap])),
+  const trapsById = useMemo(
+    () => new Map(traps.map((trap) => [trap.id, trap])),
     [traps]
   )
-  const hoveredGroup = hovered ? trapsByName.get(hovered.name) : undefined
+  const hoveredGroup = hovered ? trapsById.get(hovered.key) : undefined
   const useCanvasFallback = useCallback(() => {
     sessionStorage.setItem(canvasFallbackSessionKey, '1')
     setCanvasFallback(true)
@@ -2544,7 +2550,7 @@ export function Blueprint3D({
           />
         ) : (
           <BlueprintScene
-            amplifierSlots={amplifierSlots}
+            amplifierPads={amplifierPads}
             cinematic={cinematic}
             iconByTrapName={iconByTrapName}
             layout={layout}

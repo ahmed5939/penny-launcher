@@ -30,6 +30,7 @@ export { PanelSectionHeader } from './panel-section-header'
 export { ProgressBar } from './progress'
 export { ScopeToolbar } from './scope-toolbar'
 export { Segmented, type SegmentedOption } from './segmented'
+export { Sparkline, type SparkPoint } from './sparkline'
 export {
   StatRow,
   StatTile,
@@ -38,6 +39,7 @@ export {
   StatusPill,
   type StatusTone,
 } from './stat'
+export { ZoneTile } from './zone-tile'
 
 /*
  * The reward vocabulary. It lived inside the missions route until four other

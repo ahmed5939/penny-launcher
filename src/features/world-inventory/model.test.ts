@@ -17,6 +17,22 @@ describe('world inventories', () => {
     expect(() => parseWorldProfile(profile('theater0'), 'a', 'storage')).toThrow()
     expect(() => parseWorldProfile(profile('outpost0', 'b'), 'a', 'storage')).toThrow()
   })
+  it('reads crafted perks from alterationDefinitions, as Epic stores them', () => {
+    const body = { profileChanges: [{ profile: { profileId: 'outpost0', accountId: 'a', items: {
+      trap: { templateId: 'Trap:tid_floor_tar_sr_t05', quantity: 1, attributes: { level: 60, durability: 24, alterationDefinitions: ['Alteration:aid_ele_fire_intrin_t05', '', 'Alteration:aid_att_maxdurability_trap_t05'] } },
+    } } }] }
+    const [trap] = parseWorldProfile(body, 'a', 'storage').items
+    expect(trap.alterations).toEqual(['Alteration:aid_ele_fire_intrin_t05', 'Alteration:aid_att_maxdurability_trap_t05'])
+    expect(trap.alterationSlots).toEqual(['Alteration:aid_ele_fire_intrin_t05', null, 'Alteration:aid_att_maxdurability_trap_t05'])
+  })
+  it('reads the Ventures backpack from theater2 only', () => {
+    const result = parseWorldProfile(profile('theater2'), 'a', 'ventures')
+    expect(result.location).toBe('ventures')
+    expect(result.items).toHaveLength(4)
+    expect(() => parseWorldProfile(profile('theater0'), 'a', 'ventures')).toThrow()
+    const tools = { profileChanges: [{ profile: { profileId: 'theater2', accountId: 'a', items: { edit: { templateId: 'Weapon:edittool', quantity: 1 }, wall: { templateId: 'Weapon:buildingitemdata_wall', quantity: 1 } } } }] }
+    expect(parseWorldProfile(tools, 'a', 'ventures').items).toEqual([])
+  })
   it('distinguishes a missing profile from a genuinely empty inventory', () => {
     expect(() => parseWorldProfile({}, 'a', 'backpack')).toThrow()
     expect(parseWorldProfile({ profileChanges: [{ profile: { accountId: 'a', profileId: 'theater0', items: {} } }] }, 'a', 'backpack').items).toEqual([])

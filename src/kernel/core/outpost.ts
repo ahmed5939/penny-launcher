@@ -1,4 +1,5 @@
 import type {
+  CloudStorageUserFile,
   OutpostBaseData,
   OutpostDefenseRecord,
   OutpostInfoResult,
@@ -23,6 +24,7 @@ import { dialog } from 'electron'
 import { RuntimeLog } from '../runtime-log'
 
 import { Authentication } from './authentication'
+import { cloudSaveTimes, parseOutpostMetadata } from './outpost-metadata'
 import {
   readableOutpostFileName,
   serializeReadableOutpostReport,
@@ -36,27 +38,14 @@ import { findUsersByAccountIds } from '../../services/endpoints/lookup'
 
 /**
  * Outpost viewer — reads the `metadata` profile for Storm Shield state
- * (zone levels, endurance waves, amplifiers, edit permissions, cloud save
- * file) and parses the zone's `.sav` backup from user cloud storage to
- * inventory the structures and traps actually placed in the base.
+ * (zone levels, endurance waves, amplifier pads, edit permissions, cloud
+ * save file; see `outpost-metadata.ts`) and parses the zone's `.sav`
+ * backup from user cloud storage to inventory the structures and traps
+ * actually placed in the base.
  */
 
 const CLOUD_STORAGE_USER =
   'https://fngw-mcp-gc-livefn.ol.epicgames.com/fortnite/api/cloudstorage/user'
-
-const ZONE_MAP: Record<string, string> = {
-  outpostcore_pve_04: 'Twine Peaks',
-  outpostcore_pve_03: 'Canny Valley',
-  outpostcore_pve_02: 'Plankerton',
-  outpostcore_pve_01: 'Stonewood',
-}
-
-const ZONE_ORDER = [
-  'outpostcore_pve_04',
-  'outpostcore_pve_03',
-  'outpostcore_pve_02',
-  'outpostcore_pve_01',
-]
 
 const TRAP_NAMES: Record<string, string> = {
   Floor_Spikes_Wood: 'Wooden Floor Spikes',
@@ -463,10 +452,13 @@ function readTrapLevel(
 }
 
 type TrapGroup = {
+  /** The first copy's perks, in slot order. */
+  alterations: Array<string>
   category: OutpostTrapCategory
   count: number
   displayName: string
   iconKey?: string
+  id: string
   level: number | null
   perks: Map<string, number>
   rarity: string | null
@@ -522,6 +514,9 @@ export function parseSav(raw: Buffer): {
   /** Dot identity for the minimap — display names, deduped by index. */
   const layoutTrapNames: Array<string> = []
   const layoutTrapNameIndex = new Map<string, number>()
+  /** Each dot's trap variant, by `OutpostTrap.id`. */
+  const layoutTrapVariants: Array<string> = []
+  const layoutTrapVariantIndex = new Map<string, number>()
   const layoutShapes: Array<string> = []
   const layoutShapeIndex = new Map<string, number>()
   const layoutPropNames: Array<string> = []
@@ -652,9 +647,13 @@ export function parseSav(raw: Buffer): {
 
   /**
    * Traps — one record per placed trap actor, carrying its item definition
-   * (rarity + tier), power level and applied perks. Grouped by display name.
+   * (rarity + tier), power level and applied perks. Grouped by schematic:
+   * the same trap at the same rarity and tier with the same perks, so two
+   * rolls of one trap stay apart.
    */
   const groups = new Map<string, TrapGroup>()
+  /** Variants seen so far per display name, for the next variant's id. */
+  const variantsByName = new Map<string, number>()
   const globalPerks = new Map<string, number>()
   /** Unique (trap item, level) → placed count, for power-level stats. */
   const instanceTallies = new Map<string, OutpostTrapInstanceTally>()
@@ -694,22 +693,36 @@ export function parseSav(raw: Buffer): {
     const templateId = tid ? `Trap:${tid[0].toLowerCase()}` : null
     const level = readTrapLevel(buffer, text, match.index, 2500)
     const perks = readAppliedAlterations(text, match.index, recordEnd)
+    /* Perk order follows the item's slots; sort so it cannot split a group. */
+    const groupKey = [displayName, templateId ?? '', [...perks].sort().join(',')].join('|')
 
-    let group = groups.get(displayName)
+    let group = groups.get(groupKey)
 
     if (!group) {
+      const variant = (variantsByName.get(displayName) ?? 0) + 1
+
+      variantsByName.set(displayName, variant)
       group = {
+        alterations: perks.map((perk) => `Alteration:${perk}`),
         category,
         count: 0,
         displayName,
         iconKey: TRAP_ICONS_LOWER.get(lower),
+        id: `${displayName}#${variant}`,
         level: null,
         perks: new Map(),
         rarity: null,
         templateId: null,
         tier: null,
       }
-      groups.set(displayName, group)
+
+      /* Every trap in the group carries these same perks. */
+      for (const perk of perks) {
+        const perkTemplateId = `Alteration:${perk}`
+
+        group.perks.set(perkTemplateId, (group.perks.get(perkTemplateId) ?? 0) + 1)
+      }
+      groups.set(groupKey, group)
     }
 
     group.count += 1
@@ -739,10 +752,6 @@ export function parseSav(raw: Buffer): {
     for (const perk of perks) {
       const perkTemplateId = `Alteration:${perk}`
 
-      group.perks.set(
-        perkTemplateId,
-        (group.perks.get(perkTemplateId) ?? 0) + 1
-      )
       globalPerks.set(
         perkTemplateId,
         (globalPerks.get(perkTemplateId) ?? 0) + 1
@@ -762,6 +771,7 @@ export function parseSav(raw: Buffer): {
         TRAP_LAYOUT_CODE[category],
         intern(layoutTrapNames, layoutTrapNameIndex, displayName),
         transform.yawQuadrant,
+        intern(layoutTrapVariants, layoutTrapVariantIndex, group.id),
       ])
     }
   }
@@ -803,14 +813,17 @@ export function parseSav(raw: Buffer): {
   const traps: Array<OutpostTrap> = [...groups.values()]
     .sort((a, b) => b.count - a.count)
     .map((group) => ({
+      alterations: group.alterations,
       category: group.category,
       count: group.count,
       displayName: group.displayName,
       iconKey: group.iconKey,
+      id: group.id,
       level: group.level,
-      perks: [...group.perks.entries()]
-        .map(([templateId, count]) => ({ count, templateId }))
-        .sort((a, b) => b.count - a.count),
+      perks: [...group.perks.entries()].map(([templateId, count]) => ({
+        count,
+        templateId,
+      })),
       rarity: group.rarity,
       templateId: group.templateId,
       tier: group.tier,
@@ -839,6 +852,7 @@ export function parseSav(raw: Buffer): {
           shapes: layoutShapes,
           structures: structureLayout,
           trapNames: layoutTrapNames,
+          trapVariants: layoutTrapVariants,
           traps: trapLayout,
         }
       : null
@@ -885,8 +899,8 @@ export class Outpost {
 
   /**
    * Zone overview for the given account: level, best endurance wave,
-   * amplifier count, edit permissions (resolved to display names) and the
-   * cloud save filename each zone's base is stored under.
+   * amplifier pads, edit permissions (resolved to display names), and the
+   * cloud save each zone's base is stored under with when it was saved.
    */
   static async requestInfo(account: AccountData): Promise<OutpostInfoResult> {
     try {
@@ -898,19 +912,28 @@ export class Outpost {
 
       /**
        * The metadata profile carries the shield state; the campaign profile
-       * carries the defense quest ledger. The latter is a bonus — if it
-       * fails, the page still renders without the defense dates.
+       * carries the defense quest ledger, and the cloud storage listing the
+       * time each base was last saved. The last two are a bonus — if either
+       * fails, the page still renders without those dates.
        */
-      const [metadataResult, campaignResult] = await Promise.allSettled([
-        getQueryProfileMetadata({
-          accessToken,
-          accountId: account.accountId,
-        }),
-        getQueryProfile({
-          accessToken,
-          accountId: account.accountId,
-        }),
-      ])
+      const [metadataResult, campaignResult, listingResult] =
+        await Promise.allSettled([
+          getQueryProfileMetadata({
+            accessToken,
+            accountId: account.accountId,
+          }),
+          getQueryProfile({
+            accessToken,
+            accountId: account.accountId,
+          }),
+          axios.get<Array<CloudStorageUserFile>>(
+            `${CLOUD_STORAGE_USER}/${account.accountId}`,
+            {
+              headers: { Authorization: `bearer ${accessToken}` },
+              timeout: 20_000,
+            }
+          ),
+        ])
 
       if (metadataResult.status === 'rejected') {
         throw metadataResult.reason
@@ -921,114 +944,32 @@ export class Outpost {
           ? campaignResult.value.data
           : null
       )
+      const saveTimes = cloudSaveTimes(
+        listingResult.status === 'fulfilled' ? listingResult.value.data : null
+      )
 
-      const profile = metadataResult.value.data?.profileChanges?.[0]?.profile
-      if (!profile) {
+      const parsed = parseOutpostMetadata(metadataResult.value.data)
+      if (!parsed) {
         return { error: 'Failed to read the metadata profile', success: false, zones: [] }
       }
 
-      const items = profile.items ?? {}
-      const allPermissionIds = new Set<string>()
-      const zoneData = new Map<
-        string,
-        {
-          amplifiers: number
-          amplifierSlots: Array<string>
-          lastSavedAt: string | null
-          level: number
-          permissions: Array<string>
-          saveCount: number
-          saveFile: string
-          wave: number
-        }
-      >()
+      const names = await Outpost.resolveAccountNames(accessToken, [
+        ...new Set(parsed.zones.flatMap((zone) => zone.editorIds)),
+      ])
 
-      for (const item of Object.values(items)) {
-        const templateId: string = item?.templateId ?? ''
-        const match = templateId.match(/^Outpost:(.+)$/)
-
-        if (!match || !ZONE_MAP[match[1]]) continue
-
-        const zoneKey = match[1]
-        const attributes = item.attributes ?? {}
-        const coreInfo = attributes.outpost_core_info ?? {}
-        const cloudInfo = attributes.cloud_save_info ?? {}
-        const records = cloudInfo.savedRecords ?? []
-        const permissions: Array<string> =
-          coreInfo.accountsWithEditPermission ?? []
-
-        for (const permissionId of permissions) {
-          allPermissionIds.add(permissionId)
-        }
-
-        const placedBuildings: Array<{ buildingTag?: string }> =
-          coreInfo.placedBuildings ?? []
-        /**
-         * Building tags are undocumented gameplay-tag paths; the last
-         * dotted/slashed segment is the only human-readable part.
-         */
-        const amplifierSlots = placedBuildings
-          .map((building) => {
-            const tag =
-              typeof building?.buildingTag === 'string'
-                ? building.buildingTag
-                : ''
-
-            return tag.split(/[./]/).filter(Boolean).pop() ?? ''
-          })
-          .filter(Boolean)
-
-        /** Metadata record order is not guaranteed. */
-        const newestRecord = records.reduce<
-          { lastModified?: string; recordFilename?: string } | null
-        >(
-          (best, record) =>
-            !best ||
-            (record.lastModified ?? '') > (best.lastModified ?? '')
-              ? record
-              : best,
-          null
-        )
-        zoneData.set(zoneKey, {
-          amplifiers: placedBuildings.length,
-          amplifierSlots,
-          lastSavedAt: newestRecord?.lastModified ?? null,
-          level: attributes.level ?? 0,
-          permissions,
-          saveCount: cloudInfo.saveCount ?? 0,
-          saveFile: newestRecord?.recordFilename ?? '',
-          wave: coreInfo.highestEnduranceWaveReached ?? 0,
-        })
-      }
-
-      const names = await Outpost.resolveAccountNames(
-        accessToken,
-        [...allPermissionIds]
-      )
-
-      const zones: Array<OutpostZoneInfo> = ZONE_ORDER.map((zoneKey) => {
-        const data = zoneData.get(zoneKey)
-        const zoneId = zoneKey.replace('outpostcore_', '')
-
-        return {
-          amplifierCount: data?.amplifiers ?? 0,
-          amplifierSlots: data?.amplifierSlots ?? [],
-          defenses: defenseHistory.get(zoneId) ?? [],
-          editPermissions: (data?.permissions ?? []).map((accountId) => ({
+      const zones: Array<OutpostZoneInfo> = parsed.zones.map(
+        ({ editorIds, ...zone }) => ({
+          ...zone,
+          defenses: defenseHistory.get(zone.zoneId) ?? [],
+          editPermissions: editorIds.map((accountId) => ({
             accountId,
             displayName: names.get(accountId) ?? accountId,
           })),
-          highestEnduranceWave: data?.wave ?? 0,
-          lastSavedAt: data?.lastSavedAt ?? null,
-          level: data?.level ?? 0,
-          saveCount: data?.saveCount ?? 0,
-          saveFile: data?.saveFile ?? '',
-          zoneId,
-          zoneName: ZONE_MAP[zoneKey],
-        }
-      })
+          lastSavedAt: saveTimes.get(zone.saveFile) ?? null,
+        })
+      )
 
-      return { success: true, zones }
+      return { success: true, summary: parsed.summary, zones }
     } catch (error) {
       RuntimeLog.error('caught:core/outpost.ts', error)
 

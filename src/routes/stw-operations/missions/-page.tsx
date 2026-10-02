@@ -7,6 +7,7 @@ import { AlertsOverview } from '../../-index/-alerts-overview/-index'
 import { AlertsDone } from '../../-index/alerts-done'
 import { FetchAlertsButton } from '../../-index/-components/-fetch-alerts-button'
 import { useDropzoneConfig } from '../../-index/-hooks'
+import { dailyResetLocalTime } from '../../-index/-home/-dashboard-model'
 import { useGetAccounts } from '../../../hooks/accounts'
 import { cn } from '../../../lib/utils'
 import { Route } from './route'
@@ -33,7 +34,7 @@ export function RouteComponent() {
         <PageHeader
           icon={Compass}
           title={t('sidebar:missions')}
-          description="Today's missions and alerts in every zone, and what each one pays. The board resets at 00:00 UTC."
+          description={`Today's missions and alerts in every zone, and what each one pays. Missions refresh daily at ${dailyResetLocalTime(Date.now())}.`}
           section={t('sidebar:groups.stw')}
           actions={<FetchAlertsButton />}
         />

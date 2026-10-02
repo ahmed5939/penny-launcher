@@ -48,6 +48,7 @@ import { Route as InformationCreditsRouteImport } from './routes/information/cre
 import { Route as AdvancedModeWorldInfoRouteImport } from './routes/advanced-mode/world-info/route'
 import { Route as AdvancedModeServerStatusRouteImport } from './routes/advanced-mode/server-status/route'
 import { Route as AdvancedModeMatchmakingTrackRouteImport } from './routes/advanced-mode/matchmaking-track/route'
+import { Route as AdvancedModeIslandsRouteImport } from './routes/advanced-mode/islands/route'
 import { Route as AdvancedModeGameSettingsRouteImport } from './routes/advanced-mode/game-settings/route'
 import { Route as AccountsRemoveRouteImport } from './routes/accounts/remove/route'
 import { Route as AccountManagementVbucksInformationRouteImport } from './routes/account-management/vbucks-information/route'
@@ -55,6 +56,7 @@ import { Route as AccountManagementSpritesRouteImport } from './routes/account-m
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
 import { Route as AccountManagementLockerRouteImport } from './routes/account-management/locker/route'
+import { Route as AccountManagementLibraryRouteImport } from './routes/account-management/library/route'
 import { Route as AccountManagementHistoryRouteImport } from './routes/account-management/history/route'
 import { Route as AccountManagementGiftsInformationRouteImport } from './routes/account-management/gifts-information/route'
 import { Route as AccountManagementFriendsRouteImport } from './routes/account-management/friends/route'
@@ -278,6 +280,11 @@ const AdvancedModeMatchmakingTrackRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AdvancedModeIslandsRouteRoute = AdvancedModeIslandsRouteImport.update({
+  path: '/advanced-mode/islands',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const AdvancedModeGameSettingsRouteRoute =
   AdvancedModeGameSettingsRouteImport.update({
     path: '/advanced-mode/game-settings',
@@ -316,6 +323,12 @@ const AccountManagementProfileRouteRoute =
 const AccountManagementLockerRouteRoute =
   AccountManagementLockerRouteImport.update({
     path: '/account-management/locker',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const AccountManagementLibraryRouteRoute =
+  AccountManagementLibraryRouteImport.update({
+    path: '/account-management/library',
     getParentRoute: () => rootRoute,
   } as any)
 
@@ -395,6 +408,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountManagementHistoryRouteImport
       parentRoute: typeof rootRoute
     }
+    '/account-management/library': {
+      preLoaderRoute: typeof AccountManagementLibraryRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/account-management/locker': {
       preLoaderRoute: typeof AccountManagementLockerRouteImport
       parentRoute: typeof rootRoute
@@ -421,6 +438,10 @@ declare module '@tanstack/react-router' {
     }
     '/advanced-mode/game-settings': {
       preLoaderRoute: typeof AdvancedModeGameSettingsRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/advanced-mode/islands': {
+      preLoaderRoute: typeof AdvancedModeIslandsRouteImport
       parentRoute: typeof rootRoute
     }
     '/advanced-mode/matchmaking-track': {
@@ -574,6 +595,7 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementFriendsRouteRoute,
   AccountManagementGiftsInformationRouteRoute,
   AccountManagementHistoryRouteRoute,
+  AccountManagementLibraryRouteRoute,
   AccountManagementLockerRouteRoute,
   AccountManagementProfileRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
@@ -581,6 +603,7 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementVbucksInformationRouteRoute,
   AccountsRemoveRouteRoute,
   AdvancedModeGameSettingsRouteRoute,
+  AdvancedModeIslandsRouteRoute,
   AdvancedModeMatchmakingTrackRouteRoute,
   AdvancedModeServerStatusRouteRoute,
   AdvancedModeWorldInfoRouteRoute,

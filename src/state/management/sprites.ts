@@ -1,4 +1,5 @@
 import type {
+  CatalogueStatus,
   SpriteCollection,
   SpritesPayload,
 } from '../../kernel/core/sprites'
@@ -10,6 +11,8 @@ export type SpritesState = {
   loadedFor: string | null
   requestedFor: string | null
   collection: SpriteCollection | null
+  /** New and unknown relics, and whether Epic moved the catalogue. */
+  catalogue: CatalogueStatus | null
   errorMessage: string | null
   isLoading: boolean
 
@@ -22,6 +25,7 @@ export const useSpritesStore = create<SpritesState>()((set) => ({
   loadedFor: null,
   requestedFor: null,
   collection: null,
+  catalogue: null,
   errorMessage: null,
   isLoading: false,
 
@@ -30,6 +34,7 @@ export const useSpritesStore = create<SpritesState>()((set) => ({
       loadedFor: null,
       requestedFor: null,
       collection: null,
+      catalogue: null,
       errorMessage: null,
       isLoading: false,
     }),
@@ -46,6 +51,7 @@ export const useSpritesStore = create<SpritesState>()((set) => ({
       state.requestedFor === payload.accountId
         ? {
             collection: payload.collection,
+            catalogue: payload.catalogue ?? state.catalogue,
             errorMessage: payload.errorMessage ?? null,
             loadedFor: payload.accountId,
             isLoading: false,

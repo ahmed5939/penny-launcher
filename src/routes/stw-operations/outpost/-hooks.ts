@@ -7,13 +7,14 @@ import { usePrimaryAccount } from '../../../hooks/accounts/scope'
 import { toast } from '../../../lib/notifications'
 
 export function useOutpostData() {
-  const { baseData, errorMessage, infoLoading, loadingZone, zones } =
+  const { baseData, errorMessage, infoLoading, loadingZone, summary, zones } =
     useOutpostStore(
       useShallow((state) => ({
         baseData: state.baseData,
         errorMessage: state.errorMessage,
         infoLoading: state.infoLoading,
         loadingZone: state.loadingZone,
+        summary: state.summary,
         zones: state.zones,
       }))
     )
@@ -98,6 +99,7 @@ export function useOutpostData() {
     infoLoading,
     loadingZone,
     primaryAccount,
+    summary,
     zones,
   }
 }

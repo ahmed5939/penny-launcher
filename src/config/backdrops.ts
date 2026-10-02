@@ -160,11 +160,15 @@ const routeBackdrops: Array<[prefix: string, backdrop: Backdrop]> = [
   ['/stw-operations/xpboosts', art(huskHorde, 'center 35%')],
   ['/stw-operations/leaderboards', art(stormKing, 'center 15%')],
   ['/advanced-mode/world-info', art(canny, 'center 45%')],
+  // Creator islands, under Scurvy Shoals' tropical coast.
+  ['/advanced-mode/islands', art(scurvyShoals, 'center 55%')],
   ['/advanced-mode/matchmaking-track', art(twineBlast, 'center 45%')],
   ['/advanced-mode', art(commandCenterDark, 'center 60%')],
   ['/account-management/friends', art(lobbyWinter, 'center 50%')],
   ['/account-management/locker', art(jess, 'center 30%')],
   ['/account-management/sprites', art(tropicalTemple, 'center 45%')],
+  // The founders' squad key art: the library is, above all, "do I own STW".
+  ['/account-management/library', art(stormWarning, 'center 30%')],
   ['/account-management/vbucks-information', art(vault, 'center 70%')],
   ['/account-management/gifts-information', art(vault, 'center 70%')],
   ['/account-management/redeem-codes', art(vault, 'center 70%')],

@@ -84,6 +84,7 @@ const markStartup = (name: string) => {
 }
 
 const features = {
+  accountExtras: () => import('./core/account-extras'),
   accountHealth: () => import('./core/account-health'),
   accounts: () => import('./startup/accounts'),
   alerts: () => import('./core/alerts'),
@@ -103,10 +104,12 @@ const features = {
   gameInstall: () => import('./startup/game-install'),
   gifts: () => import('./core/gifts-information'),
   inventory: () => import('./core/inventory'),
+  islands: () => import('./core/islands'),
   itemActions: () => import('./core/item-actions'),
   itemDatabase: () => import('./core/item-database'),
   launcher: () => import('./core/launcher'),
   leaderboard: () => import('./core/leaderboard'),
+  library: () => import('./core/library'),
   loadouts: () => import('./core/loadouts'),
   locker: () => import('./core/locker'),
   sprites: () => import('./core/sprites'),
@@ -115,6 +118,14 @@ const features = {
   mcp: () => import('./core/mcp'),
   party: () => import('./core/party'),
   pennyDb: () => import('./core/pennydb-missions'),
+  playtime: () => import('./core/playtime'),
+  accountSecurity: () => import('./core/account-security'),
+  ranked: () => import('./core/ranked'),
+  tournaments: () => import('./core/tournaments'),
+  brStats: () => import('./core/br-stats'),
+  gameNews: () => import('./core/game-news'),
+  epicStore: () => import('./core/epic-store'),
+  rewindFacts: () => import('./core/rewind-facts'),
   quests: () => import('./core/quests'),
   redeemCodes: () => import('./core/redeem-codes'),
   serverStatus: () => import('./core/server-status'),
@@ -147,8 +158,19 @@ process.on('uncaughtExceptionMonitor', (error) => {
     event.preventDefault()
     if (historyFlushPending) return
     historyFlushPending = true
-    void import('./startup/automation-history')
-      .then(({ flushAutomationHistory }) => flushAutomationHistory())
+    // A flush that never settles must not keep a windowless Penny alive.
+    const flushTimeoutMs = 3_000
+    void Promise.race([
+      import('./startup/automation-history').then(({ flushAutomationHistory }) =>
+        flushAutomationHistory()
+      ),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`history flush did not finish within ${flushTimeoutMs}ms`)),
+          flushTimeoutMs
+        )
+      ),
+    ])
       .catch((error) => RuntimeLog.error('automation-history:shutdown', error))
       .finally(() => {
         historyFlushedForQuit = true
@@ -520,6 +542,11 @@ process.on('uncaughtExceptionMonitor', (error) => {
       void runAutoDailyQuests().catch((error) =>
         RuntimeLog.error('startup:auto-daily-quests', error)
       )
+      // Arms the sprite watch only if it was switched on; otherwise this is
+      // one small file read.
+      void features.sprites()
+        .then(({ SpriteHistory }) => SpriteHistory.startWatch())
+        .catch((error) => RuntimeLog.error('startup:sprite-watch', error))
     })
 
     secureIpcOn(ElectronAPIEventKeys.RequestSettings, async () => {
@@ -890,6 +917,133 @@ process.on('uncaughtExceptionMonitor', (error) => {
     )
 
     secureIpcOn(
+      ElectronAPIEventKeys.AccountAvatarsRequest,
+      async (_, accountIds: Array<string>) => {
+        const { AccountExtras } = await features.accountExtras()
+        await AccountExtras.requestAvatars(accountIds)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.AccountStandingRequest,
+      async (_, refresh?: boolean) => {
+        const { AccountExtras } = await features.accountExtras()
+        await AccountExtras.requestStanding(Boolean(refresh))
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.AccountPlaytimeRequest,
+      async (_, refresh?: boolean) => {
+        const { Playtime } = await features.playtime()
+        await Playtime.request(Boolean(refresh))
+      }
+    )
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.AccountAchievementsRequest,
+      async (_, accountId: unknown, sandboxId: unknown) => {
+        const { Playtime } = await features.playtime()
+        return Playtime.gameAchievements(accountId, sandboxId)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.AccountSecurityRequest,
+      async (_, refresh?: boolean) => {
+        const { AccountSecurity } = await features.accountSecurity()
+        await AccountSecurity.request(Boolean(refresh))
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.AccountRankedRequest,
+      async (_, refresh?: boolean) => {
+        const { Ranked } = await features.ranked()
+        await Ranked.request(Boolean(refresh))
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.AccountTournamentsRequest,
+      async (_, refresh?: boolean) => {
+        const { Tournaments } = await features.tournaments()
+        await Tournaments.request(Boolean(refresh))
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.AccountBrStatsRequest,
+      async (_, refresh?: boolean) => {
+        const { BrStats } = await features.brStats()
+        await BrStats.request(Boolean(refresh))
+      }
+    )
+
+    secureIpcOn(ElectronAPIEventKeys.GameNewsRequest, async () => {
+      const { GameNews } = await features.gameNews()
+      await GameNews.request()
+    })
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LibraryOverviewRequest,
+      async (_, refresh?: boolean) => {
+        const { Library } = await features.library()
+        await Library.requestOverview(Boolean(refresh))
+      }
+    )
+
+    secureIpcHandle(ElectronAPIEventKeys.FreeGamesRequest, async (_, refresh?: boolean) => {
+      const { EpicStore } = await features.epicStore()
+      return EpicStore.freeGames(Boolean(refresh))
+    })
+
+    secureIpcHandle(ElectronAPIEventKeys.GameDetailsRequest, async (_, namespace: unknown) => {
+      const { EpicStore } = await features.epicStore()
+      return EpicStore.gameDetails(namespace)
+    })
+
+    secureIpcHandle(
+      ElectronAPIEventKeys.StoreOpenSignedIn,
+      async (_, accountId: unknown, url: unknown) => {
+        const { EpicStore } = await features.epicStore()
+        return EpicStore.openSignedIn(accountId, url)
+      }
+    )
+
+    /*
+     * By account id, never a renderer-supplied AccountData: the account and
+     * its tokens are looked up here, and the island is checked again in the
+     * launcher's argument builder.
+     */
+    secureIpcOn(
+      ElectronAPIEventKeys.LauncherStartMode,
+      async (_, accountId: unknown, island: unknown) => {
+        const { AccountsManager } = await features.accounts()
+        const account =
+          typeof accountId === 'string' ? AccountsManager.getAccountById(accountId) : undefined
+        const { isIslandOverride } = await import('./core/launcher-arguments')
+
+        if (!account) {
+          return
+        }
+
+        const { FortniteLauncher } = await features.launcher()
+        await FortniteLauncher.start(account, {
+          islandOverride: isIslandOverride(island) ? island : null,
+        })
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.RewindFactsRequest,
+      async (_, refresh?: boolean) => {
+        const { RewindFacts } = await features.rewindFacts()
+        await RewindFacts.request(Boolean(refresh))
+      }
+    )
+
+    secureIpcOn(
       ElectronAPIEventKeys.ExpeditionsRequest,
       async (_, accounts: Array<AccountData>) => {
         const { Expeditions } = await features.expeditions()
@@ -1067,6 +1221,39 @@ process.on('uncaughtExceptionMonitor', (error) => {
       await Shop.requestCatalog()
     })
 
+    // Library: account ids in, tagged replies out (see preload-actions/library).
+    secureIpcOn(
+      ElectronAPIEventKeys.LibraryRequest,
+      async (_, requestId: string, accountId: string, refresh: unknown) => {
+        const { Library } = await features.library()
+        await Library.request(requestId, accountId, refresh === true)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.LibraryStoreRequest,
+      async (_, requestId: string, refresh: unknown) => {
+        const { Library } = await features.library()
+        await Library.requestStore(requestId, refresh === true)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.CloudSavesRequest,
+      async (_, requestId: string, accountId: string) => {
+        const { Library } = await features.library()
+        await Library.requestCloudSaves(requestId, accountId)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.CloudSavesDownload,
+      async (_, requestId: string, accountId: string, appName: string) => {
+        const { Library } = await features.library()
+        await Library.downloadCloudSaves(requestId, accountId, appName)
+      }
+    )
+
     secureIpcOn(
       ElectronAPIEventKeys.LockerRequest,
       async (_, account: AccountData) => {
@@ -1096,6 +1283,27 @@ process.on('uncaughtExceptionMonitor', (error) => {
       async (_, account: AccountData, refresh: boolean) => {
         const { Sprites } = await features.sprites()
         await Sprites.request(account, refresh)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.SpritesAllRequest,
+      async (_, refresh: unknown) => {
+        const { Sprites } = await features.sprites()
+        await Sprites.requestAll(refresh === true)
+      }
+    )
+
+    secureIpcOn(ElectronAPIEventKeys.SpritesHistoryRequest, async () => {
+      const { SpriteHistory } = await features.sprites()
+      await SpriteHistory.request()
+    })
+
+    secureIpcOn(
+      ElectronAPIEventKeys.SpritesWatchSet,
+      async (_, enabled: unknown, intervalMinutes: unknown) => {
+        const { SpriteHistory } = await features.sprites()
+        await SpriteHistory.setWatch(enabled === true, intervalMinutes)
       }
     )
 
@@ -1857,6 +2065,51 @@ process.on('uncaughtExceptionMonitor', (error) => {
         await EULATracking.verify(accountIds)
       }
     )
+
+    /**
+     * Islands (Fortnite's Discover service via any linked account + Epic's ecosystem API)
+     */
+
+    secureIpcOn(
+      ElectronAPIEventKeys.IslandsDiscoveryRequest,
+      async (_, refresh: unknown) => {
+        const { Islands } = await features.islands()
+        await Islands.requestDiscovery(refresh === true)
+      }
+    )
+
+    secureIpcOn(
+      ElectronAPIEventKeys.IslandsMetricsRequest,
+      async (_, code: unknown, refresh: unknown) => {
+        const { Islands } = await features.islands()
+        await Islands.requestMetrics(String(code), refresh === true)
+      }
+    )
+
+    secureIpcOn(ElectronAPIEventKeys.IslandsWatchlistRequest, async () => {
+      const { IslandWatchlist } = await features.islands()
+      await IslandWatchlist.request()
+    })
+
+    secureIpcOn(
+      ElectronAPIEventKeys.IslandsWatchlistUpdate,
+      async (
+        _,
+        update: import('../features/islands/watchlist').WatchlistUpdate
+      ) => {
+        if (!update || typeof update !== 'object') return
+        const { IslandWatchlist } = await features.islands()
+        await IslandWatchlist.update(update)
+      }
+    )
+
+    // Watched islands alert from the tray; an empty list schedules nothing.
+    setTimeout(() => {
+      void features
+        .islands()
+        .then(({ IslandWatchlist }) => IslandWatchlist.start())
+        .catch((error) => RuntimeLog.error('startup:islands-watchlist', error))
+    }, 30_000)
 
     /**
      * Schedules

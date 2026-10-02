@@ -11,18 +11,29 @@ export type OutpostDefenseRecord = {
   defense: number
 }
 
+/**
+ * One Storm Shield amplifier from the metadata profile's `placedBuildings`:
+ * which amplifier it is and which pad the player put it on. Pads are the
+ * zone's `AmplifierPlacementActor`s, in the order `OutpostZoneTerrain`
+ * stores their positions.
+ */
+export type OutpostAmplifier = {
+  /** From `Outpost.BuildingActor.Building.NN`. */
+  building: number
+  /** From `Outpost.PlacementActor.Placement.NN`. */
+  pad: number
+}
+
 export type OutpostZoneInfo = {
-  amplifierCount: number
-  /**
-   * Human-ish slot labels parsed from `placedBuildings[].buildingTag` — the
-   * tag's last dotted/slashed segment. Empty when the format is unrecognised.
-   */
-  amplifierSlots: Array<string>
+  amplifiers: Array<OutpostAmplifier>
   /** Completed defenses with their claim dates, sorted by defense number. */
   defenses: Array<OutpostDefenseRecord>
   editPermissions: Array<OutpostPermissionPlayer>
   highestEnduranceWave: number
-  /** ISO timestamp of the newest cloud save record, when Epic reports one. */
+  /**
+   * When the current save was uploaded, from the cloud storage listing —
+   * the metadata profile itself carries no timestamps per zone.
+   */
   lastSavedAt: string | null
   level: number
   /** How many times this zone's base has been saved to cloud storage. */
@@ -32,9 +43,18 @@ export type OutpostZoneInfo = {
   zoneName: string
 }
 
+/** The metadata profile as a whole: when the outpost began and last changed. */
+export type OutpostProfileSummary = {
+  /** Profile creation — the account's first visit to a Storm Shield. */
+  createdAt: string | null
+  /** Last write to the profile, which every base save makes. */
+  updatedAt: string | null
+}
+
 export type OutpostInfoResult = {
   error?: string
   success: boolean
+  summary?: OutpostProfileSummary
   zones: Array<OutpostZoneInfo>
 }
 
@@ -75,12 +95,25 @@ export type OutpostPerkTally = {
   count: number
 }
 
+/**
+ * One trap schematic placed in the base: the same trap, rarity, tier and
+ * perks. A trap rolled twice with different perks is two of these, sharing
+ * a display name.
+ */
 export type OutpostTrap = {
+  /** `Alteration:` ids in slot order, a repeated perk once per slot. */
+  alterations: Array<string>
   category: OutpostTrapCategory
   count: number
   displayName: string
   /** Key into the renderer's local image map; undefined = no art shipped. */
   iconKey?: string
+  /**
+   * `"Wall Darts#2"` — unique per variant within one scan. Layout dots point
+   * at it through `OutpostLayout.trapVariants`, so selecting a card lights
+   * exactly its copies.
+   */
+  id: string
   /**
    * Short rarity code from the trap's TID — `c`|`uc`|`r`|`vr`|`sr`|`ur`,
    * the highest seen in the group. Maps straight onto `RarityType`.
@@ -99,7 +132,10 @@ export type OutpostTrap = {
    * curves for (rarity, tier, level), computed in the renderer.
    */
   level: number | null
-  /** Perks used across this trap type, most-used first. */
+  /**
+   * The perks every trap in this variant carries, in slot order; `count`
+   * is how many slots roll the same perk.
+   */
   perks: Array<OutpostPerkTally>
 }
 
@@ -148,14 +184,17 @@ export type OutpostLayout = {
    */
   shapes: Array<string>
   /**
-   * `[x, y, z, categoryCode, nameIndex, yawQuadrant]` — category 0 floor,
-   * 1 wall, 2 ceiling, 3 other; `nameIndex` points into `trapNames`. Floor
-   * and ceiling traps use the edge-origin convention and move half a tile
-   * forward; wall traps sit directly on the saved wall plane.
+   * `[x, y, z, categoryCode, nameIndex, yawQuadrant, variantIndex]` —
+   * category 0 floor, 1 wall, 2 ceiling, 3 other; `nameIndex` points into
+   * `trapNames`, `variantIndex` into `trapVariants`. Floor and ceiling traps
+   * use the edge-origin convention and move half a tile forward; wall traps
+   * sit directly on the saved wall plane.
    */
-  traps: Array<[number, number, number, number, number, number]>
+  traps: Array<[number, number, number, number, number, number, number?]>
   /** Trap display names referenced by the dots' `nameIndex`. */
   trapNames: Array<string>
+  /** `OutpostTrap.id` of each dot's variant, referenced by `variantIndex`. */
+  trapVariants?: Array<string>
   /**
    * World actors the save records alongside the player's build — trees,
    * rocks, loot containers and the map's own building pieces that the game
@@ -196,15 +235,18 @@ export type OutpostBaseData = {
 export type OutpostMetadataProfile = {
   profileChanges: Array<{
     profile?: {
+      created?: string
       items?: Record<
         string,
         {
           attributes?: {
             cloud_save_info?: {
               saveCount?: number
+              /** Each zone keeps two archives, `_a0` and `_a1`; this names the current one. */
               savedRecords?: Array<{
-                lastModified?: string
+                archiveNumber?: number
                 recordFilename?: string
+                recordIndex?: number
               }>
             }
             level?: number
@@ -220,6 +262,15 @@ export type OutpostMetadataProfile = {
           templateId?: string
         }
       >
+      updated?: string
     }
   }>
+}
+
+/** One file from `cloudstorage/user/{accountId}` — only the fields read here. */
+export type CloudStorageUserFile = {
+  filename?: string
+  length?: number
+  uniqueFilename?: string
+  uploaded?: string
 }

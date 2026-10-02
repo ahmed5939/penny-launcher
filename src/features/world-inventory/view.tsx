@@ -1,10 +1,10 @@
 import type { ItemRecord, ItemRecordMap } from '../../kernel/core/item-database'
 import type { LucideIcon } from 'lucide-react'
-import type { ComponentProps, MouseEvent } from 'react'
+import type { ComponentProps, MouseEvent, ReactNode } from 'react'
 import type { WorldInventory, WorldInventoryLocation, WorldItem, WorldTransfer } from './model'
 
 import { useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, Backpack, BrickWall, Crosshair, Gem, Info, Package, Sparkles, Star, Sword, Warehouse, X, Zap } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Backpack, BrickWall, Compass, Crosshair, Gem, Info, Package, Sparkles, Star, Sword, Warehouse, X, Zap } from 'lucide-react'
 
 import { useItemDatabaseStore } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
@@ -15,13 +15,17 @@ import ingredients from '../../data/ingredients.json'
 import { toast } from '../../lib/notifications'
 
 import { Button } from '../../components/ui/button'
+import { ContextMenuItem, ContextMenuLabel, ContextMenuSeparator } from '../../components/ui/context-menu'
 import { Input } from '../../components/ui/input'
 import { ItemDetailDialog } from '../../components/items/item-detail'
 import { ItemTile } from '../../components/items/item-tile'
 import { DetailSection } from '../../components/items/detail-parts'
 import { AccountResourceGate, Chip, EmptyState, KeyValue, PageHeader, Panel, PanelBody, PanelFooter, PanelHeader, RefreshButton, SearchField, Segmented, ToolBadges, useAccountResource } from '../../components/page'
 
-const copy: Record<WorldInventoryLocation, { title: string; icon: LucideIcon; empty: string; moveTo: string }> = {
+/** The two sides stacks move between. The Ventures backpack is view-only. */
+type Side = Exclude<WorldInventoryLocation, 'ventures'>
+
+const copy: Record<Side, { title: string; icon: LucideIcon; empty: string; moveTo: string }> = {
   backpack: { title: 'Backpack', icon: Backpack, empty: 'Nothing of this kind in the backpack.', moveTo: 'storage' },
   storage: { title: 'Storage', icon: Warehouse, empty: 'Nothing of this kind in storage.', moveTo: 'backpack' },
 }
@@ -68,6 +72,27 @@ function rarityRank(rarity: string | null | undefined) {
   return index === -1 ? rarityOrder.length : index
 }
 
+function itemName(id: string, records: ItemRecordMap) {
+  return worldItemDisplay(id, records)?.name ?? fallbackNames[id.split(':')[1]]?.name ?? (id.split(':')[1] ?? id).replaceAll('_', ' ')
+}
+
+/** One tab's stacks matching the search, best first. */
+function stacksFor(items: WorldItem[], tab: string, query: string, records: ItemRecordMap) {
+  const q = query.trim().toLowerCase()
+  return items
+    .filter((i) => tabOf(i.category) === tab && (!q || `${itemName(i.templateId, records)} ${i.templateId}`.toLowerCase().includes(q)))
+    .sort((a, b) => {
+      const da = worldItemDisplay(a.templateId, records)
+      const db = worldItemDisplay(b.templateId, records)
+      return rarityRank(da?.rarity) - rarityRank(db?.rarity) || (db?.tier ?? 0) - (da?.tier ?? 0) || itemName(a.templateId, records).localeCompare(itemName(b.templateId, records)) || a.id.localeCompare(b.id)
+    })
+}
+
+/** The category tabs, each with how many stacks it holds. */
+function tabOptionsFor(items: WorldItem[]) {
+  return tabs.map((t) => ({ ...t, label: `${t.label} (${items.filter((i) => tabOf(i.category) === t.value).length.toLocaleString()})` }))
+}
+
 /** Electron wraps a main-process throw in its own sentence; the user only needs ours. */
 function ipcMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : ''
@@ -93,10 +118,18 @@ function useTileRecords(records: ItemRecordMap, inventories: WorldInventory[]) {
   }, [records, ...inventories])
 }
 
+type View = 'world' | 'ventures'
+
+const viewOptions: Array<{ value: View; label: string }> = [
+  { value: 'world', label: 'Backpack & storage' },
+  { value: 'ventures', label: 'Ventures' },
+]
+
 /**
  * Backpack and Storage side by side, the way the game's Storm Shield storage
  * screen lays them out: the same category tabs over both, six items to a
- * row, and a transfer strip under each side. Both routes land here.
+ * row, and a transfer strip under each side. Both routes land here. The
+ * Ventures backpack is a third profile, switched to from the header.
  */
 export function BackpackPage() {
   return <WorldInventoryPage />
@@ -106,10 +139,17 @@ export function StoragePage() {
   return <WorldInventoryPage />
 }
 
-type BothSides = { accountId: string; backpack: WorldInventory; storage: WorldInventory }
-
 function WorldInventoryPage() {
   useRequestItemDatabase()
+  const [view, setView] = useState<View>('world')
+  const switcher = <Segmented onChange={setView} options={viewOptions} value={view} />
+
+  return view === 'ventures' ? <VenturesBackpack switcher={switcher} /> : <BackpackAndStorage switcher={switcher} />
+}
+
+type BothSides = { accountId: string; backpack: WorldInventory; storage: WorldInventory }
+
+function BackpackAndStorage({ switcher }: { switcher: ReactNode }) {
   const resource = useAccountResource(
     async (accountId): Promise<BothSides> => {
       const [backpack, storage] = await Promise.all([
@@ -124,7 +164,7 @@ function WorldInventoryPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        actions={<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />}
+        actions={<>{switcher}<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} /></>}
         description="Your backpack and Storm Shield storage side by side, as in game. Select items and move them across; perks are read from each copy."
         icon={Backpack}
         section="Save the World"
@@ -138,7 +178,119 @@ function WorldInventoryPage() {
   )
 }
 
-type Selection = { side: WorldInventoryLocation; ids: string[]; amount: number }
+function VenturesBackpack({ switcher }: { switcher: ReactNode }) {
+  const resource = useAccountResource(
+    (accountId) => window.electronAPI.requestWorldInventory(accountId, 'ventures'),
+    { cacheKey: 'stw.world-inventory.ventures', owner: (result) => result.accountId }
+  )
+
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        actions={<>{switcher}<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} /></>}
+        description="What you carry in Ventures this season. The game keeps it apart from storage."
+        icon={Compass}
+        section="Save the World"
+        status={<ToolBadges beta readOnly />}
+        title="Ventures Backpack"
+      />
+      <AccountResourceGate icon={Compass} loading={{ title: 'Loading the Ventures backpack…', description: 'Reading the account profile from Epic.' }} resource={resource} what="the Ventures backpack">
+        {(inventory) => <VenturesContents inventory={inventory} key={inventory.accountId} />}
+      </AccountResourceGate>
+    </div>
+  )
+}
+
+function VenturesContents({ inventory }: { inventory: WorldInventory }) {
+  const records = useTileRecords(useItemDatabaseStore((s) => s.records), [inventory])
+  const ratings = useItemDatabaseStore((s) => s.ratings)
+  const [tab, setTab] = useState('Weapon')
+  const [query, setQuery] = useState('')
+  const [detail, setDetail] = useState<WorldItem | null>(null)
+  const shown = useMemo(() => stacksFor(inventory.items, tab, query, records), [inventory, tab, query, records])
+
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        <Segmented onChange={setTab} options={tabOptionsFor(inventory.items)} value={tab} />
+        <SearchField className="w-64" label="Search the Ventures backpack" onChange={setQuery} placeholder="Item name" value={query} />
+      </div>
+
+      <Panel>
+        <PanelHeader
+          actions={<span className="text-xs text-muted-foreground"><span className="figure text-foreground">{shown.length.toLocaleString()}</span> here · <span className="figure">{inventory.items.length.toLocaleString()}</span> stacks in all</span>}
+          as="div"
+          compact
+          icon={Compass}
+          title="Ventures backpack"
+        />
+        <PanelBody className="min-h-72 px-3 py-3">
+          {shown.length > 0 ? (
+            <StackGrid
+              className="grid-cols-[repeat(auto-fill,minmax(5.75rem,1fr))]"
+              items={shown}
+              onClick={(item) => setDetail(item)}
+              records={records}
+            />
+          ) : (
+            <EmptyState
+              className="border-0 bg-transparent py-8"
+              description={query ? 'Nothing matches the search.' : inventory.items.length ? 'Nothing of this kind in the Ventures backpack.' : 'Play a Ventures mission this season to fill it.'}
+              icon={Compass}
+              title="Nothing here"
+            />
+          )}
+        </PanelBody>
+      </Panel>
+
+      <WorldItemDialog item={detail} onClose={() => setDetail(null)} ratings={ratings} records={records} />
+    </>
+  )
+}
+
+/** A tab's stacks as item tiles. Shared by both screens, so a stack looks the same in either. */
+function StackGrid({ busy, className, items, menu, onClick, onDoubleClick, records, selectedIds }: {
+  busy?: boolean
+  className: string
+  items: WorldItem[]
+  /** Right-click items for one stack. */
+  menu?: (item: WorldItem) => ReactNode
+  onClick: (item: WorldItem, event: MouseEvent) => void
+  onDoubleClick?: (item: WorldItem) => void
+  records: ItemRecordMap
+  selectedIds?: string[]
+}) {
+  return (
+    <div className={`grid content-start gap-1.5 ${className}`}>
+      {items.map((item) => {
+        const display = worldItemDisplay(item.templateId, records)
+        const name = itemName(item.templateId, records)
+        const facts = [item.level !== null && `Level ${item.level}`, item.durability !== null && `Durability ${Math.round(item.durability)}`, item.quantity > 1 && `×${item.quantity.toLocaleString()}`].filter(Boolean)
+        return (
+          <ItemTile
+            className="w-full"
+            disabled={busy}
+            key={item.id}
+            locked={item.favorite}
+            menu={menu?.(item)}
+            name={name}
+            onClick={(event) => onClick(item, event)}
+            onDoubleClick={onDoubleClick && (() => onDoubleClick(item))}
+            quantity={item.quantity}
+            records={records}
+            selected={selectedIds?.includes(item.id) ?? false}
+            size="small"
+            templateId={item.templateId}
+            tier={display?.tier}
+            title={[name, ...facts].join(' · ')}
+          />
+        )
+      })}
+    </div>
+  )
+}
+
+type Selection = { side: Side; ids: string[]; amount: number }
 
 function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged: () => void; refreshing: boolean }) {
   const records = useTileRecords(useItemDatabaseStore((s) => s.records), [data.backpack, data.storage])
@@ -150,27 +302,16 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
   const [detail, setDetail] = useState<WorldItem | null>(null)
   const busy = moving || refreshing
 
-  const name = (id: string) =>
-    worldItemDisplay(id, records)?.name ?? fallbackNames[id.split(':')[1]]?.name ?? (id.split(':')[1] ?? id).replaceAll('_', ' ')
+  const name = (id: string) => itemName(id, records)
 
-  const sides = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const shown = (inventory: WorldInventory) =>
-      inventory.items
-        .filter((i) => tabOf(i.category) === tab && (!q || `${name(i.templateId)} ${i.templateId}`.toLowerCase().includes(q)))
-        .sort((a, b) => {
-          const da = worldItemDisplay(a.templateId, records)
-          const db = worldItemDisplay(b.templateId, records)
-          return rarityRank(da?.rarity) - rarityRank(db?.rarity) || (db?.tier ?? 0) - (da?.tier ?? 0) || name(a.templateId).localeCompare(name(b.templateId)) || a.id.localeCompare(b.id)
-        })
-    return { backpack: shown(data.backpack), storage: shown(data.storage) }
-    // `name` reads `records`, which is the dependency that matters.
-  }, [data, tab, query, records])
+  const sides = useMemo(
+    () => ({ backpack: stacksFor(data.backpack.items, tab, query, records), storage: stacksFor(data.storage.items, tab, query, records) }),
+    [data, tab, query, records]
+  )
 
-  const tabCount = (value: string) => [...data.backpack.items, ...data.storage.items].filter((i) => tabOf(i.category) === value).length
-  const tabOptions = tabs.map((t) => ({ ...t, label: `${t.label} (${tabCount(t.value).toLocaleString()})` }))
+  const tabOptions = tabOptionsFor([...data.backpack.items, ...data.storage.items])
 
-  const pick = (side: WorldInventoryLocation, item: WorldItem, event: MouseEvent) => {
+  const pick = (side: Side, item: WorldItem, event: MouseEvent) => {
     setSelection((current) => {
       const additive = event.ctrlKey || event.metaKey
       if (additive && current?.side === side) {
@@ -182,9 +323,9 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
     })
   }
 
-  const find = (side: WorldInventoryLocation, id: string) => data[side].items.find((i) => i.id === id)
+  const find = (side: Side, id: string) => data[side].items.find((i) => i.id === id)
 
-  const move = async (side: WorldInventoryLocation, transfers: WorldTransfer[]) => {
+  const move = async (side: Side, transfers: WorldTransfer[]) => {
     setMoving(true)
     try {
       await window.electronAPI.transferWorldItems(data.accountId, transfers)
@@ -198,7 +339,7 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
     }
   }
 
-  const moveSelection = (side: WorldInventoryLocation) => {
+  const moveSelection = (side: Side) => {
     if (!selection || selection.side !== side) return
     const single = selection.ids.length === 1
     move(side, selection.ids.flatMap((id) => {
@@ -233,30 +374,38 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
               />
               <PanelBody className="h-[58vh] min-h-72 overflow-y-auto px-3 py-3">
                 {sides[side].length > 0 ? (
-                  <div className="grid grid-cols-6 content-start gap-1.5">
-                    {sides[side].map((item) => {
-                      const display = worldItemDisplay(item.templateId, records)
-                      const facts = [item.level !== null && `Level ${item.level}`, item.durability !== null && `Durability ${Math.round(item.durability)}`, item.quantity > 1 && `×${item.quantity.toLocaleString()}`].filter(Boolean)
+                  <StackGrid
+                    busy={busy}
+                    className="grid-cols-6"
+                    items={sides[side]}
+                    menu={(item) => {
+                      const inSelection = selected !== null && selected.ids.length > 1 && selected.ids.includes(item.id)
                       return (
-                        <ItemTile
-                          className="w-full"
-                          disabled={busy}
-                          key={item.id}
-                          locked={item.favorite}
-                          name={name(item.templateId)}
-                          onClick={(event) => pick(side, item, event)}
-                          onDoubleClick={() => move(side, [{ itemId: item.id, quantity: item.quantity, toStorage: side === 'backpack' }])}
-                          quantity={item.quantity}
-                          records={records}
-                          selected={selected?.ids.includes(item.id) ?? false}
-                          size="small"
-                          templateId={item.templateId}
-                          tier={display?.tier}
-                          title={[name(item.templateId), ...facts].join(' · ')}
-                        />
+                        <>
+                          <ContextMenuLabel className="truncate">{name(item.templateId)}</ContextMenuLabel>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onSelect={() => setDetail(item)}>
+                            <Info className="mr-2 size-3.5" />
+                            Details and perks
+                          </ContextMenuItem>
+                          <ContextMenuItem disabled={busy} onSelect={() => move(side, [{ itemId: item.id, quantity: item.quantity, toStorage: side === 'backpack' }])}>
+                            <Arrow className="mr-2 size-3.5" />
+                            {item.quantity > 1 ? `Move all ${item.quantity.toLocaleString()} to ${moveTo}` : `Move to ${moveTo}`}
+                          </ContextMenuItem>
+                          {inSelection && (
+                            <ContextMenuItem disabled={busy} onSelect={() => moveSelection(side)}>
+                              <Arrow className="mr-2 size-3.5" />
+                              Move {selected?.ids.length} selected to {moveTo}
+                            </ContextMenuItem>
+                          )}
+                        </>
                       )
-                    })}
-                  </div>
+                    }}
+                    onClick={(item, event) => pick(side, item, event)}
+                    onDoubleClick={(item) => move(side, [{ itemId: item.id, quantity: item.quantity, toStorage: side === 'backpack' }])}
+                    records={records}
+                    selectedIds={selected?.ids}
+                  />
                 ) : (
                   <EmptyState className="border-0 bg-transparent py-8" description={query ? 'Nothing matches the search.' : empty} icon={icon} title="Nothing here" />
                 )}
@@ -282,7 +431,7 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
                       </span>
                     )}
                     {single && (
-                      <Button aria-label="Item details" onClick={() => setDetail(single)} size="icon" variant="ghost"><Info className="size-4" /></Button>
+                      <Button onClick={() => setDetail(single)} size="sm" variant="ghost"><Info className="size-4" />Details</Button>
                     )}
                     <Button aria-label="Clear selection" onClick={() => setSelection(null)} size="icon" variant="ghost"><X className="size-4" /></Button>
                     <Button disabled={busy} onClick={() => moveSelection(side)} size="sm">
@@ -292,7 +441,7 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
                     </Button>
                   </>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Click to select, Ctrl-click for several, double-click to move a whole stack to {moveTo}.</span>
+                  <span className="text-xs text-muted-foreground">Click to select (Ctrl for several), double-click to move a stack, right-click for details and perks.</span>
                 )}
               </PanelFooter>
             </Panel>

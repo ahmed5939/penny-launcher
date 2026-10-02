@@ -47,6 +47,9 @@ module.exports = {
         'display-sm': '1.375rem',
         display: '1.75rem',
         'display-lg': '2rem',
+        /** Penny Rewind's story figures — one number filling a slide. */
+        hero: '3.5rem',
+        'hero-lg': '5.5rem',
       },
       colors: {
         border: 'hsl(var(--border))',

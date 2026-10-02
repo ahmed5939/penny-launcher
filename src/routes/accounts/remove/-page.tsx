@@ -2,6 +2,7 @@ import { Trash2, UserX } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { AccountAvatar } from '../../../components/accounts/account-avatar'
 import { Button } from '../../../components/ui/button'
 import {
   EmptyState,
@@ -74,7 +75,16 @@ function Content() {
   return (
     <Panel className="max-w-xl">
       <div className="px-5 py-5">
-        <p className="text-display-sm font-bold leading-tight">{name}</p>
+        <div className="flex items-center gap-3">
+          <AccountAvatar
+            accountId={selected.accountId}
+            name={name}
+            size="lg"
+          />
+          <p className="min-w-0 truncate text-display-sm font-bold leading-tight">
+            {name}
+          </p>
+        </div>
         <ul className="mt-3 space-y-1 text-ui text-muted-foreground">
           <li>Removes it from Penny, with its saved sign-in.</li>
           <li>Drops it from Penny's automations and auto-pins.</li>

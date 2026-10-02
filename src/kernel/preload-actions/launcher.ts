@@ -38,3 +38,8 @@ export function onNotificationLauncher(
       ),
   }
 }
+
+/** Start Fortnite straight into one mode (`campaign`, `playlist_juno`…) for one account, by id. */
+export function launcherStartMode(accountId: string, island: string | null) {
+  ipcRenderer.send(ElectronAPIEventKeys.LauncherStartMode, accountId, island)
+}

@@ -1,0 +1,302 @@
+{
+  "source": "Doc examples from LeleDerGrasshalmi/FortniteEndpointsDocumentation (docSurface, docPage, docLinks, docToken), plus a constructed panel and links using island codes recorded from fortnite.com on 2026-10-01. Not a live capture.",
+  "docToken": {
+    "branchName": "++Fortnite+Release-31.30",
+    "appId": "Fortnite",
+    "token": "6liJ9OTYJpwtx0+jApUc/OYtq2eHDXFHTIp4nfJgduc="
+  },
+  "docSurface": {
+    "testVariantName": "Baseline",
+    "testName": "31.30_31.40_EpicPage",
+    "testAnalyticsId": "v2|5117|1cf3c6c8329b7f8040f39fec1712d1dd",
+    "testVariantAnalyticsId": "v2_v0_c7790",
+    "panels": [
+      {
+        "panelName": "Featured_EpicPage",
+        "panelDisplayName": "Featured",
+        "panelSubtitle": null,
+        "featureTags": [
+          "hasViewAll:true",
+          "horizontalScroll:false",
+          "maxVisibleRows:2",
+          "panelType:featured",
+          "showIfEmpty:false",
+          "squareTiles:false"
+        ],
+        "firstPage": {
+          "results": [
+            {
+              "lastVisited": "2024-08-31T10:40:42.535Z",
+              "linkCode": "playlist_juno",
+              "isFavorite": true,
+              "globalCCU": 56152,
+              "lockStatus": "UNLOCKED",
+              "lockStatusReason": "RATING_THRESHOLD",
+              "isVisible": true
+            }
+          ],
+          "hasMore": false,
+          "panelTargetName": null,
+          "pageMarker": null
+        },
+        "panelType": "CuratedList",
+        "playHistoryType": null,
+        "panelContexts": {}
+      },
+      {
+        "panelName": "PublishedIslands",
+        "panelDisplayName": "More Islands",
+        "panelSubtitle": null,
+        "featureTags": [
+          "hasViewAll:true",
+          "horizontalScroll:false",
+          "maxVisibleRows:2",
+          "panelType:published",
+          "showIfEmpty:false",
+          "squareTiles:false"
+        ],
+        "firstPage": {
+          "results": [],
+          "hasMore": false,
+          "panelTargetName": null,
+          "pageMarker": null
+        },
+        "panelType": "PublishedIslands",
+        "playHistoryType": null,
+        "panelContexts": {}
+      }
+    ]
+  },
+  "docPage": {
+    "results": [
+      {
+        "lastVisited": null,
+        "linkCode": "set_habanero_blastberry_playlists",
+        "isFavorite": false,
+        "globalCCU": 370554,
+        "lockStatus": "UNLOCKED",
+        "lockStatusReason": "RATING_THRESHOLD",
+        "isVisible": true
+      }
+    ],
+    "hasMore": false,
+    "panelTargetName": null,
+    "pageMarker": null
+  },
+  "docLinks": [
+    {
+      "namespace": "fn",
+      "accountId": "epic",
+      "creatorName": "Epic",
+      "mnemonic": "playlist_defaultsolo",
+      "linkType": "BR:Playlist",
+      "metadata": {
+        "parent_set": "set_br_playlists",
+        "favorite_override": "experience_br",
+        "alt_title": {
+          "de": "Solo"
+        },
+        "play_history_override": "experience_br",
+        "parent_experience": "experience_br",
+        "image_url": "https://cdn2.unrealengine.com/solosize-1920-1920x1080-741c5c77900f.jpg",
+        "product_tag": "Product.BR.Build.Solo",
+        "image_urls": {
+          "url_s": "https://cdn2.unrealengine.com/solosize-480-480x270-bd71a8aecb8f.jpg",
+          "url_xs": "https://cdn2.unrealengine.com/solosize-256-256x144-9e4ba5075e53.jpg",
+          "url_m": "https://cdn2.unrealengine.com/solosize-640-640x360-0062a2e4e8b4.jpg",
+          "url": "https://cdn2.unrealengine.com/solosize-1920-1920x1080-741c5c77900f.jpg"
+        },
+        "dynamicXp": {
+          "uniqueGameVersion": 95,
+          "calibrationPhase": "LiveXp"
+        },
+        "title": "Solo",
+        "matchmaking": {
+          "override_playlist": "playlist_defaultsolo"
+        },
+        "video_vuid": "taqdZkWyokbCyEFWld"
+      },
+      "version": 95,
+      "active": true,
+      "disabled": false,
+      "created": "2021-10-01T00:56:43.870Z",
+      "published": "2021-08-03T15:27:17.540Z",
+      "updated": "2025-09-17T23:51:16.629Z",
+      "descriptionTags": [],
+      "moderationStatus": "Unmoderated"
+    },
+    {
+      "namespace": "fn",
+      "accountId": "epic",
+      "creatorName": "Epic",
+      "mnemonic": "playlist_defaultduo",
+      "linkType": "BR:Playlist",
+      "metadata": {
+        "parent_set": "set_br_playlists",
+        "favorite_override": "experience_br",
+        "alt_title": {
+          "de": "Duo"
+        },
+        "play_history_override": "experience_br",
+        "parent_experience": "experience_br",
+        "image_url": "https://cdn2.unrealengine.com/duossize-1920-1920x1080-284f117a184a.jpg",
+        "product_tag": "Product.BR.Build.Duo",
+        "image_urls": {
+          "url_s": "https://cdn2.unrealengine.com/duossize-480-480x270-f7ab641d8d9c.jpg",
+          "url_xs": "https://cdn2.unrealengine.com/duossize-256-256x144-6291155853c9.jpg",
+          "url_m": "https://cdn2.unrealengine.com/duossize-640-640x360-9cd7be7aba4c.jpg",
+          "url": "https://cdn2.unrealengine.com/duossize-1920-1920x1080-284f117a184a.jpg"
+        },
+        "dynamicXp": {
+          "uniqueGameVersion": 95,
+          "calibrationPhase": "LiveXp"
+        },
+        "title": "Duo",
+        "matchmaking": {
+          "override_playlist": "playlist_defaultduo"
+        },
+        "video_vuid": "taqdZkWyokbCyEFWld"
+      },
+      "version": 95,
+      "active": true,
+      "disabled": false,
+      "created": "2021-10-01T00:56:46.389Z",
+      "published": "2021-08-03T15:27:17.523Z",
+      "updated": "2025-09-17T23:51:45.494Z",
+      "descriptionTags": [],
+      "moderationStatus": "Unmoderated",
+      "discoveryIntent": "PUBLIC"
+    }
+  ],
+  "constructedPanel": {
+    "panelName": "ByEpicNoBuild_Shooters",
+    "panelDisplayName": null,
+    "panelSubtitle": null,
+    "featureTags": [
+      "panelType:curated"
+    ],
+    "firstPage": {
+      "results": [
+        {
+          "lastVisited": null,
+          "linkCode": "2198-3887-7937",
+          "isFavorite": false,
+          "globalCCU": 1714,
+          "lockStatus": "UNLOCKED",
+          "lockStatusReason": "RATING_THRESHOLD",
+          "isVisible": true
+        },
+        {
+          "lastVisited": null,
+          "linkCode": "6155-1398-4059",
+          "isFavorite": false,
+          "globalCCU": 8415,
+          "lockStatus": "UNLOCKED",
+          "lockStatusReason": "RATING_THRESHOLD",
+          "isVisible": true
+        },
+        {
+          "lastVisited": null,
+          "linkCode": "5066-7426-3382",
+          "isFavorite": false,
+          "globalCCU": -1,
+          "lockStatus": "UNLOCKED",
+          "lockStatusReason": "RATING_THRESHOLD",
+          "isVisible": true
+        },
+        {
+          "lastVisited": null,
+          "linkCode": "0468-6365-1453",
+          "isFavorite": false,
+          "globalCCU": 107,
+          "lockStatus": "UNLOCKED",
+          "lockStatusReason": "RATING_THRESHOLD",
+          "isVisible": true
+        },
+        {
+          "lastVisited": null,
+          "linkCode": "1111-2222-3333",
+          "isFavorite": false,
+          "globalCCU": 50,
+          "lockStatus": "UNLOCKED",
+          "lockStatusReason": "RATING_THRESHOLD",
+          "isVisible": false
+        },
+        {
+          "lastVisited": null,
+          "linkCode": "2198-3887-7937",
+          "isFavorite": false,
+          "globalCCU": 1714,
+          "lockStatus": "UNLOCKED",
+          "lockStatusReason": "RATING_THRESHOLD",
+          "isVisible": true
+        },
+        {
+          "linkCode": "../../etc"
+        },
+        null
+      ],
+      "hasMore": true,
+      "panelTargetName": null,
+      "pageMarker": null
+    },
+    "panelType": "CuratedList",
+    "playHistoryType": null,
+    "panelContexts": {}
+  },
+  "constructedLinks": [
+    {
+      "namespace": "fn",
+      "accountId": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+      "creatorName": "hive",
+      "mnemonic": "6155-1398-4059",
+      "linkType": "Creative:Island",
+      "metadata": {
+        "title": "1V1 WITH EVERY GUN",
+        "tagline": "Every gun, one opponent.",
+        "image_url": "https://cdn-0001.qstv.on.epicgames.com/AbCdEfGhIjKlMnOpQr/image/landscape_comp.jpeg",
+        "image_urls": {
+          "url_s": "https://cdn-0001.qstv.on.epicgames.com/AbCdEfGhIjKlMnOpQr/image/landscape_comp_s.jpeg",
+          "url_m": "https://cdn-0001.qstv.on.epicgames.com/AbCdEfGhIjKlMnOpQr/image/landscape_comp_m.jpeg",
+          "url": "https://cdn-0001.qstv.on.epicgames.com/AbCdEfGhIjKlMnOpQr/image/landscape_comp.jpeg"
+        },
+        "ratings": {
+          "rating_received_time": "2024-01-01T00:00:00.000Z",
+          "boards": {
+            "ESRB": {
+              "initial_rating": "TEEN"
+            },
+            "GENERIC": {
+              "initial_rating": "AGE_12"
+            }
+          }
+        },
+        "genre_labels": [
+          "Shooter"
+        ]
+      },
+      "version": 12,
+      "active": true,
+      "disabled": false
+    },
+    {
+      "namespace": "fn",
+      "accountId": "1b2c3d4e5f60718293a4b5c6d7e8f9a0",
+      "creatorName": "gone",
+      "mnemonic": "0468-6365-1453",
+      "linkType": "Creative:Island",
+      "metadata": {
+        "title": "Taken down"
+      },
+      "active": false,
+      "disabled": true
+    },
+    {
+      "mnemonic": "../../etc",
+      "metadata": {
+        "title": "Path"
+      }
+    },
+    "junk"
+  ]
+}

@@ -88,6 +88,7 @@ import {
   rarityLabels,
   rarityOrder,
 } from '../../../config/constants/fortnite/items'
+import { schematicTypeOptions } from '../../../config/constants/fortnite/schematic-types'
 
 /**
  * Kind is a tab, not a filter.
@@ -577,6 +578,19 @@ function Content({
               value={filters.search}
             />
 
+            {activeKind === 'schematic' && (
+              <Picker
+                className="min-w-36"
+                label="Weapon or trap type"
+                onChange={(schematicType) => {
+                  updateFilters({ schematicType })
+                  clearSelection()
+                }}
+                options={schematicTypeOptions}
+                value={filters.schematicType}
+              />
+            )}
+
             {/*
               Kept as a plain Select rather than a Picker: each option carries
               its rarity dot, which a Picker's text-only options cannot.
@@ -690,7 +704,7 @@ function Content({
               <PanelBody>
                 <EmptyState
                   className="border-0 bg-transparent py-8"
-                  description="Nothing here matches the current search, rarity and tier."
+                  description={`Nothing here matches the current search, ${activeKind === 'schematic' ? 'type, ' : ''}rarity and tier.`}
                   icon={Boxes}
                   title="No matches"
                 />

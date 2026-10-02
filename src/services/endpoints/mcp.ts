@@ -1040,3 +1040,26 @@ export function setStorageTransfer({
     }
   )
 }
+
+/** `common_public`: what other players can see — the homebase name and banner. */
+export function getQueryProfileCommonPublic({
+  accessToken,
+  accountId,
+}: {
+  accessToken: string
+  accountId: string
+}) {
+  return baseGameService.post<MCPQueryProfile>(
+    `/profile/${accountId}/client/QueryProfile`,
+    {},
+    {
+      headers: {
+        Authorization: `bearer ${accessToken}`,
+      },
+      params: {
+        profileId: 'common_public',
+        rvn: -1,
+      },
+    }
+  )
+}

@@ -1,77 +1,32 @@
-import type {
-  EpicComponentGroup,
-  EpicComponent,
-  EpicIncident,
-  EpicOverallStatus,
-  EpicStatusSummary,
-  ServerStatusEntry,
-  ServerStatusPayload,
-} from '../../kernel/core/server-status'
+import type { ServerStatusPayload } from '../../features/server-status/model'
 
 import { create } from 'zustand'
 
 export type ServerStatusState = {
-  entries: Array<ServerStatusEntry>
-  diagnostics: ServerStatusPayload['diagnostics']
-  errorMessage: string | null
-  page: EpicOverallStatus | null
-  groups: Array<EpicComponentGroup>
-  standalone: Array<EpicComponent>
-  incidents: Array<EpicIncident>
-  summary: EpicStatusSummary | null
-  pageError: string | null
+  checkedAt: number | null
   isLoading: boolean
-  lastCheckedAt: number | null
+  status: ServerStatusPayload | null
+  /** Mounted Servers pages; while any is open the status is kept fresh. */
+  viewers: number
 
   setLoading: (value: boolean) => void
-  setResponse: (config: {
-    entries: Array<ServerStatusEntry>
-    diagnostics?: ServerStatusPayload['diagnostics']
-    errorMessage?: string
-    checkedAt: number
-  } & Pick<
-    ServerStatusPayload,
-    'groups' | 'incidents' | 'page' | 'standalone' | 'summary' | 'pageError'
-  >) => void
+  setResponse: (status: ServerStatusPayload, checkedAt: number) => void
+  /** Registers a viewer and returns its release. */
+  watch: () => () => void
 }
 
 export const useServerStatusStore = create<ServerStatusState>()((set) => ({
-  entries: [],
-  diagnostics: undefined,
-  errorMessage: null,
-  page: null,
-  groups: [],
-  standalone: [],
-  incidents: [],
-  summary: null,
-  pageError: null,
+  checkedAt: null,
   isLoading: false,
-  lastCheckedAt: null,
+  status: null,
+  viewers: 0,
 
   setLoading: (value) => set({ isLoading: value }),
-  setResponse: ({
-    entries,
-    diagnostics,
-    errorMessage,
-    groups,
-    incidents,
-    page,
-    standalone,
-    summary,
-    pageError,
-    checkedAt,
-  }) =>
-    set({
-      entries,
-      diagnostics,
-      errorMessage: errorMessage ?? null,
-      groups: groups ?? [],
-      incidents: incidents ?? [],
-      page: page ?? null,
-      standalone: standalone ?? [],
-      summary: summary ?? null,
-      pageError: pageError ?? null,
-      isLoading: false,
-      lastCheckedAt: checkedAt,
-    }),
+  setResponse: (status, checkedAt) =>
+    set({ checkedAt, isLoading: false, status }),
+  watch: () => {
+    set((state) => ({ viewers: state.viewers + 1 }))
+
+    return () => set((state) => ({ viewers: state.viewers - 1 }))
+  },
 }))

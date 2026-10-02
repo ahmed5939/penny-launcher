@@ -18,18 +18,19 @@ import { AccountResourceGate, Callout, Chip, EmptyState, FilterBar, KeyValue, Pa
 
 const PAGE_SIZE = 48
 
-type ViewId = 'aoe' | 'historical' | 'modded' | 'location'
+type ViewId = 'aoe' | 'legacy' | 'historical' | 'modded' | 'location'
 type StatusFilter = 'highlighted' | 'hybrid' | 'modded' | 'legacy' | 'review' | 'all'
 type SortKey = 'power' | 'rarity' | 'name'
 
 /**
- * The three account-wide views are what the tool is for. "By location" reads
+ * The account-wide views are what the tool is for. "By location" reads
  * one inventory at a time; it is one tab with a picker rather than four,
  * because browsing an inventory is what the Vault, Collection Book and
  * Backpack & Storage pages are for.
  */
 const views: Array<{ id: ViewId; label: string; title: string; description: string }> = [
   { id: 'aoe', label: 'AOE weapons', title: 'AOE weapons', description: 'Legacy Knockback AOE weapons and schematics, grouped by where each copy lives.' },
+  { id: 'legacy', label: 'Legacy', title: 'Legacy weapons & traps', description: 'Every copy carrying a legacy perk, grouped by where it lives.' },
   { id: 'historical', label: 'Historical', title: 'Historical weapons & traps', description: 'Perks you could once roll legitimately and no longer can — Discharger reload speed, Vindertech five-headshots and the like.' },
   { id: 'modded', label: 'Modded', title: 'Modded weapons & traps', description: 'Confirmed modded rolls, and candidates whose perks fit no rule. Each is labelled.' },
   { id: 'location', label: 'By location', title: 'By location', description: 'Every weapon and trap in one inventory. Filter by status to see what stands out.' },
@@ -143,7 +144,7 @@ function Results({ scan: current }: { scan: RareItemScan }) {
   const [page, setPage] = useState(0)
   const [detail, setDetail] = useState<FinderItem | null>(null)
 
-  const aggregate = view === 'aoe' || view === 'historical' || view === 'modded'
+  const aggregate = view !== 'location'
   const { succeeded, failed } = useMemo(() => ({
     succeeded: current.profiles.filter((p) => p.status === 'success'),
     failed: current.profiles.filter((p) => p.status === 'error'),
@@ -152,12 +153,12 @@ function Results({ scan: current }: { scan: RareItemScan }) {
   const profile: Pick<ScannedProfile, 'status' | 'items' | 'scannedCount' | 'malformedItems' | 'error'> | null = useMemo(() => aggregate
     ? {
         status: succeeded.length ? 'success' : 'error',
-        items: succeeded.flatMap((p) => p.items).filter((i) => (view === 'aoe' ? i.aoe : view === 'historical' ? i.historical && !i.modded : i.modded)),
+        items: succeeded.flatMap((p) => p.items).filter((i) => (view === 'aoe' ? i.aoe : view === 'legacy' ? i.status === 'legacy' : view === 'historical' ? i.historical && !i.modded : i.modded)),
         scannedCount: succeeded.reduce((n, p) => n + (p.scannedCount ?? 0), 0),
         malformedItems: succeeded.reduce((n, p) => n + (p.malformedItems ?? 0), 0),
         error: { message: 'No inventories could be checked.', code: '' },
       }
-    : (current.profiles.find((p) => p.sourceId === location) ?? null), [aggregate, current.profiles, succeeded, view])
+    : (current.profiles.find((p) => p.sourceId === location) ?? null), [aggregate, current.profiles, location, succeeded, view])
 
   const displayed = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -169,7 +170,7 @@ function Results({ scan: current }: { scan: RareItemScan }) {
         : item.status === status
     const items = (profile?.status === 'success' ? profile.items : []).filter(
       (item) =>
-        (aggregate || kind === 'all' || item.kind === kind) &&
+        (view === 'aoe' || kind === 'all' || item.kind === kind) &&
         (aggregate || matchesStatus(item)) &&
         (!q || [item.name, item.templateId, ...item.perks.map((p) => `${p.name} ${p.id}`)].join(' ').toLowerCase().includes(q))
     )
@@ -179,17 +180,14 @@ function Results({ scan: current }: { scan: RareItemScan }) {
         ? (a: FinderItem, b: FinderItem) => (rarityRank[b.rarity] || 0) - (rarityRank[a.rarity] || 0)
         : () => 0
     return items.sort((a, b) => byKey(a, b) || a.name.localeCompare(b.name) || a.itemId.localeCompare(b.itemId))
-  }, [profile, aggregate, kind, status, query, sort])
+  }, [profile, aggregate, kind, status, query, sort, view])
 
   const shown = paginate(displayed, page, PAGE_SIZE)
   const visible = shown.items
   const activeView = views.find((v) => v.id === view)!
   const complete = current.counts.complete
 
-  const countFor = (id: ViewId) => {
-    if (id === 'aoe' || id === 'historical' || id === 'modded') return succeeded.length ? current.counts[id] : null
-    return null
-  }
+  const countFor = (id: ViewId) => (id !== 'location' && succeeded.length ? current.counts[id] : null)
   const tabs = views.map((v) => {
     const n = countFor(v.id)
     return { value: v.id, label: n === null ? v.label : `${v.label} · ${n}` }
@@ -225,13 +223,9 @@ function Results({ scan: current }: { scan: RareItemScan }) {
 
           <FilterBar>
             <SearchField label="Search items or perks" onChange={(v) => { setQuery(v); setPage(0) }} placeholder="Item name, perk or template id" value={query} />
-            {!aggregate && (
-              <>
-                <Picker label="Location" onChange={(v) => { setLocation(v); setPage(0) }} options={SOURCES.map((source) => ({ value: source.id, label: locationLabel[source.id] }))} value={location} />
-                <Picker label="Item type" onChange={(v) => { setKind(v); setPage(0) }} options={[{ value: 'all', label: 'Weapons & traps' }, { value: 'weapon', label: 'Weapons' }, { value: 'trap', label: 'Traps' }]} value={kind} />
-                <Picker label="Status" onChange={(v) => { setStatus(v); setPage(0) }} options={statusFilters} value={status} />
-              </>
-            )}
+            {!aggregate && <Picker label="Location" onChange={(v) => { setLocation(v); setPage(0) }} options={SOURCES.map((source) => ({ value: source.id, label: locationLabel[source.id] }))} value={location} />}
+            {view !== 'aoe' && <Picker label="Item type" onChange={(v) => { setKind(v); setPage(0) }} options={[{ value: 'all', label: 'Weapons & traps' }, { value: 'weapon', label: 'Weapons' }, { value: 'trap', label: 'Traps' }]} value={kind} />}
+            {!aggregate && <Picker label="Status" onChange={(v) => { setStatus(v); setPage(0) }} options={statusFilters} value={status} />}
             <Picker label="Sort" onChange={setSort} options={[{ value: 'power', label: 'Power, high to low' }, { value: 'rarity', label: 'Rarity, high to low' }, { value: 'name', label: 'Name, A to Z' }]} value={sort} />
           </FilterBar>
 
@@ -264,8 +258,8 @@ function Results({ scan: current }: { scan: RareItemScan }) {
                             ? 'Waiting for this inventory.'
                             : inLocation.length
                               ? 'Matches are on another page.'
-                              : query
-                                ? 'No matches for this search.'
+                              : query || (view !== 'aoe' && kind !== 'all')
+                                ? 'Nothing here matches the search or type filter.'
                                 : 'Nothing here.'}
                       </p>
                     )}

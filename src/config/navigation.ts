@@ -18,6 +18,7 @@ import {
   History,
   LayoutDashboard,
   Library,
+  LibraryBig,
   Monitor,
   Pin,
   Puzzle,
@@ -30,6 +31,7 @@ import {
   Swords,
   Ticket,
   Trash2,
+  TreePalm,
   Trophy,
   UserPlus,
   UserRound,
@@ -348,6 +350,13 @@ export const navSections: Array<NavSection> = [
         to: '/account-management/sprites',
       },
       {
+        beta: true,
+        icon: LibraryBig,
+        label: 'sidebar:library',
+        needsAccount: true,
+        to: '/account-management/library',
+      },
+      {
         // Keeps the old Profile page's menu toggle.
         can: 'profile',
         icon: History,
@@ -422,6 +431,12 @@ export const navSections: Array<NavSection> = [
         icon: Globe,
         label: 'sidebar:advanced-mode.options.world-info',
         to: '/advanced-mode/world-info',
+      },
+      {
+        beta: true,
+        icon: TreePalm,
+        label: 'sidebar:advanced-mode.options.islands',
+        to: '/advanced-mode/islands',
       },
       {
         can: 'fnLaunch',

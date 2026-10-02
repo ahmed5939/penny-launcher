@@ -102,7 +102,7 @@ export function useAlertsOverviewData() {
           }
 
           if (rewards.length > 0) {
-            return rewards.some((key) => {
+            const checkRewards = rewards.some((key) => {
               const isCommandSection =
                 key === 'Defender' ||
                 key === 'Hero' ||
@@ -127,6 +127,10 @@ export function useAlertsOverviewData() {
                 return filterKey.includes(key.toLowerCase())
               })
             })
+
+            if (!checkRewards) {
+              return false
+            }
           }
 
           const valueToSearch = inputSearch.trim()

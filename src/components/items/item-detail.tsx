@@ -32,11 +32,12 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { Callout } from '../page'
+import { rarityStyle } from '../page/rarity'
 import {
-  accentByRarity,
-  rarityStyle,
-  rarityTypeFromName,
-} from '../page/rarity'
+  accentForRarityName,
+  displayAlteration,
+  PerkRankPips,
+} from './perks'
 
 import { getItemRecord } from '../../state/items/database'
 
@@ -45,52 +46,6 @@ import { rarities, raritiesColor, RarityType } from '../../config/constants/reso
 import { pennyDBSchematicUrl } from '../../services/endpoints/pennydb'
 
 import { cn } from '../../lib/utils'
-
-/**
- * The database spells a rarity as the word a player reads ("Legendary"); the
- * app's ladder is keyed by `RarityType`. `rarityTypeFromName` bridges the two
- * and the ladder does the rest: nothing below Rare has an entry, so a Common
- * perk gets a grey pip rather than a colour that says nothing.
- */
-function accentForRarityName(name: string | null | undefined) {
-  const type = rarityTypeFromName(name)
-
-  return type ? accentByRarity[type] ?? null : null
-}
-
-const alterationWords: Record<string, string> = {
-  afflicted: 'afflicted',
-  afflictedenemy: 'afflicted enemies',
-  critdmg: 'critical damage',
-  critrating: 'critical rating',
-  damage: 'damage',
-  headshotdamage: 'headshot damage',
-  knockbackaoe: 'area knockback',
-  ranged: 'ranged',
-  weapon: 'weapon',
-}
-
-/** Human fallback for alteration ids missing from the extracted name table. */
-function alterationName(templateId: string) {
-  const raw = (templateId.split(':').pop() ?? templateId)
-    .replace(/^aid_[ag]_/, '')
-    .replace(/_alt\d+$/i, '')
-  const words = raw
-    .split('_')
-    .filter((word) => word !== 'att' && word !== 'ondmg')
-    .map((word) => alterationWords[word.toLowerCase()] ?? word)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  return words
-    ? words.charAt(0).toUpperCase() + words.slice(1)
-    : 'Unknown perk'
-}
-
-function displayAlteration(records: ItemRecordMap, templateId: string) {
-  return getItemRecord(records, templateId)?.name ?? alterationName(templateId)
-}
 
 /**
  * Alteration loadouts list their scalable perks at Common (`_t01`). A respec
@@ -740,9 +695,6 @@ function UpgradeActions({
  * One perk slot: what is rolled, what upgrading it costs, and — when the
  * game data knows the slot's pool — what else could go there.
  */
-/** Perk rarities, lowest first — how far a perk has been upgraded. */
-const perkRanks = ['common', 'uncommon', 'rare', 'epic', 'legendary']
-
 function PerkRow({
   alteration,
   detail,
@@ -771,7 +723,6 @@ function PerkRow({
     .map((option) => alterationAtCurrentTier(option, alteration))
     .filter((option) => option.toLowerCase() !== alteration.toLowerCase())
 
-  const rank = perkRanks.indexOf((perkRecord?.rarity ?? '').toLowerCase()) + 1
   const edge = accent ?? 'hsl(var(--muted-foreground) / 0.5)'
 
   return (
@@ -787,20 +738,7 @@ function PerkRow({
           {detail?.tags && (
             <span className="mt-1 flex flex-wrap gap-1">{detail.tags}</span>
           )}
-          {/* The site's rarity pips: one lit per step the perk has climbed. */}
-          {rank > 0 && (
-            <span aria-label={`${perkRecord?.rarity} perk`} className="mt-1.5 flex gap-1" role="img">
-              {perkRanks.map((name, index) => (
-                <span
-                  className="h-0.5 flex-1 rounded-full"
-                  key={name}
-                  style={{
-                    background: index < rank ? edge : 'hsl(var(--muted-foreground) / 0.2)',
-                  }}
-                />
-              ))}
-            </span>
-          )}
+          <PerkRankPips className="mt-1.5" color={edge} rarity={perkRecord?.rarity} />
 
           {Object.keys(upgrade).length > 0 && (
             <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">

@@ -23,6 +23,13 @@ export const spriteModuleId = '70329e8f-f377-4a73-90cf-76b7ace87a07'
 
 export const spriteModuleVersion = '13'
 
+/**
+ * Where to look when the configured version answers 404. Epic has only ever
+ * moved the number forwards, a step at a time, so a short run of the next
+ * few covers a patch landing before Penny does.
+ */
+export const spriteModuleVersionCandidates = [14, 15, 16, 17]
+
 /** Read ownership across schema versions so older and newer relics appear. */
 export const spriteModuleFilter = `${spriteModuleId}:*`
 

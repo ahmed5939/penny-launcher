@@ -9,6 +9,7 @@ import type {
   ResolvedAppearanceTheme,
 } from '../types/window'
 
+import * as accountExtrasActions from './preload-actions/account-extras'
 import * as accountHealthActions from './preload-actions/account-health'
 import * as accountsActions from './preload-actions/accounts'
 import * as alertsActions from './preload-actions/alerts'
@@ -27,6 +28,7 @@ import * as generalActions from './preload-actions/general'
 import * as giftsInformationActions from './preload-actions/gifts-information'
 import * as shellActions from './preload-actions/shell'
 import * as inventoryActions from './preload-actions/inventory'
+import * as islandsActions from './preload-actions/islands'
 import * as collectionBookActions from './preload-actions/collection-book'
 import * as rareItemFinderActions from './preload-actions/rare-item-finder'
 import * as venturesActions from './preload-actions/ventures'
@@ -35,6 +37,7 @@ import * as itemActionsActions from './preload-actions/item-actions'
 import * as itemDatabaseActions from './preload-actions/item-database'
 import * as launcherActions from './preload-actions/launcher'
 import * as leaderboardActions from './preload-actions/leaderboard'
+import * as libraryActions from './preload-actions/library'
 import * as lockerActions from './preload-actions/locker'
 import * as spritesActions from './preload-actions/sprites'
 import * as loadoutsActions from './preload-actions/loadouts'
@@ -42,6 +45,14 @@ import * as matchmakingActions from './preload-actions/matchmaking'
 import * as mcpActions from './preload-actions/mcp'
 import * as partyActions from './preload-actions/party'
 import * as pennydbMissionsActions from './preload-actions/pennydb-missions'
+import * as playtimeActions from './preload-actions/playtime'
+import * as accountSecurityActions from './preload-actions/account-security'
+import * as rankedActions from './preload-actions/ranked'
+import * as tournamentsActions from './preload-actions/tournaments'
+import * as brStatsActions from './preload-actions/br-stats'
+import * as gameNewsActions from './preload-actions/game-news'
+import * as epicStoreActions from './preload-actions/epic-store'
+import * as rewindActions from './preload-actions/rewind'
 import * as fileTweaksActions from './preload-actions/file-tweaks'
 import * as outpostActions from './preload-actions/outpost'
 import * as pluginsActions from './preload-actions/plugins'
@@ -78,6 +89,7 @@ const initialAppearance = {
 
 export const availableElectronAPIs = {
   initialAppearance,
+  ...accountExtrasActions,
   ...accountHealthActions,
   ...accountsActions,
   ...alertsActions,
@@ -97,6 +109,7 @@ export const availableElectronAPIs = {
   ...giftsInformationActions,
   ...shellActions,
   ...inventoryActions,
+  ...islandsActions,
   ...worldInventoryActions,
   ...collectionBookActions,
   ...rareItemFinderActions,
@@ -106,11 +119,20 @@ export const availableElectronAPIs = {
   ...itemDatabaseActions,
   ...launcherActions,
   ...leaderboardActions,
+  ...libraryActions,
   ...loadoutsActions,
   ...lockerActions,
   ...spritesActions,
   ...partyActions,
   ...pennydbMissionsActions,
+  ...playtimeActions,
+  ...accountSecurityActions,
+  ...rankedActions,
+  ...tournamentsActions,
+  ...brStatsActions,
+  ...gameNewsActions,
+  ...epicStoreActions,
+  ...rewindActions,
   ...fileTweaksActions,
   ...outpostActions,
   ...pluginsActions,

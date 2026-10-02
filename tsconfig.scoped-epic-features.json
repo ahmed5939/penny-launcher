@@ -1,0 +1,38 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "src/kernel/main.ts",
+    "src/kernel/preload.ts",
+    "src/routeTree.gen.ts",
+    "src/config/navigation.ts",
+    "src/kernel/core/island-directory.ts",
+    "src/kernel/core/islands*.ts",
+    "src/kernel/core/sprite*.ts",
+    "src/kernel/core/library.ts",
+    "src/kernel/core/launcher-token.ts",
+    "src/kernel/core/account-extras.ts",
+    "src/kernel/core/discord-presence.ts",
+    "src/features/islands/**/*.ts",
+    "src/features/islands/**/*.tsx",
+    "src/features/sprites/**/*.ts",
+    "src/features/sprites/**/*.tsx",
+    "src/features/library/**/*.ts",
+    "src/features/library/**/*.tsx",
+    "src/features/account-extras/**/*.ts",
+    "src/features/account-extras/**/*.tsx",
+    "src/components/accounts/*.tsx",
+    "src/components/shell/*.tsx",
+    "src/components/friends/*.tsx",
+    "src/routes/account/*.tsx",
+    "src/routes/-index/*.tsx",
+    "src/routes/account-management/**/*.tsx",
+    "src/routes/advanced-mode/islands/*.tsx",
+    "src/state/accounts/*.ts",
+    "src/state/management/sprite*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
+}

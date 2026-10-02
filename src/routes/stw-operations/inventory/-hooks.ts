@@ -26,6 +26,7 @@ import {
   rarityFromLabel,
   rarityOrder,
 } from '../../../config/constants/fortnite/items'
+import { matchesSchematicType } from '../../../config/constants/fortnite/schematic-types'
 
 import { useAccountResource } from '../../../components/page'
 
@@ -220,15 +221,18 @@ export function useInventoryData(entry: InventoryEntry, reload: () => void) {
     })
 
     const visible = mapped.filter((item) => {
-      // Craft-only ammo, building and utility recipes also use the
-      // Schematic prefix. They are not manageable weapon/trap schematics.
-      if (
-        item.kind === 'schematic' &&
-        !['Melee', 'Ranged', 'Trap'].includes(
-          getItemRecord(records, item.templateId)?.category ?? ''
-        )
-      ) {
-        return false
+      if (item.kind === 'schematic') {
+        const record = getItemRecord(records, item.templateId)
+
+        // Craft-only ammo, building and utility recipes also use the
+        // Schematic prefix. They are not manageable weapon/trap schematics.
+        if (!['Melee', 'Ranged', 'Trap'].includes(record?.category ?? '')) {
+          return false
+        }
+
+        if (!matchesSchematicType(filters.schematicType, item.templateId, record)) {
+          return false
+        }
       }
 
       if (rarityOrder.indexOf(item.rarity) > maxRarityIndex) {

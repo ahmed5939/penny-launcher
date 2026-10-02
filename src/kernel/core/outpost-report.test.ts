@@ -9,8 +9,10 @@ import {
 } from './outpost-report'
 
 const zone: OutpostZoneInfo = {
-  amplifierCount: 2,
-  amplifierSlots: ['A', 'B'],
+  amplifiers: [
+    { building: 0, pad: 1 },
+    { building: 1, pad: 0 },
+  ],
   defenses: [{ completedAt: '2026-01-01T00:00:00.000Z', defense: 1 }],
   editPermissions: [{ accountId: 'builder-id', displayName: 'Builder' }],
   highestEnduranceWave: 12,
@@ -50,9 +52,11 @@ const baseData: OutpostBaseData = {
   trapItems: [{ count: 1, level: 60, templateId: 'Trap:tid_wall_darts' }],
   traps: [
     {
+      alterations: [],
       category: 'wall',
       count: 1,
       displayName: 'Wall Darts',
+      id: 'Wall Darts#1',
       level: 60,
       perks: [],
       rarity: 'sr',
@@ -116,7 +120,7 @@ describe('createReadableOutpostReport', () => {
       zone,
     })
 
-    expect(serialized).toContain('\n  "schemaVersion": 1,')
+    expect(serialized).toContain('\n  "schemaVersion": 2,')
     expect(serialized.endsWith('\n')).toBe(true)
     expect(JSON.parse(serialized).zone.name).toBe('Stonewood')
   })

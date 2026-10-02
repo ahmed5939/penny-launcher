@@ -10,12 +10,12 @@ async function accessTokenFor(accountId: string) {
   return accessToken
 }
 export async function requestWorldInventory(accountId: string, location: WorldInventoryLocation) {
-  if (location !== 'backpack' && location !== 'storage') throw new Error('Choose Backpack or Storage.')
+  if (!Object.hasOwn(worldProfiles, location)) throw new Error('Choose Backpack, Storage or Ventures.')
   const accessToken = await accessTokenFor(accountId)
   const response = await fetch(profileUrl(accountId, 'QueryProfile', worldProfiles[location]), {
     method: 'POST', headers: { Authorization: `bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(30000),
   })
-  if (!response.ok) throw new Error(`Could not load ${location} (HTTP ${response.status}). Try Refresh.`)
+  if (!response.ok) throw new Error(`Could not load the ${location === 'ventures' ? 'Ventures backpack' : location} (HTTP ${response.status}). Try Refresh.`)
   return parseWorldProfile(await response.json(), accountId, location)
 }
 /** Moves stacks between the backpack and Storm Shield storage, the same call the game's storage screen makes. */

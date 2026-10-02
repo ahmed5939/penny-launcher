@@ -123,3 +123,73 @@ describe('edited build classification', () => {
     expect(result.structures.total).toBe(1)
   })
 })
+
+
+/** A placed trap actor whose record carries its schematic and perks. */
+function trapRecord({ perks, tid, x }: { perks: Array<string>; tid: string; x: number }) {
+  const path = '/SaveTheWorld/Items/Traps/Blueprints/Trap_Wall_Darts.Trap_Wall_Darts_C'
+  const transform = Buffer.alloc(36)
+
+  transform.writeFloatLE(1, 8)
+  transform.writeFloatLE(x, 12)
+  transform.writeFloatLE(512, 16)
+  transform.writeFloatLE(768, 20)
+  transform.writeFloatLE(1, 24)
+  transform.writeFloatLE(1, 28)
+  transform.writeFloatLE(1, 32)
+
+  const spawnedField = Buffer.alloc(4)
+  const actorData = Buffer.from(
+    `${tid} AppliedAlterations ${perks.map((perk) => `/Alterations/${perk}.${perk}`).join(' ')} OriginalTrapLevel`,
+    'latin1'
+  )
+  const actorDataSize = Buffer.alloc(4)
+
+  spawnedField.writeUInt32LE(1)
+  actorDataSize.writeUInt32LE(actorData.length)
+
+  return concatBuffers([
+    Buffer.alloc(16),
+    Buffer.from([2]),
+    gvasString(path),
+    transform,
+    spawnedField,
+    actorDataSize,
+    actorData,
+  ])
+}
+
+describe('trap variants', () => {
+  it('splits one trap into a card per perk roll and points each dot at its roll', () => {
+    const critRoll = ['AID_Att_CritDamage_T05', 'AID_Att_Damage_T05']
+    const result = parseSav(concatBuffers([
+      Buffer.from('SavedActors', 'latin1'),
+      trapRecord({ perks: critRoll, tid: 'TID_Wall_Darts_SR_T05', x: 512 }),
+      trapRecord({ perks: [...critRoll].reverse(), tid: 'TID_Wall_Darts_SR_T05', x: 1024 }),
+      trapRecord({ perks: ['AID_Att_Durability_T05', 'AID_Att_Durability_T05'], tid: 'TID_Wall_Darts_SR_T05', x: 1536 }),
+    ]))
+
+    expect(result.traps.map((trap) => [trap.id, trap.count])).toEqual([
+      ['Wall Darts#1', 2],
+      ['Wall Darts#2', 1],
+    ])
+    expect(result.traps[1].perks).toEqual([
+      { count: 2, templateId: 'Alteration:aid_att_durability_t05' },
+    ])
+    expect(result.traps[0].alterations).toEqual([
+      'Alteration:aid_att_critdamage_t05',
+      'Alteration:aid_att_damage_t05',
+    ])
+    expect(result.traps[1].alterations).toHaveLength(2)
+    expect(result.traps.reduce((total, trap) => total + trap.count, 0)).toBe(3)
+
+    const layout = result.layout!
+
+    expect(layout.traps.map((trap) => layout.trapVariants?.[trap[6]!])).toEqual([
+      'Wall Darts#1',
+      'Wall Darts#1',
+      'Wall Darts#2',
+    ])
+    expect(result.perks.find((perk) => perk.templateId === 'Alteration:aid_att_durability_t05')?.count).toBe(2)
+  })
+})

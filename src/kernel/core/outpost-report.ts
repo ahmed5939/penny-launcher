@@ -75,11 +75,15 @@ function readableLayout(layout: NonNullable<OutpostBaseData['layout']>) {
         tier,
       })
     ),
-    traps: layout.traps.map(([x, y, z, category, nameIndex, yaw]) => ({
+    traps: layout.traps.map(([x, y, z, category, nameIndex, yaw, variantIndex]) => ({
       blueprintX: y,
       blueprintY: -x,
       category: trapCategoryNames[category] ?? 'other',
       name: layout.trapNames[nameIndex] ?? 'Unknown trap',
+      variant:
+        variantIndex === undefined
+          ? null
+          : (layout.trapVariants?.[variantIndex] ?? null),
       rotationDegrees: ((yaw ?? 0) % 4) * 90,
       sourceX: x,
       sourceY: y,
@@ -119,7 +123,7 @@ export function createReadableOutpostReport({
   )
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: generatedAt.toISOString(),
     account: displayName,
     zone: {
@@ -127,8 +131,7 @@ export function createReadableOutpostReport({
       name: zone.zoneName,
       shieldLevel: zone.level,
       highestEnduranceWave: zone.highestEnduranceWave,
-      amplifiers: zone.amplifierCount,
-      amplifierSlots: zone.amplifierSlots,
+      amplifiers: zone.amplifiers,
       builders: zone.editPermissions,
       defenses: zone.defenses,
       cloudSave: {
@@ -149,6 +152,7 @@ export function createReadableOutpostReport({
     traps: baseData.traps.map((trap) => ({
       category: trap.category,
       count: trap.count,
+      id: trap.id,
       level: trap.level,
       name: trap.displayName,
       perks: readablePerks(trap.perks),

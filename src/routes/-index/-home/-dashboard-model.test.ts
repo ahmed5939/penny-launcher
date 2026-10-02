@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   activeThisWeek,
+  dailyResetLocalTime,
   digestRewardEvents,
   formatCountdown,
   isDailyQuest,
@@ -18,6 +19,12 @@ describe('home dashboard model', () => {
   it('counts down to 00:00 UTC', () => {
     expect(msUntilDailyReset(Date.parse('2026-09-24T22:30:00Z'))).toBe(90 * 60_000)
     expect(msUntilDailyReset(Date.parse('2026-09-24T00:00:00Z'))).toBe(86_400_000)
+  })
+
+  it('states the reset on the local clock', () => {
+    const now = Date.parse('2026-09-24T22:30:00Z')
+    expect(dailyResetLocalTime(now, 'en-US', 'America/New_York')).toBe('8:00 PM EDT')
+    expect(dailyResetLocalTime(now, 'en-GB', 'UTC')).toBe('00:00 UTC')
   })
 
   it('formats countdowns', () => {

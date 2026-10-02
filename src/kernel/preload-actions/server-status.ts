@@ -1,5 +1,5 @@
 import type { IpcRendererEvent } from 'electron'
-import type { ServerStatusPayload } from '../core/server-status'
+import type { ServerStatusPayload } from '../../features/server-status/model'
 
 import { ipcRenderer } from 'electron'
 

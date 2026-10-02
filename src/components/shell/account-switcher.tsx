@@ -3,7 +3,13 @@ import { ChevronDown, ShieldAlert, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAccountList } from '../account-list/hooks'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
-import { AccountGlyph, AccountRoster } from './account-roster'
+import { AccountAvatar } from '../accounts/account-avatar'
+import { AccountRoster } from './account-roster'
+import {
+  useEquippedSprite,
+  useSpriteHistorySync,
+} from '../../state/management/sprite-history'
+import { spriteIconUrl } from '../../sprite-images'
 import { parseCustomDisplayName } from '../../lib/utils'
 
 export function AccountSwitcher() {
@@ -12,6 +18,9 @@ export function AccountSwitcher() {
   const { selected, members, accounts, open, setOpen } = model
   const name = selected ? parseCustomDisplayName(selected) : t('add-account')
   const hasIssue = accounts.some((account) => account.authStatus === 'invalid')
+
+  // The shell is always mounted, so this is where the sprite history loads.
+  useSpriteHistorySync()
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -22,7 +31,14 @@ export function AccountSwitcher() {
           title={`${t('primary-account')}: ${name}. ${t('account-scope')}: ${members.length}`}
         >
           {selected ? (
-            <AccountGlyph accountId={selected.accountId} name={name} selected />
+            <AccountAvatar
+              accountId={selected.accountId}
+              className="ring-1 ring-primary/70"
+              name={name}
+              size="xs"
+            >
+              <EquippedSpriteBadge accountId={selected.accountId} />
+            </AccountAvatar>
           ) : (
             <Users className="size-4" />
           )}
@@ -65,5 +81,31 @@ export function AccountSwitcher() {
         </div>
       </PopoverContent>
     </Popover>
+  )
+}
+
+/**
+ * The account's last-known equipped sprite, tucked into the corner of its
+ * avatar. An overlay rather than part of the avatar, so it sits on top of
+ * whatever the avatar becomes; nothing at all when no read has said.
+ */
+function EquippedSpriteBadge({ accountId }: { accountId: string }) {
+  const equipped = useEquippedSprite(accountId)
+  const url = spriteIconUrl(equipped?.iconFile ?? null)
+
+  if (!equipped || !url) {
+    return null
+  }
+
+  const label = `Equipped sprite: ${equipped.name}`
+
+  return (
+    <img
+      alt={label}
+      className="absolute -bottom-1 -right-1.5 size-3.5 rounded-full bg-background object-contain ring-1 ring-border"
+      draggable={false}
+      src={url}
+      title={label}
+    />
   )
 }

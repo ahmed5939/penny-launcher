@@ -4,6 +4,7 @@ import type { ProfileEntry, ProfileFort, ProfileHero, ProfileStack } from './mod
 
 import { ExternalLink, UserRound, Zap } from 'lucide-react'
 
+import { AccountAvatar } from '../../components/accounts/account-avatar'
 import { Button } from '../../components/ui/button'
 import {
   AccountResourceGate,
@@ -205,9 +206,12 @@ function CommanderBanner({
 
   return (
     <Panel className="relative flex items-stretch gap-5 overflow-hidden p-5">
-      <span className="grid size-16 shrink-0 place-items-center self-center rounded-full text-display font-bold text-primary ring-2 ring-inset ring-primary/60">
-        {entry.displayName.slice(0, 1).toUpperCase()}
-      </span>
+      <AccountAvatar
+        accountId={entry.accountId}
+        className="self-center ring-2 ring-primary/60"
+        name={entry.displayName}
+        size="xl"
+      />
 
       <div className="min-w-0 flex-1 self-center">
         <p className="micro-label">Commander profile</p>

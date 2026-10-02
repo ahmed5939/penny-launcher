@@ -71,6 +71,7 @@
       "matchmaking-track": "Matchmaking",
       "server-status": "Servers",
       "world-info": "World info",
+      "islands": "Islands",
       "game-settings": "Game settings"
     }
   },
@@ -98,6 +99,7 @@
   "outpost": "Outpost",
   "br-locker": "BR Locker",
   "sprites": "Sprites",
+  "library": "Library",
   "eula": "EULA",
   "add-account": "Add account",
   "add-ons": "Add-ons",

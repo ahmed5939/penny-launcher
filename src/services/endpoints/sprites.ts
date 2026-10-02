@@ -15,10 +15,17 @@ import {
  * Every relic in the module, with summoning costs. An ordinary eg1 token.
  *
  * The trailing slash is deliberate — it is how the client requests it.
+ * `version` is only passed when the configured one has stopped answering.
  */
-export function getSpriteCatalog({ accessToken }: { accessToken: string }) {
+export function getSpriteCatalog({
+  accessToken,
+  version = spriteModuleVersion,
+}: {
+  accessToken: string
+  version?: number | string
+}) {
   return baseGameService.get<SpriteCatalogResponse>(
-    `/extractablerelics/${spriteModuleId}/${spriteModuleVersion}/getBackendCatalog/`,
+    `/extractablerelics/${spriteModuleId}/${version}/getBackendCatalog/`,
     {
       headers: {
         Authorization: `bearer ${accessToken}`,

@@ -78,6 +78,8 @@ describe('navigation', () => {
       '/stw-operations/leaderboards',
       '/account-management/locker',
       '/account-management/sprites',
+      '/account-management/library',
+      '/advanced-mode/islands',
     ])
   })
 

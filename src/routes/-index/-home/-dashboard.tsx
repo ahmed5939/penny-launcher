@@ -30,6 +30,7 @@ import { useGetSelectedAccount } from '../../../hooks/accounts'
 import { relativeTime } from '../../../lib/dates'
 import { HomeHero } from '../-hero'
 import { CommanderCard } from '../../../features/commander-profile/commander-card'
+import { GameNewsPanel } from '../../../features/news/panel'
 
 import {
   useAutoExpeditionsStatus,
@@ -39,6 +40,7 @@ import {
   useMinuteClock,
 } from './-dashboard-hooks'
 import {
+  dailyResetLocalTime,
   formatCountdown,
   isDailyQuest,
   msUntilDailyReset,
@@ -99,6 +101,7 @@ function Dashboard({ main, side }: { main: ReactNode; side: ReactNode }) {
         <div className="min-w-0 space-y-6">
           <CommanderCard />
           <ExpeditionsPanel now={now} resource={expeditions} />
+          <GameNewsPanel />
           {side}
         </div>
       </div>
@@ -206,7 +209,7 @@ function DailyQuestsPanel({ dailies, records, resource }: { dailies: Array<Daily
       {!dailies ? (
         resource.error ? <PanelError>{resource.error}</PanelError> : <RowsSkeleton />
       ) : dailies.length === 0 ? (
-        <EmptyState className="border-0 bg-transparent py-6" description="Every daily is claimed. The next one arrives at 00:00 UTC." title="No daily quests in the log" />
+        <EmptyState className="border-0 bg-transparent py-6" description={`Every daily is claimed. The next one arrives at ${dailyResetLocalTime(Date.now())}.`} title="No daily quests in the log" />
       ) : (
         /*
          * One card per daily, drawn the way the quest log draws a quest: the

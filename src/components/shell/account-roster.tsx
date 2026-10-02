@@ -18,6 +18,8 @@ import { Checkbox } from '../ui/checkbox'
 
 import type { useAccountList } from '../account-list/hooks'
 
+import { AccountAvatar } from '../accounts/account-avatar'
+
 import { cn, parseCustomDisplayName } from '../../lib/utils'
 
 export function AccountRoster({
@@ -140,10 +142,13 @@ export function AccountRoster({
                       }
                       onClick={() => onSelect(account)(account.accountId)}
                     >
-                      <AccountGlyph
+                      <AccountAvatar
                         accountId={account.accountId}
+                        className={
+                          isCurrent ? 'ring-1 ring-primary/70' : 'opacity-90'
+                        }
                         name={displayName}
-                        selected={isCurrent}
+                        size="xs"
                       />
                       <span className="min-w-0 flex-1 truncate">
                         {displayName}
@@ -219,28 +224,6 @@ export function AccountRoster({
   )
 }
 
-export function AccountGlyph({
-  accountId,
-  name,
-  selected,
-}: {
-  accountId: string
-  name: string
-  selected: boolean
-}) {
-  return (
-    <span
-      className={cn(
-        'grid size-5 shrink-0 place-items-center rounded-md text-3xs font-semibold uppercase text-white',
-        selected ? 'ring-1 ring-primary/70' : 'opacity-90',
-      )}
-      style={{ backgroundColor: `hsl(${accountHue(accountId)} 42% 36%)` }}
-    >
-      {name.slice(0, 1)}
-    </span>
-  )
-}
-
 function ScopeAction({
   children,
   disabled,
@@ -261,14 +244,4 @@ function ScopeAction({
       {children}
     </Button>
   )
-}
-
-function accountHue(accountId: string) {
-  let hash = 0
-
-  for (let index = 0; index < accountId.length; index += 1) {
-    hash = (hash * 33 + accountId.charCodeAt(index)) >>> 0
-  }
-
-  return hash % 360
 }

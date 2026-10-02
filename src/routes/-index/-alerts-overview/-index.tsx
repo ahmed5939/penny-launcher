@@ -28,7 +28,11 @@ import {
 import { RewardsSummaryList } from '../-components/-rewards-summary-list'
 import { TitleSection } from '../-components/-title'
 import { zoneArtForTheater } from '../-components/-zone-art'
-import { formatCountdown, msUntilDailyReset } from '../-home/-dashboard-model'
+import {
+  dailyResetLocalTime,
+  formatCountdown,
+  msUntilDailyReset,
+} from '../-home/-dashboard-model'
 import { useMinuteClock } from '../-home/-dashboard-hooks'
 import { AlertFilters } from './-filters'
 
@@ -194,13 +198,33 @@ export function AlertsOverview() {
   )
 }
 
+/** The reward filter value for V-Bucks, as the More filters sheet sets it. */
+const vbucksReward = 'currency_mtxswap'
+
 /**
  * The board at a glance, before any filter: how much is on it, how many
  * V-Bucks it pays, and how long until it turns over.
+ *
+ * The V-Bucks figure lists the missions that pay it: every V-Bucks alert on
+ * the board, whatever was filtered before, so the list matches the number.
  */
 function TodayLine() {
   const { data, isFetching } = useWorldInfo()
   const now = useMinuteClock()
+  const { changeInputSearch, rewards } = useAlertsOverviewFiltersData()
+  const { resetFilters, toggleFilterKeys } = useAlertsOverviewFiltersActions()
+  const vbucksOnly = rewards.includes(vbucksReward)
+
+  const toggleVbucks = () => {
+    if (vbucksOnly) {
+      toggleFilterKeys('rewards')(rewards.filter((key) => key !== vbucksReward))
+      return
+    }
+
+    resetFilters()
+    changeInputSearch('')
+    toggleFilterKeys('rewards')([vbucksReward])
+  }
 
   const totals = useMemo(() => {
     let missions = 0
@@ -236,7 +260,16 @@ function TodayLine() {
   return (
     <StatRow className="pb-1">
       <StatTile
+        hint={
+          totals.vbucks > 0
+            ? vbucksOnly
+              ? 'Showing these missions'
+              : 'Show these missions'
+            : undefined
+        }
         label="V-Bucks in alerts"
+        onClick={totals.vbucks > 0 || vbucksOnly ? toggleVbucks : undefined}
+        pressed={vbucksOnly}
         tone={totals.vbucks > 0 ? 'primary' : 'default'}
         value={
           <span className="flex items-center gap-2">
@@ -258,8 +291,8 @@ function TodayLine() {
         value={numberWithCommaSeparator(totals.missions)}
       />
       <StatTile
-        hint="00:00 UTC"
-        label="New board in"
+        hint={`Daily at ${dailyResetLocalTime(now)}`}
+        label="Missions refresh in"
         value={formatCountdown(msUntilDailyReset(now))}
       />
     </StatRow>

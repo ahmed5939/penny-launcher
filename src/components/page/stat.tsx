@@ -13,6 +13,9 @@ export type StatusTone = 'idle' | 'active' | 'warning' | 'danger'
  * small above it, no box and no icon tile. `accent` (a rarity, a F.O.R.T.
  * stat) colours a short bar beside the figure; `tone` colours the figure.
  * `icon` is accepted for existing call sites and not drawn.
+ *
+ * `onClick` makes the figure a toggle for the list it counts ("50 V-Bucks"
+ * shows those missions); `pressed` says the toggle is on.
  */
 export function StatTile({
   accent,
@@ -20,6 +23,8 @@ export function StatTile({
   className,
   hint,
   label,
+  onClick,
+  pressed,
   tone = 'default',
   value,
 }: {
@@ -30,6 +35,8 @@ export function StatTile({
   hint?: ReactNode
   icon?: LucideIcon
   label: ReactNode
+  onClick?: () => void
+  pressed?: boolean
   tone?: 'default' | 'primary' | 'success' | 'warning' | 'danger'
   value: ReactNode
 }) {
@@ -41,17 +48,38 @@ export function StatTile({
     danger: 'text-destructive',
   }[tone]
 
-  return (
-    <div className={cn('relative min-w-0 py-1', className)}>
-      <p className="micro-label">{label}</p>
-      <p className="mt-2 flex items-center gap-2">
+  // A button may only hold phrasing content, so its lines are block spans.
+  const Line = onClick ? 'span' : 'p'
+  const content = (
+    <>
+      <Line className="micro-label block">{label}</Line>
+      <Line className="mt-2 flex items-center gap-2">
         {accent && <span aria-hidden className="h-5 w-1 rounded-full" style={{ background: accent }} />}
         <span className={cn('figure text-display-sm font-bold leading-none', toneClass)}>{value}</span>
-      </p>
+      </Line>
       {children}
-      {hint && <p className="mt-1.5 text-xs text-muted-foreground">{hint}</p>}
-    </div>
+      {hint && <Line className="mt-1.5 block text-xs text-muted-foreground">{hint}</Line>}
+    </>
   )
+
+  if (onClick) {
+    return (
+      <button
+        aria-pressed={pressed}
+        className={cn(
+          'relative -mx-2 min-w-0 rounded-lg px-2 py-1 text-left transition-colors hover:bg-muted/40',
+          pressed && 'bg-primary/10 ring-1 ring-inset ring-primary/40 hover:bg-primary/15',
+          className
+        )}
+        onClick={onClick}
+        type="button"
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return <div className={cn('relative min-w-0 py-1', className)}>{content}</div>
 }
 
 /**

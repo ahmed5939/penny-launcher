@@ -1,12 +1,14 @@
 import type {
   OutpostBaseData,
   OutpostInfoResult,
+  OutpostProfileSummary,
   OutpostZoneInfo,
 } from '../../kernel/core/outpost-types'
 
 import { create } from 'zustand'
 
 export type OutpostState = {
+  summary: OutpostProfileSummary | null
   zones: Array<OutpostZoneInfo>
   /** Base scans per zone id — filled in on demand. */
   baseData: Record<string, OutpostBaseData>
@@ -23,6 +25,7 @@ export type OutpostState = {
 }
 
 export const useOutpostStore = create<OutpostState>()((set) => ({
+  summary: null,
   zones: [],
   baseData: {},
   loadingZone: null,
@@ -32,6 +35,7 @@ export const useOutpostStore = create<OutpostState>()((set) => ({
   setInfoLoading: (value) => set({ infoLoading: value }),
   setInfo: (result) =>
     set({
+      summary: result.summary ?? null,
       zones: result.zones,
       errorMessage: result.error ?? null,
       infoLoading: false,

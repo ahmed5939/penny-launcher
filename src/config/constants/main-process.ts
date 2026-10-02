@@ -291,6 +291,12 @@ export enum ElectronAPIEventKeys {
   ServerStatusResponse = 'server-status:response',
 
   /**
+   * In-game news (Fortnite public content CMS, global)
+   */
+  GameNewsRequest = 'game:news:request',
+  GameNewsResponse = 'game:news:response',
+
+  /**
    * FN Launch
    */
 
@@ -439,6 +445,53 @@ export enum ElectronAPIEventKeys {
   /** Every BR sprite Epic has released, flagged owned / lost / missing. */
   SpritesRequest = 'sprites:request',
   SpritesResponse = 'sprites:response',
+  /** Every linked account's collection, one reply per account as it lands. */
+  SpritesAllRequest = 'sprites:all:request',
+  SpritesAllResponse = 'sprites:all:response',
+  /** Collection change log and per-account last-known state, from disk. */
+  SpritesHistoryRequest = 'sprites:history:request',
+  SpritesHistoryResponse = 'sprites:history:response',
+  /** Background sweep for collection changes (toast on new/lost/mastered). */
+  SpritesWatchSet = 'sprites:watch:set',
+
+  /**
+   * Epic account extras: avatars and social standing
+   */
+
+  /** Equipped-skin avatars for linked accounts (and friends) by account id. */
+  AccountAvatarsRequest = 'account:avatars:request',
+  AccountAvatarsResponse = 'account:avatars:response',
+  /** Social bans and warnings for every linked account. */
+  AccountStandingRequest = 'account:standing:request',
+  AccountStandingResponse = 'account:standing:response',
+
+  /**
+   * Library: entitlements + catalogue, store offers, Epic cloud saves
+   */
+
+  LibraryRequest = 'library:request',
+  LibraryResponse = 'library:response',
+  LibraryStoreRequest = 'library:store:request',
+  LibraryStoreResponse = 'library:store:response',
+  CloudSavesRequest = 'library:cloud-saves:request',
+  CloudSavesResponse = 'library:cloud-saves:response',
+  CloudSavesDownload = 'library:cloud-saves:download',
+  CloudSavesDownloadProgress = 'library:cloud-saves:download:progress',
+
+  /**
+   * Creative islands (Fortnite's Discover service + Epic's public ecosystem API)
+   */
+
+  /** Discovery panels: titles, art, live player counts. */
+  IslandsDiscoveryRequest = 'islands:discovery:request',
+  IslandsDiscoveryResponse = 'islands:discovery:response',
+  /** One island's ecosystem metrics (peak players, plays, favourites…). */
+  IslandsMetricsRequest = 'islands:metrics:request',
+  IslandsMetricsResponse = 'islands:metrics:response',
+  /** Watched islands and their player-count thresholds. */
+  IslandsWatchlistRequest = 'islands:watchlist:request',
+  IslandsWatchlistResponse = 'islands:watchlist:response',
+  IslandsWatchlistUpdate = 'islands:watchlist:update',
 
   /**
    * Schedules
@@ -468,4 +521,45 @@ export enum ElectronAPIEventKeys {
   PluginOpen = 'plugins:open',
   PluginNavigate = 'plugins:navigate',
   PluginAccountScopeSync = 'plugins:account-scope:sync',
+
+  /**
+   * Playtime (the launcher's GraphQL gateway, per linked account)
+   */
+
+  /** Time played per launcher app for every linked account. */
+  AccountPlaytimeRequest = 'account:playtime:request',
+  AccountPlaytimeResponse = 'account:playtime:response',
+  /** One game's Epic achievements for one linked account (invoke). */
+  AccountAchievementsRequest = 'account:achievements:request',
+  /** Two-factor, email and linked platforms for every linked account. */
+  AccountSecurityRequest = 'account:security:request',
+  AccountSecurityResponse = 'account:security:response',
+  /** Competitive rank per track for every linked account (Habanero). */
+  AccountRankedRequest = 'account:ranked:request',
+  AccountRankedResponse = 'account:ranked:response',
+  /** Each linked account's own competitive event history (events service). */
+  AccountTournamentsRequest = 'account:tournaments:request',
+  AccountTournamentsResponse = 'account:tournaments:response',
+  /** Battle Royale career stats for every linked account. */
+  AccountBrStatsRequest = 'account:br-stats:request',
+  AccountBrStatsResponse = 'account:br-stats:response',
+
+  /**
+   * Cross-account Library and the Epic Games Store
+   */
+
+  /** Every linked account's Epic library and game profile. */
+  LibraryOverviewRequest = 'library:overview:request',
+  LibraryOverviewResponse = 'library:overview:response',
+  /** The store's free games, this week and next (invoke). */
+  FreeGamesRequest = 'store:free-games:request',
+  /** A game's player rating and critic score (invoke). */
+  GameDetailsRequest = 'store:game-details:request',
+  /** A store page in the browser, signed in as one linked account (invoke). */
+  StoreOpenSignedIn = 'store:open-signed-in',
+  /** Start Fortnite straight into one mode for one account. */
+  LauncherStartMode = 'launcher:start:mode',
+  /** Penny Rewind's game-profile facts for every linked account. */
+  RewindFactsRequest = 'rewind:facts:request',
+  RewindFactsResponse = 'rewind:facts:response',
 }

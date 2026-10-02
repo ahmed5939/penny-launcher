@@ -11,17 +11,33 @@ import {
   Gift,
   History,
   KeyRound,
+  LibraryBig,
   Shirt,
   Ticket,
   Trash2,
   UserPlus,
 } from 'lucide-react'
 
+import { AccountAvatar } from '../../components/accounts/account-avatar'
 import { Panel, PanelHeader } from '../../components/page'
+import {
+  AccountStandingCallout,
+  AccountStandingLine,
+} from '../../features/account-extras/standing'
+import {
+  AccountSecurityCallout,
+  AccountSecurityLine,
+} from '../../features/account-security/line'
+import { AccountPlaytimePanel } from '../../features/playtime/panel'
+import { AccountRankedPanel } from '../../features/ranked/panel'
+import { AccountTournamentsPanel } from '../../features/tournaments/panel'
+import { AccountBrStatsPanel } from '../../features/br-stats/panel'
+import { RewindBanner } from '../../features/rewind/launch'
 
 import { useGetAccounts, useGetSelectedAccount } from '../../hooks/accounts'
 
 import { spriteIconUrl } from '../../sprite-images'
+import { useEquippedSprite } from '../../state/management/sprite-history'
 import { assets } from '../../lib/repository'
 import { cn, parseCustomDisplayName } from '../../lib/utils'
 
@@ -72,6 +88,13 @@ const features: Array<Feature> = [
     art: spriteIconUrl('airsprite_gold.webp'),
     icon: Ghost,
     to: '/account-management/sprites',
+  },
+  {
+    title: 'Library',
+    description: 'Every game and mode across your accounts, and free games to claim',
+    art: assets('eventcurrency_founders'),
+    icon: LibraryBig,
+    to: '/account-management/library',
   },
   {
     title: 'Friends',
@@ -136,17 +159,36 @@ const utilities: Array<Utility> = [
 ]
 
 export function AccountHub() {
+  const { selected } = useGetSelectedAccount()
+  // The Sprites card shows the sprite this account has out, once a read has said.
+  const equippedArt = spriteIconUrl(
+    useEquippedSprite(selected?.accountId)?.iconFile ?? null
+  )
+
   return (
     <div className="space-y-6">
       <SignedInLine />
 
+      <RewindBanner />
+
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {features.map((feature) => (
           <li key={feature.title}>
-            <FeatureCard feature={feature} />
+            <FeatureCard
+              feature={
+                feature.to === '/account-management/sprites' && equippedArt
+                  ? { ...feature, art: equippedArt }
+                  : feature
+              }
+            />
           </li>
         ))}
       </ul>
+
+      {selected && <AccountPlaytimePanel accountId={selected.accountId} />}
+      {selected && <AccountBrStatsPanel accountId={selected.accountId} />}
+      {selected && <AccountRankedPanel accountId={selected.accountId} />}
+      {selected && <AccountTournamentsPanel accountId={selected.accountId} />}
 
       <Panel>
         <PanelHeader
@@ -189,21 +231,39 @@ function SignedInLine() {
     )
   }
 
+  const name = parseCustomDisplayName(selected)
+
+  // A fragment, so the standing callout spaces like the hub's other blocks.
   return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <span className="text-display-sm font-bold leading-none">
-        {parseCustomDisplayName(selected)}
-      </span>
-      <span className="text-ui text-muted-foreground">
-        Selected in the title bar
-        {total > 1 && (
-          <>
-            {' · '}
-            <span className="figure">{total}</span> accounts linked
-          </>
-        )}
-      </span>
-    </div>
+    <>
+      <div className="flex items-center gap-4">
+        <AccountAvatar
+          accountId={selected.accountId}
+          name={name}
+          size="xl"
+        />
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-display-sm font-bold leading-none">
+              {name}
+            </span>
+            <span className="text-ui text-muted-foreground">
+              Selected in the title bar
+              {total > 1 && (
+                <>
+                  {' · '}
+                  <span className="figure">{total}</span> accounts linked
+                </>
+              )}
+            </span>
+          </div>
+          <AccountStandingLine accountId={selected.accountId} />
+          <AccountSecurityLine accountId={selected.accountId} />
+        </div>
+      </div>
+      <AccountStandingCallout accountId={selected.accountId} />
+      <AccountSecurityCallout accountId={selected.accountId} />
+    </>
   )
 }
 

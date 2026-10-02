@@ -1,27 +1,29 @@
 import { useShallow } from 'zustand/react/shallow'
 import { useEffect } from 'react'
 
-import { useSpritesStore } from '../../../state/management/sprites'
+import { useSpritesStore } from '../../state/management/sprites'
 
-import { useGetSelectedAccount } from '../../../hooks/accounts'
+import { useGetSelectedAccount } from '../../hooks/accounts'
 
 /**
- * The page's one connection to the main process: ask once per account, keep
- * the answer until the account changes, and let Reload get past both the
- * catalogue cache and the last inventory read.
+ * The page's one connection to the main process for the selected account:
+ * ask once per account, keep the answer until the account changes, and let
+ * Refresh get past both the catalogue cache and the last inventory read.
  */
 export function useSpritesPage() {
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null
 
-  const { collection, errorMessage, isLoading, loadedFor } = useSpritesStore(
-    useShallow((state) => ({
-      collection: state.collection,
-      errorMessage: state.errorMessage,
-      isLoading: state.isLoading,
-      loadedFor: state.loadedFor,
-    }))
-  )
+  const { catalogue, collection, errorMessage, isLoading, loadedFor } =
+    useSpritesStore(
+      useShallow((state) => ({
+        catalogue: state.catalogue,
+        collection: state.collection,
+        errorMessage: state.errorMessage,
+        isLoading: state.isLoading,
+        loadedFor: state.loadedFor,
+      }))
+    )
   const { reset, setLoading, setPayload } = useSpritesStore(
     useShallow((state) => ({
       reset: state.reset,
@@ -65,6 +67,7 @@ export function useSpritesPage() {
 
   return {
     account: selected,
+    catalogue,
     collection: loadedFor === accountId ? collection : null,
     errorMessage: loadedFor === accountId ? errorMessage : null,
     handleReload,

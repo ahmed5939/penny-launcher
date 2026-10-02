@@ -92,6 +92,17 @@ export function trapCentre(
 }
 
 /** Human-friendly label for a world actor class name. */
+/**
+ * Which trap a dot is, for selection and hover: its variant id (one
+ * schematic — the same trap, tier and perks), or its display name when the
+ * layout predates variants.
+ */
+export function trapKey(layout: OutpostLayout, trap: TrapTuple): string {
+  const name = layout.trapNames[trap[4]] ?? 'Unknown trap'
+
+  return trap[6] === undefined ? name : (layout.trapVariants?.[trap[6]] ?? name)
+}
+
 export function propLabel(className: string) {
   return className
     .replace(/_C$/, '')

@@ -3,6 +3,7 @@ import type {
   ItemKind,
   Rarity,
 } from '../../config/constants/fortnite/items'
+import type { SchematicType } from '../../config/constants/fortnite/schematic-types'
 
 import { create } from 'zustand'
 
@@ -12,6 +13,8 @@ export type InventoryFilters = {
   maxRarity: Rarity
   /** 0 means "any tier". */
   maxTier: number
+  /** Schematics only: ranged, melee or traps, or one family of them. */
+  schematicType: SchematicType
   search: string
   /**
    * The Defender tab has two views of the same items: the shelves, and the
@@ -26,6 +29,7 @@ export const defaultInventoryFilters: InventoryFilters = {
   kinds: ['schematic'],
   maxRarity: 'mythic',
   maxTier: 0,
+  schematicType: 'all',
   search: '',
   defenderView: 'browse',
 }

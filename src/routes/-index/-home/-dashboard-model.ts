@@ -17,6 +17,19 @@ export function msUntilDailyReset(now: number) {
   return next.getTime() - now
 }
 
+/**
+ * When the daily reset lands, on the system's own clock and in its own
+ * format: "8:00 PM EDT", "02:00 GMT+2". `locale` and `timeZone` are for tests.
+ */
+export function dailyResetLocalTime(now: number, locale?: string, timeZone?: string) {
+  return new Intl.DateTimeFormat(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone,
+    timeZoneName: 'short',
+  }).format(now + msUntilDailyReset(now))
+}
+
 /** "2d 4h", "5h 12m", "12m", "under a minute". */
 export function formatCountdown(ms: number) {
   if (ms <= 0) return 'now'

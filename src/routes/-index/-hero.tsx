@@ -10,6 +10,7 @@ import { homeBackdrop } from '../../config/backdrops'
 import { useBackdropStore } from '../../state/ui/backdrop'
 import { useTheme } from '../../components/theme-provider'
 import { Button } from '../../components/ui/button'
+import { AccountAvatar } from '../../components/accounts/account-avatar'
 
 import { useGetAccounts, useGetSelectedAccount } from '../../hooks/accounts'
 import { useGameAction } from '../../hooks/ui/game-action'
@@ -95,9 +96,12 @@ export function HomeHero({ today }: { today?: HeroToday }) {
               <span>{t('home.no-account-description')}</span>
             ) : displayName ? (
               <>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-2xs font-bold uppercase text-primary ring-1 ring-inset ring-primary/40">
-                  {displayName.charAt(0)}
-                </span>
+                <AccountAvatar
+                  accountId={selected?.accountId ?? ''}
+                  className="ring-1 ring-primary/40"
+                  name={displayName}
+                  size="sm"
+                />
                 <span className="truncate font-medium text-foreground/80">
                   {displayName}
                 </span>

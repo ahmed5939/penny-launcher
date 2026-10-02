@@ -5,6 +5,7 @@ import {
   Maximize2,
   ScanSearch,
   Shield,
+  Users,
   X,
   ZoomIn,
   ZoomOut,
@@ -15,8 +16,8 @@ import { useTranslation } from 'react-i18next'
 
 import type {
   OutpostBaseData,
-  OutpostDefenseRecord,
   OutpostLayout,
+  OutpostProfileSummary,
   OutpostTrap,
   OutpostTrapCategory,
   OutpostZoneInfo,
@@ -25,14 +26,12 @@ import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import type { RatingTables } from '../../../config/constants/fortnite/power'
 
 import { Button } from '../../../components/ui/button'
-import { TabsContent } from '../../../components/ui/tabs'
 import {
   Callout,
   Chip,
   EmptyState,
   KeyValue,
   PageHeader,
-  PageTabs,
   Panel,
   PanelHeader,
   ProgressBar,
@@ -41,13 +40,17 @@ import {
   StatRow,
   StatTile,
   ToolBadges,
+  ZoneTile,
+  zoneArt,
 } from '../../../components/page'
 import { ItemCard, ItemCardGrid } from '../../../components/items/item-card'
+import { PerkList } from '../../../components/items/perks'
 
 import { computeItemPower } from '../../../config/constants/fortnite/power'
 import { RarityColor } from '../../../config/constants/resources'
 
 import { useItemDatabaseStore, getItemRecord } from '../../../state/items/database'
+import { useAccountListStore } from '../../../state/accounts/list'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 
 import { getShortDateFormat, relativeTime } from '../../../lib/dates'
@@ -62,7 +65,6 @@ import { OUTPOST_ZONE_TERRAIN } from '../../../config/constants/outpost-zones'
 import { zoneTerrainImage } from './-blueprint-terrain'
 
 import { Route } from './route'
-import { resolveCollectionSelection } from '../../../lib/navigation/page-tabs'
 
 import { useOutpostData } from './-hooks'
 import { Blueprint3D } from './-blueprint-3d'
@@ -72,6 +74,7 @@ import {
   propLabel,
   structureCentre,
   trapCentre,
+  trapKey,
 } from './-blueprint-geometry'
 
 const MAX_SHIELD_LEVEL = 10
@@ -106,19 +109,6 @@ const TRAP_CATEGORY_HEX: Record<OutpostTrapCategory, string> = {
 const TRAP_SLOT_LABEL = ['Floor', 'Wall', 'Ceiling', 'Other']
 
 const MAX_ZOOM = 8
-
-function perkName(records: ItemRecordMap, templateId: string) {
-  const record = getItemRecord(records, templateId)
-
-  if (record?.name) return record.name
-
-  // Fall back to a readable form of the alteration id.
-  return templateId
-    .replace(/^Alteration:aid_/i, '')
-    .replace(/_t\d\d$/i, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
 
 /**
  * Real power levels for the base's traps: each unique (item, level) pair is
@@ -161,6 +151,13 @@ function formatBytes(bytes: number) {
   return `${bytes} B`
 }
 
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
 /**
  * The difficulty-skull colours already mean "how deep into the campaign" on
  * the alerts screen, so they double as zone badges here.
@@ -170,6 +167,47 @@ const ZONE_BADGES: Record<string, string> = {
   pve_02: 'yellow-skull',
   pve_03: 'orange-skull',
   pve_04: 'red-skull',
+}
+
+const ZONE_ART: Record<string, string> = {
+  pve_01: zoneArt.stonewood,
+  pve_02: zoneArt.plankerton,
+  pve_03: zoneArt['canny-valley'],
+  pve_04: zoneArt['twine-peaks'],
+}
+
+/** Where the account last built, so the page opens on the base in progress. */
+function lastBuiltZone(zones: Array<OutpostZoneInfo>) {
+  return (
+    zones.reduce<OutpostZoneInfo | null>(
+      (newest, zone) =>
+        zone.lastSavedAt &&
+        (!newest?.lastSavedAt || zone.lastSavedAt > newest.lastSavedAt)
+          ? zone
+          : newest,
+      null
+    ) ?? zones.findLast((zone) => zone.level > 0)
+  )
+}
+
+/** One pip per Storm Shield Defense, dated from the campaign quest ledger. */
+function defensePips(zone: OutpostZoneInfo) {
+  const byNumber = new Map(zone.defenses.map((record) => [record.defense, record]))
+
+  return Array.from({ length: MAX_SHIELD_LEVEL }, (_, index) => {
+    const defense = index + 1
+    const record = byNumber.get(defense)
+    const done = Boolean(record) || defense <= zone.level
+
+    return {
+      done,
+      title: !done
+        ? `SSD ${defense} · not defended`
+        : record?.completedAt
+          ? `SSD ${defense} · ${day(record.completedAt)}`
+          : `SSD ${defense} · defended`,
+    }
+  })
 }
 
 export function RouteComponent() {
@@ -186,7 +224,7 @@ function OutpostHeader({ actions }: { actions?: ReactNode }) {
       section={t('stw-operations.title')}
       status={<ToolBadges beta />}
       title="Outpost"
-      description="Storm Shield progress for each zone, and the base you built there: scan it to walk it in 3D or read it as a blueprint."
+      description="Your Storm Shields and the bases you built around them, in 3D."
     />
   )
 }
@@ -203,6 +241,7 @@ function Content() {
     infoLoading,
     loadingZone,
     primaryAccount,
+    summary,
     zones,
   } = useOutpostData()
 
@@ -210,6 +249,13 @@ function Content() {
   useRequestItemDatabase()
   const records = useItemDatabaseStore((state) => state.records)
   const ratings = useItemDatabaseStore((state) => state.ratings)
+  const ownAccounts = useAccountListStore((state) => state.accounts)
+
+  /* Stonewood first, the order the map unlocks them. */
+  const ordered = useMemo(
+    () => [...zones].sort((a, b) => a.zoneId.localeCompare(b.zoneId)),
+    [zones]
+  )
 
   if (!primaryAccount) {
     return (
@@ -225,23 +271,9 @@ function Content() {
   }
 
   const scannable = zones.some((zone) => zone.saveFile)
-  const uniqueBuilders = new Set(
-    zones.flatMap((zone) =>
-      zone.editPermissions.map((permission) => permission.accountId)
-    )
-  ).size
-  const totalLevels = zones.reduce((total, zone) => total + zone.level, 0)
-  const bestZone = zones.reduce<OutpostZoneInfo | null>(
-    (best, zone) =>
-      zone.highestEnduranceWave > (best?.highestEnduranceWave ?? 0)
-        ? zone
-        : best,
-    null
-  )
-  const totalAmplifiers = zones.reduce(
-    (total, zone) => total + zone.amplifierCount,
-    0
-  )
+  const selectedId = tab ?? lastBuiltZone(ordered)?.zoneId
+  const selected =
+    ordered.find((zone) => zone.zoneId === selectedId) ?? ordered[0]
 
   return (
     <>
@@ -278,60 +310,131 @@ function Content() {
         <EmptyState
           icon={Shield}
           title="No outpost data"
-          description="This account's metadata profile has no Storm Shield entries."
+          description="This account has no Storm Shields yet."
         />
       )}
 
-      {zones.length > 0 && (
-        <StatRow>
-          <StatTile
-            hint={`of ${zones.length * MAX_SHIELD_LEVEL} across ${zones.length} zones`}
-            label="Shield levels"
-            value={totalLevels}
-          />
-          <StatTile
-            hint={bestZone ? bestZone.zoneName : 'No endurance runs yet'}
-            label="Best endurance wave"
-            tone={
-              (bestZone?.highestEnduranceWave ?? 0) >= MAX_ENDURANCE_WAVE
-                ? 'success'
-                : 'default'
-            }
-            value={bestZone?.highestEnduranceWave ?? 0}
-          />
-          <StatTile label="Amplifiers placed" value={totalAmplifiers} />
-          <StatTile
-            hint="Accounts with edit access"
-            label="Builders"
-            value={uniqueBuilders}
-          />
-        </StatRow>
-      )}
+      {ordered.length > 0 && (
+        <>
+          <OutpostSummary summary={summary} zones={ordered} />
 
-      {zones.length > 0 && <PageTabs label="Outpost zones"
-        value={resolveCollectionSelection(zones.map((zone) => zone.zoneId), tab) ?? tab}
-        tabs={zones.map((zone) => ({ value: zone.zoneId, label: zone.zoneName }))}
-        onValueChange={(value) => {
-          if (value === 'pve_01' || value === 'pve_02' || value === 'pve_03' || value === 'pve_04') {
-            void navigate({ search: (previous) => ({ ...previous, tab: value }), resetScroll: false })
-          }
-        }}>
-        {zones.map((zone) => (
-          <TabsContent key={`${primaryAccount.accountId}:${zone.zoneId}`} value={zone.zoneId}>
-        <ZoneCard
-          baseData={baseData[zone.zoneId]}
-          displayName={primaryAccount.displayName || primaryAccount.accountId}
-          isLoadingBase={loadingZone === zone.zoneId}
-          key={zone.zoneId}
-          onScanBase={handleScanBase}
-          ratings={ratings}
-          records={records}
-          zone={zone}
-        />
-          </TabsContent>
-        ))}
-      </PageTabs>}
+          <Panel>
+            <div className="grid gap-px bg-border/30 sm:grid-cols-2 xl:grid-cols-4">
+              {ordered.map((zone) => (
+                <ZoneTile
+                  art={ZONE_ART[zone.zoneId] ?? zoneArt.stonewood}
+                  caption={
+                    zone.lastSavedAt
+                      ? `Base saved ${relativeTime(zone.lastSavedAt)}`
+                      : zone.saveFile
+                        ? 'Base saved'
+                        : 'No base yet'
+                  }
+                  key={zone.zoneId}
+                  name={zone.zoneName}
+                  onSelect={() => {
+                    const value = zone.zoneId
+
+                    if (value === 'pve_01' || value === 'pve_02' || value === 'pve_03' || value === 'pve_04') {
+                      void navigate({ search: (previous) => ({ ...previous, tab: value }), resetScroll: false })
+                    }
+                  }}
+                  pips={defensePips(zone)}
+                  selected={zone === selected}
+                  total={MAX_SHIELD_LEVEL}
+                  value={zone.level}
+                />
+              ))}
+            </div>
+          </Panel>
+
+          {selected && (
+            <ZoneCard
+              baseData={baseData[selected.zoneId]}
+              displayName={primaryAccount.displayName || primaryAccount.accountId}
+              isLoadingBase={loadingZone === selected.zoneId}
+              key={`${primaryAccount.accountId}:${selected.zoneId}`}
+              onScanBase={handleScanBase}
+              ratings={ratings}
+              records={records}
+              zone={selected}
+            />
+          )}
+
+          <BuildersPanel
+            ownAccountIds={ownAccounts}
+            primaryAccountId={primaryAccount.accountId}
+            zones={ordered}
+          />
+        </>
+      )}
     </>
+  )
+}
+
+/** The outpost at a glance: defenses, endurance, builders, and its age. */
+function OutpostSummary({
+  summary,
+  zones,
+}: {
+  summary: OutpostProfileSummary | null
+  zones: Array<OutpostZoneInfo>
+}) {
+  const total = zones.length * MAX_SHIELD_LEVEL
+  const levels = zones.reduce((sum, zone) => sum + zone.level, 0)
+  const bestZone = zones.reduce<OutpostZoneInfo | null>(
+    (best, zone) =>
+      zone.highestEnduranceWave > (best?.highestEnduranceWave ?? 0)
+        ? zone
+        : best,
+    null
+  )
+  const builders = new Set(
+    zones.flatMap((zone) =>
+      zone.editPermissions.map((permission) => permission.accountId)
+    )
+  ).size
+  const lastBuilt = lastBuiltZone(zones)?.lastSavedAt ?? null
+
+  return (
+    <StatRow>
+      <StatTile
+        label="Storm Shield Defenses"
+        tone={levels === total ? 'success' : 'primary'}
+        value={
+          <>
+            {levels}
+            <span className="text-sm text-muted-foreground">/{total}</span>
+          </>
+        }
+      >
+        <ProgressBar className="mt-2.5" total={total} value={levels} />
+      </StatTile>
+      <StatTile
+        hint={bestZone ? bestZone.zoneName : 'No endurance runs yet'}
+        label="Best endurance wave"
+        tone={
+          (bestZone?.highestEnduranceWave ?? 0) >= MAX_ENDURANCE_WAVE
+            ? 'success'
+            : 'default'
+        }
+        value={bestZone?.highestEnduranceWave ?? 0}
+      />
+      <StatTile hint="Accounts that can edit your bases" label="Builders" value={builders} />
+      {summary?.createdAt && (
+        <StatTile
+          hint={
+            lastBuilt
+              ? `Last built ${relativeTime(lastBuilt)}`
+              : summary.updatedAt
+                ? `Last change ${relativeTime(summary.updatedAt)}`
+                : undefined
+          }
+          label="Outpost since"
+          value={<span className="text-base">{day(summary.createdAt)}</span>}
+        />
+      )}
+    </StatRow>
   )
 }
 
@@ -355,11 +458,18 @@ function ZoneCard({
   const visibleData = baseData
   const canScan = Boolean(zone.saveFile) && !isLoadingBase
   const badge = assets(ZONE_BADGES[zone.zoneId] ?? '')
-  const enduranceComplete = zone.highestEnduranceWave >= MAX_ENDURANCE_WAVE
+  const art = ZONE_ART[zone.zoneId]
   const scanned = Boolean(visibleData?.success)
   const powerStats = visibleData?.success
     ? trapPowerStats(visibleData.trapItems, ratings)
     : null
+  const lastDefense = zone.defenses.reduce<string | null>(
+    (latest, record) =>
+      record.completedAt && (!latest || record.completedAt > latest)
+        ? record.completedAt
+        : latest,
+    null
+  )
   /**
    * The trap highlighted across the card — set by clicking a dot on the
    * blueprint or a tile in the trap list, cleared by clicking it again.
@@ -367,11 +477,65 @@ function ZoneCard({
   const [selectedTrap, setSelectedTrap] = useState<string | null>(null)
   const hasLayout = Boolean(visibleData?.success && visibleData.layout)
 
+  const facts: Array<{ label: string; title?: string; tone?: 'success'; value: ReactNode }> = [
+    {
+      label: 'Storm Shield',
+      tone: zone.level >= MAX_SHIELD_LEVEL ? 'success' : undefined,
+      value: `${zone.level}/${MAX_SHIELD_LEVEL}`,
+    },
+    {
+      label: 'Endurance',
+      tone: zone.highestEnduranceWave >= MAX_ENDURANCE_WAVE ? 'success' : undefined,
+      value: `${zone.highestEnduranceWave}/${MAX_ENDURANCE_WAVE}`,
+    },
+    { label: 'Amplifiers', value: zone.amplifiers.length },
+    { label: 'Builders', value: zone.editPermissions.length },
+    { label: 'Base saves', value: zone.saveCount.toLocaleString() },
+    ...(lastDefense
+      ? [{ label: 'Last defense', title: getShortDateFormat(lastDefense), value: day(lastDefense) }]
+      : []),
+    ...(powerStats ? [{ label: 'Trap power', value: powerStats.average }] : []),
+  ]
+
   return (
     <Panel>
-      <PanelHeader
-        actions={
-          <>
+      {/* The zone's key art behind its shield, the way the game's map screen introduces a zone. */}
+      <div className="relative overflow-hidden">
+        {art && (
+          <img alt="" className="absolute inset-0 size-full object-cover opacity-50" src={art} />
+        )}
+        <span aria-hidden className="absolute inset-0 bg-gradient-to-r from-card via-card/80 to-card/20" />
+        <div className="relative flex flex-wrap items-end gap-x-10 gap-y-4 px-5 py-5">
+          <div className="min-w-40">
+            <p className="flex items-center gap-2.5 text-display font-bold leading-none tracking-tight">
+              {badge && <img alt="" className="size-8 shrink-0 object-contain" src={badge} />}
+              {zone.zoneName}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {zone.lastSavedAt ? (
+                <span title={getShortDateFormat(zone.lastSavedAt)}>
+                  Base saved {relativeTime(zone.lastSavedAt)}
+                </span>
+              ) : zone.saveFile ? (
+                'Base saved to the cloud'
+              ) : (
+                'No base saved yet'
+              )}
+            </p>
+          </div>
+
+          <dl className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
+            {facts.map((fact) => (
+              <div key={fact.label} title={fact.title}>
+                <dt className="micro-label">{fact.label}</dt>
+                <dd className={cn('figure mt-1 font-semibold', fact.tone === 'success' && 'text-success')}>
+                  {fact.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {visibleData?.success && (
               <Button
                 onClick={async () => {
@@ -413,90 +577,16 @@ function ZoneCard({
                 Rescan base
               </Button>
             )}
-          </>
-        }
-        description={
-          zone.saveCount > 0 && zone.lastSavedAt
-            ? `Base last saved ${relativeTime(zone.lastSavedAt)}`
-            : undefined
-        }
-        title={
-          <span className="flex items-center gap-2.5">
-            {badge && (
-              <img alt="" className="size-7 shrink-0 object-contain" src={badge} />
-            )}
-            {zone.zoneName}
-          </span>
-        }
-      />
-
-      {/*
-        The status rail keeps a fixed width so every zone's blueprint area
-        starts on the same vertical line down the page.
-      */}
-      <div className="grid gap-6 px-5 py-4 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-5">
-          <MeterRow
-            label="Shield level"
-            total={MAX_SHIELD_LEVEL}
-            value={zone.level}
-          />
-          <MeterRow
-            label={enduranceComplete ? 'Endurance complete' : 'Endurance wave'}
-            total={MAX_ENDURANCE_WAVE}
-            value={zone.highestEnduranceWave}
-          />
-
-          <DefenseTimeline defenses={zone.defenses} />
-
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <KeyValue
-              label="Amplifiers"
-              value={<span className="figure">{zone.amplifierCount}</span>}
-            />
-            <KeyValue
-              label="Builders"
-              value={<span className="figure">{zone.editPermissions.length}</span>}
-            />
-            {powerStats && (
-              <KeyValue
-                label="Average trap power"
-                value={<span className="figure">{powerStats.average}</span>}
-              />
-            )}
-            {zone.saveCount > 0 && (
-              <KeyValue
-                label="Cloud saves"
-                value={<span className="figure">{zone.saveCount}</span>}
-              />
-            )}
-          </dl>
-
-          {/* Purely numeric slot tags ("00"…"08") say nothing beyond the count. */}
-          {zone.amplifierSlots.some((slot) => !/^\d+$/.test(slot)) && (
-            <ChipList
-              items={zone.amplifierSlots.map((slot) =>
-                slot.replace(/_/g, ' ')
-              )}
-              label="Amplifier slots"
-            />
-          )}
-
-          {zone.editPermissions.length > 0 && (
-            <ChipList
-              items={zone.editPermissions.map(
-                (permission) => permission.displayName
-              )}
-              label="Edit access"
-            />
-          )}
+          </div>
         </div>
+      </div>
 
+      <div className="border-t border-border/30 px-5 py-4">
         <BlueprintShowcase
+          amplifierPads={zone.amplifiers.map((amplifier) => amplifier.pad)}
           baseData={visibleData}
           canScan={canScan}
           isLoadingBase={isLoadingBase}
-          amplifierSlots={zone.amplifierSlots}
           onScan={() => onScanBase(zone.zoneId, zone.saveFile)}
           onSelectTrap={setSelectedTrap}
           zoneId={zone.zoneId}
@@ -518,17 +608,100 @@ function ZoneCard({
   )
 }
 
-/** A captioned row of neutral chips — names, slots, anything enumerable. */
-function ChipList({ items, label }: { items: Array<string>; label: string }) {
+/**
+ * Everyone the Storm Shields let build, across all four zones at once: a
+ * lit skull is a zone they can edit. The account's own other accounts are
+ * marked, since those are usually the reason the list exists.
+ */
+function BuildersPanel({
+  ownAccountIds,
+  primaryAccountId,
+  zones,
+}: {
+  ownAccountIds: Record<string, unknown>
+  primaryAccountId: string
+  zones: Array<OutpostZoneInfo>
+}) {
+  const builders = useMemo(() => {
+    const byId = new Map<string, { accountId: string; displayName: string; zones: Set<string> }>()
+
+    for (const zone of zones) {
+      for (const permission of zone.editPermissions) {
+        const entry = byId.get(permission.accountId) ?? {
+          accountId: permission.accountId,
+          displayName: permission.displayName,
+          zones: new Set<string>(),
+        }
+
+        entry.zones.add(zone.zoneId)
+        byId.set(permission.accountId, entry)
+      }
+    }
+
+    const own = (accountId: string) =>
+      accountId === primaryAccountId || accountId in ownAccountIds
+
+    return [...byId.values()].sort(
+      (a, b) =>
+        Number(own(b.accountId)) - Number(own(a.accountId)) ||
+        b.zones.size - a.zones.size ||
+        a.displayName.localeCompare(b.displayName)
+    )
+  }, [ownAccountIds, primaryAccountId, zones])
+
+  if (builders.length === 0) return null
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="micro-label text-muted-foreground">{label}</p>
-      <div className="flex flex-wrap gap-1">
-        {items.map((item, index) => (
-          <Chip key={`${item}-${index}`}>{item}</Chip>
-        ))}
-      </div>
-    </div>
+    <Panel>
+      <PanelHeader
+        actions={
+          <span className="text-xs text-muted-foreground">
+            {builders.length} {builders.length === 1 ? 'account' : 'accounts'}
+          </span>
+        }
+        compact
+        icon={Users}
+        title="Builders"
+      />
+      <ul className="grid gap-px bg-border/30 sm:grid-cols-2 xl:grid-cols-3">
+        {builders.map((builder) => {
+          /* Names that did not resolve come back as the raw account id. */
+          const unresolved = builder.displayName === builder.accountId
+
+          return (
+            <li className="flex items-center gap-3 bg-card px-4 py-2.5" key={builder.accountId}>
+              <span
+                className={cn('min-w-0 flex-1 truncate text-ui', unresolved ? 'text-muted-foreground' : 'font-medium')}
+                title={builder.accountId}
+              >
+                {unresolved ? 'Unknown account' : builder.displayName}
+              </span>
+              {builder.accountId === primaryAccountId ? (
+                <Chip tone="accent">You</Chip>
+              ) : (
+                builder.accountId in ownAccountIds && <Chip tone="accent">Your account</Chip>
+              )}
+              <span className="flex shrink-0 items-center gap-1">
+                {zones.map((zone) => {
+                  const canBuild = builder.zones.has(zone.zoneId)
+                  const badge = assets(ZONE_BADGES[zone.zoneId] ?? '')
+
+                  return badge ? (
+                    <img
+                      alt={canBuild ? zone.zoneName : ''}
+                      className={cn('size-4 object-contain', !canBuild && 'opacity-20 grayscale')}
+                      key={zone.zoneId}
+                      src={badge}
+                      title={canBuild ? `Can build in ${zone.zoneName}` : `No access to ${zone.zoneName}`}
+                    />
+                  ) : null
+                })}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </Panel>
   )
 }
 
@@ -538,7 +711,7 @@ function ChipList({ items, label }: { items: Array<string>; label: string }) {
  * card keeps its shape through every state.
  */
 function BlueprintShowcase({
-  amplifierSlots,
+  amplifierPads,
   baseData,
   canScan,
   isLoadingBase,
@@ -547,8 +720,8 @@ function BlueprintShowcase({
   selectedTrap,
   zoneId,
 }: {
-  /** Occupied amplifier slots for this zone (`"00"`, `"01"` …). */
-  amplifierSlots?: Array<string>
+  /** Pads with an amplifier on them, from the metadata profile. */
+  amplifierPads?: Array<number>
   baseData?: OutpostBaseData
   canScan: boolean
   isLoadingBase: boolean
@@ -588,7 +761,7 @@ function BlueprintShowcase({
         {/* Only the chosen view is mounted, so the 3D scene costs nothing while the plan is open. */}
         {view === '3d' ? (
           <Blueprint3D
-            amplifierSlots={amplifierSlots}
+            amplifierPads={amplifierPads}
             layout={baseData.layout}
             onSelectTrap={onSelectTrap}
             selectedTrap={selectedTrap}
@@ -597,6 +770,7 @@ function BlueprintShowcase({
           />
         ) : (
           <Blueprint
+            amplifierPads={amplifierPads}
             baseData={baseData}
             layout={baseData.layout}
             onSelectTrap={onSelectTrap}
@@ -656,12 +830,14 @@ const KIND_ROOF = 3
  * grid underlay keeps the tile rhythm visible where nothing is built.
  */
 function Blueprint({
+  amplifierPads,
   baseData,
   layout,
   onSelectTrap,
   selectedTrap,
   zoneId,
 }: {
+  amplifierPads?: Array<number>
   baseData: OutpostBaseData
   layout: OutpostLayout
   onSelectTrap: (name: string | null) => void
@@ -695,6 +871,7 @@ function Blueprint({
   const [hovered, setHovered] = useState<{
     category: number
     index: number
+    key: string
     name?: string
     x: number
     y: number
@@ -722,13 +899,18 @@ function Blueprint({
   )
   const traps = useMemo(
     () =>
-      layout.traps.map((trap): [number, number, number, number, number] => {
-        const [, , z, cat, nameIdx] = trap
+      layout.traps.map((trap) => {
         const centre = trapCentre(trap)
 
-        return [centre.y, -centre.x, z, cat, nameIdx]
+        return {
+          cat: trap[3],
+          key: trapKey(layout, trap),
+          name: layout.trapNames[trap[4]],
+          x: centre.y,
+          y: -centre.x,
+        }
       }),
-    [layout.traps]
+    [layout]
   )
   /* World actors near the build, as faint markers under everything else. */
   const props = useMemo(
@@ -750,17 +932,45 @@ function Blueprint({
         })),
     [layout.bounds, layout.propNames, layout.props]
   )
+  /*
+   * The Storm Shield and the zone's amplifier pads, from the level data.
+   * They share the save's world space, so they rotate like everything else.
+   */
+  const outpost = useMemo(() => {
+    const occupied = new Set(amplifierPads ?? [])
+    const shield = zoneTerrain?.stormShield
+
+    return {
+      pads: (zoneTerrain?.amplifiers ?? []).map(([x, y], pad) => ({
+        occupied: occupied.has(pad),
+        x: y,
+        y: -x,
+      })),
+      shield: shield ? { x: shield[1], y: -shield[0] } : null,
+    }
+  }, [amplifierPads, zoneTerrain])
   const bounds = {
     maxX: layout.bounds.maxY,
     maxY: -layout.bounds.minX,
     minX: layout.bounds.minY,
     minY: -layout.bounds.maxX,
   }
+  /* The drawn area also takes in the shield and every placed amplifier. */
+  const landmarks = [
+    ...(outpost.shield ? [outpost.shield] : []),
+    ...outpost.pads.filter((pad) => pad.occupied),
+  ]
+  const extent = {
+    maxX: Math.max(bounds.maxX, ...landmarks.map((mark) => mark.x)),
+    maxY: Math.max(bounds.maxY, ...landmarks.map((mark) => mark.y)),
+    minX: Math.min(bounds.minX, ...landmarks.map((mark) => mark.x)),
+    minY: Math.min(bounds.minY, ...landmarks.map((mark) => mark.y)),
+  }
 
-  const minX = bounds.minX - 1.2
-  const minY = bounds.minY - 1.2
-  const width = Math.max(1, bounds.maxX - bounds.minX + 2.4)
-  const height = Math.max(1, bounds.maxY - bounds.minY + 2.4)
+  const minX = extent.minX - 1.2
+  const minY = extent.minY - 1.2
+  const width = Math.max(1, extent.maxX - extent.minX + 2.4)
+  const height = Math.max(1, extent.maxY - extent.minY + 2.4)
 
   /* The zoomed window: same aspect as the full map, clamped inside it. */
   const clamp = (value: number, low: number, high: number) =>
@@ -824,19 +1034,15 @@ function Blueprint({
     return () => wrapper.removeEventListener('wheel', onWheel)
   })
 
-  const trapsByName = useMemo(
-    () => new Map(baseData.traps.map((trap) => [trap.displayName, trap])),
+  const trapsById = useMemo(
+    () => new Map(baseData.traps.map((trap) => [trap.id, trap])),
     [baseData.traps]
   )
 
-  const trapNames = layout.trapNames ?? []
   /* Only dim the other dots when the selection actually exists on this map. */
   const selectionOnMap =
-    selectedTrap !== null &&
-    layout.traps.some(([, , , , nameIdx]) =>
-      trapNames[nameIdx] === selectedTrap
-    )
-  const hoveredGroup = hovered?.name ? trapsByName.get(hovered.name) : undefined
+    selectedTrap !== null && traps.some((trap) => trap.key === selectedTrap)
+  const hoveredGroup = hovered ? trapsById.get(hovered.key) : undefined
 
   const byKind = (kind: number) =>
     structures.filter((piece) => piece[4] === kind)
@@ -859,7 +1065,7 @@ function Blueprint({
               title="Clear the trap highlight"
               type="button"
             >
-              {selectedTrap}
+              {trapsById.get(selectedTrap)?.displayName ?? selectedTrap}
               <X className="size-3" />
             </button>
           )}
@@ -1156,10 +1362,9 @@ function Blueprint({
               )
             )}
 
-            {traps.map(([x, y, , cat, nameIdx], index) => {
-              const name = trapNames[nameIdx]
-              const isSelected = selectionOnMap && name === selectedTrap
-              const dimmed = selectionOnMap && name !== selectedTrap
+            {traps.map(({ cat, key, name, x, y }, index) => {
+              const isSelected = selectionOnMap && key === selectedTrap
+              const dimmed = selectionOnMap && key !== selectedTrap
               const isHovered = hovered?.index === index
 
               return (
@@ -1169,13 +1374,9 @@ function Blueprint({
                   fill={TRAP_SLOT_HEX[cat] ?? TRAP_SLOT_HEX[3]}
                   fillOpacity={dimmed ? 0.2 : 1}
                   key={`t${index}`}
-                  onClick={
-                    name
-                      ? () => onSelectTrap(isSelected ? null : name)
-                      : undefined
-                  }
+                  onClick={() => onSelectTrap(isSelected ? null : key)}
                   onMouseEnter={() =>
-                    setHovered({ category: cat, index, name, x, y })
+                    setHovered({ category: cat, index, key, name, x, y })
                   }
                   onMouseLeave={() => setHovered(null)}
                   r={(isSelected || isHovered ? 0.42 : 0.3) * dotScale}
@@ -1187,6 +1388,66 @@ function Blueprint({
                 />
               )
             })}
+
+            {/* Landmarks last, so a dense base cannot bury them. */}
+            {outpost.pads.map((pad, index) =>
+              pad.occupied ? (
+                <rect
+                  className="text-foreground"
+                  fill="currentColor"
+                  height={0.8}
+                  key={`a${index}`}
+                  stroke="#000c"
+                  strokeWidth={0.08}
+                  transform={`rotate(45 ${pad.x} ${pad.y})`}
+                  width={0.8}
+                  x={pad.x - 0.4}
+                  y={pad.y - 0.4}
+                >
+                  <title>Amplifier</title>
+                </rect>
+              ) : (
+                <circle
+                  className="text-muted-foreground"
+                  cx={pad.x}
+                  cy={pad.y}
+                  fill="none"
+                  key={`a${index}`}
+                  r={0.3}
+                  stroke="currentColor"
+                  strokeDasharray="0.12 0.08"
+                  strokeOpacity={0.7}
+                  strokeWidth={0.05}
+                >
+                  <title>Empty amplifier pad</title>
+                </circle>
+              )
+            )}
+            {outpost.shield && (
+              <g className="text-foreground">
+                <circle
+                  cx={outpost.shield.x}
+                  cy={outpost.shield.y}
+                  fill="currentColor"
+                  fillOpacity={0.12}
+                  pointerEvents="none"
+                  r={1.1}
+                  stroke="currentColor"
+                  strokeOpacity={0.6}
+                  strokeWidth={0.05}
+                />
+                <circle
+                  cx={outpost.shield.x}
+                  cy={outpost.shield.y}
+                  fill="currentColor"
+                  r={0.38}
+                  stroke="#0008"
+                  strokeWidth={0.05}
+                >
+                  <title>Storm Shield</title>
+                </circle>
+              </g>
+            )}
           </svg>
 
           {hovered && (
@@ -1219,6 +1480,13 @@ function Blueprint({
         <LegendSwatch color={TRAP_SLOT_HEX[0]} label="Floor trap" round />
         <LegendSwatch color={TRAP_SLOT_HEX[1]} label="Wall trap" round />
         <LegendSwatch color={TRAP_SLOT_HEX[2]} label="Ceiling trap" round />
+        {outpost.shield && (
+          <>
+            <span className="text-border">|</span>
+            <LegendSwatch color="hsl(var(--foreground))" label="Storm Shield" round />
+            <LegendSwatch color="hsl(var(--foreground))" label="Amplifier" />
+          </>
+        )}
       </div>
       <p className="text-caption text-muted-foreground">
         Scroll to zoom, drag to pan, click a trap to highlight every copy.
@@ -1249,6 +1517,12 @@ function BaseDetails({
   selectedTrap: string | null
 }) {
   const { structures } = baseData
+  /** Every roll of a trap together, so its cards sort as one. */
+  const placedByName = new Map<string, number>()
+
+  for (const trap of baseData.traps) {
+    placedByName.set(trap.displayName, (placedByName.get(trap.displayName) ?? 0) + trap.count)
+  }
   const materials = [
     { count: structures.materials.wood, key: 'wooditemdata', name: 'Wood' },
     { count: structures.materials.stone, key: 'stoneitemdata', name: 'Stone' },
@@ -1324,19 +1598,29 @@ function BaseDetails({
             </p>
           </div>
 
-          {/* One grid in slot order; the dot matches the trap's frame in the 3D view. */}
+          {/*
+            One grid in slot order; the dot matches the trap's frame in the
+            3D view. Each perk roll of a trap is its own card, kept beside
+            the trap's other rolls.
+          */}
           <ItemCardGrid>
             {TRAP_CATEGORIES.flatMap(({ key, label }) =>
               baseData.traps
                 .filter((trap) => trap.category === key)
-                .sort((a, b) => b.count - a.count)
+                .sort(
+                  (a, b) =>
+                    (placedByName.get(b.displayName) ?? 0) -
+                      (placedByName.get(a.displayName) ?? 0) ||
+                    a.displayName.localeCompare(b.displayName) ||
+                    b.count - a.count
+                )
                 .map((trap) => (
                   <TrapCard
-                    key={trap.displayName}
+                    key={trap.id}
                     onSelect={onSelectTrap}
                     ratings={ratings}
                     records={records}
-                    selected={selectedTrap === trap.displayName}
+                    selected={selectedTrap === trap.id}
                     slot={
                       <span className="flex items-center gap-1.5">
                         <span
@@ -1405,14 +1689,9 @@ function TrapCard({
   return (
     <ItemCard
       badges={
-        trap.perks.length > 0
-          ? trap.perks.map((perk) => (
-              <Chip key={perk.templateId}>
-                {perkName(records, perk.templateId)}
-                {perk.count > 1 && ` ×${perk.count}`}
-              </Chip>
-            ))
-          : undefined
+        trap.alterations.length > 0 ? (
+          <PerkList alterations={trap.alterations} className="w-full" records={records} />
+        ) : undefined
       }
       className={cn(selected && 'ring-2 ring-primary/70')}
       eyebrow={trap.templateId ? undefined : RARITY_NAMES[trap.rarity ?? '']}
@@ -1420,7 +1699,7 @@ function TrapCard({
       name={trap.displayName}
       onClick={
         onSelect
-          ? () => onSelect(selected ? null : trap.displayName)
+          ? () => onSelect(selected ? null : trap.id)
           : undefined
       }
       overlay={
@@ -1439,88 +1718,6 @@ function TrapCard({
       templateId={trap.templateId ?? ''}
       tier={trap.tier ?? undefined}
     />
-  )
-}
-
-/**
- * Ten dots, one per Storm Shield Defense, with the claim date in the
- * tooltip — the campaign quest ledger remembers when each one was beaten.
- */
-function DefenseTimeline({
-  defenses,
-}: {
-  defenses: Array<OutpostDefenseRecord>
-}) {
-  if (defenses.length === 0) {
-    return null
-  }
-
-  const byNumber = new Map(defenses.map((record) => [record.defense, record]))
-  const dated = defenses.filter((record) => record.completedAt)
-  const last = dated.reduce<OutpostDefenseRecord | null>(
-    (latest, record) =>
-      !latest || record.completedAt > latest.completedAt ? record : latest,
-    null
-  )
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="micro-label text-muted-foreground">Defenses</span>
-      <div className="flex items-center gap-1">
-        {Array.from({ length: MAX_SHIELD_LEVEL }, (_, index) => index + 1).map(
-          (defense) => {
-            const record = byNumber.get(defense)
-
-            return (
-              <span
-                className={cn(
-                  'size-2 rounded-full',
-                  record ? 'bg-success' : 'bg-muted/70'
-                )}
-                key={defense}
-                title={
-                  record?.completedAt
-                    ? `Defense ${defense} — ${getShortDateFormat(record.completedAt)}`
-                    : record
-                      ? `Defense ${defense} — completed`
-                      : `Defense ${defense} — not completed`
-                }
-              />
-            )
-          }
-        )}
-      </div>
-      {last && (
-        <span
-          className="text-xs text-muted-foreground"
-          title={getShortDateFormat(last.completedAt)}
-        >
-          last {relativeTime(last.completedAt)}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function MeterRow({
-  label,
-  total,
-  value,
-}: {
-  label: string
-  total: number
-  value: number
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="micro-label text-muted-foreground">{label}</span>
-        <span className="text-xs font-semibold tabular-nums">
-          {value}/{total}
-        </span>
-      </div>
-      <ProgressBar total={total} value={value} />
-    </div>
   )
 }
 

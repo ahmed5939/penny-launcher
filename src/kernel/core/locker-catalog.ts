@@ -434,6 +434,14 @@ let catalog: CosmeticsCatalog | null = null
 let catalogFetchedAt = 0
 let catalogRequest: Promise<CosmeticsCatalog> | null = null
 
+/**
+ * The catalogue if a locker screen has already paid for it, never a fetch —
+ * for callers to whom a cosmetic's name is a nicety, not worth 20 MB.
+ */
+export function peekCosmeticsCatalog() {
+  return catalog
+}
+
 async function settledData<T>(request: Promise<{ data?: { data?: T } }>) {
   try {
     return (await request).data?.data

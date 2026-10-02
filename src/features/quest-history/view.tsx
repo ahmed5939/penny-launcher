@@ -10,7 +10,7 @@ import { recentActivity, stormShields, zoneProgress, zones } from './model'
 
 
 import { ItemIcon } from '../../components/items/item-icon'
-import { AccountResourceGate, AnimatedNumber, EmptyState, Pager, PageHeader, Panel, PanelHeader, ProgressBar, RefreshButton, Segmented, StatRow, StatTile, ToolBadges, paginate, useAccountResource, zoneArt as keyArt } from '../../components/page'
+import { AccountResourceGate, AnimatedNumber, EmptyState, Pager, PageHeader, Panel, PanelHeader, ProgressBar, RefreshButton, Segmented, StatRow, StatTile, ToolBadges, ZoneTile, paginate, useAccountResource, zoneArt as keyArt } from '../../components/page'
 
 import { cn } from '../../lib/utils'
 
@@ -114,36 +114,17 @@ function HistoryBody({ data }: { data: QuestHistory }) {
 /** One zone's shield: its key art, the count, and ten pips — one per defence. Picking it opens that zone's questline below. */
 function ShieldCard({ onSelect, selected, shield }: { onSelect: () => void; selected: boolean; shield: StormShield }) {
   const latest = shield.levels.filter((l) => l.doneAt).map((l) => l.doneAt!).sort().pop() ?? null
-  const complete = shield.completed === 10
   return (
-    <button
-      aria-pressed={selected}
-      className={cn('group relative flex flex-col bg-card text-left transition-colors hover:bg-muted/40', selected && 'bg-primary/[0.06]')}
-      onClick={onSelect}
-      type="button"
-    >
-      <span className="relative block h-20 overflow-hidden">
-        <img alt="" className="size-full object-cover opacity-80 transition-opacity group-hover:opacity-100" src={zoneArt[shield.zone]} />
-        <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
-        <span className="absolute inset-x-4 bottom-2 flex items-end justify-between gap-2">
-          <span className="text-title font-bold leading-tight">{shield.zone}</span>
-          <span className={cn('figure text-xl font-bold leading-none', complete ? 'text-success' : 'text-foreground')}>{shield.completed}<span className="text-xs text-muted-foreground">/10</span></span>
-        </span>
-      </span>
-      <span className="block space-y-2 px-4 pb-3.5 pt-2">
-        <ol aria-label={`${shield.zone} defences`} className="grid grid-cols-10 gap-1">
-          {shield.levels.map((level) => (
-            <li
-              className={cn('h-1.5 rounded-full', level.done ? (complete ? 'bg-success' : 'bg-primary') : 'bg-muted')}
-              key={level.level}
-              title={level.done ? `SSD ${level.level} · ${day(level.doneAt) ?? 'date unknown'}` : `SSD ${level.level} · not defended`}
-            />
-          ))}
-        </ol>
-        <span className="block text-xs text-muted-foreground">{latest ? `Last defended ${day(latest)}` : 'Not started'}</span>
-      </span>
-      {selected && <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />}
-    </button>
+    <ZoneTile
+      art={zoneArt[shield.zone]}
+      caption={latest ? `Last defended ${day(latest)}` : 'Not started'}
+      name={shield.zone}
+      onSelect={onSelect}
+      pips={shield.levels.map((level) => ({ done: level.done, title: level.done ? `SSD ${level.level} · ${day(level.doneAt) ?? 'date unknown'}` : `SSD ${level.level} · not defended` }))}
+      selected={selected}
+      total={10}
+      value={shield.completed}
+    />
   )
 }
 

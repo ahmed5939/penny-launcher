@@ -8,7 +8,7 @@ import { ScopeToolbar } from './scope-toolbar'
 
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '../ui/select'
 
 import { cn } from '../../lib/utils'
 
@@ -21,7 +21,13 @@ import { cn } from '../../lib/utils'
  * spinner. See `UX-STANDARD.md` at the repo root for when to use each.
  */
 
-export type PickerOption<T extends string = string> = { value: T; label: string; disabled?: boolean }
+export type PickerOption<T extends string = string> = {
+  value: T
+  label: string
+  disabled?: boolean
+  /** Consecutive options with the same group are listed under it as a heading. */
+  group?: string
+}
 
 /**
  * A labelled dropdown. The label is for screen readers — the selected value
@@ -43,17 +49,35 @@ export function Picker<T extends string>({
   options: ReadonlyArray<PickerOption<T>>
   value: T
 }) {
+  const runs = options.reduce<Array<{ group?: string; options: Array<PickerOption<T>> }>>((list, option) => {
+    const last = list.at(-1)
+    if (last && last.group === option.group) last.options.push(option)
+    else list.push({ group: option.group, options: [option] })
+    return list
+  }, [])
+  const item = (option: PickerOption<T>) => (
+    <SelectItem disabled={option.disabled} key={option.value} value={option.value}>
+      {option.label}
+    </SelectItem>
+  )
+
   return (
     <Select disabled={disabled} onValueChange={(next) => onChange(next as T)} value={value}>
       <SelectTrigger aria-label={label} className={cn('h-8 w-auto min-w-36 gap-2', className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {options.map((option) => (
-          <SelectItem disabled={option.disabled} key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
+        {runs.map((run, index) =>
+          run.group === undefined ? (
+            run.options.map(item)
+          ) : (
+            <SelectGroup key={`${run.group}:${index}`}>
+              {index > 0 && <SelectSeparator />}
+              <SelectLabel className="text-xs font-semibold text-muted-foreground">{run.group}</SelectLabel>
+              {run.options.map(item)}
+            </SelectGroup>
+          )
+        )}
       </SelectContent>
     </Select>
   )

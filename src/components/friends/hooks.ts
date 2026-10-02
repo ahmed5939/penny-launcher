@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useFriendsManagerStore } from '../../state/management/friends-manager'
 import { useAccountListStore } from '../../state/accounts/list'
 import { useAccountScopeStore } from '../../state/accounts/scope'
+import { useNotificationRulesStore } from '../../state/settings/notification-rules'
 
 import { groupFriendEntries } from './group'
 
@@ -79,15 +80,13 @@ export function useFriendsManagerListeners() {
         limitsReached: response.limitsReached,
       })
 
-      const rules = JSON.parse(
-        localStorage.getItem('penny-notification-rules') ?? '{}'
-      ) as { friendRequests?: boolean }
+      const { rules } = useNotificationRulesStore.getState()
       const newRequests = response.entries.filter(
         (entry) =>
           entry.kind === 'incoming' && !previousIncoming.includes(entry.accountId)
       )
       if (
-        rules.friendRequests !== false &&
+        rules.friendRequests &&
         previousState.loadedFor === response.accountId &&
         newRequests.length > 0
       ) {

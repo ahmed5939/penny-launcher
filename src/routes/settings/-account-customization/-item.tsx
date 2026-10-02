@@ -2,6 +2,7 @@ import type { AccountData } from '../../../types/accounts'
 
 import { useTranslation } from 'react-i18next'
 
+import { AccountAvatar } from '../../../components/accounts/account-avatar'
 import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 
@@ -39,15 +40,22 @@ export function AccountItem({
         value: customDisplayName,
       })}
     >
-      <div className="min-w-0 flex-1 basis-40">
-        <p className="truncate text-ui font-medium">
-          {nickname ?? account.displayName}
-        </p>
-        {nickname && (
-          <p className="truncate text-xs text-muted-foreground">
-            {account.displayName}
+      <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+        <AccountAvatar
+          accountId={account.accountId}
+          name={nickname ?? account.displayName}
+          size="md"
+        />
+        <div className="min-w-0">
+          <p className="truncate text-ui font-medium">
+            {nickname ?? account.displayName}
           </p>
-        )}
+          {nickname && (
+            <p className="truncate text-xs text-muted-foreground">
+              {account.displayName}
+            </p>
+          )}
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Input

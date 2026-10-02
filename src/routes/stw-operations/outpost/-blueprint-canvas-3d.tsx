@@ -16,6 +16,7 @@ import {
   forwardVector,
   structureCentre,
   trapCentre,
+  trapKey,
 } from './-blueprint-geometry'
 
 const MATERIAL_COLORS = ['#c9a06a', '#9aa4ad', '#6fd3e0', '#b7a5ca']
@@ -357,14 +358,15 @@ export function BlueprintCanvas3D({
 
       trapPoints = []
       for (const trap of layout.traps) {
-        const [, , z, category, nameIndex] = trap
+        const [, , z, category] = trap
 
         if (z > maxVisibleZ) continue
 
         const centre = trapCentre(trap)
         const lift = category === TRAP_WALL ? STOREY_HEIGHT / 2 : 0.08
         const point = project(centre.x, centre.y, z + lift)
-        const name = layout.trapNames[nameIndex] ?? 'Unknown trap'
+        /* The variant, so a selected card lights only its own copies. */
+        const name = trapKey(layout, trap)
         const selected = selectedTrap === name
 
         const markerSize = selected ? 9 : 7
