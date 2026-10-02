@@ -14,13 +14,10 @@ import {
   Hammer,
   Info,
   ShieldAlert,
-  ShieldHalf,
   Sparkles,
   Star,
-  Swords,
   Target,
   Trash2,
-  UsersRound,
   Zap,
 } from 'lucide-react'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'

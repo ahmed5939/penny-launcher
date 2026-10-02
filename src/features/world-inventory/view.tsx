@@ -4,7 +4,7 @@ import type { ComponentProps, MouseEvent, ReactNode } from 'react'
 import type { WorldInventory, WorldInventoryLocation, WorldItem, WorldTransfer } from './model'
 
 import { useMemo, useState } from 'react'
-import { ArrowLeft, ArrowRight, Backpack, BrickWall, Compass, Crosshair, Gem, Info, Package, Sparkles, Star, Sword, Warehouse, X, Zap } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Backpack, BrickWall, Compass, Crosshair, Gem, Info, Package, Sword, Warehouse, X, Zap } from 'lucide-react'
 
 import { useItemDatabaseStore } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
