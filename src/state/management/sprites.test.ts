@@ -9,7 +9,7 @@ describe('sprites account requests', () => {
     const state = useSpritesStore.getState()
     state.setLoading('first')
     state.setLoading('second')
-    state.setPayload({ accountId: 'first', collection: null })
+    state.setPayload({ accountId: 'first', collection: null, catalogue: null })
 
     expect(useSpritesStore.getState()).toMatchObject({
       requestedFor: 'second',
@@ -17,7 +17,7 @@ describe('sprites account requests', () => {
       isLoading: true,
     })
 
-    state.setPayload({ accountId: 'second', collection: null })
+    state.setPayload({ accountId: 'second', collection: null, catalogue: null })
 
     expect(useSpritesStore.getState()).toMatchObject({
       loadedFor: 'second',
@@ -30,6 +30,7 @@ describe('sprites account requests', () => {
     state.setLoading('first')
     state.setPayload({
       accountId: 'first',
+      catalogue: null,
       collection: {
         families: [],
         totalVariants: 0,

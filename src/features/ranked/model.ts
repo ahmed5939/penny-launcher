@@ -338,7 +338,7 @@ export function currentSeason(tracks: Record<string, RankedTrackMeta>): number |
  */
 export function peakTrack(tracks: Array<RankedTrack>): RankedTrack | null {
   return tracks.reduce<RankedTrack | null>((best, track) => {
-    if (!isPlacedTrack(track)) {
+    if (!track.tier || !isPlacedTrack(track)) {
       return best
     }
 

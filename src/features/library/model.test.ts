@@ -100,7 +100,7 @@ describe('library model — entitlements and the catalogue', () => {
     const founder = parseEntitlements([
       entitlement({ catalogItemId: '4217759881dd43209da2e89a9552a9a6', entitlementName: 'Fortnite_Founder', grantDate: '2019-01-15T00:00:00Z' }),
     ])
-    const profile = (campaignAccess: boolean, founderTier: number | null) => ({ campaignAccess, founderTier, tutorialComplete: true })
+    const profile = (campaignAccess: boolean, founderTier: number | null) => ({ campaignAccess, created: null, founderTier, tutorialComplete: true })
 
     expect(buildLibrary('acc', founder, mainItem, {}, { profile: profile(true, 2) }).fortnite.saveTheWorld).toMatchObject({
       access: true,
