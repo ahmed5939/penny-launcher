@@ -76,6 +76,8 @@ describe('navigation', () => {
       '/stw-operations/ventures',
       '/stw-operations/outpost',
       '/stw-operations/leaderboards',
+      // Unconfirmed against a live friend list until the acceptance test runs.
+      '/account-management/presence',
       '/account-management/locker',
       '/account-management/sprites',
       '/account-management/library',

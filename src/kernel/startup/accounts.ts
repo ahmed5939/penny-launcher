@@ -24,6 +24,19 @@ import { RuntimeLog } from '../runtime-log'
 export class AccountsManager {
   private static _accounts: Collection<string, AccountData> =
     new Collection()
+  private static removalListeners = new Set<(accountId: string) => void>()
+
+  /**
+   * For features that hold something per account and are loaded lazily
+   * (presence), so removing an account does not have to load them.
+   */
+  static onRemoved(listener: (accountId: string) => void) {
+    AccountsManager.removalListeners.add(listener)
+
+    return () => {
+      AccountsManager.removalListeners.delete(listener)
+    }
+  }
 
   static toRenderer(account: AccountData): AccountData {
     return {
@@ -192,6 +205,15 @@ export class AccountsManager {
     )
 
     AccountsManager._accounts.delete(accountId)
+
+    for (const listener of AccountsManager.removalListeners) {
+      try {
+        listener(accountId)
+      } catch (error) {
+        RuntimeLog.error('accounts:removed-listener', error)
+      }
+    }
+
     const { Automation } = await import('./automation')
     await Automation.removeAccount(accountId)
 

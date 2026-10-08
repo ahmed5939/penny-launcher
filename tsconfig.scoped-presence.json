@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "src/kernel/main.ts",
+    "src/kernel/preload.ts",
+    "src/routeTree.gen.ts",
+    "src/config/navigation.ts",
+    "src/config/navigation.test.ts",
+    "src/types/presence.ts",
+    "src/lib/presence.ts",
+    "src/lib/presence.test.ts",
+    "src/services/config/presence.ts",
+    "src/services/endpoints/presence.ts",
+    "src/kernel/core/presence-*.ts",
+    "src/kernel/startup/presence.ts",
+    "src/kernel/startup/accounts.ts",
+    "src/kernel/secure-ipc.ts",
+    "src/kernel/secure-ipc.test.ts",
+    "src/kernel/preload-actions/presence.ts",
+    "src/state/accounts/presence.ts",
+    "src/features/presence/*.ts",
+    "src/features/presence/*.tsx",
+    "src/routes/account-management/presence/*.tsx",
+    "src/components/shell/status-bar.tsx",
+    "src/layouts/main.tsx"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

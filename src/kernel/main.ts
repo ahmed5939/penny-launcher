@@ -83,6 +83,9 @@ const markStartup = (name: string) => {
   RuntimeLog.info(`startup:${name}`, `${Date.now() - processCreatedAt}ms`)
 }
 
+/** Quit only has presence to close if something ever loaded it. */
+let presenceLoaded = false
+
 const features = {
   accountExtras: () => import('./core/account-extras'),
   accountHealth: () => import('./core/account-health'),
@@ -119,6 +122,11 @@ const features = {
   party: () => import('./core/party'),
   pennyDb: () => import('./core/pennydb-missions'),
   playtime: () => import('./core/playtime'),
+  presence: () =>
+    import('./startup/presence').then((module) => {
+      presenceLoaded = true
+      return module
+    }),
   accountSecurity: () => import('./core/account-security'),
   ranked: () => import('./core/ranked'),
   tournaments: () => import('./core/tournaments'),
@@ -161,12 +169,22 @@ process.on('uncaughtExceptionMonitor', (error) => {
     // A flush that never settles must not keep a windowless Penny alive.
     const flushTimeoutMs = 3_000
     void Promise.race([
-      import('./startup/automation-history').then(({ flushAutomationHistory }) =>
-        flushAutomationHistory()
-      ),
+      Promise.all([
+        import('./startup/automation-history')
+          .then(({ flushAutomationHistory }) => flushAutomationHistory())
+          .catch((error) => RuntimeLog.error('automation-history:shutdown', error)),
+        // Closes presence's own connection only. Its own close is bounded
+        // well inside this timeout; Epic expires the presence either way.
+        presenceLoaded
+          ? features
+              .presence()
+              .then(({ PresenceManager }) => PresenceManager.shutdown())
+              .catch((error) => RuntimeLog.error('presence:shutdown', error))
+          : undefined,
+      ]),
       new Promise((_, reject) =>
         setTimeout(
-          () => reject(new Error(`history flush did not finish within ${flushTimeoutMs}ms`)),
+          () => reject(new Error(`shutdown work did not finish within ${flushTimeoutMs}ms`)),
           flushTimeoutMs
         )
       ),
@@ -954,6 +972,38 @@ process.on('uncaughtExceptionMonitor', (error) => {
         const { AccountSecurity } = await features.accountSecurity()
         await AccountSecurity.request(Boolean(refresh))
       }
+    )
+
+    /**
+     * Presence. Requests carry an account id and the status; the manager
+     * re-validates everything and looks the account up itself.
+     */
+    secureIpcHandle(
+      ElectronAPIEventKeys.PresenceStart,
+      async (_, request: unknown) =>
+        (await features.presence()).PresenceManager.start(request),
+      { mainFrameOnly: true }
+    )
+    secureIpcHandle(
+      ElectronAPIEventKeys.PresenceUpdate,
+      async (_, request: unknown) =>
+        (await features.presence()).PresenceManager.update(request),
+      { mainFrameOnly: true }
+    )
+    secureIpcHandle(
+      ElectronAPIEventKeys.PresenceStop,
+      async () => (await features.presence()).PresenceManager.stop(),
+      { mainFrameOnly: true }
+    )
+    // Asked by the shell on every launch: answer without loading presence
+    // (and ws) when nothing has used it yet — nothing can be running then.
+    secureIpcHandle(
+      ElectronAPIEventKeys.PresenceStatus,
+      async () =>
+        presenceLoaded
+          ? (await features.presence()).PresenceManager.status()
+          : null,
+      { mainFrameOnly: true }
     )
 
     secureIpcOn(

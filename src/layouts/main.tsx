@@ -9,6 +9,7 @@ import { TooltipProvider } from '../components/ui/tooltip'
 import { LanguageNotification } from '../components/language-notification'
 import { useFetchPlayerDataSync } from '../routes/-index/-hooks'
 import { useServerStatusSync } from '../features/server-status/sync'
+import { usePresenceSync } from '../features/presence/sync'
 import { CommandPalette } from '../components/navigation/command-palette'
 import { FriendsPanel } from '../components/friends/panel'
 import { StatusBar } from '../components/shell/status-bar'
@@ -31,6 +32,8 @@ export function MainLayout({ children }: PropsWithChildren) {
   useFetchPlayerDataSync()
   // Server alerts work from any page, not just Servers.
   useServerStatusSync()
+  // Presence runs in the main process; the status bar and page follow it.
+  usePresenceSync()
 
   return (
     <TooltipProvider delayDuration={250}>

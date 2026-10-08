@@ -45,12 +45,27 @@ export function secureIpcOn(channel: string, listener: Listener<IpcMainEvent>) {
   })
 }
 
+/**
+ * The window's own document, not a frame inside it. Preload only runs in the
+ * main frame today; channels that act on an account check anyway.
+ */
+function isMainFrame(event: IpcEvent) {
+  const frame = event.senderFrame
+
+  return Boolean(frame) && frame === event.sender.mainFrame
+}
+
 export function secureIpcHandle(
   channel: string,
-  listener: Listener<IpcMainInvokeEvent>
+  listener: Listener<IpcMainInvokeEvent>,
+  { mainFrameOnly = false }: { mainFrameOnly?: boolean } = {}
 ) {
   ipcMain.handle(channel, async (event, ...args) => {
-    if (!isTrustedSender(event) || !isReasonableIpcPayload(args)) {
+    if (
+      !isTrustedSender(event) ||
+      (mainFrameOnly && !isMainFrame(event)) ||
+      !isReasonableIpcPayload(args)
+    ) {
       RuntimeLog.error(
         `ipc-rejected:${channel}`,
         new Error('Untrusted sender or invalid payload.')

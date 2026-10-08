@@ -55,6 +55,7 @@ import { Route as AccountManagementVbucksInformationRouteImport } from './routes
 import { Route as AccountManagementSpritesRouteImport } from './routes/account-management/sprites/route'
 import { Route as AccountManagementRedeemCodesRouteImport } from './routes/account-management/redeem-codes/route'
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
+import { Route as AccountManagementPresenceRouteImport } from './routes/account-management/presence/route'
 import { Route as AccountManagementLockerRouteImport } from './routes/account-management/locker/route'
 import { Route as AccountManagementLibraryRouteImport } from './routes/account-management/library/route'
 import { Route as AccountManagementHistoryRouteImport } from './routes/account-management/history/route'
@@ -320,6 +321,12 @@ const AccountManagementProfileRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AccountManagementPresenceRouteRoute =
+  AccountManagementPresenceRouteImport.update({
+    path: '/account-management/presence',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountManagementLockerRouteRoute =
   AccountManagementLockerRouteImport.update({
     path: '/account-management/locker',
@@ -414,6 +421,10 @@ declare module '@tanstack/react-router' {
     }
     '/account-management/locker': {
       preLoaderRoute: typeof AccountManagementLockerRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/account-management/presence': {
+      preLoaderRoute: typeof AccountManagementPresenceRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/profile': {
@@ -597,6 +608,7 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementHistoryRouteRoute,
   AccountManagementLibraryRouteRoute,
   AccountManagementLockerRouteRoute,
+  AccountManagementPresenceRouteRoute,
   AccountManagementProfileRouteRoute,
   AccountManagementRedeemCodesRouteRoute,
   AccountManagementSpritesRouteRoute,

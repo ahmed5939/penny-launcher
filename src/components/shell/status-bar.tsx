@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { StatusDot } from '../page'
 
 import { useAccountScope, usePrimaryAccount } from '../../hooks/accounts/scope'
+import { PresenceStatusItem } from '../../features/presence/status-item'
 
 import { cn, parseCustomDisplayName } from '../../lib/utils'
 
@@ -62,7 +63,11 @@ export function StatusBar() {
         </span>
       </span>
 
-      <span className="figure ml-auto text-caption text-muted-foreground">
+      <span className="ml-auto flex min-w-0 items-center gap-3">
+        <PresenceStatusItem />
+      </span>
+
+      <span className="figure text-caption text-muted-foreground">
         v{packageJson.version}
       </span>
     </footer>

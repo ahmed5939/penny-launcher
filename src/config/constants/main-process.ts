@@ -562,4 +562,16 @@ export enum ElectronAPIEventKeys {
   /** Penny Rewind's game-profile facts for every linked account. */
   RewindFactsRequest = 'rewind:facts:request',
   RewindFactsResponse = 'rewind:facts:response',
+
+  /**
+   * Fortnite presence: one account's friend-facing status while the game
+   * is closed. All invoke, all account-id only; the snapshot pushed back
+   * holds no credentials.
+   */
+
+  PresenceStart = 'presence:start',
+  PresenceUpdate = 'presence:update',
+  PresenceStop = 'presence:stop',
+  PresenceStatus = 'presence:status',
+  PresenceChanged = 'presence:changed',
 }

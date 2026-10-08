@@ -18,10 +18,12 @@ export const external = [
   // node_modules directory layout. fnbr/stanza stay external because their
   // ws dependency performs optional native acceleration probes with dynamic
   // require(); bundling turns a caught MODULE_NOT_FOUND into a hard failure.
+  // Presence imports ws directly, so it is external for the same reason.
   'fnbr',
   'ps-list',
   'sharp',
   'stanza',
+  'ws',
 ]
 
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {

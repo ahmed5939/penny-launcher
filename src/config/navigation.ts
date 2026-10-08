@@ -23,6 +23,7 @@ import {
   Pin,
   Puzzle,
   Map,
+  MessageSquareText,
   Radar,
   ScrollText,
   Shield,
@@ -334,6 +335,13 @@ export const navSections: Array<NavSection> = [
         label: 'sidebar:account-management.options.friends',
         needsAccount: true,
         to: '/account-management/friends',
+      },
+      {
+        beta: true,
+        icon: MessageSquareText,
+        label: 'sidebar:presence',
+        needsAccount: true,
+        to: '/account-management/presence',
       },
       {
         beta: true,
