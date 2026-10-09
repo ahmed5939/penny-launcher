@@ -29,6 +29,7 @@ import { Route as StwOperationsRareItemFinderRouteImport } from './routes/stw-op
 import { Route as StwOperationsQuestsRouteImport } from './routes/stw-operations/quests/route'
 import { Route as StwOperationsProfileRouteImport } from './routes/stw-operations/profile/route'
 import { Route as StwOperationsOutpostRouteImport } from './routes/stw-operations/outpost/route'
+import { Route as StwOperationsOpenLlamasRouteImport } from './routes/stw-operations/open-llamas/route'
 import { Route as StwOperationsMissionsRouteImport } from './routes/stw-operations/missions/route'
 import { Route as StwOperationsLoadoutsRouteImport } from './routes/stw-operations/loadouts/route'
 import { Route as StwOperationsLeaderboardsRouteImport } from './routes/stw-operations/leaderboards/route'
@@ -167,6 +168,12 @@ const StwOperationsOutpostRouteRoute = StwOperationsOutpostRouteImport.update({
   path: '/stw-operations/outpost',
   getParentRoute: () => rootRoute,
 } as any)
+
+const StwOperationsOpenLlamasRouteRoute =
+  StwOperationsOpenLlamasRouteImport.update({
+    path: '/stw-operations/open-llamas',
+    getParentRoute: () => rootRoute,
+  } as any)
 
 const StwOperationsMissionsRouteRoute = StwOperationsMissionsRouteImport.update(
   {
@@ -542,6 +549,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsMissionsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/open-llamas': {
+      preLoaderRoute: typeof StwOperationsOpenLlamasRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/outpost': {
       preLoaderRoute: typeof StwOperationsOutpostRouteImport
       parentRoute: typeof rootRoute
@@ -646,6 +657,7 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsLeaderboardsRouteRoute,
   StwOperationsLoadoutsRouteRoute,
   StwOperationsMissionsRouteRoute,
+  StwOperationsOpenLlamasRouteRoute,
   StwOperationsOutpostRouteRoute,
   StwOperationsProfileRouteRoute,
   StwOperationsQuestsRouteRoute,

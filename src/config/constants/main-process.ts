@@ -412,11 +412,20 @@ export enum ElectronAPIEventKeys {
   ShopResponse = 'shop:response',
   ShopPurchase = 'shop:purchase',
   ShopPurchaseNotification = 'shop:purchase:notification',
-  ShopOpen = 'shop:open',
-  ShopOpenNotification = 'shop:open:notification',
   /** Public PennyDB catalog — read-only, not a purchase path. */
   ShopCatalogRequest = 'shop:catalog:request',
   ShopCatalogResponse = 'shop:catalog:response',
+
+  /**
+   * Open Llamas: opening card packs the account already owns. Invoke only,
+   * account id and preview id only; the pool a run may open stays in main.
+   */
+
+  OpenLlamasPreview = 'open-llamas:preview',
+  OpenLlamasStart = 'open-llamas:start',
+  OpenLlamasCancel = 'open-llamas:cancel',
+  OpenLlamasStatus = 'open-llamas:status',
+  OpenLlamasProgress = 'open-llamas:progress',
 
   /**
    * BR Locker

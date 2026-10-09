@@ -135,6 +135,7 @@ const features = {
   serverStatus: () => import('./core/server-status'),
   settings: () => import('./startup/settings'),
   shop: () => import('./core/shop'),
+  openLlamas: () => import('./core/open-llamas'),
   squads: () => import('./core/squads'),
   timeline: () => import('./core/timeline'),
   vbucks: () => import('./core/vbucks-information'),
@@ -1266,12 +1267,32 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
-    secureIpcOn(
-      ElectronAPIEventKeys.ShopOpen,
-      async (_, accounts: Array<AccountData>) => {
-        const { Shop } = await features.shop()
-        await Shop.openLlamas(accounts)
-      }
+    /**
+     * Open Llamas. The renderer sends an account id, the preview id it was
+     * shown and its choices; `OpenLlamas` re-validates all of it.
+     */
+    secureIpcHandle(
+      ElectronAPIEventKeys.OpenLlamasPreview,
+      async (_, accountId: unknown) =>
+        (await features.openLlamas()).OpenLlamas.preview(accountId),
+      { mainFrameOnly: true }
+    )
+    secureIpcHandle(
+      ElectronAPIEventKeys.OpenLlamasStart,
+      async (_, request: unknown) =>
+        (await features.openLlamas()).OpenLlamas.start(request),
+      { mainFrameOnly: true }
+    )
+    secureIpcHandle(
+      ElectronAPIEventKeys.OpenLlamasCancel,
+      async (_, accountId: unknown) =>
+        (await features.openLlamas()).OpenLlamas.cancel(accountId),
+      { mainFrameOnly: true }
+    )
+    secureIpcHandle(
+      ElectronAPIEventKeys.OpenLlamasStatus,
+      async () => (await features.openLlamas()).OpenLlamas.status(),
+      { mainFrameOnly: true }
     )
 
     secureIpcOn(ElectronAPIEventKeys.ShopCatalogRequest, async () => {

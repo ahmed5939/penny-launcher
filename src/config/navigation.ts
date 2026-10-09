@@ -20,6 +20,7 @@ import {
   Library,
   LibraryBig,
   Monitor,
+  PackageOpen,
   Pin,
   Puzzle,
   Map,
@@ -297,6 +298,17 @@ export const navSections: Array<NavSection> = [
         icon: Store,
         label: 'sidebar:stw-operations.options.shop',
         to: '/stw-operations/shop',
+      },
+      {
+        // Opening owned llamas grew out of the shop's Open button, so it
+        // follows the shop's visibility rather than owning a toggle.
+        group: 'sidebar:groups.stw-activity',
+        beta: true,
+        can: 'shop',
+        icon: PackageOpen,
+        label: 'sidebar:stw-operations.options.open-llamas',
+        needsAccount: true,
+        to: '/stw-operations/open-llamas',
       },
       {
         group: 'sidebar:groups.stw-activity',

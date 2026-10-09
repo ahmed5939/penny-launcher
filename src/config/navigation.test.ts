@@ -56,6 +56,7 @@ describe('navigation', () => {
     }
     expect(destinations).toContain('/stw-operations/collection-book')
     expect(destinations).toContain('/stw-operations/rare-item-finder')
+    expect(destinations).toContain('/stw-operations/open-llamas')
     expect(destinations).toContain('/stw-operations/loadouts')
     expect(destinations).toContain('/stw-operations/squads')
     expect(destinations).toContain('/stw-operations/quests')
@@ -75,6 +76,8 @@ describe('navigation', () => {
       '/stw-operations/rare-item-finder',
       '/stw-operations/ventures',
       '/stw-operations/outpost',
+      // Opening and recycling not yet run against a live account.
+      '/stw-operations/open-llamas',
       '/stw-operations/leaderboards',
       // Unconfirmed against a live friend list until the acceptance test runs.
       '/account-management/presence',

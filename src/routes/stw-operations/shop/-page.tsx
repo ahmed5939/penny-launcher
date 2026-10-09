@@ -10,7 +10,7 @@ import type {
 } from '../../../kernel/core/shop'
 import type { SegmentedOption } from '../../../components/page'
 
-import { UpdateIcon } from '@radix-ui/react-icons'
+import { Link } from '@tanstack/react-router'
 import { Coins, PackageOpen, Sparkles, Store } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -75,7 +75,7 @@ export function RouteComponent() {
 
   const { updateView, view } = useShopView()
   const { followUp, resource } = useShopResource()
-  const actions = useShopActions(resource, followUp)
+  const actions = useShopActions(followUp)
   const catalog = useShopCatalog(view === 'browse')
   const isBrowsing = view === 'browse'
 
@@ -191,10 +191,8 @@ function AccountShop({
 }) {
   const records = useItemDatabaseStore((state) => state.records)
   const { section, updateSection } = useShopView()
-  const { handleOpenLlamas, isOpening } = actions
 
   const offers = entry.offers.filter((offer) => offer.section === section)
-  const canOpen = !isOpening && entry.unopenedLlamas > 0
   const balances = groupBalances(entry.currencies)
   const nameOf = (currency: ShopCurrency) =>
     // The game's own name ("Pure Drop of Rain"), not the id turned into
@@ -262,20 +260,18 @@ function AccountShop({
               </span>
             </span>
           )}
-          {(entry.unopenedLlamas > 0 || isOpening) && (
+          {entry.unopenedLlamas > 0 && (
+            // Choosing types, a number and recycling happens on its own page.
             <Button
-              disabled={!canOpen}
-              onClick={handleOpenLlamas}
+              asChild
               size="sm"
               variant="secondary"
             >
-              {isOpening ? (
-                <UpdateIcon className="animate-spin" />
-              ) : (
+              <Link to="/stw-operations/open-llamas">
                 <PackageOpen className="size-4" />
-              )}
-              Open {entry.unopenedLlamas}{' '}
-              {entry.unopenedLlamas === 1 ? 'llama' : 'llamas'}
+                Open {entry.unopenedLlamas.toLocaleString()}{' '}
+                {entry.unopenedLlamas === 1 ? 'llama' : 'llamas'}
+              </Link>
             </Button>
           )}
           {wallet.map((currency) => (

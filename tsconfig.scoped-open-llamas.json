@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "src/kernel/preload.ts",
+    "src/kernel/preload-actions/open-llamas.ts",
+    "src/kernel/preload-actions/shop.ts",
+    "src/kernel/core/open-llamas.ts",
+    "src/kernel/core/open-llamas-run.ts",
+    "src/kernel/core/open-llamas.test.ts",
+    "src/kernel/core/open-llamas-run.test.ts",
+    "src/kernel/core/shop.ts",
+    "src/features/open-llamas/*.ts",
+    "src/features/open-llamas/*.tsx",
+    "src/state/stw-operations/open-llamas.ts",
+    "src/state/stw-operations/open-llamas.test.ts",
+    "src/routes/stw-operations/open-llamas/*.tsx",
+    "src/routes/stw-operations/shop/*.tsx",
+    "src/routes/stw-operations/shop/*.ts",
+    "src/config/navigation.ts",
+    "src/config/navigation.test.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

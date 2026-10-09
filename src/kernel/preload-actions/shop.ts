@@ -1,7 +1,6 @@
 import type { IpcRendererEvent } from 'electron'
 import type {
   ShopCatalogPayload,
-  ShopOpenNotification,
   ShopPayload,
   ShopPurchaseNotification,
 } from '../core/shop'
@@ -27,10 +26,6 @@ export function purchaseShopOffer(
   }
 ) {
   ipcRenderer.send(ElectronAPIEventKeys.ShopPurchase, account, offer)
-}
-
-export function openLlamas(accounts: Array<AccountData>) {
-  ipcRenderer.send(ElectronAPIEventKeys.ShopOpen, accounts)
 }
 
 export function responseShop(
@@ -98,29 +93,6 @@ export function responseShopCatalog(
     removeListener: () =>
       rendererInstance.removeListener(
         ElectronAPIEventKeys.ShopCatalogResponse,
-        customCallback
-      ),
-  }
-}
-
-export function notificationShopOpen(
-  callback: (response: ShopOpenNotification) => Promise<void>
-) {
-  const customCallback = (
-    _: IpcRendererEvent,
-    response: ShopOpenNotification
-  ) => {
-    callback(response).catch(console.error)
-  }
-  const rendererInstance = ipcRenderer.on(
-    ElectronAPIEventKeys.ShopOpenNotification,
-    customCallback
-  )
-
-  return {
-    removeListener: () =>
-      rendererInstance.removeListener(
-        ElectronAPIEventKeys.ShopOpenNotification,
         customCallback
       ),
   }

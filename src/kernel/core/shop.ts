@@ -14,7 +14,6 @@ import {
   getQueryProfileMainProfile,
   populatePrerolledOffers,
   purchaseCatalogEntry,
-  setOpenCardPackBatch,
 } from '../../services/endpoints/mcp'
 import { getPennyDBStwShop } from '../../services/endpoints/pennydb'
 import { getCatalog } from '../../services/endpoints/storefront'
@@ -123,16 +122,6 @@ export type ShopPurchaseNotification = {
   offerTitle: string
   quantity: number
   errorMessage?: string
-}
-
-export type ShopOpenNotification = {
-  results: Array<{
-    accountId: string
-    opened: number
-    /** Rarity histogram of everything that dropped, when readable. */
-    loot: Partial<Record<Rarity, number>>
-    errorMessage?: string
-  }>
 }
 
 function labelForCurrency(currencySubType: string, currency: string) {
@@ -531,106 +520,5 @@ export class Shop {
     )
 
     await Shop.request([account])
-  }
-
-  /**
-   * Opens every unopened card pack on each account.
-   *
-   * The loot histogram is parsed defensively — the notification payload is
-   * not pinned down by the endpoint documentation, so an unreadable response
-   * degrades to "opened N" rather than failing the operation.
-   */
-  static async openLlamas(accounts: Array<AccountData>) {
-    const results: ShopOpenNotification['results'] = []
-
-    await Promise.allSettled(
-      accounts.map(async (account) => {
-        const result = {
-          accountId: account.accountId,
-          opened: 0,
-          loot: {},
-        } as ShopOpenNotification['results'][number]
-
-        try {
-          const accessToken =
-            await Authentication.verifyAccessToken(account)
-
-          if (!accessToken) {
-            result.errorMessage = 'Unknown Error'
-            results.push(result)
-
-            return
-          }
-
-          const profile = await getQueryProfile({
-            accessToken,
-            accountId: account.accountId,
-          })
-          const items = profile.data.profileChanges[0]?.profile.items ?? {}
-          const cardPackItemIds = Object.entries(items)
-            .filter(([, item]) => item.templateId.startsWith('CardPack:'))
-            .map(([itemId]) => itemId)
-
-          if (cardPackItemIds.length <= 0) {
-            results.push(result)
-
-            return
-          }
-
-          const response = await setOpenCardPackBatch({
-            accessToken,
-            accountId: account.accountId,
-            cardPackItemIds,
-          })
-
-          result.opened = cardPackItemIds.length
-          result.loot = Shop.parseLoot(response.data)
-
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-          result.errorMessage =
-            error?.response?.data?.errorMessage ?? 'Unknown Error'
-        }
-
-        results.push(result)
-      })
-    )
-
-    MainWindow.instance.webContents.send(
-      ElectronAPIEventKeys.ShopOpenNotification,
-      { results } as ShopOpenNotification
-    )
-  }
-
-  private static parseLoot(response: unknown) {
-    const loot: Partial<Record<Rarity, number>> = {}
-    const notifications = (
-      response as {
-        notifications?: Array<{
-          lootGranted?: { items?: Array<{ itemType?: string }> }
-        }>
-      }
-    )?.notifications
-
-    if (!Array.isArray(notifications)) {
-      return loot
-    }
-
-    notifications.forEach((notification) => {
-      notification.lootGranted?.items?.forEach((item) => {
-        const decoded =
-          typeof item.itemType === 'string'
-            ? decodeItemTemplate(item.itemType)
-            : null
-
-        if (!decoded) {
-          return
-        }
-
-        loot[decoded.rarity] = (loot[decoded.rarity] ?? 0) + 1
-      })
-    })
-
-    return loot
   }
 }

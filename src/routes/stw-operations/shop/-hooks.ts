@@ -1,4 +1,3 @@
-import type { AccountResource } from '../../../components/page'
 import type { ShopEntry, ShopOffer } from '../../../kernel/core/shop'
 
 import { useShallow } from 'zustand/react/shallow'
@@ -10,8 +9,6 @@ import { useAccountListStore } from '../../../state/accounts/list'
 import { useShopStore } from '../../../state/stw-operations/shop'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
-
-import { rarityLabels } from '../../../config/constants/fortnite/items'
 
 import { toast } from '../../../lib/notifications'
 
@@ -99,21 +96,16 @@ export function useShopResource() {
 export type ShopActions = ReturnType<typeof useShopActions>
 
 /**
- * Purchases and llama opening. Mounted by the page itself, not by either
- * view, so a purchase started from Browse still gets its response and toast
- * after switching back.
+ * Purchases. Mounted by the page itself, not by either view, so a purchase
+ * started from Browse still gets its response and toast after switching
+ * back. Opening owned llamas lives on its own page (Open llamas).
  */
-export function useShopActions(
-  resource: AccountResource<ShopEntry>,
-  followUp: () => void
-) {
+export function useShopActions(followUp: () => void) {
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null
-  const { refresh } = resource
 
   /** Offer id currently being bought, so only that button spins. */
   const [purchasingOfferId, setPurchasing] = useState<string | null>(null)
-  const [isOpening, setOpening] = useState(false)
 
   useEffect(() => {
     const listener = window.electronAPI.notificationShopPurchase(
@@ -137,59 +129,6 @@ export function useShopActions(
     }
   }, [accountId, followUp])
 
-  useEffect(() => {
-    const listener = window.electronAPI.notificationShopOpen(
-      async (response) => {
-        setOpening(false)
-
-        const opened = response.results.reduce(
-          (accumulator, current) => accumulator + current.opened,
-          0
-        )
-        const failed = response.results.filter((item) => item.errorMessage)
-
-        toast[opened > 0 ? 'success' : 'info'](
-          opened > 0
-            ? `Opened ${opened} llama${opened === 1 ? '' : 's'}`
-            : 'Nothing to open'
-        )
-
-        const loot = response.results.reduce<Record<string, number>>(
-          (accumulator, current) => {
-            Object.entries(current.loot).forEach(([rarity, count]) => {
-              accumulator[rarity] = (accumulator[rarity] ?? 0) + count
-            })
-
-            return accumulator
-          },
-          {}
-        )
-        const lootSummary = Object.entries(loot)
-          .filter(([, count]) => count > 0)
-          .map(
-            ([rarity, count]) =>
-              `${count} ${rarityLabels[rarity as keyof typeof rarityLabels] ?? rarity}`
-          )
-          .join(', ')
-
-        if (lootSummary.length > 0) {
-          toast.info(`Loot: ${lootSummary}`)
-        }
-
-        if (failed.length > 0) {
-          toast.error(`Epic reported an error: ${failed[0].errorMessage}`)
-        }
-
-        // Opening does not re-read the shop on its own; ask for it.
-        refresh()
-      }
-    )
-
-    return () => {
-      listener.removeListener()
-    }
-  }, [refresh])
-
   const handlePurchase = (offer: ShopOffer, quantity = 1) => {
     if (!selected || purchasingOfferId !== null) {
       return
@@ -207,20 +146,9 @@ export function useShopActions(
     })
   }
 
-  const handleOpenLlamas = () => {
-    if (isOpening || !selected) {
-      return
-    }
-
-    setOpening(true)
-    window.electronAPI.openLlamas([selected])
-  }
-
   return {
-    isOpening,
     purchasingOfferId,
 
-    handleOpenLlamas,
     handlePurchase,
   }
 }
