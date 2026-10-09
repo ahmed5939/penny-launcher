@@ -79,6 +79,8 @@ describe('navigation', () => {
       // Unconfirmed against a live friend list until the acceptance test runs.
       '/account-management/presence',
       '/account-management/locker',
+      // Live redemption unverified until a user-supplied code confirms it.
+      '/account-management/lobby-hacks',
       '/account-management/sprites',
       '/account-management/library',
       '/advanced-mode/islands',

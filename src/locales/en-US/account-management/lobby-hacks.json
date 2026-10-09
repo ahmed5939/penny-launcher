@@ -1,0 +1,125 @@
+{
+  "description": "Submit a code from the in-game Admin Panel for one account. Rewards land on the account; lobby effects only play in game.",
+  "no-accounts": {
+    "title": "No linked accounts",
+    "description": "Add an account to submit codes."
+  },
+  "form": {
+    "title": "Admin Panel code",
+    "description": "One code for one account. Nothing is sent until you press Submit.",
+    "account": "Account",
+    "account-hint": "The code is submitted for this account only.",
+    "code": "Code",
+    "placeholder": "Code from the Admin Panel",
+    "length": "{{length}} of {{max}} characters. Sent exactly as typed.",
+    "submit": "Submit",
+    "submitting": "Submitting…",
+    "submits-for": "Submits for",
+    "problems": {
+      "line-break": "One code at a time: remove the line break.",
+      "characters": "Tabs and other control characters are not allowed.",
+      "too-long": "That is {{length}} characters; the limit is {{max}}.",
+      "multi-line-paste": "That paste has more than one line. Paste one code at a time."
+    }
+  },
+  "result": {
+    "submitting-for": "Submitting for",
+    "code": "Code",
+    "rewards": "Rewards in Epic's reply",
+    "epic-said": "Epic's reply",
+    "retry-after": "Try again in {{seconds}} seconds.",
+    "can-repeat": "Epic says this code can be used again on this account.",
+    "check-first": "Check the account in game before submitting this code again.",
+    "sign-in": "Sign in again",
+    "removed-account": "Removed account"
+  },
+  "outcomes": {
+    "granted": {
+      "label": "Granted",
+      "title": "Rewards granted",
+      "body": "Epic confirmed the code and granted its rewards."
+    },
+    "no-reward": {
+      "label": "No reward",
+      "title": "No reward granted",
+      "body": "Epic accepted the code but granted nothing. This account may already have its rewards."
+    },
+    "unconfirmed": {
+      "label": "Unconfirmed",
+      "title": "Not confirmed",
+      "body": "Epic answered without confirming a reward."
+    },
+    "invalid-code": {
+      "label": "Invalid",
+      "title": "Code not recognised",
+      "body": "Check the code and try again."
+    },
+    "already-used": {
+      "label": "Already used",
+      "title": "Already used",
+      "body": "This account has already used this code."
+    },
+    "cooldown": {
+      "label": "Cooldown",
+      "title": "On cooldown",
+      "body": "Epic is limiting attempts. Wait a moment, then try again."
+    },
+    "unavailable": {
+      "label": "Unavailable",
+      "title": "Not available",
+      "body": "Fortnite is not accepting this command right now."
+    },
+    "rejected": {
+      "label": "Refused",
+      "title": "Epic refused the code",
+      "body": "Epic's reason is below."
+    },
+    "auth-failed": {
+      "label": "Sign-in failed",
+      "title": "Could not sign in",
+      "body": "Epic refused this account's saved sign-in. Sign in again, then retry."
+    },
+    "account-missing": {
+      "label": "No account",
+      "title": "Account not linked",
+      "body": "That account is no longer linked to Penny. Pick another."
+    },
+    "not-sent": {
+      "label": "Not sent",
+      "title": "Could not reach Epic",
+      "body": "Nothing was sent. Check your connection and try again."
+    },
+    "uncertain": {
+      "label": "Unknown",
+      "title": "Result unknown",
+      "body": "No answer came back from Epic, so the code may or may not have gone through."
+    },
+    "busy": {
+      "label": "Busy",
+      "title": "Still submitting",
+      "body": "Another code is still being submitted. Wait for it to finish."
+    },
+    "invalid-input": {
+      "label": "Not sent",
+      "title": "Not sent",
+      "body": "The code or account was not valid, so nothing was sent."
+    }
+  },
+  "codes": {
+    "title": "Lobby Hack codes",
+    "description": "{{count}} codes from community guides, checked {{date}}. Pick a reward code to put it in the form.",
+    "search": "Search codes",
+    "search-placeholder": "Code or reward",
+    "empty": "No code matches that search.",
+    "sources": "Sources",
+    "categories": {
+      "sprite": "Sprites",
+      "sprite-dust": "Sprite Dust",
+      "xp": "XP",
+      "gizmo": "Gizmos",
+      "cosmetic": "Cosmetics",
+      "lobby-effect": "Lobby effects: in game only",
+      "expired": "Expired"
+    }
+  }
+}

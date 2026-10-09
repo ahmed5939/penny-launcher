@@ -47,6 +47,7 @@ import * as partyActions from './preload-actions/party'
 import * as pennydbMissionsActions from './preload-actions/pennydb-missions'
 import * as playtimeActions from './preload-actions/playtime'
 import * as presenceActions from './preload-actions/presence'
+import * as lobbyHacksActions from './preload-actions/lobby-hacks'
 import * as accountSecurityActions from './preload-actions/account-security'
 import * as rankedActions from './preload-actions/ranked'
 import * as tournamentsActions from './preload-actions/tournaments'
@@ -128,6 +129,7 @@ export const availableElectronAPIs = {
   ...pennydbMissionsActions,
   ...playtimeActions,
   ...presenceActions,
+  ...lobbyHacksActions,
   ...accountSecurityActions,
   ...rankedActions,
   ...tournamentsActions,

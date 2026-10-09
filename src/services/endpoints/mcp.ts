@@ -13,6 +13,8 @@ import type {
 import type {
   MCPActivateConsumableResponse,
   MCPClientQuestLoginResponse,
+  MCPExecuteTerminalCommandPayload,
+  MCPExecuteTerminalCommandResponse,
   MCPPurchaseCatalogEntryResponse,
   MCPQueryProfile,
   MCPQueryProfileAthenaProfile,
@@ -959,6 +961,38 @@ export function setRedeemSTWAccoladeTokens({
     {
       headers: {
         Authorization: `bearer ${accessToken}`,
+      },
+      params: {
+        profileId: 'athena',
+        rvn: -1,
+      },
+    }
+  )
+}
+
+/**
+ * Submits one BR Lobby Hack code, as the in-game Admin Panel does
+ * (`TerminalCommandContext.TryToExecuteTerminalCommand`).
+ *
+ * Never retried: a timeout can land after Epic has granted the rewards.
+ * `baseGameService` has no retry interceptor; keep it that way for this call.
+ */
+export function setExecuteTerminalCommand({
+  accessToken,
+  accountId,
+  command,
+}: {
+  accessToken: string
+  accountId: string
+  command: string
+}) {
+  return baseGameService.post<MCPExecuteTerminalCommandResponse>(
+    `/profile/${accountId}/client/ExecuteTerminalCommand`,
+    { command } as MCPExecuteTerminalCommandPayload,
+    {
+      headers: {
+        Authorization: `bearer ${accessToken}`,
+        'Content-Type': 'application/json',
       },
       params: {
         profileId: 'athena',

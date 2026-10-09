@@ -131,6 +131,7 @@ const features = {
   rewindFacts: () => import('./core/rewind-facts'),
   quests: () => import('./core/quests'),
   redeemCodes: () => import('./core/redeem-codes'),
+  lobbyHacks: () => import('./core/lobby-hacks'),
   serverStatus: () => import('./core/server-status'),
   settings: () => import('./startup/settings'),
   shop: () => import('./core/shop'),
@@ -998,6 +999,18 @@ process.on('uncaughtExceptionMonitor', (error) => {
         presenceLoaded()
           ? (await features.presence()).PresenceManager.status()
           : null,
+      { mainFrameOnly: true }
+    )
+
+    /**
+     * BR Lobby Hacks. The request carries an account id and the code; the
+     * submitter re-validates both, looks the account up and signs in
+     * itself. Expected failures come back as an outcome, never a throw.
+     */
+    secureIpcHandle(
+      ElectronAPIEventKeys.LobbyHackSubmit,
+      async (_, request: unknown) =>
+        (await features.lobbyHacks()).LobbyHacks.submit(request),
       { mainFrameOnly: true }
     )
 

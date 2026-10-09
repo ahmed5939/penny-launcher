@@ -32,6 +32,7 @@ import {
   Swords,
   Ticket,
   Trash2,
+  Terminal,
   TreePalm,
   Trophy,
   UserPlus,
@@ -349,6 +350,13 @@ export const navSections: Array<NavSection> = [
         label: 'sidebar:br-locker',
         needsAccount: true,
         to: '/account-management/locker',
+      },
+      {
+        beta: true,
+        icon: Terminal,
+        label: 'sidebar:lobby-hacks',
+        needsAccount: true,
+        to: '/account-management/lobby-hacks',
       },
       {
         beta: true,

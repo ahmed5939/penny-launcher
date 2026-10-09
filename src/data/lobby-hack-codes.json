@@ -1,0 +1,624 @@
+{
+  "_comment": "Battle Royale Lobby Hack codes for the in-game Admin Panel, Chapter 7 Season 4 (Override). Epic publishes no list: these come from community guides, cross-checked against each other, spelled as published. 'sources' says which guides list a code. 'lobby-effect' codes run inside the game client and do nothing when submitted from Penny. Extend by hand when new codes appear; re-check 'checkedAt' sources first.",
+  "season": "Chapter 7 Season 4",
+  "checkedAt": "2026-10-09",
+  "sources": {
+    "beebom": {
+      "name": "Beebom",
+      "url": "https://beebom.com/fortnite-lobby-hack-codes/",
+      "updated": "2026-10-05"
+    },
+    "vice": {
+      "name": "VICE",
+      "url": "https://www.vice.com/en/article/fortnite-cheat-codes-lobby-hacks/",
+      "updated": "2026-10-01"
+    },
+    "gamerant": {
+      "name": "Game Rant",
+      "url": "https://gamerant.com/fortnite-all-lobby-hack-codes/",
+      "updated": null
+    },
+    "altchar": {
+      "name": "AltChar",
+      "url": "https://www.altchar.com/guides/fortnite-all-admin-panel-cheat-codes-october-2026-aiXHl7E6K23S",
+      "updated": null
+    },
+    "skycoach": {
+      "name": "Skycoach",
+      "url": "https://skycoach.gg/blog/fortnite/articles/admin-panel-codes",
+      "updated": null
+    }
+  },
+  "codes": [
+    {
+      "code": "JonesyIsGolden",
+      "category": "sprite",
+      "reward": "Gold Jonesy Sprite",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "Play4All",
+      "category": "sprite",
+      "reward": "Cheat Master Jonesy Sprite",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "GottaGoFast",
+      "category": "sprite",
+      "reward": "Cheat Master Sonic Sprite",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "IWannaFlyHigh",
+      "category": "sprite",
+      "reward": "Cheat Master Tails Sprite",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "Born2Play",
+      "category": "sprite",
+      "reward": "Cheat Master Adventure Sprite",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "8BitBlast",
+      "category": "sprite",
+      "reward": "Cheat Master 8-Bit Sprite",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "GatherAndCraft",
+      "category": "sprite",
+      "reward": "Cheat Master Bush Sprite",
+      "requires": "Finish the Wrixel and Ziggy story quest first.",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "runSystemOverride",
+      "category": "sprite-dust",
+      "reward": "5,000 Sprite Dust",
+      "requires": "Finish the Geno story quests first.",
+      "sources": [
+        "vice"
+      ]
+    },
+    {
+      "code": "ImTheRealEdgelord",
+      "category": "sprite-dust",
+      "reward": "5,000 Sprite Dust",
+      "requires": "Finish the Wrixel story quests first.",
+      "sources": [
+        "vice"
+      ]
+    },
+    {
+      "code": "DustySprites",
+      "category": "sprite-dust",
+      "reward": "5,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "MagicIsReal",
+      "category": "sprite-dust",
+      "reward": "5,000 Sprite Dust",
+      "requires": "Finish the Bastian story quests first.",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "BLINKYINKYPINKYCLYDE",
+      "category": "sprite-dust",
+      "reward": "5,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "DustInTheWind",
+      "category": "sprite-dust",
+      "reward": "5,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "WhereIsTheDustyTree",
+      "category": "sprite-dust",
+      "reward": "5,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "H0p0nVC",
+      "category": "sprite-dust",
+      "reward": "2,000 Sprite Dust",
+      "note": "The second character is a zero.",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "PlayToLevelUp",
+      "category": "sprite-dust",
+      "reward": "2,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "gamerant"
+      ]
+    },
+    {
+      "code": "Abgestaubt",
+      "category": "sprite-dust",
+      "reward": "2,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "Perlimpinpin",
+      "category": "sprite-dust",
+      "reward": "2,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "Chispambo",
+      "category": "sprite-dust",
+      "reward": "2,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "Magilume",
+      "category": "sprite-dust",
+      "reward": "2,000 Sprite Dust",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "WhoCrackedTheCode",
+      "category": "xp",
+      "reward": "40,000 XP",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "OverrideXP",
+      "category": "xp",
+      "reward": "40,000 XP",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "VeryScaryPumpkin",
+      "category": "gizmo",
+      "reward": "3 Snack-O'-Lantern Gizmos",
+      "sources": [
+        "beebom",
+        "vice"
+      ]
+    },
+    {
+      "code": "IThinkTheKeyFoundMeChat",
+      "category": "gizmo",
+      "reward": "1 Extraction Accelerator",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "BONERATTLER",
+      "category": "gizmo",
+      "reward": "4 Spicy Tacos",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "AlmostScaringSeason",
+      "category": "gizmo",
+      "reward": "2 Cheat Code Locators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "DestinyAwaits",
+      "category": "gizmo",
+      "reward": "2 Llama Supply Drops",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "NOCTURNEOP55N1",
+      "category": "gizmo",
+      "reward": "2 Extraction Accelerators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "ChatFindMeAnotherCode",
+      "category": "gizmo",
+      "reward": "2 Cheat Code Locators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "BeamMeUp",
+      "category": "gizmo",
+      "reward": "2 Extraction Accelerators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "INVALIDCHEAT",
+      "category": "gizmo",
+      "reward": "2 Cheat Code Locators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "ChatWhereDoYouFindTheKey",
+      "category": "gizmo",
+      "reward": "2 Extraction Accelerators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "FindItChat",
+      "category": "gizmo",
+      "reward": "2 Cheat Code Locators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "SurviveTheNight",
+      "category": "gizmo",
+      "reward": "2 Cheat Code Locators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "TakeYourHeart",
+      "category": "gizmo",
+      "reward": "2 Extraction Accelerators",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "PerfectOrder",
+      "category": "gizmo",
+      "reward": "4 Spicy Tacos",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "O2Override",
+      "category": "gizmo",
+      "reward": "1 Llama Supply Drop and 5 Portable Extractors",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "NOPROLLAMA",
+      "category": "gizmo",
+      "reward": "1 Llama Supply Drop",
+      "expires": "2026-09-14",
+      "note": "Was valid 7 to 14 September.",
+      "sources": [
+        "beebom",
+        "vice"
+      ]
+    },
+    {
+      "code": "YourThoughtsAreMine",
+      "category": "cosmetic",
+      "reward": "Void Master Geno outfit style and 5,000 Sprite Dust",
+      "requires": "Finish the Geno: The Ultimate Reality quests first.",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant"
+      ]
+    },
+    {
+      "code": "WeAreTheWorldChampionsToday",
+      "category": "cosmetic",
+      "reward": "FNCS back bling",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "9YEARS",
+      "category": "cosmetic",
+      "reward": "9th Birthday Sprite spray",
+      "note": "Some lists call it an emote.",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "SAYH12WR1X3L",
+      "category": "cosmetic",
+      "reward": "Wrixel's Hero Portrait spray",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "BeMoreAlien",
+      "category": "cosmetic",
+      "reward": "Override Ready loading screen",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "ReachYourImpossible",
+      "category": "cosmetic",
+      "reward": "Block Party loading screen",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "s7h-50p-r03",
+      "category": "lobby-effect",
+      "reward": "Geno glitches your lobby",
+      "requires": "Reach stage 4 of the Hope quest first.",
+      "sources": [
+        "beebom",
+        "vice"
+      ]
+    },
+    {
+      "code": "CrowsAreAfraid",
+      "category": "lobby-effect",
+      "reward": "Turns the lobby into scarecrows",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "PumpkinSpiceLife",
+      "category": "lobby-effect",
+      "reward": "Turns the lobby into pumpkins",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "powerout!",
+      "category": "lobby-effect",
+      "reward": "Lights out and a FNAF jumpscare",
+      "note": "Also listed as POWEROUT.",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "BRB",
+      "category": "lobby-effect",
+      "reward": "Turns you into a toilet",
+      "sources": [
+        "altchar",
+        "beebom",
+        "vice"
+      ]
+    },
+    {
+      "code": "InsertCoinToContinue",
+      "category": "lobby-effect",
+      "reward": "Turns you into an arcade machine",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "vice"
+      ]
+    },
+    {
+      "code": "LetsBlockAndRoll",
+      "category": "lobby-effect",
+      "reward": "Turns you into a Tetris block",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    },
+    {
+      "code": "DontBlockMe",
+      "category": "lobby-effect",
+      "reward": "Tetris block effect",
+      "note": "Some lists say it turns the effect off.",
+      "sources": [
+        "altchar",
+        "beebom",
+        "gamerant",
+        "skycoach",
+        "vice"
+      ]
+    }
+  ]
+}

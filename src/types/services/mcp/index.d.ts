@@ -6,6 +6,7 @@ export type MCPClientQuestLoginResponse = {
 
 export * from './activate-consumable.d'
 export * from './claim-rewards.d'
+export * from './execute-terminal-command.d'
 export * from './purchase-catalog-entry.d'
 export * from './query-profile-athena.d'
 export * from './query-profile-main.d'

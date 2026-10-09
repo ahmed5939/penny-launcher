@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "src/kernel/main.ts",
+    "src/kernel/preload.ts",
+    "src/routeTree.gen.ts",
+    "src/config/navigation.ts",
+    "src/config/navigation.test.ts",
+    "src/types/lobby-hacks.ts",
+    "src/types/services/mcp/*.d.ts",
+    "src/lib/lobby-hacks.ts",
+    "src/lib/lobby-hacks.test.ts",
+    "src/services/endpoints/mcp.ts",
+    "src/services/endpoints/mcp-terminal-command.test.ts",
+    "src/kernel/core/lobby-hacks*.ts",
+    "src/kernel/preload-actions/lobby-hacks*.ts",
+    "src/features/lobby-hacks/*.ts",
+    "src/features/lobby-hacks/*.tsx",
+    "src/routes/account-management/lobby-hacks/*.tsx"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

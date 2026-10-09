@@ -574,4 +574,10 @@ export enum ElectronAPIEventKeys {
   PresenceStop = 'presence:stop',
   PresenceStatus = 'presence:status',
   PresenceChanged = 'presence:changed',
+
+  /**
+   * BR Lobby Hacks: one Admin Panel code for one account (invoke). Carries
+   * an account id and the code; the result holds no credentials.
+   */
+  LobbyHackSubmit = 'lobby-hacks:submit',
 }

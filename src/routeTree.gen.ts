@@ -57,6 +57,7 @@ import { Route as AccountManagementRedeemCodesRouteImport } from './routes/accou
 import { Route as AccountManagementProfileRouteImport } from './routes/account-management/profile/route'
 import { Route as AccountManagementPresenceRouteImport } from './routes/account-management/presence/route'
 import { Route as AccountManagementLockerRouteImport } from './routes/account-management/locker/route'
+import { Route as AccountManagementLobbyHacksRouteImport } from './routes/account-management/lobby-hacks/route'
 import { Route as AccountManagementLibraryRouteImport } from './routes/account-management/library/route'
 import { Route as AccountManagementHistoryRouteImport } from './routes/account-management/history/route'
 import { Route as AccountManagementGiftsInformationRouteImport } from './routes/account-management/gifts-information/route'
@@ -333,6 +334,12 @@ const AccountManagementLockerRouteRoute =
     getParentRoute: () => rootRoute,
   } as any)
 
+const AccountManagementLobbyHacksRouteRoute =
+  AccountManagementLobbyHacksRouteImport.update({
+    path: '/account-management/lobby-hacks',
+    getParentRoute: () => rootRoute,
+  } as any)
+
 const AccountManagementLibraryRouteRoute =
   AccountManagementLibraryRouteImport.update({
     path: '/account-management/library',
@@ -417,6 +424,10 @@ declare module '@tanstack/react-router' {
     }
     '/account-management/library': {
       preLoaderRoute: typeof AccountManagementLibraryRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/account-management/lobby-hacks': {
+      preLoaderRoute: typeof AccountManagementLobbyHacksRouteImport
       parentRoute: typeof rootRoute
     }
     '/account-management/locker': {
@@ -607,6 +618,7 @@ export const routeTree = rootRoute.addChildren([
   AccountManagementGiftsInformationRouteRoute,
   AccountManagementHistoryRouteRoute,
   AccountManagementLibraryRouteRoute,
+  AccountManagementLobbyHacksRouteRoute,
   AccountManagementLockerRouteRoute,
   AccountManagementPresenceRouteRoute,
   AccountManagementProfileRouteRoute,
