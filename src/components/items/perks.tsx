@@ -1,6 +1,7 @@
 import type { ItemRecordMap } from '../../kernel/core/item-database'
 
 import { getItemRecord } from '../../state/items/database'
+import legacyPerks from '../../features/rare-item-finder/data/legacy-perks.json'
 
 import {
   accentByRarity,
@@ -37,10 +38,18 @@ const alterationWords: Record<string, string> = {
   weapon: 'weapon',
 }
 
+/**
+ * Legacy perks were pulled from the game, so the item database has no record
+ * for them; the legacy dictionary still holds the text the game printed.
+ */
+const legacyPerkNames = new Map(
+  Object.entries(legacyPerks as Record<string, string>).map(([id, name]) => [id.toLowerCase(), name])
+)
+
 /** Human fallback for alteration ids missing from the extracted name table. */
 function alterationName(templateId: string) {
   const raw = (templateId.split(':').pop() ?? templateId)
-    .replace(/^aid_[ag]_/, '')
+    .replace(/^aid_(?:att|g)_/i, '')
     .replace(/_alt\d+$/i, '')
   const words = raw
     .split('_')
@@ -57,7 +66,11 @@ function alterationName(templateId: string) {
 
 /** A perk's name as the game prints it ("+42% Reload Speed"). */
 export function displayAlteration(records: ItemRecordMap, templateId: string) {
-  return getItemRecord(records, templateId)?.name ?? alterationName(templateId)
+  return (
+    getItemRecord(records, templateId)?.name ??
+    legacyPerkNames.get(templateId.toLowerCase()) ??
+    alterationName(templateId)
+  )
 }
 
 /** The site's rarity pips: one lit per step the perk has climbed. */
