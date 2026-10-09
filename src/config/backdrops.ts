@@ -145,6 +145,7 @@ const routeBackdrops: Array<[prefix: string, backdrop: Backdrop]> = [
   ['/stw-operations/backpack', art(vault, 'center 70%')],
   ['/stw-operations/collection-book', art(commandCenterDark, 'center 60%')],
   ['/stw-operations/rare-item-finder', art(cannyBeams, 'center 45%')],
+  ['/stw-operations/sixth-perks', art(hordeFight, 'center 40%')],
   ['/stw-operations/codex', art(hordeFight, 'center 40%')],
   ['/stw-operations/auto-llamas', art(llama, 'center 72%')],
   ['/stw-operations/shop', art(llama, 'center 72%')],

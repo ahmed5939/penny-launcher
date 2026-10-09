@@ -1220,6 +1220,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
       const { requestRareItemScan } = await import('./core/rare-item-finder')
       return requestRareItemScan(accountId)
     })
+    secureIpcHandle('sixth-perks:query', async (_, accountId: string, includeBook = false) => (await import('./core/sixth-perks')).requestSixthPerks(accountId, includeBook), { mainFrameOnly: true })
     secureIpcOn(
       ElectronAPIEventKeys.InventoryRequest,
       async (_, accounts: Array<AccountData>) => {

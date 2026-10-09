@@ -56,6 +56,7 @@ describe('navigation', () => {
     }
     expect(destinations).toContain('/stw-operations/collection-book')
     expect(destinations).toContain('/stw-operations/rare-item-finder')
+    expect(destinations).toContain('/stw-operations/sixth-perks')
     expect(destinations).toContain('/stw-operations/open-llamas')
     expect(destinations).toContain('/stw-operations/loadouts')
     expect(destinations).toContain('/stw-operations/squads')
@@ -74,6 +75,8 @@ describe('navigation', () => {
       '/stw-operations/backpack',
       '/stw-operations/collection-book',
       '/stw-operations/rare-item-finder',
+      // Ownership matching not yet checked against a live account.
+      '/stw-operations/sixth-perks',
       '/stw-operations/ventures',
       '/stw-operations/outpost',
       // Opening and recycling not yet run against a live account.

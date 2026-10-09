@@ -1,0 +1,11 @@
+export type Location = 'inventory' | 'book'
+export type SchematicCopy = { id: string; templateId: string; level: number | null; alterations: (string | null)[] }
+export type ProfileRead = { status: 'success' | 'error' | 'skipped'; items: SchematicCopy[]; error: string | null }
+export type SixthPerksScan = { accountId: string; fetchedAt: string; inventory: ProfileRead; book: ProfileRead }
+export type PerkOption = { id: string; description: string; matchIds: string[]; availability: 'current' | 'historical' | 'website-listed' | 'observed'; evidence: string }
+export type Weapon = { id: string; name: string; category: string; image: string | null; templateId: string; options: PerkOption[]; legendaryAvailable: boolean }
+export type Variant = { weaponId: string; allowed: string[]; unlockLevel: number; slotIndex: number; rarity: 'Legendary' | 'Epic' }
+export type Catalog = { metadata: { build: string; weaponFamilies: number; schematicVariants: number; websiteAdditionalOptions: number; unresolvedWebsiteOptions: number }; weapons: Weapon[]; variants: Record<string, Variant>; knownGameplayPerks: Record<string, { description: string; legacy: boolean }> }
+export type MatchCopy = SchematicCopy & { location: Location; perkId: string; slotIndex: number; active: boolean | null; rarity: 'Legendary' | 'Epic'; countsForCompletion: boolean }
+export type OptionResult = PerkOption & { inventory: MatchCopy[]; book: MatchCopy[] }
+export type WeaponResult = Omit<Weapon, 'options'> & { options: OptionResult[]; inventoryCount: number; bookCount: number; inventoryUnknown: boolean; bookUnknown: boolean; unresolved: { copy: SchematicCopy; location: Location }[] }

@@ -255,6 +255,14 @@ export const navSections: Array<NavSection> = [
         to: '/stw-operations/rare-item-finder',
       },
       {
+        // The catalog is browsable without an account; only a scan needs one.
+        group: 'sidebar:groups.stw-inventory',
+        beta: true,
+        icon: Swords,
+        label: 'sidebar:stw-operations.options.sixth-perks',
+        to: '/stw-operations/sixth-perks',
+      },
+      {
         group: 'sidebar:groups.stw-inventory',
         can: 'codex',
         icon: Library,

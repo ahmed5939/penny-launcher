@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "src/kernel/preload.ts",
+    "src/kernel/preload-actions/sixth-perks.ts",
+    "src/kernel/core/sixth-perks.ts",
+    "src/kernel/core/sixth-perks.test.ts",
+    "src/features/sixth-perks/*.ts",
+    "src/features/sixth-perks/*.tsx",
+    "src/state/stw-operations/sixth-perks.ts",
+    "src/state/stw-operations/sixth-perks.test.ts",
+    "src/routes/stw-operations/sixth-perks/*.tsx",
+    "src/routeTree.gen.ts",
+    "src/config/navigation.ts",
+    "src/config/navigation.test.ts",
+    "src/config/backdrops.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

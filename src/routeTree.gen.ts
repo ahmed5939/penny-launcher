@@ -23,6 +23,10 @@ import { Route as StwOperationsSurvivorsRouteImport } from './routes/stw-operati
 import { Route as StwOperationsStorageRouteImport } from './routes/stw-operations/storage/route'
 import { Route as StwOperationsSquadsRouteImport } from './routes/stw-operations/squads/route'
 import { Route as StwOperationsShopRouteImport } from './routes/stw-operations/shop/route'
+import {
+  Route as StwOperationsSixthPerksRouteImport,
+  CompletionRoute as StwOperationsSixthPerksCompletionRouteImport,
+} from './routes/stw-operations/sixth-perks/route'
 import { Route as StwOperationsSchematicsRouteImport } from './routes/stw-operations/schematics/route'
 import { Route as StwOperationsRecycledRewardsRouteImport } from './routes/stw-operations/recycled-rewards/route'
 import { Route as StwOperationsRareItemFinderRouteImport } from './routes/stw-operations/rare-item-finder/route'
@@ -135,6 +139,18 @@ const StwOperationsShopRouteRoute = StwOperationsShopRouteImport.update({
   path: '/stw-operations/shop',
   getParentRoute: () => rootRoute,
 } as any)
+
+const StwOperationsSixthPerksRouteRoute =
+  StwOperationsSixthPerksRouteImport.update({
+    path: '/stw-operations/sixth-perks',
+    getParentRoute: () => rootRoute,
+  } as any)
+
+const StwOperationsSixthPerksCompletionRouteRoute =
+  StwOperationsSixthPerksCompletionRouteImport.update({
+    path: '/stw-operations/sixth-perks/completion',
+    getParentRoute: () => rootRoute,
+  } as any)
 
 const StwOperationsSchematicsRouteRoute =
   StwOperationsSchematicsRouteImport.update({
@@ -581,6 +597,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StwOperationsShopRouteImport
       parentRoute: typeof rootRoute
     }
+    '/stw-operations/sixth-perks': {
+      preLoaderRoute: typeof StwOperationsSixthPerksRouteImport
+      parentRoute: typeof rootRoute
+    }
+    '/stw-operations/sixth-perks/completion': {
+      preLoaderRoute: typeof StwOperationsSixthPerksCompletionRouteImport
+      parentRoute: typeof rootRoute
+    }
     '/stw-operations/squads': {
       preLoaderRoute: typeof StwOperationsSquadsRouteImport
       parentRoute: typeof rootRoute
@@ -665,6 +689,8 @@ export const routeTree = rootRoute.addChildren([
   StwOperationsRecycledRewardsRouteRoute,
   StwOperationsSchematicsRouteRoute,
   StwOperationsShopRouteRoute,
+  StwOperationsSixthPerksRouteRoute,
+  StwOperationsSixthPerksCompletionRouteRoute,
   StwOperationsSquadsRouteRoute,
   StwOperationsStorageRouteRoute,
   StwOperationsSurvivorsRouteRoute,
