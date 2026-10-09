@@ -16,8 +16,11 @@ import { RuntimeLog } from '../runtime-log'
  *   4 — sandbox-only async SDK, reviewed permissions and declarative UI
  *   5 — scoped inventory, confirmed recycling, Epic Launcher close,
  *       read-only desktop information, declared MCP operations and EOS locker reads
+ *   6 — any declared MCP operation and profile, approved at install (money and
+ *       gifts still confirmed per call), redacted full profiles and command
+ *       replies, matchmaking session lookup and presence
  */
-export const PLUGIN_API_VERSION = 5
+export const PLUGIN_API_VERSION = 6
 
 type PluginEventListener = (payload: unknown) => unknown
 

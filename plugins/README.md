@@ -1,6 +1,6 @@
 # Penny plugins
 
-Penny API v5 plugins (including compatible v4 packages) run in **separate sandboxed Chromium renderers**, with no
+Penny API v6 plugins (including compatible v4 and v5 packages) run in **separate sandboxed Chromium renderers**, with no
 Node/Electron access, direct network, filesystem, or launcher credentials.
 All launcher operations pass through a permission-checked host bridge.
 

@@ -58,6 +58,7 @@ import {
 } from './startup/window-chrome'
 import { Appearance } from './startup/appearance'
 import { WindowState } from './startup/window-state'
+import { loadPresence, presenceLoaded } from './startup/presence-loader'
 import { RuntimeLog } from './runtime-log'
 import { secureIpcHandle, secureIpcOn } from './secure-ipc'
 import {
@@ -82,9 +83,6 @@ const processCreatedAt = process.getCreationTime() ?? Date.now()
 const markStartup = (name: string) => {
   RuntimeLog.info(`startup:${name}`, `${Date.now() - processCreatedAt}ms`)
 }
-
-/** Quit only has presence to close if something ever loaded it. */
-let presenceLoaded = false
 
 const features = {
   accountExtras: () => import('./core/account-extras'),
@@ -122,11 +120,8 @@ const features = {
   party: () => import('./core/party'),
   pennyDb: () => import('./core/pennydb-missions'),
   playtime: () => import('./core/playtime'),
-  presence: () =>
-    import('./startup/presence').then((module) => {
-      presenceLoaded = true
-      return module
-    }),
+  // Shared with add-ons: quit only has presence to close if something loaded it.
+  presence: loadPresence,
   accountSecurity: () => import('./core/account-security'),
   ranked: () => import('./core/ranked'),
   tournaments: () => import('./core/tournaments'),
@@ -175,7 +170,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
           .catch((error) => RuntimeLog.error('automation-history:shutdown', error)),
         // Closes presence's own connection only. Its own close is bounded
         // well inside this timeout; Epic expires the presence either way.
-        presenceLoaded
+        presenceLoaded()
           ? features
               .presence()
               .then(({ PresenceManager }) => PresenceManager.shutdown())
@@ -1000,7 +995,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
     secureIpcHandle(
       ElectronAPIEventKeys.PresenceStatus,
       async () =>
-        presenceLoaded
+        presenceLoaded()
           ? (await features.presence()).PresenceManager.status()
           : null,
       { mainFrameOnly: true }

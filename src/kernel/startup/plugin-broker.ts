@@ -45,6 +45,8 @@ const permissionForMethod: Record<string, PluginPermission> = {
   'inventory.read': 'inventory:read', 'inventory.recycle': 'inventory:recycle',
   'epicLauncher.close': 'epic-launcher:close',
   'mcp.queryProfile': 'fortnite:profiles', 'mcp.write': 'fortnite:commands', 'eos.locker': 'eos:locker:read',
+  'matchmaking.findPlayer': 'fortnite:sessions',
+  'presence.status': 'fortnite:presence', 'presence.start': 'fortnite:presence', 'presence.update': 'fortnite:presence', 'presence.stop': 'fortnite:presence',
   'desktop.system': 'system:read', 'desktop.displays': 'displays:read', 'desktop.power': 'power:read',
 }
 export function requirePluginPermission(manifest: PluginManifest, method: string) {
@@ -108,13 +110,23 @@ export async function dispatchPlugin(plugin: PluginRuntimeRecord, method: string
     case 'mcp.operations':
     case 'mcp.queryProfile':
     case 'mcp.request':
-    case 'eos.locker': {
+    case 'eos.locker':
+    case 'matchmaking.findPlayer': {
       const host = plugin.host
       const revision = PluginBridge.getAccountScopeRevision()
       const { dispatchFortnite } = await import('./plugin-fortnite')
       if (!host || plugin.host !== host) throw new Error('Plugin stopped or restarted.')
       if (revision !== PluginBridge.getAccountScopeRevision()) throw new Error('Account scope changed.')
       return dispatchFortnite(plugin, method, args)
+    }
+    case 'presence.status':
+    case 'presence.start':
+    case 'presence.update':
+    case 'presence.stop': {
+      const host = plugin.host
+      const { dispatchPluginPresence } = await import('./plugin-presence')
+      if (!host || plugin.host !== host) throw new Error('Plugin stopped or restarted.')
+      return dispatchPluginPresence(plugin, method, args)
     }
     case 'desktop.system':
     case 'desktop.displays':

@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/input'
 import { Switch } from '../../components/ui/switch'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 import { permissionLabels } from './-permissions'
+import { pluginCommandNeedsDialog } from '../../types/plugin-fortnite'
 
 type Manage = (request: PluginManageRequest) => Promise<void>
 export function PluginContributions({ plugin, manage, busy }: { plugin: PluginSummary; manage: Manage; busy: boolean }) {
@@ -58,6 +59,17 @@ export function PluginContributions({ plugin, manage, busy }: { plugin: PluginSu
     </details>
   </div>
 }
+function FortniteCommands({ manifest }: { manifest: PluginReview['manifest'] }) {
+  const commands = (manifest.fortnite?.operations ?? []).filter((operation) => operation !== 'QueryProfile')
+  const asks = commands.filter((operation) => pluginCommandNeedsDialog(operation, manifest.apiVersion))
+  const runs = commands.filter((operation) => !asks.includes(operation))
+  return <>
+    {runs.length > 0 && <p className="mt-2 break-words">Runs without asking: {runs.join(', ')}</p>}
+    {asks.length > 0 && <p className="mt-2 break-words">Asks before each use: {asks.join(', ')}</p>}
+    {!commands.length && <p className="mt-2">Fortnite commands: None</p>}
+    {runs.length > 0 && <p className="mt-2 text-muted-foreground">Approving lets this add-on run these on your selected accounts at any time.</p>}
+  </>
+}
 export function PluginReviewDialog({ review, busy, accept, cancel }: { review: PluginReview | null; busy: boolean; accept: () => void; cancel: () => void }) {
   return <Dialog open={review !== null} onOpenChange={(open) => { if (!open && !busy) cancel() }}>
     <DialogContent className="max-h-[85vh] max-w-2xl overflow-auto">
@@ -74,8 +86,7 @@ export function PluginReviewDialog({ review, busy, accept, cancel }: { review: P
         </li>)}</ul>
         {review?.manifest.fortnite && <div className="rounded-lg bg-muted/40 p-3">
           <p>Fortnite profiles: {review.manifest.fortnite.profiles.join(', ') || 'None'}</p>
-          <p className="mt-2 break-words">Fortnite commands: {review.manifest.fortnite.operations.join(', ') || 'None'}</p>
-          <p className="mt-2 text-muted-foreground">Account changes require a separate, one-time confirmation in Penny.</p>
+          <FortniteCommands manifest={review.manifest} />
         </div>}
         {!review?.manifest.permissions?.length && <p className="text-muted-foreground">No launcher permissions requested.</p>}
         {review?.installed && <p>The current code version is kept for rollback. Saved data is shared across versions; rollback does not undo data changes.</p>}

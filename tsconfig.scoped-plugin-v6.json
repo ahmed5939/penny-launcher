@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "forge.env.d.ts",
+    "plugins/sdk/index.d.ts",
+    "src/types/plugin-fortnite.ts",
+    "src/types/plugins.ts",
+    "src/kernel/startup/plugin-*.ts",
+    "src/kernel/startup/presence-loader.ts",
+    "src/routes/plugins/-extensions.tsx",
+    "src/routes/plugins/-permissions.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

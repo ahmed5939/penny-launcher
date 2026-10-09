@@ -1,4 +1,4 @@
-# Developing Penny plugins — API v5
+# Developing Penny plugins — API v6
 
 ## Quick start
 
@@ -26,7 +26,7 @@ See [DESIGN.md](./DESIGN.md), the [typed SDK](./sdk/index.d.ts), and the
   "version": "1.0.0",
   "author": "Your name",
   "runtime": "sandbox",
-  "apiVersion": 5,
+  "apiVersion": 6,
   "permissions": ["ui", "notifications"],
   "capabilities": ["notifications"],
   "entry": "main.js",
@@ -70,8 +70,10 @@ package's permissions. Penny refuses plugin execution under `--no-sandbox`.
 | `system:read` | Read OS release, architecture, memory totals and uptime |
 | `displays:read` | Read monitor sizes and scaling, without screenshots or hardware identifiers |
 | `power:read` | Read battery versus external-power status |
-| `fortnite:profiles` | Read declared, filtered game profiles for selected accounts |
-| `fortnite:commands` | Request declared MCP changes with one-time Penny confirmation |
+| `fortnite:profiles` | Read declared game profiles for selected accounts, account secrets removed |
+| `fortnite:commands` | Run declared MCP commands; approved at install from API v6 (money and gifts still ask) |
+| `fortnite:sessions` | Look up the matchmaking session a selected account is in |
+| `fortnite:presence` | Start, update and stop the friend-facing presence for a selected account |
 | `eos:locker:read` | Read equipped EOS locker slots for selected accounts |
 | `settings:read` | Read game path, watched process name, user agent; settings events |
 | `storage` | Per-plugin JSON storage operations |
@@ -98,7 +100,7 @@ All host operations are asynchronous. Await them and handle failures.
 
 | Member | Contract |
 | --- | --- |
-| `apiVersion`, `manifest` | API version 5 and the approved manifest |
+| `apiVersion`, `manifest` | API version 6 and the approved manifest |
 | `accounts.list()` | Promise of `{ accountId, displayName, customDisplayName }[]` |
 | `accounts.getScoped()` | Promise of `{ primary, members }` with sanitized accounts |
 | `accounts.quests(accountId)` | Promise of `{ accountId, quests, rerolls, errorMessage? }`; read-only |
@@ -211,10 +213,10 @@ Example: with `power:read`, use `const { onBattery } = await context.desktop.pow
 and skip optional background work when `onBattery` is true. These permissions do
 not authorize clipboard, keyboard, registry, filesystem, shell, or elevation access.
 
-## Fortnite data and commands (v5)
+## Fortnite data, commands, sessions and presence (v6)
 
 See the [Fortnite API guide](./FORTNITE.md) for the declaration format, operation
-catalog, raw-game-data filtering rules, input schemas, limits, and examples.
+catalog, redaction rules, approval model, input schemas, limits, and examples.
 The [account showcase example](./examples/account-showcase/) reads progression,
 cosmetics and EOS locker data without any mutation permission.
 
@@ -284,7 +286,7 @@ that launch. Turning off safe mode resumes only approved, enabled plugins.
 ## Migrating API v1–v3
 
 Legacy plugins are never executed in the main process. Set `runtime: "sandbox"`
-and `apiVersion: 5`, declare the permissions you use, and replace Node/Electron
+and `apiVersion: 6`, declare the permissions you use, and replace Node/Electron
 operations with the context API. Account getters, navigation, notifications and
 logging now return promises. Replace filesystem access with `storage`; replace
 BrowserWindows with UI contributions; remove `getMainWindow`, `storageDirectory`,

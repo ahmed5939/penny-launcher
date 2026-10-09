@@ -14,6 +14,7 @@ export const PLUGIN_PERMISSIONS = [
   'inventory:read', 'inventory:recycle', 'epic-launcher:close',
   'system:read', 'displays:read', 'power:read',
   'fortnite:profiles', 'fortnite:commands', 'eos:locker:read',
+  'fortnite:sessions', 'fortnite:presence',
 ] as const
 export type PluginPermission = (typeof PLUGIN_PERMISSIONS)[number]
 

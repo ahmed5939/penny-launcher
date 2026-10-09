@@ -62,7 +62,7 @@ it('reports failed activation without signalling readiness', async () => {
 })
 it('exposes v5 host operations using fixed method names and serialized arguments', async () => {
   const host = await sdk(async (context) => {
-    expect(context.apiVersion).toBe(5)
+    expect(context.apiVersion).toBe(6)
     await context.inventory.read('selected')
     await context.inventory.recycle('selected', ['item'])
     await context.epicLauncher.close()

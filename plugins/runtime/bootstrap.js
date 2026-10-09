@@ -11,7 +11,7 @@
   let controller
   const report = (error) => call('log', 'error', String(error)).catch(() => {})
   const context = {
-    apiVersion: 5,
+    apiVersion: 6,
     log: (message) => call('log', 'info', String(message)),
     accounts: {
       list: () => call('accounts.list'),
@@ -34,6 +34,13 @@
       request: (accountId, request) => call('mcp.request', accountId, request),
     },
     eos: { locker: (accountId) => call('eos.locker', accountId) },
+    matchmaking: { findPlayer: (accountId) => call('matchmaking.findPlayer', accountId) },
+    presence: {
+      status: () => call('presence.status'),
+      start: (request) => call('presence.start', request),
+      update: (request) => call('presence.update', request),
+      stop: () => call('presence.stop'),
+    },
     storage: {
       get: (key, fallback) => call('storage.get', key, fallback),
       set: (key, value) => call('storage.set', key, value),

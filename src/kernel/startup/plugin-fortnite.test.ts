@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ token: vi.fn(), eos: vi.fn(), transport: vi.fn(), locker: vi.fn(), confirm: vi.fn() }))
+const mocks = vi.hoisted(() => ({ token: vi.fn(), eos: vi.fn(), transport: vi.fn(), locker: vi.fn(), sessions: vi.fn(), confirm: vi.fn() }))
 vi.mock('electron', () => ({ dialog: { showMessageBox: mocks.confirm } }))
 vi.mock('./windows/main', () => ({ MainWindow: { instance: { isDestroyed: () => false } } }))
 vi.mock('./accounts', () => ({ AccountsManager: { getAccountById: (id: string) => id === 'selected' ? { accountId: id, displayName: 'Name' } : null } }))
@@ -14,6 +14,10 @@ vi.mock('../../services/config/base-game', async () => {
 vi.mock('../../services/config/locker', async () => {
   const { default: axios } = await import('axios')
   return { lockerService: axios.create({ adapter: mocks.locker }) }
+})
+vi.mock('../../services/config/matchmaking', async () => {
+  const { default: axios } = await import('axios')
+  return { matchmakingService: axios.create({ adapter: mocks.sessions }) }
 })
 import { PluginBridge } from './plugin-api'
 import { dispatchPlugin, type PluginRuntimeRecord } from './plugin-broker'
@@ -44,7 +48,7 @@ it('reads selected game data using a fixed authenticated URL and bounded transpo
   const config = mocks.transport.mock.calls[0][0]
   expect(config.url).toBe('/profile/selected/client/QueryProfile')
   expect(config.headers.Authorization).toBe('bearer HOST-SECRET')
-  expect(config).toMatchObject({ maxRedirects: 0, timeout: 20_000, maxContentLength: 8 * 1024 * 1024, params: { profileId: 'campaign', rvn: -1 } })
+  expect(config).toMatchObject({ maxRedirects: 0, timeout: 20_000, maxContentLength: 32 * 1024 * 1024, params: { profileId: 'campaign', rvn: -1 } })
 })
 it('cannot use the generic request route to bypass read permissions', async () => {
   plugin.manifest.permissions = ['fortnite:commands']
@@ -58,16 +62,23 @@ it('requires both declared operation and profile access before authentication', 
   await expect(query()).rejects.toThrow('declared')
   expect(mocks.token).not.toHaveBeenCalled()
 })
-it('rejects unknown operations and account/path overrides', async () => {
-  for (const operation of ['PurchaseCatalogEntry', 'RecycleItemBatch', 'https://evil.test', 'constructor']) {
+it('rejects undeclared operations, invalid names and account/path overrides', async () => {
+  for (const operation of ['PurchaseCatalogEntry', 'RecycleItemBatch', 'SomeFutureCommand']) {
+    await expect(dispatchPlugin(plugin, 'mcp.request', ['selected', { operation, profileId: 'campaign', body: { targetItemIds: ['x'] } }])).rejects.toThrow('declared')
+  }
+  for (const operation of ['https://evil.test', 'constructor', '__proto__', '../QueryProfile', 'Query/Profile']) {
     await expect(dispatchPlugin(plugin, 'mcp.request', ['selected', { operation, profileId: 'campaign' }])).rejects.toThrow('Unsupported')
   }
+  await expect(dispatchPlugin(plugin, 'mcp.request', ['selected', { operation: 'QueryProfile', profileId: 'account_security' }])).rejects.toThrow()
   await expect(dispatchPlugin(plugin, 'mcp.queryProfile', ['../selected', 'campaign'])).rejects.toThrow()
   await expect(dispatchPlugin(plugin, 'mcp.queryProfile', ['other', 'campaign'])).rejects.toThrow('scope')
   expect(mocks.token).not.toHaveBeenCalled()
 })
-it('confirms the exact command and returns only a receipt after a write', async () => {
-  expect(await command()).toEqual({ accountId: 'selected', operation: 'SetPinnedQuests', profileId: 'campaign', applied: true, cancelled: false })
+it('keeps the per-command dialog for packages approved before API v6 and returns the redacted reply', async () => {
+  const result = await command()
+  expect(result).toMatchObject({ accountId: 'selected', operation: 'SetPinnedQuests', profileId: 'campaign', applied: true, cancelled: false,
+    response: { profileChanges: [{ changeType: 'fullProfileUpdate', profile: { stats: { attributes: { level: 100 } } } }] } })
+  expect(JSON.stringify(result)).not.toContain('SECRET')
   expect(mocks.confirm.mock.calls[0][1]).toMatchObject({ defaultId: 0, cancelId: 0, detail: expect.stringContaining('SetPinnedQuests') })
   expect(mocks.confirm.mock.calls[0][1].detail).toContain('"quest"')
   expect(JSON.parse(mocks.transport.mock.calls[0][0].data)).toEqual({ pinnedQuestIds: ['quest'] })
@@ -146,6 +157,49 @@ it('provides an EOS locker read with host-only credentials and filtered data', a
 })
 it('exposes a catalog without granting execution access', async () => {
   plugin.manifest.permissions = []
-  expect(await dispatchPlugin(plugin, 'mcp.operations', [])).toHaveLength(20)
+  const catalog = await dispatchPlugin(plugin, 'mcp.operations', []) as Array<{ operation: string; alwaysConfirmed: boolean }>
+  expect(catalog.map((entry) => entry.operation)).toEqual(expect.arrayContaining(['QueryProfile', 'DisassembleWorldItems', 'ModifyQuickbar', 'ExecuteTerminalCommand', 'RecycleItemBatch']))
+  expect(catalog.find((entry) => entry.operation === 'GiftCatalogEntry')?.alwaysConfirmed).toBe(true)
   await expect(command()).rejects.toThrow('Permission')
+})
+it('runs declared commands from API v6 packages without a dialog, on any declared profile', async () => {
+  plugin.manifest.apiVersion = 6
+  plugin.manifest.fortnite = { profiles: ['theater0', 'theater2', 'athena'], operations: ['DisassembleWorldItems', 'ModifyQuickbar', 'ExecuteTerminalCommand', 'SomeFutureCommand'] }
+  const body = { targetItemIdAndQuantityPairs: [{ itemId: 'item', quantity: 3 }] }
+  expect(await dispatchPlugin(plugin, 'mcp.request', ['selected', { operation: 'DisassembleWorldItems', profileId: 'theater2', body }])).toMatchObject({ applied: true, cancelled: false })
+  expect(mocks.confirm).not.toHaveBeenCalled()
+  const config = mocks.transport.mock.calls[0][0]
+  expect(config.url).toBe('/profile/selected/client/DisassembleWorldItems')
+  expect(config.params).toEqual({ profileId: 'theater2', rvn: -1 })
+  expect(JSON.parse(config.data)).toEqual(body)
+  // A fresh record has its own spacing; commands still run one at a time per account.
+  await dispatchPlugin({ ...plugin }, 'mcp.request', ['selected', { operation: 'SomeFutureCommand', profileId: 'athena', body: { anything: [1, 'two'] } }])
+  expect(JSON.parse(mocks.transport.mock.calls[1][0].data)).toEqual({ anything: [1, 'two'] })
+  await expect(dispatchPlugin(plugin, 'mcp.request', ['selected', { operation: 'SomeFutureCommand', profileId: 'athena', body: {} }])).rejects.toThrow('rate limited')
+  await expect(dispatchPlugin(plugin, 'mcp.request', ['selected', { operation: 'ModifyQuickbar', profileId: 'athena', body: {} }])).rejects.toThrow('profile')
+  await expect(dispatchPlugin(plugin, 'mcp.request', ['selected', { operation: 'SomeFutureCommand', profileId: 'athena', body: { blob: 'x'.repeat(70_000) } }])).rejects.toThrow('64 KiB')
+})
+it('still asks before money or gift commands, even for API v6 packages', async () => {
+  plugin.manifest.apiVersion = 6
+  plugin.manifest.fortnite = { profiles: ['common_core'], operations: ['GiftCatalogEntry'] }
+  mocks.confirm.mockResolvedValue({ response: 0 })
+  expect(await dispatchPlugin(plugin, 'mcp.request', ['selected', { operation: 'GiftCatalogEntry', profileId: 'common_core', body: { offerId: 'x' } }])).toMatchObject({ cancelled: true, applied: false })
+  expect(mocks.confirm).toHaveBeenCalledOnce()
+  expect(mocks.transport).not.toHaveBeenCalled()
+})
+it('returns Epic error codes without messages', async () => {
+  plugin.manifest.apiVersion = 6
+  mocks.transport.mockRejectedValue(Object.assign(new Error('token HOST-SECRET'), { response: { status: 400, headers: {}, data: { errorCode: 'errors.com.epicgames.fortnite.invalid_quest', errorMessage: 'PRIVATE@example.com' } } }))
+  const failure = await command().catch((error: Error) => error.message)
+  expect(failure).toContain('HTTP 400, errors.com.epicgames.fortnite.invalid_quest')
+  expect(failure).not.toMatch(/PRIVATE|HOST-SECRET/)
+})
+it('looks up matchmaking sessions with host-only credentials', async () => {
+  plugin.manifest.permissions = ['fortnite:sessions']
+  mocks.sessions.mockImplementation(async (config) => ({ config, status: 200, statusText: 'OK', headers: {}, data: [{ id: 'session', serverAddress: '1.2.3.4', attributes: { GAMEMODE_s: 'FORTPVE' }, access_token: 'SECRET' }] }))
+  expect(await dispatchPlugin(plugin, 'matchmaking.findPlayer', ['selected'])).toEqual({ accountId: 'selected', sessions: [{ id: 'session', serverAddress: '1.2.3.4', attributes: { GAMEMODE_s: 'FORTPVE' } }] })
+  expect(mocks.sessions.mock.calls[0][0]).toMatchObject({ url: '/findPlayer/selected', maxRedirects: 0 })
+  expect(mocks.sessions.mock.calls[0][0].headers.Authorization).toBe('bearer HOST-SECRET')
+  plugin.manifest.permissions = []
+  await expect(dispatchPlugin(plugin, 'matchmaking.findPlayer', ['selected'])).rejects.toThrow('Permission')
 })
