@@ -2,7 +2,7 @@ import type { CosmeticMeta } from '../../../kernel/core/locker-catalog'
 import type { LockerSlotKey } from '../../../config/fortnite/locker'
 
 import { useShallow } from 'zustand/react/shallow'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { ownedForSlot } from '../../../kernel/core/locker-loadout'
 
@@ -76,7 +76,7 @@ export function useLockerPage() {
     }))
   )
   const {
-    closePicker,
+    claimFor,
     reset,
     setCard,
     setCompanions,
@@ -90,7 +90,7 @@ export function useLockerPage() {
     setResponse,
   } = useLockerStore(
     useShallow((state) => ({
-      closePicker: state.closePicker,
+      claimFor: state.claimFor,
       reset: state.reset,
       setCard: state.setCard,
       setCompanions: state.setCompanions,
@@ -104,12 +104,6 @@ export function useLockerPage() {
       setResponse: state.setResponse,
     }))
   )
-
-  /*
-   * The account the store's board was last loaded for. Starting from it, a
-   * switch made while the page was away is caught on the next mount too.
-   */
-  const lastAccountId = useRef(loadedFor)
 
   useEffect(() => {
     const listeners = [
@@ -171,14 +165,9 @@ export function useLockerPage() {
   }, [])
 
   useEffect(() => {
-    if (!accountId || lastAccountId.current === accountId) {
-      return
+    if (accountId) {
+      claimFor(accountId)
     }
-
-    lastAccountId.current = accountId
-    closePicker()
-    setEquipping(null)
-    setCard({ accountId })
   }, [accountId])
 
   useEffect(() => {

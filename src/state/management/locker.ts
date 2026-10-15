@@ -37,6 +37,12 @@ export type LockerState = {
   companionsLoadedFor: string | null
   isLoadingCompanions: boolean
 
+  /**
+   * The account the picker, the equip in flight and the card belong to. A
+   * board reply can lag behind this, so it is tracked on its own.
+   */
+  transientFor: string | null
+
   /** The slot whose picker is open, or null. */
   pickerSlot: LockerSlotKey | null
   /** The slot with an equip in flight, so only that tile spins. */
@@ -48,6 +54,11 @@ export type LockerState = {
   card: LockerCard | null
   cardError: string | null
 
+  /**
+   * Hands the transient state to `accountId`, clearing it first if another
+   * account owned it.
+   */
+  claimFor: (accountId: string) => void
   closePicker: () => void
   setView: (view: LockerView) => void
   openPicker: (slotKey: LockerSlotKey) => void
@@ -89,6 +100,7 @@ export const useLockerStore = create<LockerState>()((set) => ({
   companionsLoadedFor: null,
   isLoadingCompanions: false,
 
+  transientFor: null,
   pickerSlot: null,
   equipping: null,
 
@@ -98,6 +110,20 @@ export const useLockerStore = create<LockerState>()((set) => ({
   card: null,
   cardError: null,
 
+  claimFor: (accountId) =>
+    set((state) =>
+      state.transientFor === null || state.transientFor === accountId
+        ? { transientFor: accountId }
+        : {
+            transientFor: accountId,
+            pickerSlot: null,
+            equipping: null,
+            isGenerating: false,
+            progress: null,
+            card: null,
+            cardError: null,
+          }
+    ),
   closePicker: () => set({ pickerSlot: null }),
   setView: (view) => set({ view }),
   openPicker: (slotKey) => set({ pickerSlot: slotKey }),
@@ -115,6 +141,7 @@ export const useLockerStore = create<LockerState>()((set) => ({
       companionsError: null,
       companionsLoadedFor: null,
       isLoadingCompanions: false,
+      transientFor: null,
       pickerSlot: null,
       equipping: null,
       card: null,
