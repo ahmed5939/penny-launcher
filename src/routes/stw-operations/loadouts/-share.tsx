@@ -1,4 +1,5 @@
 
+import { UpdateIcon } from '@radix-ui/react-icons'
 import { Copy, Download, Image as ImageIcon, Share2 } from 'lucide-react'
 import type { ReactElement } from 'react'
 
@@ -74,7 +75,7 @@ export function ShareMenu({
   const [busy, setBusy] = useState(false)
 
   const run = async (
-    label: string,
+    label: string | null,
     action: () => Promise<void>,
     failure = 'Could not make the image. Try again once the art has loaded.'
   ) => {
@@ -83,7 +84,7 @@ export function ShareMenu({
     setBusy(true)
     try {
       await action()
-      toast.success(label)
+      if (label) toast.success(label)
     } catch {
       toast.error(failure)
     } finally {
@@ -95,24 +96,25 @@ export function ShareMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          aria-busy={busy}
           aria-label="Share this loadout"
           className="size-7 p-0"
           data-share-hide
-          disabled={busy}
           size="sm"
           title="Share this loadout"
           variant="ghost"
         >
-          <Share2 className="size-3.5" />
+          {busy ? <UpdateIcon className="size-3.5 animate-spin" /> : <Share2 className="size-3.5" />}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem
           onSelect={() =>
-            run('Loadout image copied', async () => {
-              const blob = await captureCard(card())
-              await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
-            })
+            run(
+              'Loadout image copied',
+              () => navigator.clipboard.write([new ClipboardItem({ 'image/png': captureCard(card()) })]),
+              'Could not copy the image. Try Save image… instead.'
+            )
           }
         >
           <ImageIcon className="mr-2 size-3.5" />
@@ -120,7 +122,7 @@ export function ShareMenu({
         </DropdownMenuItem>
         <DropdownMenuItem
           onSelect={() =>
-            run('Loadout image saved', async () => {
+            run(null, async () => {
               const blob = await captureCard(card())
               const url = URL.createObjectURL(blob)
               const link = document.createElement('a')
