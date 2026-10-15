@@ -107,6 +107,12 @@ type HoverInfo = {
   y: number
 }
 
+/** Remembers, for this session, that the WebGL view failed and the flat one should load. */
+export function rememberCanvasFallback(on: boolean) {
+  if (on) sessionStorage.setItem(canvasFallbackSessionKey, '1')
+  else sessionStorage.removeItem(canvasFallbackSessionKey)
+}
+
 export function outpostHeightLevels(layout: OutpostLayout) {
   return [
     ...new Set(
@@ -2148,7 +2154,7 @@ function BlueprintScene({
       if (walker) return
       const hit = pickTrap(event)
 
-      renderer.domElement.style.cursor = hit ? 'pointer' : 'grab'
+      renderer.domElement.style.cursor = hit ? 'default' : 'grab'
 
       if (hit) {
         onHover(hit)
@@ -2369,8 +2375,12 @@ export function Blueprint3D({
   )
   const hoveredGroup = hovered ? trapsById.get(hovered.key) : undefined
   const useCanvasFallback = useCallback(() => {
-    sessionStorage.setItem(canvasFallbackSessionKey, '1')
+    rememberCanvasFallback(true)
     setCanvasFallback(true)
+  }, [])
+  const retryWebgl = useCallback(() => {
+    rememberCanvasFallback(false)
+    setCanvasFallback(false)
   }, [])
 
   useEffect(() => {
@@ -2406,7 +2416,7 @@ export function Blueprint3D({
         </label>
         <div className="ml-auto flex flex-wrap items-center gap-1">
           <Button
-            aria-label={showProps ? 'Hide trees and rocks' : 'Show trees and rocks'}
+            aria-label="Trees and rocks"
             aria-pressed={showProps}
             className="size-7"
             disabled={worldAssets === 0 && (canvasFallback || !zoneTerrain)}
@@ -2418,64 +2428,64 @@ export function Blueprint3D({
           >
             <Trees className="size-3.5" />
           </Button>
-          <Button
-            aria-label={showTerrain ? 'Hide terrain' : 'Show terrain'}
-            aria-pressed={showTerrain}
-            className="size-7"
-            disabled={canvasFallback}
-            onClick={() => setShowTerrain((value) => !value)}
-            size="icon"
-            title={showTerrain ? 'Hide terrain' : 'Show terrain'}
-            type="button"
-            variant={showTerrain ? 'secondary' : 'ghost'}
-          >
-            <MapIcon className="size-3.5" />
-          </Button>
-          <Button
-            aria-label={showGrid ? 'Hide build grid' : 'Show build grid'}
-            aria-pressed={showGrid}
-            className="size-7"
-            disabled={canvasFallback}
-            onClick={() => setShowGrid((value) => !value)}
-            size="icon"
-            title={showGrid ? 'Hide build grid' : 'Show build grid'}
-            type="button"
-            variant={showGrid ? 'secondary' : 'ghost'}
-          >
-            <Grid3x3 className="size-3.5" />
-          </Button>
-          <Button
-            aria-label={showShield ? 'Hide Storm Shield' : 'Show Storm Shield'}
-            aria-pressed={showShield}
-            className="size-7"
-            disabled={canvasFallback}
-            onClick={() => setShowShield((value) => !value)}
-            size="icon"
-            title={showShield ? 'Hide Storm Shield' : 'Show Storm Shield'}
-            type="button"
-            variant={showShield ? 'secondary' : 'ghost'}
-          >
-            <Shield className="size-3.5" />
-          </Button>
-          <Button
-            aria-label="Effects"
-            aria-pressed={cinematic}
-            className="size-7"
-            disabled={canvasFallback}
-            onClick={() =>
-              setCinematic((value) => {
-                localStorage.setItem(cinematicStorageKey, value ? '0' : '1')
+          {!canvasFallback && (
+            <>
+              <Button
+                aria-label="Terrain"
+                aria-pressed={showTerrain}
+                className="size-7"
+                onClick={() => setShowTerrain((value) => !value)}
+                size="icon"
+                title={showTerrain ? 'Hide terrain' : 'Show terrain'}
+                type="button"
+                variant={showTerrain ? 'secondary' : 'ghost'}
+              >
+                <MapIcon className="size-3.5" />
+              </Button>
+              <Button
+                aria-label="Build grid"
+                aria-pressed={showGrid}
+                className="size-7"
+                onClick={() => setShowGrid((value) => !value)}
+                size="icon"
+                title={showGrid ? 'Hide build grid' : 'Show build grid'}
+                type="button"
+                variant={showGrid ? 'secondary' : 'ghost'}
+              >
+                <Grid3x3 className="size-3.5" />
+              </Button>
+              <Button
+                aria-label="Storm Shield"
+                aria-pressed={showShield}
+                className="size-7"
+                onClick={() => setShowShield((value) => !value)}
+                size="icon"
+                title={showShield ? 'Hide Storm Shield' : 'Show Storm Shield'}
+                type="button"
+                variant={showShield ? 'secondary' : 'ghost'}
+              >
+                <Shield className="size-3.5" />
+              </Button>
+              <Button
+                aria-label="Effects"
+                aria-pressed={cinematic}
+                className="size-7"
+                onClick={() =>
+                  setCinematic((value) => {
+                    localStorage.setItem(cinematicStorageKey, value ? '0' : '1')
 
-                return !value
-              })
-            }
-            size="icon"
-            title={cinematic ? 'Effects on: soft shadows and glow' : 'Effects off: fastest rendering'}
-            type="button"
-            variant={cinematic ? 'secondary' : 'ghost'}
-          >
-            <Sparkles className="size-3.5" />
-          </Button>
+                    return !value
+                  })
+                }
+                size="icon"
+                title={cinematic ? 'Effects on: soft shadows and glow' : 'Effects off: fastest rendering'}
+                type="button"
+                variant={cinematic ? 'secondary' : 'ghost'}
+              >
+                <Sparkles className="size-3.5" />
+              </Button>
+            </>
+          )}
           <span aria-hidden className="mx-1 h-4 w-px bg-border" />
           <Button
             onClick={() => resetRef.current?.()}
@@ -2486,40 +2496,43 @@ export function Blueprint3D({
           >
             Base
           </Button>
-          {zoneTerrain && (
+          {zoneTerrain && !canvasFallback && (
             <Button
-              disabled={canvasFallback}
               onClick={() => resetRef.current?.(true)}
               size="sm"
+              title="Show the whole map"
               type="button"
               variant="ghost"
             >
               Map
             </Button>
           )}
+          {!canvasFallback && (
+            <>
+              <Button
+                onClick={() => topViewRef.current?.()}
+                size="sm"
+                title="Look straight down"
+                type="button"
+                variant="ghost"
+              >
+                Top
+              </Button>
+              <span aria-hidden className="mx-1 h-4 w-px bg-border" />
+              <Button
+                aria-pressed={walking}
+                onClick={toggleWalking}
+                size="sm"
+                type="button"
+                variant={walking ? 'secondary' : 'outline'}
+              >
+                <Footprints className="size-3.5" />
+                {walking ? 'Stop walking' : 'Walk'}
+              </Button>
+            </>
+          )}
           <Button
-            disabled={canvasFallback}
-            onClick={() => topViewRef.current?.()}
-            size="sm"
-            type="button"
-            variant="ghost"
-          >
-            Top
-          </Button>
-          <span aria-hidden className="mx-1 h-4 w-px bg-border" />
-          <Button
-            aria-pressed={walking}
-            disabled={canvasFallback}
-            onClick={toggleWalking}
-            size="sm"
-            type="button"
-            variant={walking ? 'secondary' : 'outline'}
-          >
-            <Footprints className="size-3.5" />
-            {walking ? 'Stop walking' : 'Walk'}
-          </Button>
-          <Button
-            aria-label={fullscreen ? 'Exit full screen' : 'Full screen'}
+            aria-label="Full screen"
             aria-pressed={fullscreen}
             className="size-7"
             onClick={toggleFullscreen}
@@ -2603,7 +2616,12 @@ export function Blueprint3D({
         <LegendSwatch color={TRAP_COLOR_HEX[1]} label="Wall trap" round />
         <LegendSwatch color={TRAP_COLOR_HEX[2]} label="Ceiling trap" round />
         {canvasFallback && (
-          <span className="ml-auto">Compatibility view: simple shapes on flat ground</span>
+          <span className="ml-auto flex items-center gap-2">
+            <span>Compatibility view: simple shapes on flat ground</span>
+            <Button onClick={retryWebgl} size="sm" type="button" variant="ghost">
+              Try 3D again
+            </Button>
+          </span>
         )}
         {underlay?.credit && (
           <>

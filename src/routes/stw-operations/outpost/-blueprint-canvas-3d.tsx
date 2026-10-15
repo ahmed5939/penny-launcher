@@ -3,6 +3,8 @@ import type { OutpostLayout } from '../../../kernel/core/outpost-types'
 
 import { useEffect, useRef, useState } from 'react'
 
+import { Callout } from '../../../components/page'
+
 import {
   KIND_FLOOR,
   KIND_ROOF,
@@ -89,18 +91,18 @@ export function BlueprintCanvas3D({
     yaw: -0.72,
     zoom: 1,
   })
-  const [error, setError] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
     const context = canvas?.getContext('2d')
 
     if (!canvas || !context) {
-      setError('Canvas graphics are unavailable.')
+      setFailed(true)
       return
     }
 
-    setError(null)
+    setFailed(false)
     let frame = 0
     let trapPoints: Array<{ name: string; x: number; y: number }> = []
     const centerX = (layout.bounds.minX + layout.bounds.maxX) / 2
@@ -435,7 +437,7 @@ export function BlueprintCanvas3D({
     }
     const onPointerMove = (event: PointerEvent) => {
       if (!drag.active) {
-        canvas.style.cursor = nearestTrap(event) ? 'pointer' : 'grab'
+        canvas.style.cursor = nearestTrap(event) ? 'default' : 'grab'
         return
       }
 
@@ -498,9 +500,11 @@ export function BlueprintCanvas3D({
     }
   }, [layout, maxVisibleZ, onSelectTrap, resetRef, selectedTrap, showProps])
 
-  return error ? (
-    <div className="flex size-full items-center justify-center p-6 text-center text-xs text-destructive">
-      {error}
+  return failed ? (
+    <div className="flex size-full items-center justify-center p-6" role="alert">
+      <Callout tone="danger">
+        Could not draw the Outpost: graphics are unavailable. Restart Penny or update your graphics driver.
+      </Callout>
     </div>
   ) : (
     <canvas
