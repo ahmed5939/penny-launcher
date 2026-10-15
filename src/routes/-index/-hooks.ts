@@ -154,6 +154,9 @@ export function useDropzoneConfig() {
 
             initPagination(worldInfo.keys().toArray())
             setWorldInfoData(worldInfo)
+            toast.success(
+              `Showing missions from ${currentFile.name}. Refresh to go back to today's.`,
+            )
           } catch (error) {
             toast.error(t('world-info.notifications.error'), {
               duration: 5000,
@@ -173,6 +176,7 @@ export function useDropzoneConfig() {
       },
       maxFiles: 1,
       noClick: true,
+      noKeyboard: true,
     })
   const isFileAccepted = !(isDragActive && isDragAccept)
   const isFileRejected = !(isDragActive && isDragReject)
