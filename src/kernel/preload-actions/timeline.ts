@@ -5,8 +5,8 @@ import { ipcRenderer } from 'electron'
 
 import { ElectronAPIEventKeys } from '../../config/constants/main-process'
 
-export function requestTimeline() {
-  ipcRenderer.send(ElectronAPIEventKeys.TimelineRequest)
+export function requestTimeline(force = false) {
+  ipcRenderer.send(ElectronAPIEventKeys.TimelineRequest, force)
 }
 
 export function responseTimeline(

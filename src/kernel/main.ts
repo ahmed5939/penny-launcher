@@ -1152,10 +1152,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
       await ItemDatabase.request(true)
     })
 
-    secureIpcOn(ElectronAPIEventKeys.TimelineRequest, async () => {
-      const { Timeline } = await features.timeline()
-      await Timeline.request()
-    })
+    secureIpcOn(
+      ElectronAPIEventKeys.TimelineRequest,
+      async (_, force?: boolean) => {
+        const { Timeline } = await features.timeline()
+        await Timeline.request(Boolean(force))
+      }
+    )
 
     secureIpcOn(
       ElectronAPIEventKeys.LeaderboardRequest,
