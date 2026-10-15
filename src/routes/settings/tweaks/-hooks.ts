@@ -63,16 +63,6 @@ export function useFileTweaksData() {
 
       setIsLocked(!unlocked)
 
-      if (unlocked) {
-        /**
-         * The auto-probe below short-circuited while locked; kick it off
-         * now that the handlers will actually answer.
-         */
-        for (const patchId of PATCH_IDS) {
-          await refreshPatchStatus(patchId)
-        }
-      }
-
       return unlocked
     } catch {
       return false
@@ -133,7 +123,7 @@ export function useFileTweaksData() {
     } catch {
       const status = {
         activated: false,
-        error: 'Scan failed',
+        error: 'Could not scan the game files. Check the game folder in Settings.',
         found: false,
       }
       store().setPatchStatus(key, status)
@@ -182,7 +172,9 @@ export function useFileTweaksData() {
       const data = await window.electronAPI.fetchTrapsData()
       store().setTrapsData(data)
     } catch {
-      store().setTrapsError('Could not read the trap database.')
+      store().setTrapsError(
+        'Could not read the trap database. Check the game folder and try again.'
+      )
     } finally {
       store().setTrapsLoading(false)
     }
@@ -225,7 +217,7 @@ export function useFileTweaksData() {
         store().unpatchTrapLocally(guid)
       }
     } catch {
-      toast.error('Revert failed.')
+      toast.error('Could not revert the trap. Close Fortnite and try again.')
     } finally {
       store().setBusyTrapGuid(null)
     }
@@ -244,7 +236,7 @@ export function useFileTweaksData() {
         store().clearTrapStatuses()
       }
     } catch {
-      toast.error('Revert all failed.')
+      toast.error('Could not revert the traps. Close Fortnite and try again.')
     } finally {
       store().setBusyTrapGuid(null)
     }
@@ -265,7 +257,7 @@ export function useFileTweaksData() {
         })
       }
     } catch {
-      toast.error('B.A.S.E. patch failed.')
+      toast.error('Could not patch B.A.S.E. Close Fortnite and try again.')
     } finally {
       store().setBaseBusy(false)
     }
@@ -286,7 +278,7 @@ export function useFileTweaksData() {
         })
       }
     } catch {
-      toast.error('B.A.S.E. revert failed.')
+      toast.error('Could not revert B.A.S.E. Close Fortnite and try again.')
     } finally {
       store().setBaseBusy(false)
     }
@@ -308,10 +300,12 @@ export function useFileTweaksData() {
       store().setWorkerPower(result)
 
       if (!result.success) {
-        toast.error(result.error ?? 'Worker Power generation failed.')
+        toast.error(
+          result.error ?? 'Could not generate Worker Power. Try again in a moment.'
+        )
       }
     } catch {
-      toast.error('Worker Power generation failed.')
+      toast.error('Could not generate Worker Power. Try again in a moment.')
     } finally {
       store().setWorkerPowerLoading(false)
     }
