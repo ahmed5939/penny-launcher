@@ -131,11 +131,11 @@ export function Pager({ onPageChange, page, pageSize, total }: { onPageChange: (
       <span className="text-xs text-muted-foreground">
         <span className="figure">{(current * pageSize + 1).toLocaleString()}</span>–<span className="figure">{Math.min(total, (current + 1) * pageSize).toLocaleString()}</span> of <span className="figure">{total.toLocaleString()}</span>
       </span>
-      <span className="flex items-center gap-2">
-        <Button disabled={current === 0} onClick={() => onPageChange(current - 1)} size="sm" variant="outline">Previous</Button>
+      <nav aria-label="Pagination" className="flex items-center gap-2">
+        <Button aria-label="Previous page" disabled={current === 0} onClick={() => onPageChange(current - 1)} size="sm" variant="outline">Previous</Button>
         <span className="text-xs text-muted-foreground">Page <span className="figure">{current + 1}</span> of <span className="figure">{pages}</span></span>
-        <Button disabled={current >= pages - 1} onClick={() => onPageChange(current + 1)} size="sm" variant="outline">Next</Button>
-      </span>
+        <Button aria-label="Next page" disabled={current >= pages - 1} onClick={() => onPageChange(current + 1)} size="sm" variant="outline">Next</Button>
+      </nav>
     </PanelFooter>
   )
 }
@@ -150,8 +150,8 @@ export function paginate<T>(items: ReadonlyArray<T>, page: number, pageSize: num
 /** The page-level Refresh. The glyph spins while loading; the word changes too, for anyone who cannot see it. */
 export function RefreshButton({ disabled, label = 'Refresh', loading, onClick }: { disabled?: boolean; label?: string; loading: boolean; onClick: () => void }) {
   return (
-    <Button disabled={disabled || loading} onClick={onClick} variant="outline">
-      <RefreshCw className={cn('mr-2 size-4', loading && 'animate-spin')} />
+    <Button aria-busy={loading} disabled={disabled || loading} onClick={onClick} variant="outline">
+      <RefreshCw aria-hidden className={cn('size-4', loading && 'animate-spin')} />
       {loading ? 'Loading…' : label}
     </Button>
   )
