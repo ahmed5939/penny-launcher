@@ -126,10 +126,14 @@ export function AccountPlaytimePanel({ accountId }: { accountId: string }) {
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground xl:col-span-full">
-          Time started from Fortnite itself counts toward Fortnite, not the mode.
-          {ok && entry.achievements === null && ' Achievements could not be loaded.'}
-        </p>
+        {ok && entry.achievements === null && (
+          <Callout
+            className="xl:col-span-full"
+            tone="warning"
+          >
+            Achievements could not be loaded.
+          </Callout>
+        )}
       </PanelBody>
 
       {opened?.accountId === accountId && opened.row.achievements && (
@@ -161,7 +165,7 @@ function ShelfState({
         className="text-ui text-muted-foreground"
         role="status"
       >
-        {isChecking ? 'Reading playtime from Epic…' : 'Playtime has not been read yet.'}
+        {isChecking ? 'Loading playtime…' : 'Not loaded yet. Try Refresh.'}
       </p>
     )
   }

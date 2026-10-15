@@ -31,8 +31,7 @@ import {
  * Read-only, and only ever the selected account's own lifetime figures on
  * its own token: wins and win rate, K/D and matches up top, then the same
  * career split by the device it was played on. An account that only plays
- * Save the World has nothing here — Epic keeps no match stats for it — so the
- * empty state says so plainly rather than looking broken.
+ * Save the World has nothing here — Epic keeps no match stats for it.
  */
 export function AccountBrStatsPanel({ accountId }: { accountId: string }) {
   const { accounts, isChecking, refresh } = useAccountBrStats()
@@ -75,9 +74,7 @@ function Body({
         className="text-ui text-muted-foreground"
         role="status"
       >
-        {isChecking
-          ? 'Reading Battle Royale stats from Epic…'
-          : 'Battle Royale stats have not been read yet.'}
+        {isChecking ? 'Loading Battle Royale stats…' : 'Not loaded yet. Try Refresh.'}
       </p>
     )
   }
@@ -97,7 +94,7 @@ function Body({
     return (
       <EmptyState
         className="border-0 bg-transparent py-6"
-        description="Epic has no Battle Royale matches recorded for this account. Save the World keeps no match stats, so an account that only plays it shows nothing here."
+        description="No Battle Royale matches on this account."
         icon={Swords}
         title="No Battle Royale matches recorded"
       />
@@ -148,11 +145,6 @@ function Body({
           </StatRow>
         </div>
       )}
-
-      <p className="text-xs text-muted-foreground">
-        Lifetime across every Battle Royale playlist on every platform. Save the
-        World and Creative are not counted. K/D is kills per death.
-      </p>
     </>
   )
 }

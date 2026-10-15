@@ -29,11 +29,10 @@ import { cn, parseCustomDisplayName } from '../../lib/utils'
  *
  * Read-only and the account's own: the events it has actually competed in —
  * history only, not the upcoming calendar — each with the account's best
- * placement and points. Many accounts have none — a Save the World account
- * never touches the competitive calendar — so the empty state is written to
- * read as a plain fact, not a
- * fault. With more than one account linked, every account's best placement
- * sits alongside, the way the playtime panel compares hours.
+ * placement and points. Many accounts have none, as a Save the World account
+ * never touches the competitive calendar. With more than one account linked,
+ * every account's best placement sits alongside, the way the playtime panel
+ * compares hours.
  */
 
 type AccountRow = {
@@ -156,11 +155,6 @@ export function AccountTournamentsPanel({ accountId }: { accountId: string }) {
             />
           </div>
         )}
-
-        <p className="text-xs text-muted-foreground xl:col-span-full">
-          Placement and points are read from this account’s own results, newest
-          events first.
-        </p>
       </PanelBody>
     </Panel>
   )
@@ -234,9 +228,7 @@ function EventsState({
         className="text-ui text-muted-foreground"
         role="status"
       >
-        {isChecking
-          ? 'Reading competitive history from Epic…'
-          : 'Competitive history has not been read yet.'}
+        {isChecking ? 'Loading competitive history…' : 'Not loaded yet. Try Refresh.'}
       </p>
     )
   }
@@ -255,7 +247,7 @@ function EventsState({
   return (
     <EmptyState
       className="border-0 bg-transparent py-6"
-      description="This account has not entered a Fortnite competitive event. Save the World-only accounts never will."
+      description="No competitive events entered."
       icon={Trophy}
       title="No competitive history"
     />
