@@ -137,6 +137,13 @@ function LoadoutCard({
         highlighted && 'ring-2 ring-primary'
       )}
       id={`loadout-${loadout.itemId}`}
+      onBlur={(event) => {
+        const next = event.relatedTarget
+
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) {
+          setArmed(false)
+        }
+      }}
       style={{ borderLeft: `3px solid ${loadout.active ? 'hsl(var(--primary))' : (accent ?? 'hsl(var(--border))')}` }}
     >
       {/* Header: number, commander, class, and the loadout's own actions. */}
@@ -165,26 +172,16 @@ function LoadoutCard({
           </Button>
         )}
         <Button
-          aria-label={armed ? undefined : `Clear ${title}`}
-          className={armed ? 'h-7 px-2 text-xs' : 'size-7 p-0'}
+          aria-label={`Clear ${title}`}
+          className="size-7 p-0"
           data-share-hide
           disabled={actions.isEditing}
-          onBlur={() => setArmed(false)}
-          onClick={() => {
-            if (!armed) {
-              setArmed(true)
-
-              return
-            }
-
-            setArmed(false)
-            actions.onClear(loadout.itemId)
-          }}
+          onClick={() => setArmed(!armed)}
           size="sm"
           title="Empty every slot in this loadout"
           variant={armed ? 'destructive' : 'ghost'}
         >
-          {armed ? 'Confirm — empties loadout' : <Eraser className="size-3.5" />}
+          <Eraser className="size-3.5" />
         </Button>
         <ShareMenu
           card={() => (
@@ -194,6 +191,23 @@ function LoadoutCard({
           onCopyToAccount={() => actions.onCopyToAccount(loadout, title)}
         />
       </div>
+
+      {/* Armed by the Clear icon. Full width, so the label never has to fit beside the header's buttons. */}
+      {armed && (
+        <Button
+          className="mt-2 w-full text-xs"
+          data-share-hide
+          disabled={actions.isEditing}
+          onClick={() => {
+            setArmed(false)
+            actions.onClear(loadout.itemId)
+          }}
+          size="sm"
+          variant="destructive"
+        >
+          Confirm — empties loadout
+        </Button>
+      )}
 
       <span className="my-3 h-px bg-border/60" />
 

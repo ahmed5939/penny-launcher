@@ -133,7 +133,7 @@ async function loadLoadouts(accountId: string): Promise<LoadoutsData> {
    */
   const [payload, vault] = await Promise.all([
     requestLoadouts(accountId),
-    loadInventory(accountId).then<VaultRead>(
+    loadInventory(accountId).then<VaultRead, VaultRead>(
       (entry) => ({
         error: entry.errorMessage || null,
         items: entry.errorMessage ? [] : entry.items,
@@ -612,7 +612,7 @@ function Content({
           <DialogHeader>
             <DialogTitle>Pick a team perk</DialogTitle>
             <DialogDescription>
-              The team perk works with the classes of the support team; it switches on in game once they match.
+              Pick the team perk for this loadout.
             </DialogDescription>
           </DialogHeader>
           {availableTeamPerks.length > 0 ? (
