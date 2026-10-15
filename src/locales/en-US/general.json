@@ -91,7 +91,7 @@
     "button": "Launch Fortnite",
     "notifications": {
       "success": "The game has been launched with the account {{name}}",
-      "error": "An error has occurred launching game with account {{name}}, try again later",
+      "error": "Could not launch Fortnite with {{name}}. Check the game is installed and not already running, then try again.",
       "missing": "FortniteLauncher.exe was not found. Choose the Win64 folder or install Fortnite from Epic or Xbox."
     }
   },
@@ -131,7 +131,7 @@
     },
     "screenshot": {
       "success": "Screenshot generated and copied to clipboard",
-      "error": "Couldn't generate screenshot, please try again later"
+      "error": "Could not take the screenshot. Try again."
     }
   },
   "home": {
@@ -172,7 +172,7 @@
       "refresh": "Refresh",
       "updated": "Updated {{time}}",
       "empty": "No missions match this filter",
-      "error": "Couldn't load Penny DB missions",
+      "error": "Could not load Penny DB missions. Try Refresh.",
       "filter-all": "All",
       "filter-alerts": "Alerts",
       "filter-vbucks": "V-Bucks",
