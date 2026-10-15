@@ -4,6 +4,11 @@ export function formatCount(value: number) {
   return Math.round(value).toLocaleString()
 }
 
+/** A count with its noun, singular for one: "1 win", "2 wins". */
+export function countOf(value: number, one: string, many: string) {
+  return `${formatCount(value)} ${Math.round(value) === 1 ? one : many}`
+}
+
 export function formatHours(hours: number) {
   return Math.round(hours).toLocaleString()
 }

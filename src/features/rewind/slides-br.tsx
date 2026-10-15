@@ -5,7 +5,7 @@ import { AnimatedNumber } from '../../components/page'
 
 import { seasonName } from './facts'
 import { Aside, Bars, Big, CosmeticTile, Figures, Kicker, Line, TierChip, Title } from './parts'
-import { formatCount, formatHours, formatPercent } from './words'
+import { countOf, formatCount, formatHours, formatPercent } from './words'
 
 import { cn } from '../../lib/utils'
 
@@ -17,6 +17,10 @@ import { cn } from '../../lib/utils'
 
 function decimal(value: number, digits = 1) {
   return value.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits })
+}
+
+function winPace(winEvery: number) {
+  return winEvery < 1.5 ? 'More wins than losses' : `A win every ${formatCount(winEvery)} matches`
 }
 
 export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
@@ -46,7 +50,7 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
           />
           <Line>
             {[
-              br.winEvery ? `A win every ${formatCount(br.winEvery)} matches` : null,
+              br.winEvery ? winPace(br.winEvery) : null,
               br.killsPerMatch !== null ? `${decimal(br.killsPerMatch)} eliminations a match` : null,
               br.kd !== null ? `K/D ${decimal(br.kd, 2)}` : null,
             ]
@@ -58,9 +62,9 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
               {br.squads.map((squad) => (
                 <li className="min-w-32 rounded-lg bg-foreground/10 px-4 py-3 backdrop-blur-sm" key={squad.size}>
                   <p className="micro-label">{squad.label}</p>
-                  <p className="figure mt-1 text-display-sm font-bold leading-none">{formatCount(squad.wins)} wins</p>
+                  <p className="figure mt-1 text-display-sm font-bold leading-none">{countOf(squad.wins, 'win', 'wins')}</p>
                   <p className="mt-1 text-xs text-foreground/70">
-                    {formatCount(squad.matches)} matches · {formatCount(squad.kills)} elims
+                    {countOf(squad.matches, 'match', 'matches')} · {countOf(squad.kills, 'elim', 'elims')}
                   </p>
                 </li>
               ))}
@@ -114,7 +118,7 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
           <Big>
             <AnimatedNumber value={br.outlived} />
           </Big>
-          <Line>players along the way.</Line>
+          <Line>{br.outlived === 1 ? 'player' : 'players'} along the way.</Line>
         </>
       ),
     })
@@ -131,8 +135,9 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
           <Kicker>Season by season</Kicker>
           <Big>{seasons.timeline.length}</Big>
           <Line>
-            seasons{seasons.first ? `, starting in ${seasonName(seasons.first)}` : ''} · {formatCount(seasons.battlePasses)} Battle Passes
-            {seasons.otherPasses > 0 ? ` and ${formatCount(seasons.otherPasses)} more passes` : ''}.
+            {seasons.timeline.length === 1 ? 'season' : 'seasons'}
+            {seasons.first ? `, starting in ${seasonName(seasons.first)}` : ''} · {countOf(seasons.battlePasses, 'Battle Pass', 'Battle Passes')}
+            {seasons.otherPasses > 0 ? ` and ${countOf(seasons.otherPasses, 'more pass', 'more passes')}` : ''}.
           </Line>
           <div aria-hidden className="mt-2 flex h-36 max-w-3xl items-end gap-1">
             {seasons.timeline.map((season) => (
@@ -156,7 +161,7 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
           {seasons.best && (
             <Line className="text-title">
               Your best: {seasonName(seasons.best.season)}, level {formatCount(seasons.best.level)} on {seasons.best.name}
-              {seasons.crowns > 0 ? ` · ${formatCount(seasons.crowns)} crowned wins` : ''}
+              {seasons.crowns > 0 ? ` · ${countOf(seasons.crowns, 'crowned win', 'crowned wins')}` : ''}
               {seasons.accountLevel ? ` · account level ${formatCount(seasons.accountLevel.level)}` : ''}.
             </Line>
           )}
@@ -181,7 +186,7 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
             ))}
           </div>
           {cosmetics.chapterOne > 0 && (
-            <Aside>{formatCount(cosmetics.chapterOne)} Chapter 1 outfits across your lockers.</Aside>
+            <Aside>{countOf(cosmetics.chapterOne, 'Chapter 1 outfit', 'Chapter 1 outfits')} across your lockers.</Aside>
           )}
         </>
       ),
@@ -202,7 +207,7 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
             ))}
           </div>
           {cosmetics.favouriteCount > cosmetics.favourites.length && (
-            <Aside>{formatCount(cosmetics.favouriteCount)} favourites in all, outfits first.</Aside>
+            <Aside>{countOf(cosmetics.favouriteCount, 'favourite', 'favourites')} in all, outfits first.</Aside>
           )}
         </>
       ),
@@ -221,7 +226,7 @@ export function battleRoyaleSlides(rewind: Rewind): Array<Slide> {
           <Big>
             <AnimatedNumber value={locker.total} />
           </Big>
-          <Line>cosmetics across your lockers.</Line>
+          <Line>{locker.total === 1 ? 'cosmetic' : 'cosmetics'} across your lockers.</Line>
           <Figures
             items={[
               { label: 'Outfits', value: formatCount(locker.outfits) },

@@ -29,7 +29,7 @@ export function RewindBanner() {
           <p className="text-display-sm font-bold leading-tight">
             Your Fortnite{idsList.length > 1 ? `, all ${idsList.length} accounts` : ''}, rewound.
           </p>
-          <p className="mt-1 text-ui text-muted-foreground">Hours, wins, Founders and games — as a story you can share.</p>
+          <p className="mt-1 text-ui text-muted-foreground">Founders, Power, wins and hours — as a story you can share.</p>
         </div>
         <Button onClick={() => setOpen(true)}>
           <Sparkles className="mr-2 size-4" />
