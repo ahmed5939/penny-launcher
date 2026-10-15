@@ -27,9 +27,7 @@ body {
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 14%);
   border-radius: 14px;
-  background:
-    radial-gradient(circle at 100% 0%, rgb(233 59 151 / 20%), transparent 42%),
-    rgb(13 10 14 / 92%);
+  background: rgb(13 10 14 / 92%);
   box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
   backdrop-filter: blur(18px);
 }
@@ -52,15 +50,6 @@ footer {
   padding: 2px 3px 12px;
 }
 
-.eyebrow {
-  margin: 0 0 2px;
-  color: #f36aae;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
 h1,
 h2,
 p {
@@ -73,22 +62,9 @@ h1 {
   letter-spacing: -0.03em;
 }
 
-.live-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: rgb(255 255 255 / 60%);
+.overlay-header time {
+  color: rgb(255 255 255 / 48%);
   font-size: 10px;
-  font-weight: 650;
-  text-transform: uppercase;
-}
-
-.live-indicator span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #49d7ae;
-  box-shadow: 0 0 10px #49d7ae;
 }
 
 .player-list {
@@ -100,7 +76,6 @@ h1 {
 
 .player-card,
 .overlay-empty {
-  border: 1px solid rgb(255 255 255 / 9%);
   border-radius: 10px;
   background: rgb(255 255 255 / 5%);
 }
@@ -136,7 +111,7 @@ h1 {
 .venture-level span,
 .venture-level small {
   color: rgb(255 255 255 / 50%);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .venture-level strong {
@@ -181,10 +156,8 @@ h1 {
   border-radius: 4px;
   background: rgb(243 106 174 / 16%);
   color: #ff9aca;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 750;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .group-ventures {
@@ -209,7 +182,7 @@ h1 {
   margin: 3px 0 0 1px;
   overflow: hidden;
   color: rgb(255 255 255 / 48%);
-  font-size: 9px;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -250,5 +223,5 @@ h1 {
 footer {
   padding: 10px 3px 0;
   color: rgb(255 255 255 / 38%);
-  font-size: 9px;
+  font-size: 10px;
 }
