@@ -2,7 +2,7 @@ import type { MarketplacePlugin, PluginManageRequest, PluginReview, PluginSummar
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from '../../lib/notifications'
 
-const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Request failed.'
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Could not finish that request.'
 export function usePluginsData() {
   const [installed, setInstalled] = useState<PluginSummary[] | null>(null)
   const [marketplace, setMarketplace] = useState<MarketplacePlugin[] | null>(null)
@@ -25,7 +25,6 @@ export function usePluginsData() {
       setLoadError(errorMessage(error))
       setInstalled((previous) => previous ?? [])
       setMarketplace((previous) => previous ?? [])
-      toast.error(`Add-ons could not be loaded: ${errorMessage(error)}`)
     } finally { setRefreshing(false) }
   }, [])
   useEffect(() => {
@@ -45,7 +44,7 @@ export function usePluginsData() {
   }, [refresh])
   const perform = useCallback(async (id: string, operation: () => Promise<{ ok: boolean; error?: string }>) => {
     setPendingId(id)
-    try { const result = await operation(); if (!result.ok) toast.error(result.error ?? 'Add-on operation failed.') }
+    try { const result = await operation(); if (!result.ok) toast.error(result.error ?? 'Could not finish that add-on action. Try again.') }
     catch (error) { toast.error(errorMessage(error)) }
     finally { setPendingId(null); await refresh() }
   }, [refresh])
@@ -53,7 +52,7 @@ export function usePluginsData() {
     setPendingId(id ?? 'import')
     try {
       const result = await window.electronAPI.reviewPlugin(kind, id)
-      if (!result.ok) toast.error(result.error ?? 'Could not inspect add-on.')
+      if (!result.ok) toast.error(result.error ?? 'Could not inspect the add-on. Try again.')
       else if (result.review) setReview(result.review)
     } catch (error) { toast.error(errorMessage(error)) }
     finally { setPendingId(null) }
