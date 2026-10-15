@@ -9,10 +9,10 @@ import {
   X,
 } from 'lucide-react'
 import { useState } from 'react'
-import { Input } from '../ui/input'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
+import { SearchField } from '../page'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 
@@ -40,6 +40,7 @@ export function AccountRoster({
     onSelectAll,
     onToggleMember,
     selected,
+    setOpen,
     createKeywords,
   } = model
   const isChecking = accounts.some(
@@ -84,17 +85,13 @@ export function AccountRoster({
         </Link>
       ) : (
         <>
-          <Input
-            autoFocus
-            className="mb-2"
-            aria-label={t('sidebar:search-accounts')}
+          <SearchField
+            className="mb-2 block"
+            label={t('sidebar:search-accounts')}
             placeholder={t('sidebar:search-accounts')}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={setQuery}
           />
-          <p className="mb-2 px-2 text-xs text-muted-foreground">
-            {t('sidebar:primary-account')} · {t('sidebar:account-scope')}
-          </p>
           <ul className="max-h-[min(22rem,50vh)] overflow-y-auto">
             {accounts.map((account, index) => {
               if (
@@ -119,10 +116,8 @@ export function AccountRoster({
                   <div
                     className={cn(
                       'relative flex h-8 items-center gap-1.5 rounded-lg px-1.5',
-                      'text-ui text-muted-foreground',
-                      !isInvalid && 'hover:bg-accent/30 hover:text-foreground',
+                      'text-ui text-muted-foreground hover:bg-accent/30 hover:text-foreground',
                       isCurrent && 'bg-accent/70 font-medium text-foreground',
-                      isInvalid && 'opacity-45 grayscale',
                     )}
                     onContextMenu={onContextMenu(account)}
                   >
@@ -133,13 +128,7 @@ export function AccountRoster({
                       type="button"
                       disabled={isInvalid}
                       className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      title={
-                        isInvalid
-                          ? `${displayName} — authentication expired; re-add this account to authenticate again`
-                          : shortcut
-                            ? `${displayName} (${shortcut})`
-                            : displayName
-                      }
+                      title={shortcut ? `${displayName} (${shortcut})` : displayName}
                       onClick={() => onSelect(account)(account.accountId)}
                     >
                       <AccountAvatar
@@ -154,7 +143,12 @@ export function AccountRoster({
                         {displayName}
                       </span>
                       {isInvalid && (
-                        <ShieldAlert className="size-3.5 shrink-0" />
+                        <>
+                          <ShieldAlert className="size-3.5 shrink-0 text-warning" />
+                          <span className="shrink-0 text-caption text-warning">
+                            {t('sidebar:sign-in-expired')}
+                          </span>
+                        </>
                       )}
                       {isAccountChecking && (
                         <LoaderCircle className="size-3.5 shrink-0 animate-spin" />
@@ -166,13 +160,29 @@ export function AccountRoster({
                         <Check className="size-3.5 shrink-0 text-primary" />
                       )}
                     </button>
-                    {accounts.length > 1 && (
+                    {isInvalid && (
+                      <Button
+                        asChild
+                        className="h-6 shrink-0 px-1.5 text-2xs font-medium"
+                        size="sm"
+                        variant="ghost"
+                      >
+                        <Link
+                          to="/accounts/add/$type"
+                          params={{ type: 'quick-login' }}
+                          onClick={() => setOpen(false)}
+                        >
+                          {t('sidebar:sign-in-again')}
+                        </Link>
+                      </Button>
+                    )}
+                    {!isInvalid && accounts.length > 1 && (
                       <Checkbox
                         aria-label={`${t('sidebar:account-scope')}: ${displayName}`}
                         checked={isInScope}
-                        disabled={isInvalid}
                         className="ml-0.5"
                         size="sm"
+                        title={t('sidebar:account-scope')}
                         onClick={(event) => event.stopPropagation()}
                         onCheckedChange={() =>
                           onToggleMember(account.accountId)
@@ -193,7 +203,7 @@ export function AccountRoster({
               ),
           ) && (
             <p className="p-3 text-sm text-muted-foreground">
-              {t('no-item-found')}
+              {t('form.accounts.search-empty')}
             </p>
           )}
 

@@ -113,6 +113,8 @@
   "account-scope": "In scope",
   "primary-account": "Primary account",
   "search-accounts": "Search accounts",
+  "sign-in-expired": "Sign-in expired",
+  "sign-in-again": "Sign in again",
   "all-accounts": "All eligible accounts",
   "only-primary": "Only primary",
   "open-missions": "Open missions",
