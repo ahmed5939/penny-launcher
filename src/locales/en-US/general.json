@@ -3,7 +3,7 @@
     "add": "Add",
     "change": "Change",
     "create": "Create",
-    "login": "Login",
+    "login": "Log in",
     "revert": "Revert",
     "search": "Search",
     "success": "Success",
@@ -26,8 +26,8 @@
       }
     },
     "accounts": {
-      "placeholder": "Search on {{total}} accounts",
-      "placeholder_private": "Search on your accounts",
+      "placeholder": "Search {{total}} accounts",
+      "placeholder_private": "Search your accounts",
       "search-empty": "No account found",
       "select": "Select account",
       "selected": "Selected account",
@@ -47,13 +47,13 @@
     "player": {
       "search-empty": "No player found",
       "recently": {
-        "empty-placeholder": "No recently players",
-        "search-placeholder": "Search on {{total}} player/s",
-        "select-placeholder": "Select a recently player"
+        "empty-placeholder": "No recent players",
+        "search-placeholder": "Search {{total}} players",
+        "select-placeholder": "Select a recent player"
       }
     },
     "search-account": {
-      "label": "Search player by accountId or display name (epic, xbl or psn)",
+      "label": "Search by account ID or display name (Epic, Xbox or PlayStation)",
       "input": {
         "placeholder": "Example: sample"
       }
@@ -139,7 +139,7 @@
     "ready": "Ready to play",
     "playing": "Now playing",
     "no-account": "Add an account to start",
-    "no-account-description": "Authorization code, device auth, exchange code, or import from Aerial.",
+    "no-account-description": "Sign in with an Epic Games account.",
     "add-account": "Add account",
     "select-account": "Pick an account in the titlebar",
     "session": "Session",
@@ -179,6 +179,7 @@
       "zone-all": "All zones",
       "vbucks-count": "{{count}} V-Bucks",
       "alerts-count": "{{count}} alerts",
+      "alerts-count_one": "{{count}} alert",
       "open-site": "Penny DB",
       "alert": "Alert",
       "zones": {
@@ -212,19 +213,23 @@
       "check": "Check for update",
       "update": "Update",
       "incomplete": "Install is incomplete",
+      "loading": "Loading Fortnite install…",
       "update-started": "Opened the official updater. Finish the update in Epic Games Launcher or the Xbox app.",
-      "update-failed": "Could not open the official updater.",
+      "update-failed": "Could not open the official updater. Open Epic Games Launcher or the Xbox app yourself.",
+      "opened-egl": "Opened Epic Games Launcher. Finish the install there.",
+      "open-egl-failed": "Could not open Epic Games Launcher. Open it yourself and try again.",
+      "opened-xbox": "Opened the Xbox app. Finish the install there.",
+      "open-xbox-failed": "Could not open the Xbox app. Open it yourself and try again.",
       "folder-invalid": "That folder does not contain FortniteLauncher.exe.",
       "source-settings": "Saved path",
       "source-egl-manifest": "Epic Games Launcher",
       "source-egl-installed": "Epic Games Launcher",
       "source-program-files": "Program Files",
-      "source-xbox": "Xbox PC app",
-      "note": "Updates are installed by Epic or Xbox. Penny does not download or patch game files."
+      "source-xbox": "Xbox PC app"
     }
   },
   "account-selected": "Selected account: <2>{{name}}</2>",
-  "boosts": "Boost/s",
+  "boosts": "Boosts",
   "credits": "Credits",
   "current": "Current",
   "date": "Date",
@@ -235,7 +240,7 @@
   "hide-information": "Hide information",
   "note": "Note",
   "show-information": "Show hidden information",
-  "ip-address": "IP Address",
+  "ip-address": "IP address",
   "is-running": "App is running",
   "is-not-running": "App is not running",
   "last-played": "Last played at: {{date}}",
