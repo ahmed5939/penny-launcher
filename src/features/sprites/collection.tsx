@@ -108,12 +108,14 @@ export function CollectionTab({
 
   if (!collection) {
     return errorMessage ? (
-      <Callout
-        title="Could not read the sprite collection. Try Refresh."
-        tone="danger"
-      >
-        {errorMessage}
-      </Callout>
+      <div role="alert">
+        <Callout
+          title="Could not read the sprite collection. Try Refresh."
+          tone="danger"
+        >
+          {errorMessage}
+        </Callout>
+      </div>
     ) : (
       <div role="status">
         <EmptyState title="Loading sprites…" />
