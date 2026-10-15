@@ -183,7 +183,9 @@ function LeadCell({
     <div className="flex min-w-0 flex-col gap-1.5">
       <span className="flex min-w-0 items-center gap-1.5 text-2xs text-muted-foreground">
         {emblem && <img alt="" className="size-4 shrink-0 object-contain" src={emblem} />}
-        <span className="truncate">{squadLabel}</span>
+        <span className="truncate" title={squadLabel}>
+          {squadLabel}
+        </span>
       </span>
       <Artboard
         className={cn(
@@ -212,7 +214,7 @@ function LeadCell({
         <span className="block truncate text-ui font-semibold" title={lead.name}>
           {lead.short}
         </span>
-        <span className="block truncate text-2xs text-muted-foreground">
+        <span className="block truncate text-2xs text-muted-foreground" title={lead.personality}>
           {lead.personality}
         </span>
       </span>
@@ -288,11 +290,14 @@ function SupportRow({
         )}
       </Artboard>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-ui font-semibold">
+        <span
+          className="block truncate text-ui font-semibold"
+          title={`${support.name} · ${support.personality}`}
+        >
           {support.name}
           <span className="font-normal text-muted-foreground"> · {support.personality}</span>
         </span>
-        <span className="block truncate text-2xs text-muted-foreground">
+        <span className="block truncate text-2xs text-muted-foreground" title={`Belongs in ${target}`}>
           Belongs in {target}
         </span>
       </span>
