@@ -57,9 +57,6 @@ export async function upgradeCollectionBookItem(accountId: string, request: unkn
   const response = await fetch(`https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/game/v2/profile/${accountId}/client/${operation}?profileId=collection_book_${upgrade.book}0&rvn=-1`, {
     method: 'POST', headers: { Authorization: `bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(30000),
   })
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as { errorMessage?: string } | null
-    throw new UserError(error?.errorMessage ? `Epic refused the upgrade: ${error.errorMessage}` : `Could not upgrade the item (HTTP ${response.status}). Refresh and try again.`)
-  }
+  if (!response.ok) throw new UserError(`Could not upgrade the item (HTTP ${response.status}). Refresh and try again.`)
   return { ok: true as const }
 }

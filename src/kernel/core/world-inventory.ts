@@ -26,9 +26,6 @@ export async function transferWorldItems(accountId: string, transfers: unknown) 
   const response = await fetch(profileUrl(accountId, 'StorageTransfer', worldProfiles.backpack), {
     method: 'POST', headers: { Authorization: `bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ transferOperations: operations }), signal: AbortSignal.timeout(30000),
   })
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { errorMessage?: string } | null
-    throw new UserError(body?.errorMessage ? `Epic refused the transfer: ${body.errorMessage}` : `Could not move the items (HTTP ${response.status}). Refresh and try again.`)
-  }
+  if (!response.ok) throw new UserError(`Could not move the items (HTTP ${response.status}). Refresh and try again.`)
   return { moved: operations.length }
 }
