@@ -51,7 +51,10 @@ export class Party {
         await Authentication.verifyAccessToken(selectedAccount)
 
       if (!accessToken) {
-        MainWindow.instance.webContents.send(kickNotification, 0)
+        MainWindow.instance.webContents.send(
+          kickNotification,
+          config?.useGlobalNotification ? -1 : 0
+        )
 
         return
       }
@@ -220,6 +223,13 @@ export class Party {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       RuntimeLog.error('caught:core/party.ts', error)
+
+      MainWindow.instance.webContents.send(
+        kickNotification,
+        config?.useGlobalNotification ? -1 : 0
+      )
+
+      return
     }
 
     MainWindow.instance.webContents.send(kickNotification, 0)

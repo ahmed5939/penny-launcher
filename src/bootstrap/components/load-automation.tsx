@@ -9,6 +9,27 @@ import { useAutomationStore } from '../../state/stw-operations/automation'
 
 import { toast } from '../../lib/notifications'
 
+export function autoKickToast(
+  total: number,
+): { tone: 'error' | 'success'; message: string } | null {
+  if (total < 0) {
+    return {
+      tone: 'error',
+      message:
+        "Auto-kick could not run: the account's sign-in has expired or Epic did not answer. Check it on Automation.",
+    }
+  }
+
+  if (total === 0) {
+    return null
+  }
+
+  return {
+    tone: 'success',
+    message: `Automation kicked ${total} player${total > 1 ? 's' : ''}`,
+  }
+}
+
 export function LoadAutomation() {
   const { updateData } = useClaimedRewards()
 
@@ -111,11 +132,11 @@ export function LoadAutomation() {
   useEffect(() => {
     const listener = window.electronAPI.notificationAutoKick(
       async (total) => {
-        toast[total === 0 ? 'info' : 'success'](
-          total === 0
-            ? 'Automation: no user has been kicked'
-            : `Automation: kicked ${total} user${total > 1 ? 's' : ''}`,
-        )
+        const choice = autoKickToast(total)
+
+        if (choice) {
+          toast[choice.tone](choice.message)
+        }
       },
     )
 
