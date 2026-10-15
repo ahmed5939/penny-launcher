@@ -372,7 +372,7 @@ function LockScreen({ onUnlock }: { onUnlock: (key: string) => Promise<boolean> 
           value={key}
         />
         {isWrong && (
-          <Callout tone="danger">Wrong key. Check it and try again.</Callout>
+          <Callout role="alert" tone="danger">Wrong key. Check it and try again.</Callout>
         )}
         <Button className="w-full" disabled={isWorking || key.length === 0} type="submit">
           {isWorking ? <LoaderCircle className="size-4 animate-spin" /> : (
@@ -984,7 +984,7 @@ function WorkerPowerSection({
       <PanelBody className="flex flex-col gap-3">
 
       {result && !result.success && (
-        <Callout tone="danger">{result.error}</Callout>
+        <Callout role="alert" tone="danger">{result.error}</Callout>
       )}
 
       {result?.success && (

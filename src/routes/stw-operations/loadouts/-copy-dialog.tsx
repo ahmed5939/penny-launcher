@@ -186,7 +186,7 @@ function CopyTargetForm({
               </span>
             )}
           </div>
-          {slotsError && <Callout tone="danger">{slotsError}</Callout>}
+          {slotsError && <Callout role="alert" tone="danger">{slotsError}</Callout>}
           {slot?.active && <Callout tone="info">This is the loadout {target?.displayName} has equipped.</Callout>}
         </div>
       )}
@@ -371,7 +371,7 @@ export function ImportLoadoutDialog({
           value={text}
         />
 
-        {text.trim() && !copy && <Callout tone="danger">That is not a loadout code.</Callout>}
+        {text.trim() && !copy && <Callout role="alert" tone="danger">That is not a loadout code.</Callout>}
         {copy && (
           <Callout tone="info">
             {copy.commander ? `${name(copy.commander)} commanding, ` : 'No commander, '}
