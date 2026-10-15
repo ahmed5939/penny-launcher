@@ -26,23 +26,23 @@
   "notifications": {
     "save": {
       "success": "The file has been saved",
-      "error": "Could not save the snapshot. Check there is free disk space, then try again."
+      "error": "Could not save the snapshot. Try again."
     },
     "delete": {
       "success": "The file \"{{filename}}\" has been deleted",
-      "error": "Could not delete \"{{filename}}\". Close any app using it, then try again."
+      "error": "Could not delete \"{{filename}}\". Try again."
     },
     "export": {
       "success": "The file has been exported",
-      "error": "Could not export the snapshot. Check the destination folder is writable, then try again."
+      "error": "Could not export the snapshot. Try again."
     },
     "open": {
       "success": "The file \"{{filename}}\" has been opened",
-      "error": "Could not open \"{{filename}}\". Check the file still exists, then try again."
+      "error": "Could not open \"{{filename}}\". Try again."
     },
     "rename": {
       "success": "The file has been renamed",
-      "error": "Could not rename the snapshot. Close any app using it, then try again."
+      "error": "Could not rename the snapshot. Try again."
     }
   },
   "current": {

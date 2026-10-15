@@ -10,7 +10,7 @@ import {
   Share,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { LoadWorldInfoFiles } from '../../../bootstrap/components/advanced-mode/load-world-info-files'
@@ -198,6 +198,8 @@ function Item({ data }: { data: WorldInfoFileData }) {
   const { t } = useTranslation(['advanced-mode', 'general'])
 
   const [armed, setArmed] = useState(false)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const deleteRef = useRef<HTMLButtonElement>(null)
 
   const {
     changed,
@@ -217,7 +219,13 @@ function Item({ data }: { data: WorldInfoFileData }) {
       return
     }
 
-    const timer = setTimeout(() => setArmed(false), 5000)
+    const timer = setTimeout(() => {
+      if (cancelRef.current === document.activeElement) {
+        deleteRef.current?.focus()
+      }
+
+      setArmed(false)
+    }, 5000)
 
     return () => clearTimeout(timer)
   }, [armed])
@@ -283,42 +291,47 @@ function Item({ data }: { data: WorldInfoFileData }) {
         >
           <Share className="size-4" />
         </Button>
-        {armed ? (
-          <>
-            <Button
-              className="ml-1"
-              onClick={() => {
-                setArmed(false)
-                handleDeleteFile()
-              }}
-              size="sm"
-              type="button"
-              variant="destructive"
-            >
-              {t('world-info.file.confirm-delete')}
-            </Button>
-            <Button
-              onClick={() => setArmed(false)}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              {t('world-info.file.cancel')}
-            </Button>
-          </>
-        ) : (
+        {armed && (
           <Button
-            aria-label="Delete file"
-            className="size-8 text-destructive/70 hover:text-destructive"
-            onClick={() => setArmed(true)}
-            size="icon"
-            title="Delete"
+            onClick={() => {
+              deleteRef.current?.focus()
+              setArmed(false)
+            }}
+            ref={cancelRef}
+            size="sm"
             type="button"
             variant="ghost"
           >
-            <Trash2 className="size-4" />
+            {t('world-info.file.cancel')}
           </Button>
         )}
+        <Button
+          aria-label={armed ? undefined : 'Delete file'}
+          className={
+            armed ? 'ml-1' : 'size-8 text-destructive/70 hover:text-destructive'
+          }
+          onClick={() => {
+            if (!armed) {
+              setArmed(true)
+
+              return
+            }
+
+            setArmed(false)
+            handleDeleteFile()
+          }}
+          ref={deleteRef}
+          size={armed ? 'sm' : 'icon'}
+          title={armed ? undefined : 'Delete'}
+          type="button"
+          variant={armed ? 'destructive' : 'ghost'}
+        >
+          {armed ? (
+            t('world-info.file.confirm-delete')
+          ) : (
+            <Trash2 className="size-4" />
+          )}
+        </Button>
       </div>
     </li>
   )
