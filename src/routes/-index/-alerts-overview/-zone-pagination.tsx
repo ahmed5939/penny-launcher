@@ -44,6 +44,7 @@ export function ZonePagination({
       {pagination.active === totalPages ? (
         <span className="figure flex-1 px-3 text-right text-caption text-muted-foreground/60">
           {t('information.missions', {
+            count: totalMissions,
             total: totalMissions,
           })}
         </span>
