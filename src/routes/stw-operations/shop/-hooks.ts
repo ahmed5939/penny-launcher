@@ -1,4 +1,8 @@
-import type { ShopEntry, ShopOffer } from '../../../kernel/core/shop'
+import type {
+  ShopEntry,
+  ShopOffer,
+  ShopPurchaseNotification,
+} from '../../../kernel/core/shop'
 
 import { useShallow } from 'zustand/react/shallow'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -11,6 +15,7 @@ import { useShopStore } from '../../../state/stw-operations/shop'
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
 import { toast } from '../../../lib/notifications'
+import { parseCustomDisplayName } from '../../../lib/utils'
 
 /** How long a follow-up waits for the reply the main process sends by itself. */
 const followTimeoutMs = 15_000
@@ -96,6 +101,29 @@ export function useShopResource() {
 export type ShopActions = ReturnType<typeof useShopActions>
 
 /**
+ * The toast after a purchase. Names the account it was made on, so a reply
+ * that lands while another account is on screen still reads as its own.
+ */
+export function purchaseToast(
+  notification: ShopPurchaseNotification,
+  accountName: string | undefined
+) {
+  const on = accountName ? ` on ${accountName}` : ''
+
+  if (notification.errorMessage) {
+    return `Could not buy ${notification.offerTitle}${on}. Refresh the shop and try again.`
+  }
+
+  return `Bought ${notification.quantity}× ${notification.offerTitle}${on}`
+}
+
+function accountNameOf(accountId: string) {
+  const account = useAccountListStore.getState().accounts[accountId]
+
+  return account ? parseCustomDisplayName(account) : undefined
+}
+
+/**
  * Purchases. Mounted by the page itself, not by either view, so a purchase
  * started from Browse still gets its response and toast after switching
  * back. Opening owned llamas lives on its own page (Open llamas).
@@ -104,18 +132,21 @@ export function useShopActions(followUp: () => void) {
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null
 
-  /** Offer id currently being bought, so only that button spins. */
-  const [purchasingOfferId, setPurchasing] = useState<string | null>(null)
+  /** The purchase in flight, and the account it was started on. */
+  const [pending, setPending] = useState<{
+    offerId: string
+    accountId: string
+  } | null>(null)
 
   useEffect(() => {
     const listener = window.electronAPI.notificationShopPurchase(
       async (response) => {
-        setPurchasing(null)
+        setPending((current) =>
+          current?.accountId === response.accountId ? null : current
+        )
 
         toast[response.errorMessage ? 'error' : 'success'](
-          response.errorMessage
-            ? `Purchase failed: ${response.errorMessage}`
-            : `Bought ${response.quantity}× ${response.offerTitle}`
+          purchaseToast(response, accountNameOf(response.accountId))
         )
 
         if (response.accountId === accountId) {
@@ -129,12 +160,16 @@ export function useShopActions(followUp: () => void) {
     }
   }, [accountId, followUp])
 
+  /** Offer id being bought on the selected account, so only that button spins. */
+  const purchasingOfferId =
+    pending?.accountId === accountId ? pending.offerId : null
+
   const handlePurchase = (offer: ShopOffer, quantity = 1) => {
-    if (!selected || purchasingOfferId !== null) {
+    if (!selected || pending?.accountId === selected.accountId) {
       return
     }
 
-    setPurchasing(offer.offerId)
+    setPending({ offerId: offer.offerId, accountId: selected.accountId })
 
     window.electronAPI.purchaseShopOffer(selected, {
       offerId: offer.offerId,
