@@ -111,24 +111,25 @@ function Squads({
           <StatRow>
             {fortStats.map((stat) => (
               <StatTile
-                accent={stat.color}
                 key={stat.key}
                 label={stat.label}
                 value={Math.round(fort[stat.key]).toLocaleString()}
               />
             ))}
-            <StatTile
-              label="Slots filled"
-              value={`${totalFilled} / ${squadSlotCount * allSquadIds.length}`}
-            />
           </StatRow>
-          <Button
-            disabled={isAssigning}
-            onClick={() => previewFill(allSquadIds)}
-          >
-            <Wand2 className="size-4" />
-            Auto-fill all
-          </Button>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground">
+              <span className="figure">{totalFilled}</span> of{' '}
+              {squadSlotCount * allSquadIds.length} slots filled
+            </span>
+            <Button
+              disabled={isAssigning}
+              onClick={() => previewFill(allSquadIds)}
+            >
+              <Wand2 className="size-4" />
+              Auto-fill all
+            </Button>
+          </div>
         </div>
         <SetBonusStrip squads={squads} />
       </div>
