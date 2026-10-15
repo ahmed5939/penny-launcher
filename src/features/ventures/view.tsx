@@ -32,7 +32,7 @@ export function VenturesPage() {
     <div className="space-y-5">
       <PageHeader
         actions={<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />}
-        description="Season XP, zone unlocks, Ventures F.O.R.T. and the five seasonal quest chains, read live from the selected account."
+        description="Season XP, zone unlocks, Ventures F.O.R.T. and the five seasonal quest chains."
         icon={Map}
         section="Save the World"
         status={<ToolBadges beta readOnly />}
@@ -95,7 +95,7 @@ function Progress({ current }: { current: VenturesProgress }) {
               {next ? (
                 <>
                   <span>Next zone <span className="figure font-semibold text-primary"><Zap className="inline size-3 fill-current" />{next.powerLevel}</span> at level <span className="figure text-foreground">{next.level}</span></span>
-                  <span><span className="figure text-foreground">{(next.totalXp - (xp ?? 0)).toLocaleString()}</span> XP to go</span>
+                  <span>about <span className="figure text-foreground">{(next.totalXp - (xp ?? 0)).toLocaleString()}</span> XP to go</span>
                 </>
               ) : (
                 <span className="text-success">Every zone is open</span>
@@ -135,7 +135,7 @@ function Progress({ current }: { current: VenturesProgress }) {
             const from = ventureZones[index - 1]?.totalXp ?? 0
             const fill = open ? 100 : isNext && xp !== null ? Math.max(0, Math.min(100, ((xp - from) / (zone.totalXp - from)) * 100)) : 0
             return (
-              <li key={zone.level} title={`${zone.totalXp.toLocaleString()} XP`}>
+              <li key={zone.level} title={`about ${zone.totalXp.toLocaleString()} XP`}>
                 <div className="h-1 overflow-hidden rounded-full bg-muted/70">
                   <div className={cn('h-full rounded-full', open ? 'bg-success' : 'bg-primary')} style={{ width: `${fill}%` }} />
                 </div>
@@ -188,10 +188,6 @@ function Progress({ current }: { current: VenturesProgress }) {
           )}
         </Panel>
       )}
-
-      <p className="text-xs text-muted-foreground">
-        Zone thresholds are player-collected and may drift after a hotfix. F.O.R.T. is Ventures-only. Read-only: nothing here claims or spends.
-      </p>
     </>
   )
 }
@@ -220,7 +216,7 @@ function ChainCard({ chain, current, records, steps }: { chain: string; current:
         </div>
         {current ? (
           <>
-            <p className="mt-2 truncate text-ui font-semibold leading-tight">{record?.name ?? `${chainName} quest ${current.step}`}</p>
+            <p className="mt-2 truncate text-ui font-semibold leading-tight" title={record?.name}>{record?.name ?? `${chainName} quest ${current.step}`}</p>
             {objectives.length > 0 && current.state !== 'not-started' ? (
               <ul className="mt-1.5 space-y-1.5">
                 {objectives.map((o) => (
@@ -258,7 +254,7 @@ function QuestRow({ quest, records }: { quest: VentureQuest; records: Records })
     <li className="flex items-center gap-3 border-b border-border/30 px-4 py-2">
       <ItemIcon className={cn(quest.state === 'not-started' && 'opacity-50 grayscale')} records={records} size="small" templateId={quest.templateId} />
       <div className="min-w-0 flex-1">
-        <p className={cn('truncate text-ui font-medium leading-tight', quest.state === 'not-started' && 'text-muted-foreground')}>{record?.name ?? `${chainName} quest ${quest.step}`}</p>
+        <p className={cn('truncate text-ui font-medium leading-tight', quest.state === 'not-started' && 'text-muted-foreground')} title={record?.name}>{record?.name ?? `${chainName} quest ${quest.step}`}</p>
         <p className="truncate text-xs text-muted-foreground" title={objective}>
           {chainName} <span className="figure">{quest.step}</span>{objective && <> · {objective}</>}
         </p>
