@@ -183,6 +183,11 @@ export function CardPanel({
             )}
             Generate card
           </Button>
+          {owned.length === 0 && (
+            <span className="text-xs text-muted-foreground">
+              Nothing owned to draw yet
+            </span>
+          )}
           {card && !isGenerating && (
             <>
               <Button
@@ -222,7 +227,7 @@ export function CardPanel({
           </div>
         )}
 
-        {errorMessage && <Callout tone="danger">{errorMessage}</Callout>}
+        {errorMessage && <Callout tone="danger">{errorMessage} Try Refresh.</Callout>}
 
         {card && !isGenerating && (
           <div className="space-y-2">

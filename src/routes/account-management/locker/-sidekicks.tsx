@@ -89,7 +89,7 @@ export function Sidekicks({
           title="Could not list sidekicks"
           tone="warning"
         >
-          {errorMessage}
+          {errorMessage} Try Refresh.
         </Callout>
       )}
 
@@ -159,19 +159,21 @@ export function Sidekicks({
               ))}
             </div>
           ) : (
-            <EmptyState
-              description={
-                isLoading
-                  ? 'Reading this account’s sidekicks…'
-                  : companions.length === 0
-                    ? 'Nothing loaded yet — try Reload.'
-                    : ownership === 'missing'
-                      ? 'Every sidekick is on this account.'
-                      : 'Nothing matches that search.'
-              }
-              icon={Cat}
-              title={isLoading ? 'Loading' : 'Nothing to show'}
-            />
+            <div role="status">
+              <EmptyState
+                description={
+                  isLoading
+                    ? 'Reading this account’s sidekicks…'
+                    : companions.length === 0
+                      ? 'Nothing loaded yet — try Refresh.'
+                      : ownership === 'missing'
+                        ? 'Every sidekick is on this account.'
+                        : 'Nothing matches that search.'
+                }
+                icon={Cat}
+                title={isLoading ? 'Loading sidekicks…' : 'Nothing to show'}
+              />
+            </div>
           )}
         </PanelBody>
       </Panel>

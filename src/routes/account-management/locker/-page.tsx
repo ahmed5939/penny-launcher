@@ -70,8 +70,10 @@ function Content() {
     isLoading,
     isLoadingCompanions,
     isLoadingOwned,
+    loadedFor,
     owned,
     ownedError,
+    ownedLoadedFor,
     progress,
     slots,
   } = useLockerPage()
@@ -99,7 +101,7 @@ function Content() {
           onClick={handleReload}
         />
       }
-      description="What this account is wearing, everything it owns, the sidekicks it is still missing, and the whole locker as one shareable image. Pick a slot to change it."
+      description="What this account is wearing, everything it owns, the sidekicks it is still missing, and the whole locker as one shareable image. Choose a slot to change it."
       icon={Shirt}
       section={t('account-management.title')}
       status={<ToolBadges beta />}
@@ -127,6 +129,9 @@ function Content() {
     (cosmetic) => cosmetic.backendType === 'AthenaCharacter'
   ).length
 
+  const boardReady = loadedFor === account.accountId
+  const ownedReady = ownedLoadedFor === account.accountId
+
   return (
     <>
       {header}
@@ -136,7 +141,7 @@ function Content() {
           title="Could not read the locker"
           tone="danger"
         >
-          {errorMessage}
+          {errorMessage} Try Refresh.
         </Callout>
       )}
 
@@ -145,7 +150,7 @@ function Content() {
           title="Could not list owned cosmetics"
           tone="warning"
         >
-          {ownedError}
+          {ownedError} Try Refresh.
         </Callout>
       )}
 
@@ -154,16 +159,16 @@ function Content() {
           <StatTile
             icon={Sparkles}
             label="Owned"
-            value={owned.length.toLocaleString()}
+            value={ownedReady ? owned.length.toLocaleString() : '—'}
           />
           <StatTile
             icon={Shirt}
             label="Outfits"
-            value={outfitCount.toLocaleString()}
+            value={ownedReady ? outfitCount.toLocaleString() : '—'}
           />
           <StatTile
             label="Slots filled"
-            value={`${equippedCount} / ${slotTotal}`}
+            value={boardReady ? `${equippedCount} / ${slotTotal}` : '—'}
           />
         </StatRow>
 
@@ -174,7 +179,17 @@ function Content() {
         />
       </div>
 
+      {view === 'loadout' && !boardReady && (
+        <div role="status">
+          <EmptyState
+            icon={Shirt}
+            title="Loading the locker…"
+          />
+        </div>
+      )}
+
       {view === 'loadout' &&
+        boardReady &&
         lockerSlotCategories.map((category) => (
           <Panel key={category.label}>
             <PanelHeader

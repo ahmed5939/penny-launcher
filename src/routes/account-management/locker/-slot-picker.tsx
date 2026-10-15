@@ -94,7 +94,7 @@ export function SlotPicker({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {slotKey ? `Pick a ${slotLabels[slotKey]}` : 'Pick a cosmetic'}
+            {slotKey ? `Choose: ${slotLabels[slotKey]}` : 'Choose a cosmetic'}
           </DialogTitle>
           <DialogDescription>
             Only what this account owns. Equipping writes straight to the

@@ -217,8 +217,10 @@ export function useLockerPage() {
     isLoading,
     isLoadingCompanions,
     isLoadingOwned,
+    loadedFor,
     owned,
     ownedError,
+    ownedLoadedFor,
     progress,
     slots,
   }
