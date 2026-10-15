@@ -5,7 +5,7 @@ import type {
   DailyRerollStatus,
 } from '../../../features/daily-reroll/policy'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Lock, RefreshCw, ScrollText } from 'lucide-react'
 
 import {
@@ -47,20 +47,24 @@ export function RouteComponent() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(false)
+  const generation = useRef(0)
 
   const load = useCallback(() => {
+    const started = generation.current
     setLoading(true)
     return window.electronAPI
       .getAutoDailyRerollStatus()
       .then((value) => {
+        if (started !== generation.current) return
         setStatus(value)
         setError('')
       })
       .catch(() => {
+        if (started !== generation.current) return
         setError('Could not load daily quest settings. Try Refresh.')
       })
       .finally(() => {
-        setLoading(false)
+        if (started === generation.current) setLoading(false)
       })
   }, [])
 
@@ -75,6 +79,8 @@ export function RouteComponent() {
     accountId: string,
     settings: DailyRerollPreferences,
   ) => {
+    generation.current += 1
+    setLoading(false)
     setBusy(true)
     setError('')
     try {
@@ -346,7 +352,7 @@ function AccountDailies({
             />
           )}
           <p className="border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
-            Kept quests are never rerolled; any other daily may be.
+            Kept quests are never rerolled. Quests over half done, or with unknown targets, are always kept.
           </p>
         </>
       )}
