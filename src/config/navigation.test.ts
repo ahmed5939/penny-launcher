@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import {
   activeSectionFor,
+  customizeRows,
   matchesNavPath,
   navDestinations,
   navSections,
   sectionLanding,
+  visibilityKeys,
   visibleSectionItems,
 } from './navigation'
 import {
@@ -234,5 +236,52 @@ describe('area navigation', () => {
     expect(
       sectionLanding(account, account.items, true, '/accounts/add/device-auth'),
     ).toEqual({ to: '/accounts/add/device-auth' })
+  })
+})
+
+describe('customize rows', () => {
+  const stw = navSections.find((section) => section.key === 'stw')!
+  const automate = navSections.find((section) => section.key === 'automate')!
+
+  it('collapses the inventory pages into one row', () => {
+    const rows = customizeRows(stw).filter((row) => row.keys.includes('inventory'))
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].items.map((item) => item.to)).toEqual([
+      '/stw-operations/heroes',
+      '/stw-operations/survivors',
+      '/stw-operations/defenders',
+      '/stw-operations/schematics',
+    ])
+  })
+
+  it('shares the shop row with Open llamas', () => {
+    const row = customizeRows(stw).find((row) => row.keys.includes('shop'))
+
+    expect(row?.items.map((item) => item.to)).toEqual([
+      '/stw-operations/shop',
+      '/stw-operations/open-llamas',
+    ])
+  })
+
+  it('gives Recycled rewards no row of its own', () => {
+    const paths = customizeRows(automate).flatMap((row) =>
+      row.items.map((item) => item.to),
+    )
+
+    expect(paths).not.toContain('/stw-operations/recycled-rewards')
+  })
+
+  it('gives every can and canAny key a row', () => {
+    const rowKeys = new Set(
+      navSections.flatMap((section) =>
+        customizeRows(section).flatMap((row) => row.keys),
+      ),
+    )
+    const itemKeys = navSections.flatMap((section) =>
+      section.items.flatMap((item) => visibilityKeys(item)),
+    )
+
+    expect(itemKeys.filter((key) => !rowKeys.has(key))).toEqual([])
   })
 })

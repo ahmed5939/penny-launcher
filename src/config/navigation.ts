@@ -116,6 +116,44 @@ export function visibilityKeys(
   return []
 }
 
+/** One switch in the customisers, and every item it shows and drives. */
+export type CustomizeRow = {
+  items: Array<NavItem>
+  keys: Array<MenuKey>
+}
+
+/**
+ * The switches a section gets in the customisers. Items with the same keys
+ * share a row, since one switch drives all of them. A multi-key row whose keys
+ * each already have a single-key row is dropped: those switches cover it.
+ */
+export function customizeRows(section: NavSection): Array<CustomizeRow> {
+  const rows: Array<CustomizeRow> = []
+  for (const item of section.items) {
+    const keys = visibilityKeys(item)
+    if (keys.length === 0) continue
+
+    const row = rows.find((candidate) => sameKeys(candidate.keys, keys))
+    if (row) {
+      row.items.push(item)
+    } else {
+      rows.push({ items: [item], keys })
+    }
+  }
+
+  const singleKeys = new Set(
+    rows.filter((row) => row.keys.length === 1).flatMap((row) => row.keys),
+  )
+  return rows.filter(
+    (row) =>
+      row.keys.length === 1 || !row.keys.every((key) => singleKeys.has(key)),
+  )
+}
+
+function sameKeys(a: Array<MenuKey>, b: Array<MenuKey>): boolean {
+  return a.length === b.length && a.every((key) => b.includes(key))
+}
+
 export const navSections: Array<NavSection> = [
   {
     key: 'home',
