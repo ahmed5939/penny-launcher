@@ -1,5 +1,6 @@
 import { UpdateIcon } from '@radix-ui/react-icons'
 import { Gift, PackageOpen, Trash2, UserPlus, UserX } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AutomationStatusType } from '../../../config/constants/automation'
@@ -10,6 +11,7 @@ import { Combobox } from '../../../components/ui/extended/combobox'
 import { Button } from '../../../components/ui/button'
 import { GoToTop } from '../../../components/go-to-top'
 import {
+  Chip,
   EmptyState,
   PageHeader,
   Panel,
@@ -41,16 +43,16 @@ export function RouteComponent() {
 }
 
 /** The listener's state, said in the status colours every page uses. */
-function connection(status: AutomationStatusType | null): { key: string | null; tone: StatusTone; pulse?: boolean } {
+function connection(status: AutomationStatusType | null): { key: string; tone: StatusTone; pulse?: boolean } {
   switch (status) {
     case AutomationStatusType.LISTENING:
       return { key: 'auto-kick.statuses.listening', tone: 'active', pulse: true }
     case AutomationStatusType.ERROR:
-      return { key: 'auto-kick.statuses.credential-error', tone: 'danger' }
+      return { key: 'auto-kick.statuses.error', tone: 'danger' }
     case AutomationStatusType.DISCONNECTED:
       return { key: 'auto-kick.statuses.disconnected', tone: 'idle' }
     default:
-      return { key: null, tone: 'idle' }
+      return { key: 'auto-kick.statuses.connecting', tone: 'idle' }
   }
 }
 
@@ -73,6 +75,18 @@ export function Content() {
   } = useAutomationData()
   const { getMenuOptionVisibility } =
     useCustomizableMenuSettingsVisibility()
+  const [confirmingRemoveAll, setConfirmingRemoveAll] = useState(false)
+
+  const handleRemoveAllPress = () => {
+    if (!confirmingRemoveAll) {
+      setConfirmingRemoveAll(true)
+
+      return
+    }
+
+    setConfirmingRemoveAll(false)
+    handleRemoveAll()
+  }
 
   return (
     <>
@@ -131,14 +145,23 @@ export function Content() {
                 isLoading
               const state = connection(current.status)
               const name = parseCustomDisplayName(account)
+              const noneEnabled =
+                !current.actions.kick &&
+                !current.actions.claim &&
+                !current.actions.transferMats
 
               return (
                 <li className="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-4 py-3" key={account.accountId}>
                   <div className="min-w-0 flex-1 basis-40">
                     <p className="truncate text-ui font-semibold">{name}</p>
-                    <StatusPill className="mt-1.5" pulse={state.pulse} tone={state.tone}>
-                      {state.key ? t(state.key) : 'Connecting…'}
-                    </StatusPill>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <StatusPill pulse={state.pulse} tone={state.tone}>
+                        {t(state.key)}
+                      </StatusPill>
+                      {current.status === AutomationStatusType.LISTENING && noneEnabled && (
+                        <Chip tone="warning">Nothing enabled</Chip>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -205,20 +228,20 @@ export function Content() {
               {t('auto-kick.actions.restart-all')}
             </Button>
             <Button
-              className="ml-auto text-muted-foreground [&:not(:disabled)]:hover:text-destructive"
+              className={cn(
+                'ml-auto',
+                !confirmingRemoveAll && 'text-muted-foreground [&:not(:disabled)]:hover:text-destructive',
+              )}
+              onBlur={() => setConfirmingRemoveAll(false)}
+              onClick={handleRemoveAllPress}
               size="sm"
-              variant="ghost"
-              onClick={handleRemoveAll}
+              variant={confirmingRemoveAll ? 'destructive' : 'ghost'}
             >
-              {t('auto-kick.actions.remove-all')}
+              {confirmingRemoveAll ? 'Confirm — removes every account' : t('auto-kick.actions.remove-all')}
             </Button>
           </PanelFooter>
         )}
       </Panel>
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Accounts in the same party only need auto-kick on one of them; the others are kicked or leave (and claim, if on) with it. Stacking chest rewards may stop it working properly.
-      </p>
 
       <GoToTop containerId="selector-card" />
     </>
