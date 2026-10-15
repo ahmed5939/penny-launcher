@@ -54,7 +54,7 @@ export function useSetupForm() {
   })
 
   const onDetectPath = async () => {
-    const result = await window.electronAPI.detectGamePath()
+    const result = await window.electronAPI.detectGamePathOnly()
 
     form.setValue('path', result.path, {
       shouldDirty: true,
@@ -88,6 +88,7 @@ export function useSetupForm() {
       overlay: current.overlay,
       userAgent: current.userAgent,
     })
+    form.resetField('path', { defaultValue: result.path })
     toast.success(t('form.submit.status.success'))
     await refreshGameInstall(true)
   }

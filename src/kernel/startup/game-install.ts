@@ -107,36 +107,22 @@ export class GameInstallManager {
     }
   }
 
-  static async detectAndApply(): Promise<{
-    appVersion: string
-    name: string
-    path: string
-  }> {
+  static async detect(): Promise<DetectedInstall> {
     const settings = await readSettings()
-    const scan = await scanGameInstalls(nodeIo, {
-      settingsPath: settings.path,
-    })
-    const preferred = decorateInstallPlatform(
-      scan.preferred.found
-        ? scan.preferred
-        : missingInstallSnapshot(settings.path)
-    )
-    const binariesPath = preferred.binariesPath ?? settings.path
-    const latestVersion = await GameInstallManager.getLatestVersion(true)
-    const appVersion =
-      preferred.version ??
-      latestVersion ??
-      '++Fortnite+Release-38.00-CL-47722112-Windows'
+    const { result } = await detectInstall(settings)
+
+    return result
+  }
+
+  static async detectAndApply(): Promise<DetectedInstall> {
+    const settings = await readSettings()
+    const { preferred, result } = await detectInstall(settings)
 
     if (preferred.found && preferred.binariesPath) {
       await persistPath(settings, preferred.binariesPath)
     }
 
-    return {
-      appVersion,
-      name: fortniteAppName,
-      path: binariesPath,
-    }
+    return result
   }
 
   static async chooseFolder(): Promise<GameFolderPickResult> {
@@ -222,6 +208,12 @@ export class GameInstallManager {
   }
 }
 
+type DetectedInstall = {
+  appVersion: string
+  name: string
+  path: string
+}
+
 async function readSettings() {
   const { settings } = await DataDirectory.getSettingsFile()
   const defaults = DataDirectory.getSettingsDefaultData()
@@ -229,6 +221,32 @@ async function readSettings() {
   return {
     ...defaults,
     ...settings,
+  }
+}
+
+async function detectInstall(settings: Settings) {
+  const scan = await scanGameInstalls(nodeIo, {
+    settingsPath: settings.path,
+  })
+  const preferred = decorateInstallPlatform(
+    scan.preferred.found
+      ? scan.preferred
+      : missingInstallSnapshot(settings.path)
+  )
+  const binariesPath = preferred.binariesPath ?? settings.path
+  const latestVersion = await GameInstallManager.getLatestVersion(true)
+  const appVersion =
+    preferred.version ??
+    latestVersion ??
+    '++Fortnite+Release-38.00-CL-47722112-Windows'
+
+  return {
+    preferred,
+    result: {
+      appVersion,
+      name: fortniteAppName,
+      path: binariesPath,
+    },
   }
 }
 

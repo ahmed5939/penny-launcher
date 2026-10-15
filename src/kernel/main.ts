@@ -595,6 +595,11 @@ process.on('uncaughtExceptionMonitor', (error) => {
       return GameInstallManager.detectAndApply()
     })
 
+    secureIpcHandle(ElectronAPIEventKeys.SettingsDetectPathOnly, async () => {
+      const { GameInstallManager } = await features.gameInstall()
+      return GameInstallManager.detect()
+    })
+
     secureIpcHandle(
       ElectronAPIEventKeys.GameInstallStatus,
       async (_, forceLatest?: boolean) => {

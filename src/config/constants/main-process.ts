@@ -9,6 +9,7 @@ export enum ElectronAPIEventKeys {
   AppLanguageUpdate = 'settings:language:update',
 
   SettingsDetectPath = 'settings:detect:path',
+  SettingsDetectPathOnly = 'settings:detect:path:only',
   GameInstallStatus = 'game-install:status',
   GameInstallDetect = 'game-install:detect',
   GameInstallChooseFolder = 'game-install:choose-folder',

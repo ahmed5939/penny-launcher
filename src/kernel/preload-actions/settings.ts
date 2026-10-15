@@ -53,3 +53,12 @@ export function detectGamePath(): Promise<{
 }> {
   return ipcRenderer.invoke(ElectronAPIEventKeys.SettingsDetectPath)
 }
+
+/** Finds the install without saving it: the settings form decides when to save. */
+export function detectGamePathOnly(): Promise<{
+  appVersion: string
+  name: string
+  path: string
+}> {
+  return ipcRenderer.invoke(ElectronAPIEventKeys.SettingsDetectPathOnly)
+}
