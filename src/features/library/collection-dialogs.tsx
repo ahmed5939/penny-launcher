@@ -161,7 +161,11 @@ export function GameDialog({ game, onClose }: { game: CollectionGame; onClose: (
             title={game.title}
           />
           <div className="space-y-5 px-6 pb-6 pt-4">
-            {failure && <Callout tone="warning">{failure}</Callout>}
+            {failure && (
+              <div role="alert">
+                <Callout tone="warning">{failure}</Callout>
+              </div>
+            )}
             <StatRow>
               <StatTile
                 hint={info && info.polls.length > 0 ? info.polls.map((poll) => poll.title).slice(0, 2).join(' · ') : 'Epic Games Store players'}
