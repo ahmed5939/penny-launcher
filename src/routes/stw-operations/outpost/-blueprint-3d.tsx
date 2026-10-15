@@ -113,6 +113,15 @@ export function rememberCanvasFallback(on: boolean) {
   else sessionStorage.removeItem(canvasFallbackSessionKey)
 }
 
+/** Forgets the remembered flat view and lets the next render try WebGL again. */
+export function retryWebGL(
+  storage: Pick<Storage, 'removeItem'>,
+  setFallback: (on: boolean) => void
+) {
+  storage.removeItem(canvasFallbackSessionKey)
+  setFallback(false)
+}
+
 export function outpostHeightLevels(layout: OutpostLayout) {
   return [
     ...new Set(
@@ -2379,8 +2388,7 @@ export function Blueprint3D({
     setCanvasFallback(true)
   }, [])
   const retryWebgl = useCallback(() => {
-    rememberCanvasFallback(false)
-    setCanvasFallback(false)
+    retryWebGL(sessionStorage, setCanvasFallback)
   }, [])
 
   useEffect(() => {

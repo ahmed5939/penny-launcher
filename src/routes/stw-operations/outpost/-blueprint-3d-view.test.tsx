@@ -4,7 +4,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Blueprint3D, rememberCanvasFallback } from './-blueprint-3d'
+import { Blueprint3D, rememberCanvasFallback, retryWebGL } from './-blueprint-3d'
 
 const layout: OutpostLayout = {
   bounds: {
@@ -102,5 +102,17 @@ describe('Blueprint3D toolbar', () => {
     expect(html).toContain('aria-label="Terrain"')
     expect(html).toContain('>Top<')
     expect(html).toContain('Walk</button>')
+  })
+})
+
+describe('retryWebGL', () => {
+  it('forgets the remembered flat view and turns the fallback off', () => {
+    const storage = { removeItem: vi.fn() }
+    const setFallback = vi.fn()
+
+    retryWebGL(storage, setFallback)
+
+    expect(storage.removeItem).toHaveBeenCalledWith('penny:outpost:canvas-3d')
+    expect(setFallback).toHaveBeenCalledWith(false)
   })
 })
