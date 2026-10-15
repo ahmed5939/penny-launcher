@@ -201,11 +201,14 @@ function Summary({ loading, missing, onMissing, rows, scan, statistics }: { load
 
   if (!scan) {
     return (
-      <StatRow>
-        <StatTile hint={loading ? 'Scanning schematics…' : 'Scan to check your schematics'} label="6th perk completion" value="—" />
-        <StatTile label="Legendary weapons" value={statistics.eligible.toLocaleString()} />
-        <StatTile label="Legendary 6th perks" value={progress.total.toLocaleString()} />
-      </StatRow>
+      <>
+        <StatRow>
+          <StatTile hint={loading ? 'Scanning schematics…' : 'Scan to check your schematics'} label="6th perk completion" value="—" />
+          <StatTile label="Legendary weapons" value={statistics.eligible.toLocaleString()} />
+          <StatTile label="Legendary 6th perks" value={progress.total.toLocaleString()} />
+        </StatRow>
+        <p className="sr-only" role="status">{loading ? 'Scanning schematics…' : ''}</p>
+      </>
     )
   }
 
