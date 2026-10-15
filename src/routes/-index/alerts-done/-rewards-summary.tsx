@@ -6,6 +6,7 @@ import { RewardsSummaryList } from '../-components/-rewards-summary-list'
 
 import { useAlertsDoneData } from '../../../hooks/alerts/alerts-done'
 import { usePlayerData } from './-hooks'
+import { lookupOutcome } from './-lookup-outcome'
 
 export function RewardsSummary() {
   const { t } = useTranslation(['alerts', 'general'])
@@ -13,7 +14,7 @@ export function RewardsSummary() {
   const { playerData } = useAlertsDoneData()
   const { missions, rewards } = usePlayerData()
 
-  if (!playerData?.data) {
+  if (lookupOutcome(playerData) !== 'ok') {
     return null
   }
 
