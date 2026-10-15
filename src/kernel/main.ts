@@ -1156,7 +1156,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
       ElectronAPIEventKeys.TimelineRequest,
       async (_, force?: boolean) => {
         const { Timeline } = await features.timeline()
-        await Timeline.request(Boolean(force))
+        await Timeline.request(force === true)
       }
     )
 
