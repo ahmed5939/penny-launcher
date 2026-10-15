@@ -58,7 +58,7 @@ describe('ZonePagination', () => {
     expect(html).not.toContain('disabled=""')
     expect(html).not.toContain('border-dashed')
     expect(html).toContain('Show less')
-    expect(html).toContain('23 mission/s')
+    expect(html).toContain('23 missions')
   })
 
   it('keeps Show more, with its count, before the last page', () => {
