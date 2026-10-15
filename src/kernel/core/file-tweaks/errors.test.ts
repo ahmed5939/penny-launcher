@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { describeFileError } from './errors'
+import { FileTweakError, describeFileError } from './errors'
 
 function errnoError(code: string): NodeJS.ErrnoException {
   return Object.assign(
@@ -29,6 +29,15 @@ describe('describeFileError', () => {
     expect(
       describeFileError(new Error('Not a .utoc file (bad magic)'), 'repair the game file index')
     ).toBe('Could not repair the game file index. Try again.')
+  })
+
+  it('passes an already formatted FileTweakError through unchanged', () => {
+    const message =
+      'Could not repair the game file index: the file is in use. Close Fortnite and try again.'
+
+    expect(describeFileError(new FileTweakError(message), 'patch the game file')).toBe(
+      message
+    )
   })
 
   it('falls back to a retry prompt for a non-Error value', () => {

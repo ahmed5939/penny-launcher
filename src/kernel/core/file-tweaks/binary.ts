@@ -3,6 +3,8 @@ import path from 'node:path'
 
 import { app } from 'electron'
 
+import { FileTweakError } from './errors'
+
 /**
  * Binary pakchunk patching — the engine behind the File Tweaks page.
  *
@@ -180,7 +182,7 @@ export async function patchAt(
   const result = patchWithTocRepair(filePath, offset, replacement, original)
 
   if (!result.success) {
-    throw new Error(result.message)
+    throw new FileTweakError(result.message)
   }
 }
 

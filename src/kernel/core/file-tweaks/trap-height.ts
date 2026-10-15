@@ -24,7 +24,7 @@ import {
   resolvePakchunkPath,
 } from './binary'
 
-import { describeFileError } from './errors'
+import { FileTweakError, describeFileError } from './errors'
 import { patchWithTocRepair } from './utoc'
 
 /**
@@ -245,7 +245,7 @@ function patchBytes(
   )
 
   if (!result.success) {
-    throw new Error(result.message)
+    throw new FileTweakError(result.message)
   }
 }
 
