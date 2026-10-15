@@ -123,6 +123,40 @@ function accountNameOf(accountId: string) {
   return account ? parseCustomDisplayName(account) : undefined
 }
 
+/** The offer each account is buying, keyed by account id. */
+export type PendingPurchases = Map<string, string>
+
+export function startPendingPurchase(
+  pending: PendingPurchases,
+  accountId: string,
+  offerId: string
+): PendingPurchases {
+  return new Map(pending).set(accountId, offerId)
+}
+
+/** Only the account that replied is cleared; the others stay locked. */
+export function finishPendingPurchase(
+  pending: PendingPurchases,
+  accountId: string
+): PendingPurchases {
+  if (!pending.has(accountId)) {
+    return pending
+  }
+
+  const next = new Map(pending)
+
+  next.delete(accountId)
+
+  return next
+}
+
+export function pendingOfferFor(
+  pending: PendingPurchases,
+  accountId: string | null
+): string | null {
+  return accountId === null ? null : (pending.get(accountId) ?? null)
+}
+
 /**
  * Purchases. Mounted by the page itself, not by either view, so a purchase
  * started from Browse still gets its response and toast after switching
@@ -132,17 +166,14 @@ export function useShopActions(followUp: () => void) {
   const { selected } = useGetSelectedAccount()
   const accountId = selected?.accountId ?? null
 
-  /** The purchase in flight, and the account it was started on. */
-  const [pending, setPending] = useState<{
-    offerId: string
-    accountId: string
-  } | null>(null)
+  /** Purchases in flight, one per account, so each account's own reply clears it. */
+  const [pending, setPending] = useState<PendingPurchases>(() => new Map())
 
   useEffect(() => {
     const listener = window.electronAPI.notificationShopPurchase(
       async (response) => {
         setPending((current) =>
-          current?.accountId === response.accountId ? null : current
+          finishPendingPurchase(current, response.accountId)
         )
 
         toast[response.errorMessage ? 'error' : 'success'](
@@ -161,15 +192,16 @@ export function useShopActions(followUp: () => void) {
   }, [accountId, followUp])
 
   /** Offer id being bought on the selected account, so only that button spins. */
-  const purchasingOfferId =
-    pending?.accountId === accountId ? pending.offerId : null
+  const purchasingOfferId = pendingOfferFor(pending, accountId)
 
   const handlePurchase = (offer: ShopOffer, quantity = 1) => {
-    if (!selected || pending?.accountId === selected.accountId) {
+    if (!selected || pendingOfferFor(pending, selected.accountId) !== null) {
       return
     }
 
-    setPending({ offerId: offer.offerId, accountId: selected.accountId })
+    setPending((current) =>
+      startPendingPurchase(current, selected.accountId, offer.offerId)
+    )
 
     window.electronAPI.purchaseShopOffer(selected, {
       offerId: offer.offerId,
