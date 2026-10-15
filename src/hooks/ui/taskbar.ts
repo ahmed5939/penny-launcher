@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 
+import { useAccountListStore } from '../../state/accounts/list'
 import { useAccountScopeStore } from '../../state/accounts/scope'
 import { useGetAccounts } from '../accounts'
 import { useCustomProcessStatus } from '../settings'
@@ -83,6 +84,12 @@ export function useTaskbarSync() {
 
   useEffect(() => {
     const listener = window.electronAPI.onScopeRequest((accountId) => {
+      const account = useAccountListStore.getState().accounts[accountId]
+
+      if (!account || account.authStatus === 'invalid') {
+        return
+      }
+
       setPrimary(accountId)
     })
 
