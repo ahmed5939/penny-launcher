@@ -58,7 +58,9 @@ import {
   lobbyHackCodesCheckedAt,
 } from './codes'
 import {
+  armedKeyAfter,
   formAccountId,
+  formKeyOf,
   mayHaveGoneThrough,
   outcomeChipTone,
   outcomeTone,
@@ -134,10 +136,8 @@ export function SubmitPanel({
   // The draft a multi-line paste was refused on; any change clears it.
   const [refusedOn, setRefusedOn] = useState<string | null>(null)
   const pasteRefused = refusedOn !== null && refusedOn === draft.code
-  // The code and account a first press armed; changing either disarms it.
-  const [armed, setArmed] = useState<{ accountId: string; code: string } | null>(
-    null
-  )
+  // The form key a first press armed. Settled below, so it cannot outlive the form.
+  const [armedKey, setArmedKey] = useState<string | null>(null)
 
   const linked = idsList.filter((accountId) => accountList[accountId])
   const accountId = formAccountId({
@@ -145,11 +145,17 @@ export function SubmitPanel({
     linked,
     primary: selected?.accountId ?? null,
   })
+  const formKey = formKeyOf(accountId, draft.code)
+  // Runs during render, so a code or account change drops the arm at once,
+  // however it changed (typing, the code list, the title-bar account).
+  const settledKey = armedKeyAfter(armedKey, formKey)
+  if (settledKey !== armedKey) {
+    setArmedKey(settledKey)
+  }
+  const confirming = formKey !== null && settledKey === formKey
   const check = checkLobbyHackCode(draft.code)
   const busy = pending !== null
   const disabled = busy || !check.ok || !accountId
-  const confirming =
-    armed !== null && armed.accountId === accountId && armed.code === draft.code
 
   const submit = () => {
     if (disabled || !accountId) {
@@ -158,11 +164,11 @@ export function SubmitPanel({
 
     // A granted code is spent on the account, so ask twice.
     if (!confirming) {
-      setArmed({ accountId, code: draft.code })
+      setArmedKey(formKey)
       return
     }
 
-    setArmed(null)
+    setArmedKey(null)
     void submitLobbyHackCode(accountId, draft.code)
   }
 
@@ -216,10 +222,7 @@ export function SubmitPanel({
               <Picker
                 disabled={busy}
                 label={t('lobby-hacks.form.account')}
-                onChange={(value) => {
-                  setArmed(null)
-                  setLobbyHackDraft({ accountId: value })
-                }}
+                onChange={(value) => setLobbyHackDraft({ accountId: value })}
                 options={linked.map((id) => ({
                   label: parseCustomDisplayName(accountList[id]),
                   value: id,
@@ -241,7 +244,6 @@ export function SubmitPanel({
                 id={codeFieldId}
                 onChange={(event) => {
                   setRefusedOn(null)
-                  setArmed(null)
                   setLobbyHackDraft({ code: event.target.value })
                 }}
                 onPaste={(event) => {
@@ -278,7 +280,7 @@ export function SubmitPanel({
           </Button>
           {confirming && (
             <Button
-              onClick={() => setArmed(null)}
+              onClick={() => setArmedKey(null)}
               type="button"
               variant="ghost"
             >
