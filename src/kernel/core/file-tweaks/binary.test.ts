@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-import { patchAt } from './binary'
+import { asFsBuffer, patchAt } from './binary'
 import { describeFileError } from './errors'
 
 const mocks = vi.hoisted(() => ({ lockUtoc: false }))
@@ -49,14 +49,14 @@ function writeContainer(): string {
   const utocPath = path.join(dir, 'pakchunk10-WindowsClient.utoc')
   const toc = Buffer.alloc(144 + 12 + 10 + 9)
 
-  Buffer.from('-==--==--==--==-', 'ascii').copy(toc, 0)
+  Buffer.from('-==--==--==--==-', 'ascii').copy(asFsBuffer(toc), 0)
   toc.writeUInt8(7, 16)
   toc.writeUInt32LE(144, 20)
   toc.writeUInt32LE(1, 24)
   toc.writeUInt8(16, 144 + 12 + 9)
 
-  fs.writeFileSync(ucasPath, Buffer.alloc(64, 0x11))
-  fs.writeFileSync(utocPath, toc)
+  fs.writeFileSync(ucasPath, asFsBuffer(Buffer.alloc(64, 0x11)))
+  fs.writeFileSync(utocPath, asFsBuffer(toc))
 
   return ucasPath
 }
