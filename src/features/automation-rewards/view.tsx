@@ -39,12 +39,13 @@ export function RecycleCeilingPicker({ disabled, onChange, value }: { disabled?:
 
 function useLlamaRecycling(accountId: string) {
   const [level, setLevel] = useState<RecycleLevel>('off')
+  const [loaded, setLoaded] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const [busy, setBusy] = useState(true)
   useEffect(() => {
     let live = true
     window.electronAPI.getAutomationRewards()
-      .then((s) => { if (live) setLevel(s.llamaRecycling[accountId] ?? 'off') })
+      .then((s) => { if (live) { setLevel(s.llamaRecycling[accountId] ?? 'off'); setLoaded(true) } })
       .catch(() => { if (live) setLoadFailed(true) })
       .finally(() => { if (live) setBusy(false) })
     return () => { live = false }
@@ -60,18 +61,21 @@ function useLlamaRecycling(accountId: string) {
       setBusy(false)
     }
   }
-  return { busy, level, loadFailed, update }
+  return { busy, level, loaded, loadFailed, update }
 }
 
 /** The llama recycling ceiling alone, for a row that already says what it is for. */
 export function LlamaRecyclePicker({ accountId }: { accountId: string }) {
-  const { busy, level, loadFailed, update } = useLlamaRecycling(accountId)
+  const { busy, level, loaded, loadFailed, update } = useLlamaRecycling(accountId)
   if (loadFailed) {
     return (
       <span className="flex items-center gap-2" role="alert" title="Could not load recycling settings. Reopen the page to retry.">
         <Chip tone="danger">Recycling unavailable</Chip>
       </span>
     )
+  }
+  if (!loaded) {
+    return <span className="text-xs text-muted-foreground" role="status">Loading recycling settings…</span>
   }
   return (
     <span className="flex items-center gap-2">
