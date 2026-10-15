@@ -61,7 +61,7 @@ const scanned = (status: 'success' | 'error' = 'success'): SixthPerksScan => ({
 describe('6th Perks pages', () => {
   it('browses the catalog without an account and claims no ownership', () => {
     const html = render('catalog', null, false)
-    expect(html).toContain('6th Perks')
+    expect(html).toContain('6th perks')
     expect(html).toContain('Select an account')
     expect(html).toContain(first.name.replaceAll("'", '&#x27;'))
     expect(html).not.toContain('Missing')

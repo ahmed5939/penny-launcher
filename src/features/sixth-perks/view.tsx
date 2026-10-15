@@ -88,18 +88,19 @@ export function SixthPerksPage() {
         icon={Swords}
         section="Save the World"
         status={<ToolBadges beta readOnly />}
-        title="6th Perks"
+        title="6th perks"
       />
       <ScanNotices state={state} />
       {/* Keyed so filters and the open weapon reset with the account or the book setting. */}
-      <Catalog includeBook={state.includeBook} key={`${state.accountId ?? 'catalog'}:${state.includeBook}`} scan={state.scan} />
+      <Catalog includeBook={state.includeBook} key={`${state.accountId ?? 'catalog'}:${state.includeBook}`} loading={state.loading} scan={state.scan} />
     </div>
   )
 }
 
-function Catalog({ includeBook, scan }: { includeBook: boolean; scan: SixthPerksScan | null }) {
+function Catalog({ includeBook, loading, scan }: { includeBook: boolean; loading: boolean; scan: SixthPerksScan | null }) {
   const records = useCatalogRecords(useItemDatabaseStore((s) => s.records))
   const rows = useMemo(() => matchWeapons(scan), [scan])
+  const statistics = useMemo(() => scanStatistics(rows), [rows])
   const [query, setQuery] = useState('')
   const [perkFilter, setPerkFilter] = useState<PerkFilter>('all')
   const [category, setCategory] = useState<Category>('all')
@@ -126,7 +127,7 @@ function Catalog({ includeBook, scan }: { includeBook: boolean; scan: SixthPerks
 
   return (
     <>
-      <Summary missing={missing} onMissing={reset(setMissing)} rows={rows} scan={scan} />
+      <Summary loading={loading} missing={missing} onMissing={reset(setMissing)} rows={rows} scan={scan} statistics={statistics} />
       <Panel>
         <PanelHeader compact title={`${filtered.length.toLocaleString()} ${filtered.length === 1 ? 'weapon' : 'weapons'}`} />
         <FilterBar>
@@ -142,6 +143,19 @@ function Catalog({ includeBook, scan }: { includeBook: boolean; scan: SixthPerks
               { value: 'perk-book', label: 'In Collection Book', disabled: !scan || !includeBook },
             ]}
             value={perkFilter}
+          />
+          <Picker
+            label="Completion"
+            onChange={(value: string) => reset(setMissing)(value === 'all' ? null : Number(value))}
+            options={[
+              { value: 'all', label: 'Any completion' },
+              ...statistics.groups.map((group) => ({
+                value: String(group.missing),
+                label: `${group.missing === 0 ? 'Complete' : `Missing ${group.missing} ${group.missing === 1 ? 'perk' : 'perks'}`}${scan ? ` (${group.count.toLocaleString()})` : ''}`,
+                disabled: !scan,
+              })),
+            ]}
+            value={missing === null ? 'all' : String(missing)}
           />
           <Picker
             label="Weapon category"
@@ -181,20 +195,21 @@ function Catalog({ includeBook, scan }: { includeBook: boolean; scan: SixthPerks
   )
 }
 
-/** Completion across the whole catalog, then weapons grouped by how many perks they miss. */
-function Summary({ missing, onMissing, rows, scan }: { missing: number | null; onMissing: (value: number | null) => void; rows: Array<WeaponResult>; scan: SixthPerksScan | null }) {
+/** Completion across the whole catalog, then how many weapons have every perk. */
+function Summary({ loading, missing, onMissing, rows, scan, statistics }: { loading: boolean; missing: number | null; onMissing: (value: number | null) => void; rows: Array<WeaponResult>; scan: SixthPerksScan | null; statistics: ReturnType<typeof scanStatistics> }) {
   const progress = useMemo(() => overallCompletion(rows), [rows])
-  const statistics = useMemo(() => scanStatistics(rows), [rows])
 
   if (!scan) {
     return (
       <StatRow>
-        <StatTile hint="Scan to check your schematics" label="6th perk completion" value="—" />
+        <StatTile hint={loading ? 'Scanning schematics…' : 'Scan to check your schematics'} label="6th perk completion" value="—" />
         <StatTile label="Legendary weapons" value={statistics.eligible.toLocaleString()} />
         <StatTile label="Legendary 6th perks" value={progress.total.toLocaleString()} />
       </StatRow>
     )
   }
+
+  const complete = statistics.groups.find((group) => group.missing === 0)?.count ?? 0
 
   return (
     <StatRow>
@@ -206,17 +221,14 @@ function Summary({ missing, onMissing, rows, scan }: { missing: number | null; o
       >
         <ProgressBar className="mt-2" label="6th perk completion" total={progress.total} value={progress.owned} />
       </StatTile>
-      {statistics.groups.map((group) => (
-        <StatTile
-          hint={group.count === 1 ? 'weapon' : 'weapons'}
-          key={group.missing}
-          label={group.missing === 0 ? 'Complete' : `Missing ${group.missing}`}
-          onClick={() => onMissing(missing === group.missing ? null : group.missing)}
-          pressed={missing === group.missing}
-          tone={group.missing === 0 && group.count > 0 ? 'success' : 'default'}
-          value={group.count.toLocaleString()}
-        />
-      ))}
+      <StatTile
+        hint={complete === 1 ? 'weapon' : 'weapons'}
+        label="Complete"
+        onClick={() => onMissing(missing === 0 ? null : 0)}
+        pressed={missing === 0}
+        tone={complete > 0 ? 'success' : 'default'}
+        value={complete.toLocaleString()}
+      />
       {statistics.unknown > 0 && <StatTile hint="weapons" label="Unknown" tone="warning" value={statistics.unknown.toLocaleString()} />}
     </StatRow>
   )
@@ -224,26 +236,24 @@ function Summary({ missing, onMissing, rows, scan }: { missing: number | null; o
 
 function WeaponCard({ onOpen, options, records, scanned, weapon }: { onOpen: () => void; options: Array<OptionResult>; records: ItemRecordMap; scanned: boolean; weapon: WeaponResult }) {
   const { owned, total } = completionProgress(weapon)
-  const accent = raritiesColor[weapon.legendaryAvailable ? RarityType.Legendary : RarityType.Epic]
   const counts = [
     `Inventory ${weapon.inventoryUnknown ? '?' : weapon.inventoryCount}`,
     weapon.bookCount > 0 || weapon.bookUnknown ? `Book ${weapon.bookUnknown ? '?' : weapon.bookCount}` : null,
   ].filter(Boolean)
+  const detail = !weapon.legendaryAvailable
+    ? 'Epic only · not counted'
+    : scanned
+      ? `${owned} of ${total} · ${counts.join(' · ')}`
+      : `${total} ${total === 1 ? 'perk' : 'perks'}`
+  const caption = `${weapon.category} · ${detail}`
 
   return (
-    <li className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-muted/25" style={{ borderLeft: `3px solid ${accent}` }}>
+    <li className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-muted/25">
       <button className="flex items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-accent/30" onClick={onOpen} type="button">
         <ItemIcon records={records} size="xl" templateId={weapon.templateId} title={weapon.name} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-ui font-semibold">{weapon.name}</span>
-          <span className="block truncate text-caption text-muted-foreground">
-            {weapon.category}
-            {!weapon.legendaryAvailable
-              ? ' · Epic only · not counted'
-              : scanned
-                ? ` · ${owned} of ${total} · ${counts.join(' · ')}`
-                : ` · ${total} ${total === 1 ? 'perk' : 'perks'}`}
-          </span>
+          <span className="block truncate text-ui font-semibold" title={weapon.name}>{weapon.name}</span>
+          <span className="block truncate text-caption text-muted-foreground" title={caption}>{caption}</span>
           {scanned && weapon.legendaryAvailable && <ProgressBar className="mt-2" label={`${weapon.name} completion`} total={total} value={owned} />}
         </span>
       </button>
