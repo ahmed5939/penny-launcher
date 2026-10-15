@@ -25,8 +25,10 @@ export const CopyButton = forwardRef<
      * — `KeyValue` reads it back off its own rendered `<dd>`.
      */
     getValue: () => string | null | undefined
+    /** The accessible name, for when "Copy" alone does not say what is copied. */
+    label?: string
   }
->(({ className, disabled, getValue }, ref) => {
+>(({ className, disabled, getValue, label = 'Copy' }, ref) => {
   const [copied, setCopied] = useState(false)
   const $timer = useRef<ReturnType<typeof setTimeout>>()
 
@@ -51,7 +53,7 @@ export const CopyButton = forwardRef<
 
   return (
     <Button
-      aria-label="Copy"
+      aria-label={label}
       className={cn('px-0 text-muted-foreground', className)}
       disabled={disabled}
       onClick={handleCopy}

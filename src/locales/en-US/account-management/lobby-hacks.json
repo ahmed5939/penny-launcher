@@ -13,9 +13,12 @@
     "placeholder": "Code from the Admin Panel",
     "length": "{{length}} of {{max}} characters. Sent exactly as typed.",
     "submit": "Submit",
+    "confirm": "Confirm — submits for {{name}}",
+    "cancel": "Cancel",
     "submitting": "Submitting…",
     "submits-for": "Submits for",
     "problems": {
+      "blank": "Type a code, or pick one from the list below.",
       "line-break": "One code at a time: remove the line break.",
       "characters": "Tabs and other control characters are not allowed.",
       "too-long": "That is {{length}} characters; the limit is {{max}}.",

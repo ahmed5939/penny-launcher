@@ -19,6 +19,7 @@ import { useShallow } from 'zustand/react/shallow'
 import {
   Callout,
   Chip,
+  CopyButton,
   EmptyState,
   FieldGroup,
   FilterBar,
@@ -133,6 +134,10 @@ export function SubmitPanel({
   // The draft a multi-line paste was refused on; any change clears it.
   const [refusedOn, setRefusedOn] = useState<string | null>(null)
   const pasteRefused = refusedOn !== null && refusedOn === draft.code
+  // The code and account a first press armed; changing either disarms it.
+  const [armed, setArmed] = useState<{ accountId: string; code: string } | null>(
+    null
+  )
 
   const linked = idsList.filter((accountId) => accountList[accountId])
   const accountId = formAccountId({
@@ -143,12 +148,21 @@ export function SubmitPanel({
   const check = checkLobbyHackCode(draft.code)
   const busy = pending !== null
   const disabled = busy || !check.ok || !accountId
+  const confirming =
+    armed !== null && armed.accountId === accountId && armed.code === draft.code
 
   const submit = () => {
     if (disabled || !accountId) {
       return
     }
 
+    // A granted code is spent on the account, so ask twice.
+    if (!confirming) {
+      setArmed({ accountId, code: draft.code })
+      return
+    }
+
+    setArmed(null)
     void submitLobbyHackCode(accountId, draft.code)
   }
 
@@ -156,11 +170,13 @@ export function SubmitPanel({
     <span className="text-warning">
       {t('lobby-hacks.form.problems.multi-line-paste')}
     </span>
-  ) : check.ok || check.reason === 'blank' ? (
+  ) : check.ok ? (
     t('lobby-hacks.form.length', {
       length: check.length,
       max: lobbyHackCodeMaxLength,
     })
+  ) : check.reason === 'blank' ? (
+    t('lobby-hacks.form.problems.blank')
   ) : (
     <span className="text-warning">
       {t(`lobby-hacks.form.problems.${check.reason}`, {
@@ -169,6 +185,14 @@ export function SubmitPanel({
       })}
     </span>
   )
+
+  const buttonLabel = busy
+    ? t('lobby-hacks.form.submitting')
+    : confirming && accountId
+      ? t('lobby-hacks.form.confirm', {
+          name: parseCustomDisplayName(accountList[accountId]),
+        })
+      : t('lobby-hacks.form.submit')
 
   return (
     <Panel>
@@ -192,7 +216,10 @@ export function SubmitPanel({
               <Picker
                 disabled={busy}
                 label={t('lobby-hacks.form.account')}
-                onChange={(value) => setLobbyHackDraft({ accountId: value })}
+                onChange={(value) => {
+                  setArmed(null)
+                  setLobbyHackDraft({ accountId: value })
+                }}
                 options={linked.map((id) => ({
                   label: parseCustomDisplayName(accountList[id]),
                   value: id,
@@ -214,6 +241,7 @@ export function SubmitPanel({
                 id={codeFieldId}
                 onChange={(event) => {
                   setRefusedOn(null)
+                  setArmed(null)
                   setLobbyHackDraft({ code: event.target.value })
                 }}
                 onPaste={(event) => {
@@ -244,11 +272,19 @@ export function SubmitPanel({
             className="min-w-32"
             disabled={disabled}
             type="submit"
+            variant={confirming ? 'destructive' : 'default'}
           >
-            {busy
-              ? t('lobby-hacks.form.submitting')
-              : t('lobby-hacks.form.submit')}
+            {buttonLabel}
           </Button>
+          {confirming && (
+            <Button
+              onClick={() => setArmed(null)}
+              type="button"
+              variant="ghost"
+            >
+              {t('lobby-hacks.form.cancel')}
+            </Button>
+          )}
         </PanelFooter>
       </form>
     </Panel>
@@ -511,26 +547,38 @@ function CodeGroup({
         title={t(`lobby-hacks.codes.categories.${group.key}`)}
       />
       <ul className="grid gap-x-6 px-4 py-1 sm:grid-cols-2 xl:grid-cols-3">
-        {group.codes.map((entry) => (
-          <ListRow
-            caption={[entry.reward, entry.requires ?? entry.note]
-              .filter(Boolean)
-              .join(' · ')}
-            key={entry.code}
-            name={<span className="font-mono">{entry.code}</span>}
-            onClick={
-              onPick && isSubmittableCode(entry)
-                ? () => onPick(entry.code)
-                : undefined
-            }
-            well={
-              <IconWell
-                icon={Icon}
-                size="sm"
-              />
-            }
-          />
-        ))}
+        {group.codes.map((entry) => {
+          const caption = [entry.reward, entry.requires ?? entry.note]
+            .filter(Boolean)
+            .join(' · ')
+
+          return (
+            <ListRow
+              caption={<span title={caption}>{caption}</span>}
+              figure={
+                entry.category === 'lobby-effect' ? (
+                  <CopyButton
+                    getValue={() => entry.code}
+                    label={`Copy ${entry.code}`}
+                  />
+                ) : undefined
+              }
+              key={entry.code}
+              name={<span className="font-mono">{entry.code}</span>}
+              onClick={
+                onPick && isSubmittableCode(entry)
+                  ? () => onPick(entry.code)
+                  : undefined
+              }
+              well={
+                <IconWell
+                  icon={Icon}
+                  size="sm"
+                />
+              }
+            />
+          )
+        })}
       </ul>
     </section>
   )
