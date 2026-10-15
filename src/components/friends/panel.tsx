@@ -117,6 +117,7 @@ export function FriendsPanel() {
         <>
           <div className="flex min-h-0 flex-1 flex-col">
             <FriendsWorkspace
+              key={selected.accountId}
               scrollLists
               data={{
                 errorMessage,
