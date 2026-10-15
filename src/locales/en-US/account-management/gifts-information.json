@@ -6,7 +6,8 @@
   "filters": {
     "search": "Search items, senders, rarities…",
     "group-day": "By day",
-    "group-sender": "By sender"
+    "group-sender": "By sender",
+    "group-by": "Group by"
   },
   "results": {
     "title": "Accounts",

@@ -125,7 +125,7 @@ export function PennyDBMissionBoard() {
           value={zone}
         />
         <Segmented
-          label="Mission filter"
+          label={t('home.mission-board.filter-label')}
           onChange={setFilter}
           options={[
             {

@@ -163,6 +163,7 @@
     "mission-board": {
       "title": "Daily missions",
       "zone": "Zone",
+      "filter-label": "Mission filter",
       "refresh": "Refresh",
       "updated": "Updated {{time}}",
       "loading": "Loading missions…",
