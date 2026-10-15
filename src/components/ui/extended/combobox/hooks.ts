@@ -16,6 +16,7 @@ export type ComboboxCustomItemRenderFunction = (
 ) => ReactNode
 
 export type ComboboxProps = {
+  'aria-labelledby'?: string
   className?: string
   classNamePopoverContent?: string
   containerClassName?: string
