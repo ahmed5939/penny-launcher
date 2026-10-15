@@ -55,3 +55,37 @@ describe('overlay settings', () => {
     expect(parsed.success).toBe(false)
   })
 })
+
+describe('settings validation messages', () => {
+  it('asks for a game folder when the path is blank', () => {
+    const parsed = settingsSchema.safeParse({
+      ...legacySettings,
+      path: '   ',
+    })
+
+    expect(parsed.error?.issues.map((issue) => issue.message)).toContain('Choose the game folder.')
+  })
+
+  it('gives a plain message for an overlay number that is cleared', () => {
+    const parsed = settingsSchema.safeParse({
+      ...legacySettings,
+      overlay: {
+        ...defaultOverlaySettings,
+        opacity: Number.NaN,
+      },
+    })
+
+    expect(parsed.error?.issues.map((issue) => issue.message)).toContain('Enter a number from 50 to 100.')
+  })
+
+  it('names the setting in range errors', () => {
+    const parsed = settingsSchema.safeParse({
+      ...legacySettings,
+      claimingRewards: '9',
+    })
+
+    expect(parsed.error?.issues.map((issue) => issue.message)).toContain(
+      'Reward claim delay must be from 0 to 5 seconds.',
+    )
+  })
+})

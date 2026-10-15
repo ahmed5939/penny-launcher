@@ -42,10 +42,10 @@ export const overlaySettingsSchema = z
     enabled: z.boolean().default(defaultOverlaySettings.enabled),
     position: z.enum(overlayPositions).default(defaultOverlaySettings.position),
     scale: z.enum(overlayScales).default(defaultOverlaySettings.scale),
-    opacity: z.number().int().min(50).max(100).default(defaultOverlaySettings.opacity),
-    refreshMinutes: z.number().int().min(1).max(30).default(defaultOverlaySettings.refreshMinutes),
-    maximumPlayers: z.number().int().min(1).max(4).default(defaultOverlaySettings.maximumPlayers),
-    maximumQuestsPerPlayer: z.number().int().min(1).max(30).default(defaultOverlaySettings.maximumQuestsPerPlayer),
+    opacity: createOverlayNumberValidation({ range: { min: 50, max: 100 } }).default(defaultOverlaySettings.opacity),
+    refreshMinutes: createOverlayNumberValidation({ range: { min: 1, max: 30 } }).default(defaultOverlaySettings.refreshMinutes),
+    maximumPlayers: createOverlayNumberValidation({ range: { min: 1, max: 4 } }).default(defaultOverlaySettings.maximumPlayers),
+    maximumQuestsPerPlayer: createOverlayNumberValidation({ range: { min: 1, max: 30 } }).default(defaultOverlaySettings.maximumQuestsPerPlayer),
     includeSquadMembers: z.boolean().default(defaultOverlaySettings.includeSquadMembers),
     showMission: z.boolean().default(defaultOverlaySettings.showMission),
     showVentures: z.boolean().default(defaultOverlaySettings.showVentures),
@@ -70,19 +70,21 @@ export const settingsSchema = z.object({
   autoDailyQuests: z.boolean().default(true),
   claimingRewards: createRangeValidation({
     defaultValue: defaultClaimingRewardsDelay,
+    label: 'Reward claim delay',
     range: claimingRewardsDelayRange,
   }),
-  customProcess: z.string().trim().min(1),
+  customProcess: z.string().trim().min(1, 'Enter the game process name.'),
   missionInterval: createRangeValidation({
     decimals: 0,
     defaultValue: defaultMissionInterval,
+    label: 'Mission check interval',
     range: missionIntervalRange,
   }),
-  path: z.string().trim().min(1),
+  path: z.string().trim().min(1, 'Choose the game folder.'),
   systemTray: z.boolean().default(false),
   discordRichPresence: z.boolean().default(true),
   overlay: overlaySettingsSchema,
-  userAgent: z.string().trim().min(1),
+  userAgent: z.string().trim().min(1, 'Enter a user agent.'),
 })
 
 export const devSettingsSchema = z
@@ -197,9 +199,22 @@ function createWholeNumberValidation(config: {
     )
 }
 
+function createOverlayNumberValidation(config: {
+  range: { max: number; min: number }
+}) {
+  const message = `Enter a number from ${config.range.min} to ${config.range.max}.`
+
+  return z
+    .number({ invalid_type_error: message })
+    .int(message)
+    .min(config.range.min, message)
+    .max(config.range.max, message)
+}
+
 function createRangeValidation(config: {
   defaultValue: number
   decimals?: number
+  label: string
   range: { max: number; min: number }
 }) {
   const currentConfig = z
@@ -222,7 +237,7 @@ function createRangeValidation(config: {
 
       if (newValue < config.range.min || newValue > config.range.max) {
         context.addIssue({
-          message: `Delay value must between ${config.range.min} and ${config.range.max}`,
+          message: `${config.label} must be from ${config.range.min} to ${config.range.max} seconds.`,
           code: 'custom',
         })
       }
