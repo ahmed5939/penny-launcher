@@ -6,36 +6,43 @@
   },
   "search": {
     "input": {
-      "placeholder": "Search on {{total}} files"
+      "placeholder": "Search {{total}} snapshots"
     },
     "include-data": "Include file data",
-    "no-files": "No files found"
+    "no-match": "No snapshots match that search"
+  },
+  "empty": {
+    "title": "No snapshots saved yet",
+    "description": "Press Save locally to keep the live world info."
   },
   "file": {
     "input": {
       "placeholder": "Default name: {{filename}}"
-    }
+    },
+    "rename": "Rename",
+    "confirm-delete": "Confirm — delete",
+    "cancel": "Cancel"
   },
   "notifications": {
     "save": {
       "success": "The file has been saved",
-      "error": "The file can't be saved, please try again later"
+      "error": "Could not save the snapshot. Check there is free disk space, then try again."
     },
     "delete": {
       "success": "The file \"{{filename}}\" has been deleted",
-      "error": "The file \"{{filename}}\" can't be deleted, please try again later"
+      "error": "Could not delete \"{{filename}}\". Close any app using it, then try again."
     },
     "export": {
       "success": "The file has been exported",
-      "error": "The file can't be exported, please try again later"
+      "error": "Could not export the snapshot. Check the destination folder is writable, then try again."
     },
     "open": {
       "success": "The file \"{{filename}}\" has been opened",
-      "error": "The file \"{{filename}}\" can't be opened, please try again later"
+      "error": "Could not open \"{{filename}}\". Check the file still exists, then try again."
     },
     "rename": {
       "success": "The file has been renamed",
-      "error": "The file can't be renamed, please try again later"
+      "error": "Could not rename the snapshot. Close any app using it, then try again."
     }
   },
   "current": {
