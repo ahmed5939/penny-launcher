@@ -19,6 +19,7 @@ import { ExpeditionArt, ExpeditionHistory, categoryArt } from '../../../features
 import { ArtToggle, RecycleCeilingPicker } from '../../../features/automation-rewards/view'
 import { expeditionKind, rewardTypes } from '../../../features/expeditions/model'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
+import { createWriteTracker } from './-write-tracker'
 
 import { Switch } from '../../../components/ui/switch'
 import { Button } from '../../../components/ui/button'
@@ -105,15 +106,24 @@ function useAutoExpeditionConfigs() {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState<Set<string>>(() => new Set())
+  const [writes] = useState(createWriteTracker)
+  const loadedRef = useRef(false)
 
-  const reload = useCallback(
-    () =>
-      window.electronAPI
-        .getAutoExpeditionsStatus()
-        .then((data) => { setConfigs(data); setLoaded(true); setError('') })
-        .catch(() => setError('Could not load auto-expedition settings. Try Refresh.')),
-    []
-  )
+  const reload = useCallback(() => {
+    const sent = writes.mark()
+    return window.electronAPI
+      .getAutoExpeditionsStatus()
+      .then((data) => {
+        if (!writes.isCurrent(sent)) return
+        setConfigs(data)
+        setLoaded(true)
+        loadedRef.current = true
+        setError('')
+      })
+      .catch(() => setError(loadedRef.current
+        ? 'Could not refresh auto-expedition settings — showing the last known values. Try Refresh.'
+        : 'Could not load auto-expedition settings. Try Refresh.'))
+  }, [writes])
 
   useEffect(() => {
     void reload()
@@ -122,6 +132,7 @@ function useAutoExpeditionConfigs() {
   }, [reload])
 
   const update = useCallback<UpdateConfig>(async (accountId, partial) => {
+    writes.start()
     setSaving((current) => new Set(current).add(accountId))
     try {
       setConfigs(await window.electronAPI.updateAutoExpeditions(accountId, partial))
@@ -129,13 +140,14 @@ function useAutoExpeditionConfigs() {
     } catch {
       setError('Could not save auto-expedition settings. Try again.')
     } finally {
+      writes.finish()
       setSaving((current) => {
         const next = new Set(current)
         next.delete(accountId)
         return next
       })
     }
-  }, [])
+  }, [writes])
 
   return { configs, error, loaded, reload, saving, update }
 }
