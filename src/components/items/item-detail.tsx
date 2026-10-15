@@ -780,7 +780,11 @@ function PerkRow({
           <div className="flex shrink-0 gap-1">
             {Object.keys(upgrade).length > 0 && (
               <Button
-                aria-label={`Upgrade ${name}`}
+                aria-label={
+                  confirming === 'upgrade'
+                    ? `Confirm — spends materials to upgrade ${name}`
+                    : `Upgrade ${name}`
+                }
                 disabled={isBusy}
                 onClick={() =>
                   act('upgrade', {
