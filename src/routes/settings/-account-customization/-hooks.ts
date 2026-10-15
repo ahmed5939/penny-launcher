@@ -142,6 +142,7 @@ export function useOrdering({ id }: { id: string }) {
     data,
     isDragging,
     listeners,
+    setActivatorNodeRef,
     setNodeRef,
     transform,
   } = useSortable({
@@ -159,6 +160,7 @@ export function useOrdering({ id }: { id: string }) {
   return {
     attributes,
     listeners,
+    setActivatorNodeRef,
     setNodeRef,
     style,
     data: isDragging ? data : undefined,

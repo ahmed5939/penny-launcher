@@ -57,22 +57,24 @@ export function useRegisterAccounts() {
   const reorderAccounts = (event: DragEndEvent) => {
     const { active, over } = event
 
-    if (active.id !== over?.id) {
-      const oldIndex = idsList.indexOf(active.id as string)
-      const newIndex = idsList.indexOf((over?.id as string) ?? '')
-
-      const newOrderIds = arrayMove(idsList, oldIndex, newIndex)
-      const newRecord = newOrderIds.reduce((accumulator, accountId) => {
-        if (accountId) {
-          accumulator[accountId] = accounts[accountId]
-        }
-
-        return accumulator
-      }, {} as AccountDataRecord)
-
-      registerAccounts(newRecord, true)
-      window.electronAPI.syncAccountsOrdering(newRecord)
+    if (!over || active.id === over.id) {
+      return
     }
+
+    const oldIndex = idsList.indexOf(active.id as string)
+    const newIndex = idsList.indexOf(over.id as string)
+
+    const newOrderIds = arrayMove(idsList, oldIndex, newIndex)
+    const newRecord = newOrderIds.reduce((accumulator, accountId) => {
+      if (accountId) {
+        accumulator[accountId] = accounts[accountId]
+      }
+
+      return accumulator
+    }, {} as AccountDataRecord)
+
+    registerAccounts(newRecord, true)
+    window.electronAPI.syncAccountsOrdering(newRecord)
   }
 
   return { idsList, registerAccounts, reorderAccounts }
