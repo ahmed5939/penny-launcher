@@ -5,19 +5,26 @@ import { z } from 'zod'
 
 import { useAddAccountUpdateSubmittingState } from '../../../../hooks/accounts'
 import { useBaseSetupForm } from '../-hooks'
+import { extractAuthorizationCode } from '../-paste'
 import { useTranslation } from 'react-i18next'
 
 export function useSetupForm() {
-  const { t, i18n } = useTranslation(['general'], {
-    keyPrefix: 'validations.form.input',
+  const { t, i18n } = useTranslation(['accounts'], {
+    keyPrefix: 'auth-code.validations',
   })
 
   const formSchema = useMemo(
     () =>
       z.object({
-        code: z.string().length(32, {
-          message: t('code.invalid'),
-        }),
+        code: z.preprocess(
+          (value) =>
+            typeof value === 'string'
+              ? extractAuthorizationCode(value)
+              : value,
+          z.string().length(32, {
+            message: t('code'),
+          })
+        ),
       }),
     [i18n.language]
   )
@@ -33,6 +40,7 @@ export function useSetupForm() {
 
   useBaseSetupForm({
     fetcher: window.electronAPI.responseAuthWithAuthorization,
+    onSuccess: () => form.reset(),
     type: 'authorizationCode',
   })
 
@@ -43,7 +51,6 @@ export function useSetupForm() {
 
     updateSubmittingState(true)
     window.electronAPI.createAuthWithAuthorization(values.code)
-    form.reset()
   }
 
   return { form, isSubmitting, onSubmit }

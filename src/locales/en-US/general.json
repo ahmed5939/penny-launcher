@@ -115,15 +115,6 @@
   "validations": {
     "form": {
       "input": {
-        "account-id": {
-          "invalid": "❌ Invalid accountId"
-        },
-        "device-id": {
-          "invalid": "❌ Invalid deviceId"
-        },
-        "secret": {
-          "invalid": "❌ Invalid secret"
-        },
         "code": {
           "invalid": "❌ Invalid code"
         }
