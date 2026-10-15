@@ -164,13 +164,15 @@
       "refresh": "Refresh alerts",
       "vbucks": "V-Bucks",
       "survivors": "Legendary survivors",
-      "perk-up": "Uncommon PERK-UP!"
+      "perk-up": "Uncommon PERK-UP!",
+      "loading": "Loading alerts…"
     },
     "mission-board": {
       "title": "Daily missions",
-      "source": "Penny DB",
+      "zone": "Zone",
       "refresh": "Refresh",
       "updated": "Updated {{time}}",
+      "loading": "Loading missions…",
       "empty": "No missions match this filter",
       "error": "Couldn't load Penny DB missions",
       "filter-all": "All",
