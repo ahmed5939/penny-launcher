@@ -11,16 +11,15 @@ import { Button } from './ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from './ui/dialog'
-import { Label } from './ui/label'
 import { RadioGroup, RadioGroupItem } from './ui/radio-group'
 
 import { useLanguage } from '../hooks/language'
 
 import { changeDateLocale } from '../lib/dates'
-import { cn } from '../lib/utils'
 
 export const LanguageNotification = memo(() => {
   const { i18n, t } = useTranslation(['settings', 'general'])
@@ -51,55 +50,42 @@ export const LanguageNotification = memo(() => {
         onPointerDownOutside={(event) => event.preventDefault()}
         hideCloseButton
       >
-        <DialogHeader>
-          <DialogTitle className="text-center">
+        <DialogHeader className="text-left">
+          <DialogTitle>
             {t('app-settings.form.language.dialog.title')}
           </DialogTitle>
+          <DialogDescription>
+            {t('app-settings.form.language.dialog.notes.2')}
+          </DialogDescription>
         </DialogHeader>
 
-        <ul className="border-l-8- list-disc pl-6 py-1 text-muted-foreground">
-          <li className="">
-            {t('app-settings.form.language.dialog.notes.1')}
-          </li>
-          <li className="">
-            {t('app-settings.form.language.dialog.notes.2')}
-          </li>
-        </ul>
-
         <RadioGroup
-          className={cn('grid grid-cols-2 gap-4')}
           onValueChange={(value: Language) => setSelected(value)}
           value={selected}
         >
           {availableLanguages.map((language) => (
-            <div
-              className={cn(
-                'border flex items-center justify-center px-2 py-3 relative ring-offset-background rounded space-x-2',
-                'has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-secondary',
-                'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2'
-              )}
+            <label
+              className="flex items-center gap-3 rounded-md px-3 py-2 text-ui hover:bg-muted/50 has-[[data-state=checked]]:bg-muted has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary"
               key={language.id}
             >
               <RadioGroupItem
-                className="absolute border-none h-full opacity-0 rounded-none w-full"
                 value={language.id}
-                id={`language-option-${language.id}`}
                 autoFocus={language.id === defaultAppLanguage}
               />
-              <Label htmlFor={`language-option-${language.id}`}>
+              <span>
                 {language.title}
-                {language.completed === false
-                  ? ` ${t('under-translation', {
-                      ns: 'general',
-                    })}`
-                  : ''}
-              </Label>
-            </div>
+                {language.completed === false && (
+                  <span className="text-muted-foreground">
+                    {` ${t('under-translation', { ns: 'general' })}`}
+                  </span>
+                )}
+              </span>
+            </label>
           ))}
         </RadioGroup>
 
         <Button
-          variant="secondary"
+          variant="default"
           onClick={handleConfirmSelection}
           disabled={!selected}
         >
