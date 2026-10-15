@@ -31,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog'
-import { Callout } from '../page'
+import { Callout, KeyValue } from '../page'
 import { rarityStyle } from '../page/rarity'
 import {
   accentForRarityName,
@@ -182,7 +182,7 @@ export function ItemDetailDialog({
             {/* Title strip: rarity pill and name, as the site heads it. */}
             <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-border/60 px-5 py-3.5 pr-12 text-left">
               <span
-                className="shrink-0 rounded-full border px-2.5 py-0.5 text-2xs font-bold uppercase tracking-wider"
+                className="shrink-0 rounded-full border px-2.5 py-0.5 text-2xs font-bold"
                 style={{
                   background: `color-mix(in srgb, ${rarityColor} 18%, transparent)`,
                   borderColor: `color-mix(in srgb, ${rarityColor} 70%, transparent)`,
@@ -191,7 +191,7 @@ export function ItemDetailDialog({
               >
                 {record?.rarity ?? rarities[art.rarity as RarityType] ?? 'Item'}
               </span>
-              <DialogTitle className="truncate text-left text-title font-bold uppercase tracking-wide">
+              <DialogTitle className="truncate text-left text-title font-bold">
                 {art.name}
               </DialogTitle>
               {badges && <span className="flex shrink-0 flex-wrap gap-1.5">{badges}</span>}
@@ -267,7 +267,7 @@ export function ItemDetailDialog({
                   </FactBlock>
                 )}
                 <FactBlock color={rarityColor} label="Rarity" tinted>
-                  <span className="uppercase" style={{ color: rarityColor }}>
+                  <span style={{ color: rarityColor }}>
                     {record?.rarity ?? rarities[art.rarity as RarityType] ?? 'Unknown'}
                   </span>
                 </FactBlock>
@@ -457,9 +457,13 @@ export function ItemDetailDialog({
             {children}
 
             <div className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 select-all break-all rounded-lg bg-muted/40 px-3 py-2 font-mono text-2xs text-muted-foreground ring-1 ring-inset ring-border/60">
-                {subject.templateId}
-              </p>
+              <dl className="min-w-0 flex-1">
+                <KeyValue
+                  copyable
+                  label="Template id"
+                  value={subject.templateId}
+                />
+              </dl>
               {subject.templateId.startsWith('Schematic:') && (
                 <Button
                   onClick={() => window.electronAPI.openExternalURL(pennyDBSchematicUrl(art.name))}
@@ -714,16 +718,30 @@ function PerkRow({
   slotIndex: number
   subject: ItemDetailSubject
 }) {
+  const [confirming, setConfirming] = useState<string | null>(null)
   const [swapping, setSwapping] = useState(false)
 
   const perkRecord = getItemRecord(records, alteration)
   const accent = accentForRarityName(perkRecord?.rarity)
   const upgrade = perkRecord?.upgradeCost ?? {}
+  const name = detail?.name ?? displayAlteration(records, alteration)
   const options = (pool?.options ?? [])
     .map((option) => alterationAtCurrentTier(option, alteration))
     .filter((option) => option.toLowerCase() !== alteration.toLowerCase())
 
   const edge = accent ?? 'hsl(var(--muted-foreground) / 0.5)'
+
+  const act = (key: string, request: ItemActionRequest) => {
+    if (confirming !== key) {
+      setConfirming(key)
+
+      return
+    }
+
+    setConfirming(null)
+    setSwapping(false)
+    onAction?.(request)
+  }
 
   return (
     <li
@@ -732,9 +750,7 @@ function PerkRow({
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-ui font-semibold">
-            {detail?.name ?? displayAlteration(records, alteration)}
-          </p>
+          <p className="text-ui font-semibold">{name}</p>
           {detail?.tags && (
             <span className="mt-1 flex flex-wrap gap-1">{detail.tags}</span>
           )}
@@ -764,9 +780,10 @@ function PerkRow({
           <div className="flex shrink-0 gap-1">
             {Object.keys(upgrade).length > 0 && (
               <Button
+                aria-label={`Upgrade ${name}`}
                 disabled={isBusy}
                 onClick={() =>
-                  onAction({
+                  act('upgrade', {
                     kind: 'perk-upgrade',
                     itemId: subject.itemId as string,
                     alterationSlot: slotIndex,
@@ -774,15 +791,20 @@ function PerkRow({
                 }
                 size="sm"
                 title="Upgrade this perk one rarity"
-                variant="ghost"
+                variant={confirming === 'upgrade' ? 'destructive' : 'ghost'}
               >
                 <ArrowUp className="size-3.5" />
+                {confirming === 'upgrade' && 'Confirm — spends materials'}
               </Button>
             )}
             {options.length > 0 && (
               <Button
+                aria-label={`Change ${name}`}
                 disabled={isBusy}
-                onClick={() => setSwapping(!swapping)}
+                onClick={() => {
+                  setSwapping(!swapping)
+                  setConfirming(null)
+                }}
                 size="sm"
                 title="Change this perk"
                 variant="ghost"
@@ -817,25 +839,28 @@ function PerkRow({
             </p>
           )}
           <div className="flex flex-wrap gap-1.5">
-            {options.map((option) => (
-              <button
-                className="rounded-lg border border-border/70 px-2 py-1 text-xs transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-50"
-                disabled={isBusy}
-                key={option}
-                onClick={() => {
-                  setSwapping(false)
-                  onAction({
-                    kind: 'perk-respec',
-                    itemId: subject.itemId as string,
-                    alterationSlot: slotIndex,
-                    alterationId: option,
-                  })
-                }}
-                type="button"
-              >
-                {displayAlteration(records, option)}
-              </button>
-            ))}
+            {options.map((option) => {
+              const optionName = displayAlteration(records, option)
+
+              return (
+                <Button
+                  disabled={isBusy}
+                  key={option}
+                  onClick={() =>
+                    act(option, {
+                      kind: 'perk-respec',
+                      itemId: subject.itemId as string,
+                      alterationSlot: slotIndex,
+                      alterationId: option,
+                    })
+                  }
+                  size="sm"
+                  variant={confirming === option ? 'destructive' : 'outline'}
+                >
+                  {confirming === option ? `Confirm — ${optionName}` : optionName}
+                </Button>
+              )
+            })}
           </div>
         </div>
       )}
