@@ -6,6 +6,9 @@ import { usePrimaryAccount } from '../../../hooks/accounts/scope'
 
 import { toast } from '../../../lib/notifications'
 
+/** The account the store's outpost data belongs to, so a switch clears the last one's. */
+let loadedAccountId: string | null = null
+
 export function useOutpostData() {
   const { baseData, errorMessage, infoLoading, loadingZone, summary, zones } =
     useOutpostStore(
@@ -29,6 +32,16 @@ export function useOutpostData() {
 
     const store = useOutpostStore.getState()
 
+    if (primaryAccount.accountId !== loadedAccountId) {
+      loadedAccountId = primaryAccount.accountId
+      useOutpostStore.setState({
+        baseData: {},
+        errorMessage: null,
+        summary: null,
+        zones: [],
+      })
+    }
+
     store.setInfoLoading(true)
 
     try {
@@ -37,7 +50,7 @@ export function useOutpostData() {
       )
       store.setInfo(result)
     } catch {
-      store.setError('Failed to load outpost information.')
+      store.setError('Try Refresh to load it again.')
     } finally {
       store.setInfoLoading(false)
     }
@@ -61,7 +74,7 @@ export function useOutpostData() {
         )
         store.setBaseData(zoneId, result)
       } catch {
-        toast.error('Base scan failed.')
+        toast.error('Could not scan the base. Try again.')
       } finally {
         store.setLoadingZone(null)
       }
