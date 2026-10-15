@@ -5,7 +5,9 @@
     "input": {
       "placeholder": "Example: 123"
     },
+    "loading": "Loading…",
     "refetch": "Refresh",
+    "searching": "Searching…",
     "see-boosts": "See boosts",
     "send-boosts": "Send boosts"
   },
@@ -15,25 +17,34 @@
   "sidebar": {
     "title": "Which XP boosts do you want to use?",
     "personal": {
+      "confirm_one": "Confirm — uses {{total}} boost",
+      "confirm_other": "Confirm — uses {{total}} boosts",
       "description": "All of these accounts will use XP boosts:",
-      "submit-button": "Consume {{total}} XP boost/s on each account"
+      "submit-button_one": "Use {{total}} XP boost on each account",
+      "submit-button_other": "Use {{total}} XP boosts on each account",
+      "submitting": "Using boosts…"
     },
     "teammate": {
+      "confirm_one": "Confirm — sends {{total}} boost",
+      "confirm_other": "Confirm — sends {{total}} boosts",
       "note": "Some boosts might not send if your ping is not stable.",
-      "submit-button": "Send <1>{{total}}</1> to: <3>{{name}}</3>"
+      "submit-button": "Send <1>{{total}}</1> to: <3>{{name}}</3>",
+      "submitting": "Sending…"
     },
     "errors": {
-      "valid-amount": "Please type a valid amount"
+      "valid-amount": "Enter an amount first"
     }
   },
   "results": {
     "summary": {
-      "title": "Summary of {{total}} account/s"
+      "title_one": "{{count}} account",
+      "title_other": "{{count}} accounts"
     },
     "options": {
       "description": "Teammate XP boosts to use:",
       "information": "{{current}}/{{total}} of a total of {{amount}}"
-    }
+    },
+    "unavailable": "Unavailable"
   },
   "notifications": {
     "success": {

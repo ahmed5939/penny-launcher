@@ -7,6 +7,7 @@ import type {
   XPBoostType,
 } from '../../../types/xpboosts'
 
+import { useEffect, useState } from 'react'
 import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ExternalLink,
@@ -28,6 +29,7 @@ import { pennyDBProfileURL } from '../../../config/fortnite/links'
 
 import { Button } from '../../../components/ui/button'
 import {
+  Callout,
   EmptyState,
   FilterBar,
   PageHeader,
@@ -209,7 +211,10 @@ function Content() {
                         ref={$updateButton}
                       >
                         {searchUserIsSubmitting ? (
-                          <UpdateIcon className="animate-spin h-4" />
+                          <>
+                            <UpdateIcon className="animate-spin h-4" />
+                            {t('xpboosts.form.searching')}
+                          </>
                         ) : (
                           t('actions.search', {
                             ns: 'general',
@@ -224,13 +229,13 @@ function Content() {
                   {searchedUser &&
                     !searchedUser.success &&
                     !searchedUser.isPrivate && (
-                      <div className="break-all mt-2 text-center text-muted-foreground">
+                      <Callout className="break-all" tone="danger">
                         {searchedUser.errorMessage
                           ? searchedUser.errorMessage
                           : t('form.player.search-empty', {
                               ns: 'general',
                             })}
-                      </div>
+                      </Callout>
                     )}
                 </div>
                 {searchedUser?.data && (
@@ -264,7 +269,9 @@ function Content() {
                         {searchedUser.isPrivate ? (
                           <>
                             <AccountBasicInformationSection
-                              title="Account Id:"
+                              title={t('information.account-id', {
+                                ns: 'general',
+                              })}
                               value={searchedUser.data.lookup.id}
                             />
                             <div className="py-1.5">
@@ -281,7 +288,7 @@ function Content() {
                               collectionBookLevel={
                                 searchedUser.data.profileChanges.profile
                                   .stats.attributes.collection_book
-                                  ?.maxBookXpLevelAchieved ?? 0
+                                  ?.maxBookXpLevelAchieved ?? null
                               }
                               commanderLevel={
                                 extractCommanderLevel(
@@ -291,7 +298,7 @@ function Content() {
                               daysLoggedIn={
                                 searchedUser.data.profileChanges.profile
                                   .stats.attributes.daily_rewards
-                                  ?.totalDaysLoggedIn ?? 0
+                                  ?.totalDaysLoggedIn ?? null
                               }
                               founderStatus={
                                 searchedUser.data.profileChanges
@@ -342,7 +349,10 @@ function Content() {
                   variant={data.length > 0 ? 'outline' : 'default'}
                 >
                   {isSubmitting ? (
-                    <UpdateIcon className="animate-spin" />
+                    <>
+                      <UpdateIcon className="animate-spin" />
+                      {t('xpboosts.form.loading')}
+                    </>
                   ) : data.length > 0 ? (
                     t('xpboosts.form.refetch')
                   ) : (
@@ -377,6 +387,7 @@ function Content() {
             <PanelHeader
               compact
               title={t('xpboosts.results.summary.title', {
+                count: data.length,
                 total: data.length,
               })}
             />
@@ -466,6 +477,26 @@ function SendBoostsSheet({
     handleSetXPBoostsType,
   } = useSendBoostsSheet({ recalculateTotal })
 
+  const [armed, setArmed] = useState<'personal' | 'teammate' | null>(null)
+
+  useEffect(() => {
+    setArmed(null)
+  }, [amountToSendParsedToNumber, searchedUser, xpBoostType])
+
+  const confirmThen = (
+    action: 'personal' | 'teammate',
+    submit: () => void,
+  ) => () => {
+    if (armed !== action) {
+      setArmed(action)
+
+      return
+    }
+
+    setArmed(null)
+    submit()
+  }
+
   const userBoosts = extractXPBoosts(
     searchedUser?.success && searchedUser?.data
       ? searchedUser.data.profileChanges
@@ -473,7 +504,7 @@ function SendBoostsSheet({
   )
 
   return (
-    <Sheet>
+    <Sheet onOpenChange={() => setArmed(null)}>
       <SheetTrigger asChild>
         <Button
           variant="secondary"
@@ -490,7 +521,7 @@ function SendBoostsSheet({
         <div className="flex justify-center w-full">
           <SheetClose>
             <X />
-            <span className="sr-only">Close history sidebar</span>
+            <span className="sr-only">Close</span>
           </SheetClose>
         </div>
         <SheetHeader>
@@ -502,9 +533,10 @@ function SendBoostsSheet({
                   grayscale: xpBoostType,
                 })}
               >
-                <img decoding="async" loading="lazy" src={assets('smallxpboost_gift')} />
+                <img alt="Teammate XP boost" decoding="async" loading="lazy" src={assets('smallxpboost_gift')} />
               </figure>
               <Switch
+                aria-label="Use personal boosts"
                 checked={xpBoostType}
                 onCheckedChange={handleSetXPBoostsType}
                 disabled={generalIsSubmitting}
@@ -514,7 +546,7 @@ function SendBoostsSheet({
                   grayscale: !xpBoostType,
                 })}
               >
-                <img decoding="async" loading="lazy" src={assets('smallxpboost')} />
+                <img alt="Personal XP boost" decoding="async" loading="lazy" src={assets('smallxpboost')} />
               </figure>
             </div>
           </div>
@@ -551,19 +583,29 @@ function SendBoostsSheet({
                 <div className="mb-5 mt-5 px-1">
                   <Button
                     className="w-full"
-                    onClick={handleConsumePersonal}
+                    onClick={confirmThen('personal', handleConsumePersonal)}
                     disabled={consumePersonalBoostsButtonIsDisabled}
+                    variant={armed === 'personal' ? 'destructive' : 'default'}
                   >
                     {isSubmittingPersonal ? (
-                      <UpdateIcon className="animate-spin" />
+                      <>
+                        <UpdateIcon className="animate-spin" />
+                        {t('xpboosts.sidebar.personal.submitting')}
+                      </>
                     ) : noPersonalBoostsData ? (
                       t('form.accounts.no-available', {
                         ns: 'general',
                       })
                     ) : amountToSendIsInvalid ? (
                       t('xpboosts.sidebar.errors.valid-amount')
+                    ) : armed === 'personal' ? (
+                      t('xpboosts.sidebar.personal.confirm', {
+                        count: amountToSendParsedToNumber,
+                        total: compactNumber(amountToSendParsedToNumber),
+                      })
                     ) : (
                       t('xpboosts.sidebar.personal.submit-button', {
+                        count: amountToSendParsedToNumber,
                         total: compactNumber(amountToSendParsedToNumber),
                       })
                     )}
@@ -614,13 +656,13 @@ function SendBoostsSheet({
                 {searchedUser &&
                   !searchedUser.success &&
                   !searchedUser.isPrivate && (
-                    <div className="break-all mt-14 text-center text-muted-foreground">
+                    <Callout className="break-all mt-3" tone="danger">
                       {searchedUser.errorMessage
                         ? searchedUser.errorMessage
                         : t('form.player.search-empty', {
                             ns: 'general',
                           })}
-                    </div>
+                    </Callout>
                   )}
               </div>
               {!noTeammateBoostsData && searchedUser?.data && (
@@ -674,7 +716,7 @@ function SendBoostsSheet({
                               collectionBookLevel={
                                 searchedUser.data.profileChanges.profile
                                   .stats.attributes.collection_book
-                                  ?.maxBookXpLevelAchieved ?? 0
+                                  ?.maxBookXpLevelAchieved ?? null
                               }
                               commanderLevel={
                                 extractCommanderLevel(
@@ -684,7 +726,7 @@ function SendBoostsSheet({
                               daysLoggedIn={
                                 searchedUser.data.profileChanges.profile
                                   .stats.attributes.daily_rewards
-                                  ?.totalDaysLoggedIn ?? 0
+                                  ?.totalDaysLoggedIn ?? null
                               }
                               founderStatus={
                                 searchedUser.data.profileChanges
@@ -702,13 +744,22 @@ function SendBoostsSheet({
                         </div>
                         <Button
                           className="gap-1 w-full"
-                          onClick={handleConsumeTeammate}
+                          onClick={confirmThen('teammate', handleConsumeTeammate)}
                           disabled={consumeTeammateBoostsButtonIsDisabled}
+                          variant={armed === 'teammate' ? 'destructive' : 'default'}
                         >
                           {isSubmittingTeammate ? (
-                            <UpdateIcon className="animate-spin" />
+                            <>
+                              <UpdateIcon className="animate-spin" />
+                              {t('xpboosts.sidebar.teammate.submitting')}
+                            </>
                           ) : amountToSendIsInvalid ? (
                             t('xpboosts.sidebar.errors.valid-amount')
+                          ) : armed === 'teammate' ? (
+                            t('xpboosts.sidebar.teammate.confirm', {
+                              count: newCalculatedTotal,
+                              total: compactNumber(newCalculatedTotal),
+                            })
                           ) : (
                             <Trans
                               ns="stw-operations"
@@ -789,12 +840,15 @@ function SearchExternalAccount({
       />
       <Button
         type="submit"
-        className="absolute h-8 px-2 py-1.5 right-1 text-sm w-16"
+        className="absolute h-8 px-2 py-1.5 right-1 text-sm w-24"
         disabled={inputSearchButtonIsDisabled}
         ref={$updateButton}
       >
         {searchUserIsSubmitting ? (
-          <UpdateIcon className="animate-spin h-4" />
+          <>
+            <UpdateIcon className="animate-spin h-4" />
+            {t('xpboosts.form.searching')}
+          </>
         ) : (
           t('actions.search', {
             ns: 'general',
