@@ -52,9 +52,11 @@ export function SettingsSection({
  */
 export function SaveBar({
   children,
+  disabled = false,
   dirty,
 }: {
   children: ReactNode
+  disabled?: boolean
   dirty: boolean
 }) {
   const { t } = useTranslation(['settings'])
@@ -73,7 +75,9 @@ export function SaveBar({
           ? t('app-settings.form.save.dirty')
           : t('app-settings.form.save.clean')}
       </p>
-      <Button type="submit">{children}</Button>
+      <Button disabled={disabled} type="submit">
+        {children}
+      </Button>
     </div>
   )
 }

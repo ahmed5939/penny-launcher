@@ -221,7 +221,10 @@ export function OverlaySettingsForm() {
           </SettingsSection>
         </fieldset>
 
-        <SaveBar dirty={form.formState.isDirty}>
+        <SaveBar
+          disabled={form.formState.isSubmitting}
+          dirty={form.formState.isDirty}
+        >
           {t('app-settings.form.save.submit')}
         </SaveBar>
       </form>

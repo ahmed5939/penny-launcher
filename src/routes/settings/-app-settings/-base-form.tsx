@@ -281,7 +281,7 @@ export function AppSettingsBaseForm() {
           />
         </SettingsSection>
 
-        <SaveBar dirty={isDirty}>
+        <SaveBar disabled={form.formState.isSubmitting} dirty={isDirty}>
           {t('app-settings.form.save.submit')}
         </SaveBar>
       </form>
