@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import type { LoadoutDefender, LoadoutEntry, LoadoutMember } from '../../../kernel/core/loadouts'
@@ -126,6 +126,7 @@ function LoadoutCard({
   const teamPerk = loadout.teamPerk ? getItemRecord(records, loadout.teamPerk) : null
   const accent = art ? (raritiesColor[art.rarity as RarityType] ?? raritiesColor[RarityType.Common]) : null
   const filledDefenders = loadout.defenders.filter((defender) => defender.templateId).length
+  const [armed, setArmed] = useState(false)
 
   return (
     <section
@@ -164,16 +165,26 @@ function LoadoutCard({
           </Button>
         )}
         <Button
-          aria-label={`Clear ${title}`}
-          className="size-7 p-0"
+          aria-label={armed ? undefined : `Clear ${title}`}
+          className={armed ? 'h-7 px-2 text-xs' : 'size-7 p-0'}
           data-share-hide
           disabled={actions.isEditing}
-          onClick={() => actions.onClear(loadout.itemId)}
+          onBlur={() => setArmed(false)}
+          onClick={() => {
+            if (!armed) {
+              setArmed(true)
+
+              return
+            }
+
+            setArmed(false)
+            actions.onClear(loadout.itemId)
+          }}
           size="sm"
           title="Empty every slot in this loadout"
-          variant="ghost"
+          variant={armed ? 'destructive' : 'ghost'}
         >
-          <Eraser className="size-3.5" />
+          {armed ? 'Confirm — empties loadout' : <Eraser className="size-3.5" />}
         </Button>
         <ShareMenu
           card={() => (
