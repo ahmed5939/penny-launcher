@@ -17,14 +17,19 @@ export function LoadingMissions({
 }) {
   if (!section) {
     return (
-      <div className="grid grid-cols-1 gap-1.5">
+      <div
+        className="grid grid-cols-1 gap-1.5"
+        role="status"
+      >
+        <span className="sr-only">Loading missions…</span>
         <MissionSkeleton total={total} />
       </div>
     )
   }
 
   return (
-    <div>
+    <div role="status">
+      <span className="sr-only">Loading missions…</span>
       {/*
         The heading's own silhouette, not a lozenge: a taller placeholder pops
         the whole list up by a few pixels the moment the real heading arrives.
