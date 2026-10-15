@@ -46,15 +46,17 @@ export function RecoveryTab({
 
   if (!plan) {
     return (
-      <EmptyState
-        description={
-          isLoading
-            ? 'Reading this account’s sprites…'
-            : 'Nothing loaded yet — try Refresh.'
-        }
-        icon={Ghost}
-        title={isLoading ? 'Loading' : 'Nothing to plan'}
-      />
+      <div role={isLoading ? 'status' : undefined}>
+        <EmptyState
+          description={
+            isLoading
+              ? 'Reading this account’s sprites…'
+              : 'Nothing loaded yet — try Refresh.'
+          }
+          icon={Ghost}
+          title={isLoading ? 'Loading sprites…' : 'Nothing to plan'}
+        />
+      </div>
     )
   }
 

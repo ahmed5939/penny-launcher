@@ -161,16 +161,18 @@ export function HistoryTab() {
           title="History"
         />
         {shown.items.length === 0 ? (
-          <EmptyState
-            className="border-0 bg-transparent py-8"
-            description={
-              payload === null
-                ? 'Loading the change log…'
-                : 'Penny compares each read of an account with the one before. Changes show up here from the second read onwards.'
-            }
-            icon={History}
-            title={payload === null ? 'Loading' : 'No changes yet'}
-          />
+          <div role={payload === null ? 'status' : undefined}>
+            <EmptyState
+              className="border-0 bg-transparent py-8"
+              description={
+                payload === null
+                  ? 'Loading the change log…'
+                  : 'Penny compares each read of an account with the one before. Changes show up here from the second read onwards.'
+              }
+              icon={History}
+              title={payload === null ? 'Loading history…' : 'No changes yet'}
+            />
+          </div>
         ) : (
           <ol className="divide-y divide-border/30">
             {shown.items.map((batch) => (
