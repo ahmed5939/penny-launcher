@@ -52,7 +52,7 @@ export function OverflowMenu() {
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="gap-2">
             <Palette className="size-4" />
-            {t('settings:app-settings.form.appearance.label')}
+            {t('settings:app-settings.form.sections.appearance')}
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent className="max-h-[75vh] overflow-y-auto">

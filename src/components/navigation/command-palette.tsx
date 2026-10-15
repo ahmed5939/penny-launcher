@@ -133,7 +133,7 @@ export function CommandPalette({
                     <span className="flex-1">{label}</span>
                     {hidden && (
                       <span className="text-2xs text-muted-foreground">
-                        Hidden
+                        {t('sidebar:hidden')}
                       </span>
                     )}
                     {item.beta && <BetaBadge />}
@@ -144,7 +144,7 @@ export function CommandPalette({
           )
         })}
 
-        <CommandGroup heading={t('general:actions.search')}>
+        <CommandGroup heading={t('sidebar:actions')}>
           <CommandItem
             className="gap-2"
             onSelect={() => {
@@ -198,7 +198,7 @@ export function CommandPalette({
  * is what a person does before they think to go looking for a control.
  */
 function AppearanceCommands({ onDone }: { onDone: () => void }) {
-  const { t } = useTranslation(['settings'])
+  const { t } = useTranslation(['settings', 'sidebar'])
   const { theme, setTheme, colorTheme, setColorTheme } = useTheme()
 
   const modes = [
@@ -208,7 +208,7 @@ function AppearanceCommands({ onDone }: { onDone: () => void }) {
   ] as const
 
   return (
-    <CommandGroup heading={t('app-settings.form.appearance.label')}>
+    <CommandGroup heading={t('app-settings.form.sections.appearance')}>
       {modes.map((mode) => {
         const Icon = mode.icon
         const label = t(`app-settings.form.appearance.mode.${mode.id}`)
@@ -227,7 +227,7 @@ function AppearanceCommands({ onDone }: { onDone: () => void }) {
             <span className="flex-1">{label}</span>
             {theme === mode.id && (
               <span className="text-2xs text-muted-foreground">
-                Active
+                {t('sidebar:active')}
               </span>
             )}
           </CommandItem>
@@ -248,7 +248,7 @@ function AppearanceCommands({ onDone }: { onDone: () => void }) {
           <span className="flex-1">{current.name}</span>
           {colorTheme === current.id && (
             <span className="text-2xs text-muted-foreground">
-              Active
+              {t('sidebar:active')}
             </span>
           )}
         </CommandItem>
