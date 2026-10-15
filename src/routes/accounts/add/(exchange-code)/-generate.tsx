@@ -44,6 +44,7 @@ export function GenerateExchangeCodePage() {
         <div className="min-w-0 flex-1">
           <InputSecret
             buttonProps={{
+              'aria-label': 'Copy code',
               disabled: generatedCode === null,
               onClick: handleCopyCode,
             }}
