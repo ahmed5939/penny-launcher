@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
@@ -12,6 +12,7 @@ import {
 import { useGetAccounts } from '../../../hooks/accounts'
 
 import { toast } from '../../../lib/notifications'
+import { parseCustomDisplayName } from '../../../lib/utils'
 
 /**
  * One definition of "how many V-Bucks does this account have", so the banner
@@ -32,9 +33,10 @@ function accountTotal(data: VBucksInformationData): number {
 export function useVBucksInformationData() {
   const { t } = useTranslation(['general'])
 
-  const { accountsArray } = useGetAccounts()
+  const { accountList, accountsArray } = useGetAccounts()
   const { data, isLoading, selectedAccounts } =
     useGetVBucksInformationData()
+  const [requestedIds, setRequestedIds] = useState<Array<string>>([])
   const {
     vbucksInformationUpdateData,
     vbucksInformationUpdateLoading,
@@ -55,6 +57,18 @@ export function useVBucksInformationData() {
   )
 
   const isDisabledForm = isSelectedEmpty || isLoading || !areThereAccounts
+
+  /**
+   * The main process drops an account that fails rather than reporting it, so
+   * a requested account with no balance back is the only sign it failed.
+   */
+  const failedIds =
+    isLoading || isSelectedEmpty
+      ? []
+      : requestedIds.filter((accountId) => !data[accountId])
+  const failedNames = failedIds.map((accountId) =>
+    parseCustomDisplayName(accountList[accountId])
+  )
 
   useEffect(() => {
     const listener = window.electronAPI.getVBucksInformationNotification(
@@ -82,6 +96,7 @@ export function useVBucksInformationData() {
       return
     }
 
+    setRequestedIds(selectedAccounts.map((account) => account.accountId))
     vbucksInformationUpdateLoading(true)
     vbucksInformationUpdateData({}, true)
 
@@ -104,9 +119,11 @@ export function useVBucksInformationData() {
 
   return {
     areThereAccounts,
+    failedNames,
     isDisabledForm,
     isLoading,
     isSelectedEmpty,
+    requestedCount: requestedIds.length,
     vbucksSummary,
     data: parsedData,
 

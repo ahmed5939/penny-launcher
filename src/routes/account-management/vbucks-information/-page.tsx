@@ -7,6 +7,7 @@ import { GoToTop } from '../../../components/go-to-top'
 import { Skeleton } from '../../../components/ui/skeleton'
 import {
   AnimatedNumber,
+  Callout,
   Chip,
   EmptyState,
   KeyValue,
@@ -69,9 +70,12 @@ export function RouteComponent() {
   const { t } = useTranslation(['sidebar', 'account-management'])
   const {
     data,
+    failedNames,
     handleGetInfo,
     isDisabledForm,
     isLoading,
+    isSelectedEmpty,
+    requestedCount,
     vbucksSummary,
   } = useVBucksInformationData()
 
@@ -94,10 +98,20 @@ export function RouteComponent() {
         title={t('account-management.options.vbucks-information')}
       />
 
+      {failedNames.length > 0 && (
+        <Callout
+          title={`Could not load V-Bucks for ${failedNames.join(', ')}`}
+          tone="warning"
+        >
+          Try Refresh. If it keeps failing, sign the account in again.
+        </Callout>
+      )}
+
       {data.length > 0 ? (
         <>
           <WalletHero
             accounts={data.length}
+            requested={requestedCount}
             total={vbucksSummary}
           />
 
@@ -125,20 +139,30 @@ export function RouteComponent() {
             <Skeleton className="h-3 w-28" />
           </div>
         </div>
-      ) : (
+      ) : isSelectedEmpty ? (
         <EmptyState
           description="Pick one or more accounts in the title bar and their balances load here."
           icon={Coins}
           title="No accounts in scope"
         />
-      )}
+      ) : null}
 
       <GoToTop containerId="vbucks-card" />
     </div>
   )
 }
 
-function WalletHero({ accounts, total }: { accounts: number; total: number }) {
+function WalletHero({
+  accounts,
+  requested,
+  total,
+}: {
+  accounts: number
+  requested: number
+  total: number
+}) {
+  const incomplete = accounts < requested
+
   return (
     <div className="flex items-center gap-5">
       <img
@@ -153,10 +177,17 @@ function WalletHero({ accounts, total }: { accounts: number; total: number }) {
         </p>
         <p className="mt-2 text-ui text-muted-foreground">
           V-Bucks
-          {accounts > 1 && (
+          {(accounts > 1 || incomplete) && (
             <>
               {' across '}
-              <span className="figure">{accounts}</span> accounts
+              <span className="figure">{accounts}</span>
+              {incomplete && (
+                <>
+                  {' of '}
+                  <span className="figure">{requested}</span>
+                </>
+              )}
+              {' accounts'}
             </>
           )}
         </p>
