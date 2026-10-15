@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import { ExternalLink, Play, Star } from 'lucide-react'
 
 import { AccountAvatar } from '../../components/accounts/account-avatar'
-import { Chip, ListRow, StatRow, StatTile } from '../../components/page'
+import { Callout, Chip, ListRow, StatRow, StatTile } from '../../components/page'
 import { Button } from '../../components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
 
@@ -147,6 +147,8 @@ export function GameDialog({ game, onClose }: { game: CollectionGame; onClose: (
   }, [game.namespace])
 
   const info = details?.ok ? details.data : null
+  const failure = details && !details.ok ? details.error : null
+  const empty = failure ? 'Unavailable' : '—'
   const storeUrl = storePageUrl(info?.storeSlug ?? null)
 
   return (
@@ -159,6 +161,7 @@ export function GameDialog({ game, onClose }: { game: CollectionGame; onClose: (
             title={game.title}
           />
           <div className="space-y-5 px-6 pb-6 pt-4">
+            {failure && <Callout tone="warning">{failure}</Callout>}
             <StatRow>
               <StatTile
                 hint={info && info.polls.length > 0 ? info.polls.map((poll) => poll.title).slice(0, 2).join(' · ') : 'Epic Games Store players'}
@@ -170,14 +173,14 @@ export function GameDialog({ game, onClose }: { game: CollectionGame; onClose: (
                       <Star className="size-5 fill-current text-warning" />
                     </span>
                   ) : (
-                    '—'
+                    empty
                   )
                 }
               />
               <StatTile
                 hint={info?.critic?.recommended != null ? `${info.critic.recommended}% of critics recommend` : 'OpenCritic'}
                 label={info?.critic?.tier ? `Critics · ${info.critic.tier}` : 'Critics'}
-                value={!details ? '…' : info?.critic?.score != null ? Math.round(info.critic.score) : '—'}
+                value={!details ? '…' : info?.critic?.score != null ? Math.round(info.critic.score) : empty}
               />
               <StatTile
                 hint={game.owners.length > 1 ? 'All owners together' : 'On PC'}

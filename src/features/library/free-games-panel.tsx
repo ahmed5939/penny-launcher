@@ -22,7 +22,10 @@ import { parseCustomDisplayName } from '../../lib/utils'
  * the browser already signed in as that account, ready to claim.
  */
 
+type FreeGamesState = { data: FreeGamesResponse | null; error: boolean }
+
 let cache: Promise<FreeGamesResponse> | null = null
+const listeners = new Set<(state: FreeGamesState) => void>()
 
 function loadFreeGames(refresh = false) {
   if (refresh || !cache) {
@@ -35,18 +38,29 @@ function loadFreeGames(refresh = false) {
   return cache
 }
 
+/** Reloads the free games into every mounted panel, keeping the last list on screen until the new one lands. */
+export function refreshFreeGames() {
+  loadFreeGames(true).then(
+    (data) => listeners.forEach((update) => update({ data, error: false })),
+    () => listeners.forEach((update) => update({ data: null, error: true }))
+  )
+}
+
 export function useFreeGames() {
-  const [state, setState] = useState<{ data: FreeGamesResponse | null; error: boolean }>({ data: null, error: false })
+  const [state, setState] = useState<FreeGamesState>({ data: null, error: false })
 
   useEffect(() => {
     let live = true
+    const update = (next: FreeGamesState) => live && setState(next)
 
+    listeners.add(update)
     loadFreeGames()
-      .then((data) => live && setState({ data, error: false }))
-      .catch(() => live && setState({ data: null, error: true }))
+      .then((data) => update({ data, error: false }))
+      .catch(() => update({ data: null, error: true }))
 
     return () => {
       live = false
+      listeners.delete(update)
     }
   }, [])
 
@@ -72,8 +86,11 @@ export function FreeGamesPanel({
         title="Free on Epic"
       />
       {error ? (
-        <PanelBody>
-          <Callout tone="warning">Could not reach the Epic Games Store. Try Refresh.</Callout>
+        <PanelBody className="space-y-3">
+          <Callout tone="warning">Could not load this week's free games.</Callout>
+          <Button onClick={() => refreshFreeGames()} size="sm" variant="outline">
+            Try again
+          </Button>
         </PanelBody>
       ) : !data ? (
         <PanelBody>
@@ -183,18 +200,22 @@ function FreeGameCard({
         )}
 
         <div className="flex flex-wrap gap-2">
-          {missing.map((id) => (
-            <Button
-              disabled={!game.storeUrl || opening !== null}
-              key={id}
-              size="sm"
-              variant={missing.length === 1 ? 'default' : 'outline'}
-              onClick={() => claim(id)}
-            >
-              <AccountAvatar accountId={id} className="mr-2" name={parseCustomDisplayName(accountList[id])} size="xs" />
-              {opening === id ? 'Opening…' : `Claim on ${parseCustomDisplayName(accountList[id])}`}
-            </Button>
-          ))}
+          {!game.storeUrl && missing.length > 0 && (
+            <span className="text-xs text-muted-foreground">Epic gave no store page for this game.</span>
+          )}
+          {game.storeUrl &&
+            missing.map((id) => (
+              <Button
+                disabled={opening !== null}
+                key={id}
+                size="sm"
+                variant={missing.length === 1 ? 'default' : 'outline'}
+                onClick={() => claim(id)}
+              >
+                <AccountAvatar accountId={id} className="mr-2" name={parseCustomDisplayName(accountList[id])} size="xs" />
+                {opening === id ? 'Opening…' : `Claim on ${parseCustomDisplayName(accountList[id])}`}
+              </Button>
+            ))}
           {game.storeUrl && missing.length === 0 && (
             <Button size="sm" variant="ghost" onClick={() => window.electronAPI.openExternalURL(game.storeUrl!)}>
               <ExternalLink className="mr-2 size-4" />

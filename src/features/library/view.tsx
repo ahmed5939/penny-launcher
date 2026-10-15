@@ -49,6 +49,7 @@ import { secondsByApp, timeFor } from './account'
 import { RewindButton } from '../rewind/launch'
 import { CollectionView } from './collection-view'
 import { GrantsPanel, ModesPanel, SaveTheWorldLine } from './fortnite-tab'
+import { refreshFreeGames } from './free-games-panel'
 import { formatBytes, offerOwned } from './model'
 import { Art, day, tall } from './parts'
 
@@ -149,6 +150,7 @@ export function LibraryPage() {
     store.refresh()
     playtime.refresh()
     overview.refresh()
+    refreshFreeGames()
   }
 
   const tabs: Array<{ value: TabId; label: string }> = [
