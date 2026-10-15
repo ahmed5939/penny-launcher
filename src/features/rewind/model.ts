@@ -24,8 +24,8 @@ export type RewindAccount = {
   seconds: number
   pcSeconds: number | null
   everywhereSeconds: number | null
-  wins: number
-  kills: number
+  wins: number | null
+  kills: number | null
   saveTheWorld: string | null
   /** A favourite outfit to stand for the account, when one could be pictured. */
   signature: CosmeticShowcase | null
@@ -224,8 +224,8 @@ export function buildRewind({ accounts, facts = {}, overviews, playtime, saveThe
       seconds: Math.max(pcSeconds ?? 0, everywhereSeconds ?? 0),
       pcSeconds,
       everywhereSeconds,
-      wins: career?.wins ?? 0,
-      kills: career?.kills ?? 0,
+      wins: career?.wins ?? null,
+      kills: career?.kills ?? null,
       saveTheWorld,
       signature: facts[id]?.cosmetics?.favourites.find((item) => item.icon) ?? facts[id]?.cosmetics?.rarest[0] ?? null,
       commander: facts[id]?.commander?.loadout[0] ?? null,

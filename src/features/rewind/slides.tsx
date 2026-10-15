@@ -181,8 +181,8 @@ export function rewindSlides(rewind: Rewind): Array<Slide> {
                   {[
                     ['Power', account.power !== null ? formatPower(account.power) : '—'],
                     ['Hours', formatHours(account.seconds / 3600)],
-                    ['Wins', formatCount(account.wins)],
-                    ['Elims', formatCount(account.kills)],
+                    ['Wins', account.wins !== null ? formatCount(account.wins) : '—'],
+                    ['Elims', account.kills !== null ? formatCount(account.kills) : '—'],
                   ].map(([label, value]) => (
                     <div className="flex min-w-0 flex-col-reverse" key={label}>
                       <dt className="micro-label">{label}</dt>
