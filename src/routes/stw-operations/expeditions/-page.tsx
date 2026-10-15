@@ -102,30 +102,42 @@ const offConfig: AutoExpeditionConfig = { enabled: false, rewardTypes: [] }
 /** Auto-expedition settings for every account, polled because the automation writes them in the background. */
 function useAutoExpeditionConfigs() {
   const [configs, setConfigs] = useState<AutoExpeditionsData>({})
+  const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState<Set<string>>(() => new Set())
 
-  useEffect(() => {
-    let active = true
-    const refresh = () =>
+  const reload = useCallback(
+    () =>
       window.electronAPI
         .getAutoExpeditionsStatus()
-        .then((data) => { if (active) { setConfigs(data); setError('') } })
-        .catch(() => { if (active) setError('Could not load auto-expedition settings.') })
-    void refresh()
-    const timer = setInterval(refresh, 10_000)
-    return () => { active = false; clearInterval(timer) }
-  }, [])
+        .then((data) => { setConfigs(data); setLoaded(true); setError('') })
+        .catch(() => setError('Could not load auto-expedition settings. Try Refresh.')),
+    []
+  )
+
+  useEffect(() => {
+    void reload()
+    const timer = setInterval(reload, 10_000)
+    return () => clearInterval(timer)
+  }, [reload])
 
   const update = useCallback<UpdateConfig>(async (accountId, partial) => {
+    setSaving((current) => new Set(current).add(accountId))
     try {
       setConfigs(await window.electronAPI.updateAutoExpeditions(accountId, partial))
       setError('')
     } catch {
       setError('Could not save auto-expedition settings. Try again.')
+    } finally {
+      setSaving((current) => {
+        const next = new Set(current)
+        next.delete(accountId)
+        return next
+      })
     }
   }, [])
 
-  return { configs, error, update }
+  return { configs, error, loaded, reload, saving, update }
 }
 
 export function RouteComponent() {
@@ -171,7 +183,7 @@ export function RouteComponent() {
           <RefreshButton
             disabled={!resource.accountId}
             loading={resource.loading}
-            onClick={refresh}
+            onClick={() => { refresh(); void auto.reload() }}
           />
         }
         description="What is out, what is back, and what auto-expeditions will send next."
@@ -203,14 +215,23 @@ export function RouteComponent() {
                 accounts={parsedSelectedAccounts}
                 configs={auto.configs}
                 data={data}
+                loaded={auto.loaded}
+                saving={auto.saving}
                 update={auto.update}
               />
             )}
           </AccountResourceGate>
 
-          {auto.error && <div role="alert"><Callout tone="danger">{auto.error}</Callout></div>}
+          {auto.loaded && auto.error && <div role="alert"><Callout tone="danger">{auto.error}</Callout></div>}
 
-          <AutoExpeditionSettings accounts={parsedSelectedAccounts} configs={auto.configs} update={auto.update} />
+          <AutoExpeditionSettings
+            accounts={parsedSelectedAccounts}
+            configs={auto.configs}
+            error={auto.error}
+            loaded={auto.loaded}
+            saving={auto.saving}
+            update={auto.update}
+          />
 
           {parsedSelectedAccounts.map((account) => (
             <ExpeditionHistory
@@ -219,10 +240,6 @@ export function RouteComponent() {
               title={parsedSelectedAccounts.length > 1 ? `Expedition history · ${account.label}` : 'Expedition history'}
             />
           ))}
-
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Auto-expeditions run when rewards return, otherwise hourly, while Penny Launcher is open. Teams keep heroes that are already busy and must meet the vehicle, criteria and power. Recycling touches only confirmed new Hero, Survivor, Defender and Schematic rewards up to the chosen rarity; favourites, assigned items, Legendary and Mythic are always kept.
-          </p>
         </>
       )}
     </div>
@@ -234,105 +251,124 @@ export function RouteComponent() {
 function AutoExpeditionSettings({
   accounts,
   configs,
+  error,
+  loaded,
+  saving,
   update,
 }: {
   accounts: Array<SelectOption>
   configs: AutoExpeditionsData
+  error: string
+  loaded: boolean
+  saving: Set<string>
   update: UpdateConfig
 }) {
   return (
     <Panel>
       <PanelHeader compact icon={WandSparkles} title="Auto-expeditions" />
 
-      <ul className="divide-y divide-border/50">
-        {accounts.map((account) => {
-          const config = configs[account.value] ?? offConfig
-          const allSelected = rewardTypes.every((type) => config.rewardTypes.includes(type))
+      {!loaded ? (
+        error ? (
+          <div className="p-4" role="alert"><Callout tone="danger">{error}</Callout></div>
+        ) : (
+          <div role="status">
+            <EmptyState className="border-0 bg-transparent py-8" title="Loading auto-expedition settings…" />
+          </div>
+        )
+      ) : (
+        <ul className="divide-y divide-border/50">
+          {accounts.map((account) => {
+            const config = configs[account.value] ?? offConfig
+            const allSelected = rewardTypes.every((type) => config.rewardTypes.includes(type))
+            const busy = saving.has(account.value)
+            const lastRun = config.lastActivity
+              ? `Last run ${dayjs(config.lastActivity).fromNow()} · collected ${config.lastCollected ?? 0}, sent ${config.lastSent ?? 0}`
+              : 'No automatic runs yet'
+            const activity = config.enabled && config.nextRunAt ? `${lastRun} · next ${dayjs(config.nextRunAt).fromNow()}` : lastRun
 
-          return (
-            <li className="space-y-3 px-4 py-3.5" key={account.value}>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <Switch
-                  aria-label={`Auto-expeditions for ${account.label}`}
-                  checked={config.enabled}
-                  onCheckedChange={(enabled) => void update(account.value, { enabled })}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-2">
-                    <span className="truncate text-ui font-semibold">{account.label}</span>
-                    {config.lastError ? (
-                      <Chip tone="danger">Last run failed</Chip>
-                    ) : config.enabled ? (
-                      <Chip tone="success">On</Chip>
-                    ) : (
-                      <Chip>Off</Chip>
-                    )}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {config.lastActivity
-                      ? `Last run ${dayjs(config.lastActivity).fromNow()} · collected ${config.lastCollected ?? 0}, sent ${config.lastSent ?? 0}`
-                      : 'No automatic runs yet'}
-                    {config.enabled && config.nextRunAt ? ` · next ${dayjs(config.nextRunAt).fromNow()}` : ''}
-                  </p>
-                </div>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  Notify
+            return (
+              <li className="space-y-3 px-4 py-3.5" key={account.value}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <Switch
-                    aria-label={`Notify for ${account.label}`}
-                    checked={config.notificationsEnabled !== false}
-                    onCheckedChange={(notificationsEnabled) => void update(account.value, { notificationsEnabled })}
+                    aria-label={`Auto-expeditions for ${account.label}`}
+                    checked={config.enabled}
+                    disabled={busy}
+                    onCheckedChange={(enabled) => void update(account.value, { enabled })}
                   />
-                </label>
-              </div>
-
-              {config.lastError ? (
-                <Callout tone="danger">{config.lastError}</Callout>
-              ) : null}
-
-              {/* What to send, as the game's art rather than a row of text buttons. */}
-              <div className="flex flex-wrap items-center gap-2">
-                {rewardTypes.map((type) => {
-                  const selected = config.rewardTypes.includes(type)
-
-                  return (
-                    <ArtToggle
-                      art={categoryArt[type]}
-                      key={type}
-                      label={type}
-                      onChange={() =>
-                        void update(account.value, {
-                          rewardTypes: selected
-                            ? config.rewardTypes.filter((item) => item !== type)
-                            : [...config.rewardTypes, type],
-                        })
-                      }
-                      pressed={selected}
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-2">
+                      <span className="truncate text-ui font-semibold">{account.label}</span>
+                      {config.lastError ? (
+                        <Chip tone="danger">Last run failed</Chip>
+                      ) : config.enabled ? (
+                        <Chip tone="success">On</Chip>
+                      ) : (
+                        <Chip>Off</Chip>
+                      )}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground" title={activity}>{activity}</p>
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    Notify
+                    <Switch
+                      aria-label={`Notify for ${account.label}`}
+                      checked={config.notificationsEnabled !== false}
+                      disabled={busy}
+                      onCheckedChange={(notificationsEnabled) => void update(account.value, { notificationsEnabled })}
                     />
-                  )
-                })}
-                <Button
-                  disabled={allSelected}
-                  onClick={() => void update(account.value, { rewardTypes: [...rewardTypes] })}
-                  size="sm"
-                  variant="ghost"
-                >
-                  Select all
-                </Button>
-              </div>
+                  </label>
+                </div>
 
-              <FieldGroup>
-                <FieldRow
-                  className="py-0"
-                  hint="Survivors includes lead survivors and people runs; Materials includes supply, crafting and resource runs."
-                  label="Recycle new rewards"
-                >
-                  <RecycleCeilingPicker onChange={(recycleBelow) => void update(account.value, { recycleBelow })} value={config.recycleBelow ?? 'off'} />
-                </FieldRow>
-              </FieldGroup>
-            </li>
-          )
-        })}
-      </ul>
+                {config.lastError ? (
+                  <Callout tone="danger">{config.lastError}</Callout>
+                ) : null}
+
+                {/* What to send, as the game's art rather than a row of text buttons. */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {rewardTypes.map((type) => {
+                    const selected = config.rewardTypes.includes(type)
+
+                    return (
+                      <ArtToggle
+                        art={categoryArt[type]}
+                        disabled={busy}
+                        key={type}
+                        label={type}
+                        onChange={() =>
+                          void update(account.value, {
+                            rewardTypes: selected
+                              ? config.rewardTypes.filter((item) => item !== type)
+                              : [...config.rewardTypes, type],
+                          })
+                        }
+                        pressed={selected}
+                      />
+                    )
+                  })}
+                  <Button
+                    disabled={allSelected || busy}
+                    onClick={() => void update(account.value, { rewardTypes: [...rewardTypes] })}
+                    size="sm"
+                    variant="ghost"
+                  >
+                    Select all
+                  </Button>
+                </div>
+
+                <FieldGroup>
+                  <FieldRow
+                    className="py-0"
+                    hint="Survivors includes lead survivors and people runs; Materials includes supply, crafting and resource runs."
+                    label="Recycle new rewards"
+                  >
+                    <RecycleCeilingPicker disabled={busy} onChange={(recycleBelow) => void update(account.value, { recycleBelow })} value={config.recycleBelow ?? 'off'} />
+                  </FieldRow>
+                </FieldGroup>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </Panel>
   )
 }
@@ -342,7 +378,7 @@ function AutoExpeditionSettings({
 type StatusItem = {
   accountId: string
   accountName: string
-  config: AutoExpeditionConfig
+  config?: AutoExpeditionConfig
   slot: ExpeditionSlot
 }
 
@@ -350,11 +386,15 @@ function ExpeditionBoard({
   accounts,
   configs,
   data,
+  loaded,
+  saving,
   update,
 }: {
   accounts: Array<SelectOption>
   configs: AutoExpeditionsData
   data: ExpeditionsPayload
+  loaded: boolean
+  saving: Set<string>
   update: UpdateConfig
 }) {
   const now = useMinuteClock()
@@ -367,7 +407,7 @@ function ExpeditionBoard({
     entry.slots.map((slot) => ({
       accountId: entry.accountId,
       accountName: names[entry.accountId] ?? entry.accountId,
-      config: configs[entry.accountId] ?? offConfig,
+      config: loaded ? configs[entry.accountId] ?? offConfig : undefined,
       slot,
     }))
   )
@@ -400,7 +440,7 @@ function ExpeditionBoard({
         <StatTile
           label="Auto-expeditions"
           tone={autoOn > 0 ? 'primary' : 'default'}
-          value={multipleAccounts ? `${autoOn} / ${accounts.length}` : autoOn > 0 ? 'On' : 'Off'}
+          value={!loaded ? '—' : multipleAccounts ? `${autoOn} / ${accounts.length}` : autoOn > 0 ? 'On' : 'Off'}
         />
       </StatRow>
 
@@ -411,7 +451,7 @@ function ExpeditionBoard({
           items={available}
           title="To send"
         >
-          {(item) => <AvailableRow item={item} multipleAccounts={multipleAccounts} now={now} update={update} />}
+          {(item) => <AvailableRow item={item} multipleAccounts={multipleAccounts} now={now} saving={saving} update={update} />}
         </StatusColumn>
         <StatusColumn
           empty="No expeditions are out right now."
@@ -456,7 +496,7 @@ function StatusColumn({
         title={title}
       />
       {items.length === 0 ? (
-        <p className="px-4 py-6 text-center text-xs text-muted-foreground">{empty}</p>
+        <EmptyState className="border-0 bg-transparent py-6" title={empty} />
       ) : (
         <ul className="divide-y divide-border/50">
           {items.map((item) => (
@@ -507,10 +547,10 @@ function SlotRow({ caption, children, item, multipleAccounts, trailing }: { capt
   )
 }
 
-function AvailableRow({ item, multipleAccounts, now, update }: { item: StatusItem; multipleAccounts: boolean; now: number; update: UpdateConfig }) {
+function AvailableRow({ item, multipleAccounts, now, saving, update }: { item: StatusItem; multipleAccounts: boolean; now: number; saving: Set<string>; update: UpdateConfig }) {
   const { config, slot } = item
   const category = expeditionKind(slot.templateId).category
-  const covered = config.enabled && config.rewardTypes.includes(category)
+  const covered = config?.enabled && config.rewardTypes.includes(category)
   const expiresIn = slot.expiresAt ? Date.parse(slot.expiresAt) - now : null
 
   return (
@@ -520,11 +560,12 @@ function AvailableRow({ item, multipleAccounts, now, update }: { item: StatusIte
       multipleAccounts={multipleAccounts}
     >
       <div className="mt-2 flex items-center gap-2">
-        {covered ? (
+        {!config ? null : covered ? (
           <Chip tone="success">Auto-sends</Chip>
         ) : category ? (
           <Button
             className="h-6 px-2 text-xs"
+            disabled={saving.has(item.accountId)}
             onClick={() =>
               void update(item.accountId, {
                 enabled: true,
@@ -585,7 +626,7 @@ function ReadyRow({ item, multipleAccounts }: { item: StatusItem; multipleAccoun
       caption={[`Tier ${slot.tier || '—'}`, chance > 0 && `${chance}% success`]}
       item={item}
       multipleAccounts={multipleAccounts}
-      trailing={config.enabled ? <Chip tone="success">Collecting</Chip> : <Chip tone="warning">Auto off</Chip>}
+      trailing={config && (config.enabled ? <Chip tone="success">Collecting</Chip> : <Chip tone="warning">Auto off</Chip>)}
     />
   )
 }
