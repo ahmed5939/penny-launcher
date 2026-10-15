@@ -17,10 +17,10 @@ describe('collection book upgrade errors', () => {
   it('does not forward the error text Epic returns', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 409, json: async () => ({ errorCode: 'errors.com.epicgames.fortnite.item_locked', errorMessage: epicError }) })))
 
-    const error = await upgradeCollectionBookItem(accountId, request).catch((failure: Error) => failure)
+    const failure = upgradeCollectionBookItem(accountId, request)
 
-    expect(error).toBeInstanceOf(UserError)
-    expect(error.message).toBe('Could not upgrade the item (HTTP 409). Refresh and try again.')
-    expect(publicIpcMessage(error)).toBe('Could not upgrade the item (HTTP 409). Refresh and try again.')
+    await expect(failure).rejects.toBeInstanceOf(UserError)
+    await expect(failure).rejects.toThrow(/^Could not upgrade the item \(HTTP 409\)\. Refresh and try again\.$/)
+    await expect(failure.catch((error: unknown) => publicIpcMessage(error))).resolves.toBe('Could not upgrade the item (HTTP 409). Refresh and try again.')
   })
 })

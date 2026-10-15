@@ -17,10 +17,10 @@ describe('world inventory transfer errors', () => {
   it('does not forward the error text Epic returns', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 400, json: async () => ({ errorCode: 'errors.com.epicgames.fortnite.storage_full', errorMessage: epicError }) })))
 
-    const error = await transferWorldItems(accountId, transfers).catch((failure: Error) => failure)
+    const failure = transferWorldItems(accountId, transfers)
 
-    expect(error).toBeInstanceOf(UserError)
-    expect(error.message).toBe('Could not move the items (HTTP 400). Refresh and try again.')
-    expect(publicIpcMessage(error)).toBe('Could not move the items (HTTP 400). Refresh and try again.')
+    await expect(failure).rejects.toBeInstanceOf(UserError)
+    await expect(failure).rejects.toThrow(/^Could not move the items \(HTTP 400\)\. Refresh and try again\.$/)
+    await expect(failure.catch((error: unknown) => publicIpcMessage(error))).resolves.toBe('Could not move the items (HTTP 400). Refresh and try again.')
   })
 })
