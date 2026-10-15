@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
 import { VBucksInformationData } from '../../../state/management/vbucks-information'
+import { useAccountScopeStore } from '../../../state/accounts/scope'
 
 import {
   useGetVBucksInformationActions,
@@ -48,8 +49,16 @@ export function useVBucksInformationData() {
     getAccounts,
   } = useAccountSelectorData()
 
+  const scope = new Set(selectedAccounts)
+  const requestedInScope = requestedIds.filter((accountId) =>
+    scope.has(accountId)
+  )
+
   const parsedData = accountsArray
-    .filter((account) => data[account.accountId] !== undefined)
+    .filter(
+      (account) =>
+        scope.has(account.accountId) && data[account.accountId] !== undefined
+    )
     .map((account) => data[account.accountId])
   const vbucksSummary = parsedData.reduce(
     (accumulator, current) => accumulator + accountTotal(current),
@@ -65,7 +74,7 @@ export function useVBucksInformationData() {
   const failedIds =
     isLoading || isSelectedEmpty
       ? []
-      : requestedIds.filter((accountId) => !data[accountId])
+      : requestedInScope.filter((accountId) => !data[accountId])
   const failedNames = failedIds.map((accountId) =>
     parseCustomDisplayName(accountList[accountId])
   )
@@ -73,8 +82,14 @@ export function useVBucksInformationData() {
   useEffect(() => {
     const listener = window.electronAPI.getVBucksInformationNotification(
       async (data) => {
+        const inScope = new Set(useAccountScopeStore.getState().members)
+
         vbucksInformationUpdateLoading(false)
-        vbucksInformationUpdateData(data)
+        vbucksInformationUpdateData(
+          Object.fromEntries(
+            Object.entries(data).filter(([accountId]) => inScope.has(accountId))
+          )
+        )
       }
     )
 
@@ -123,7 +138,7 @@ export function useVBucksInformationData() {
     isDisabledForm,
     isLoading,
     isSelectedEmpty,
-    requestedCount: requestedIds.length,
+    requestedCount: requestedInScope.length,
     vbucksSummary,
     data: parsedData,
 
