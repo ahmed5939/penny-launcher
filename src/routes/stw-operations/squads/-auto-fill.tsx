@@ -144,10 +144,13 @@ export function AutoFillReview({
       <DialogFooter className="items-center gap-2 sm:space-x-0">
         {plan.moved > 0 && (
           <span className="mr-auto text-xs text-muted-foreground">
-            F.O.R.T. <span className="figure font-semibold text-success">{formatGain(gain)}</span>
+            F.O.R.T.{' '}
+            <span className={cn('figure font-semibold', gain > 0.5 ? 'text-success' : 'text-muted-foreground')}>
+              {formatGain(gain)}
+            </span>
           </span>
         )}
-        <Button onClick={onCancel} variant="outline">
+        <Button disabled={isAssigning} onClick={onCancel} variant="outline">
           {plan.moved > 0 ? 'Cancel' : 'Close'}
         </Button>
         {plan.moved > 0 && (
