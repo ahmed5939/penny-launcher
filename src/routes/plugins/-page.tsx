@@ -1,18 +1,24 @@
 import type { ReactNode } from 'react'
 
+import type { LucideIcon } from 'lucide-react'
+
 import {
-  Activity,
+  AppWindow,
+  Bell,
   BookOpen,
   Boxes,
   Code2,
   Download,
   FolderInput,
   FolderOpen,
+  Globe,
   LoaderCircle,
   Puzzle,
   Settings2,
   ShieldCheck,
+  Timer,
   Trash2,
+  UserRound,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -36,6 +42,7 @@ import {
   Panel,
   PanelBody,
   PanelFooter,
+  RefreshButton,
   StatusPill,
 } from '../../components/page'
 
@@ -44,17 +51,18 @@ import { PluginContributions, PluginReviewDialog } from './-extensions'
 
 const capabilityLabels: Record<
   PluginCapability,
-  { icon: typeof Activity; label: string }
+  { icon: LucideIcon; label: string; warn?: boolean }
 > = {
-  accounts: { icon: Activity, label: 'Reads account info' },
-  notifications: { icon: Activity, label: 'Desktop notifications' },
-  network: { icon: Activity, label: 'Network access' },
-  filesystem: { icon: FolderOpen, label: 'File access' },
-  'opens-windows': { icon: Boxes, label: 'Opens windows' },
-  background: { icon: Activity, label: 'Runs in background' },
+  accounts: { icon: UserRound, label: 'Reads account info' },
+  notifications: { icon: Bell, label: 'Desktop notifications' },
+  network: { icon: Globe, label: 'Network access' },
+  filesystem: { icon: FolderOpen, label: 'File access', warn: true },
+  'opens-windows': { icon: AppWindow, label: 'Opens windows' },
+  background: { icon: Timer, label: 'Runs in background' },
   'changes-app-behavior': {
     icon: Settings2,
-    label: 'Changes Penny behavior',
+    label: 'Changes Penny behaviour',
+    warn: true,
   },
 }
 
@@ -68,11 +76,11 @@ function CapabilityPills({
   return (
     <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Access it asks for">
       {capabilities.map((capability) => {
-        const { icon: Icon, label } = capabilityLabels[capability]
+        const { icon: Icon, label, warn } = capabilityLabels[capability]
 
         return (
           <li key={capability}>
-            <Chip className="inline-flex items-center gap-1" tone="warning">
+            <Chip className="inline-flex items-center gap-1" tone={warn ? 'warning' : 'neutral'}>
               <Icon className="size-3" />
               {label}
             </Chip>
@@ -122,14 +130,20 @@ export function RouteComponent() {
     handleOpen,
     handleReadme,
     handleRemove,
+    handleRollback,
     installed,
     isLoading,
+    loadError,
     marketplace,
     pendingId,
     readme,
+    refresh,
+    refreshing,
     removeTarget,
+    rollbackTarget,
     setReadme,
     setRemoveTarget,
+    setRollbackTarget,
   } = usePluginsData()
 
   const [tab, setTab] = useState<LibraryTab>('discover')
@@ -149,6 +163,17 @@ export function RouteComponent() {
         }
         actions={
           <>
+            <RefreshButton loading={refreshing} onClick={refresh} />
+            {!mode.safeMode && (
+              <Button
+                disabled={busy || mode.forced}
+                onClick={() => handleManage({ action: 'safe-mode', enabled: true })}
+                variant="secondary"
+              >
+                <ShieldCheck className="size-4" />
+                Stop all with safe mode
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => window.electronAPI.openPluginsDirectory()}>
               <FolderOpen className="size-4" />
               Open folder
@@ -178,6 +203,14 @@ export function RouteComponent() {
         </Callout>
       )}
 
+      {loadError && (
+        <div role="alert">
+          <Callout title="Could not load add-ons" tone="danger">
+            {loadError} Try Refresh.
+          </Callout>
+        </div>
+      )}
+
       <PageTabs
         label="Add-on library"
         onValueChange={setTab}
@@ -191,12 +224,10 @@ export function RouteComponent() {
         value={tab}
       >
         <PageTabPanel activeValue={tab} value="discover">
-          {marketplace.length === 0 ? (
-            <EmptyState
-              icon={Puzzle}
-              title={isLoading ? 'Loading add-ons…' : 'Catalog is empty'}
-              description="Add-on packages will appear here when they are available."
-            />
+          {isLoading ? (
+            <p className="py-12 text-center text-ui text-muted-foreground" role="status">Loading add-ons…</p>
+          ) : marketplace.length === 0 ? (
+            !loadError && <EmptyState icon={Puzzle} title="Catalog is empty" />
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
               {marketplace.map((plugin) => (
@@ -254,12 +285,10 @@ export function RouteComponent() {
         </PageTabPanel>
 
         <PageTabPanel activeValue={tab} value="installed">
-          {installed.length === 0 ? (
-            <EmptyState
-              icon={Boxes}
-              title={isLoading ? 'Loading installed add-ons…' : 'No add-ons installed'}
-              description="Pick one from Discover. It stays separate from Penny and you can inspect it in the add-ons folder."
-            />
+          {isLoading ? (
+            <p className="py-12 text-center text-ui text-muted-foreground" role="status">Loading installed add-ons…</p>
+          ) : installed.length === 0 ? (
+            !loadError && <EmptyState icon={Boxes} title="No add-ons installed" />
           ) : (
             <div className="grid items-start gap-4 lg:grid-cols-2">
               {installed.map((plugin) => (
@@ -316,7 +345,7 @@ export function RouteComponent() {
                       Reload
                     </Button>
                     {plugin.canRollback && (
-                      <Button variant="ghost" disabled={busy} onClick={() => handleManage({ action: 'rollback', id: plugin.id })}>
+                      <Button variant="ghost" disabled={busy} onClick={() => setRollbackTarget(plugin)}>
                         Roll back code
                       </Button>
                     )}
@@ -351,23 +380,6 @@ export function RouteComponent() {
           )}
         </PageTabPanel>
       </PageTabs>
-
-      {/* Fine print, and the one control that stops everything at once. */}
-      {!mode.safeMode && (
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <ShieldCheck className="size-3.5" />
-          Every install and update is reviewed before it runs, and an add-on
-          gets only the launcher access it declared.
-          <button
-            className="font-medium text-primary hover:underline disabled:opacity-50"
-            disabled={busy || mode.forced}
-            onClick={() => handleManage({ action: 'safe-mode', enabled: true })}
-            type="button"
-          >
-            Stop all with safe mode
-          </button>
-        </p>
-      )}
 
       <PluginReviewDialog review={review} busy={pendingId !== null} accept={handleAccept} cancel={handleCancelReview} />
       <Dialog open={readme !== null} onOpenChange={(open) => !open && setReadme(null)}>
@@ -406,6 +418,35 @@ export function RouteComponent() {
                 <LoaderCircle className="size-4 animate-spin" />
               )}
               Remove
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={rollbackTarget !== null}
+        onOpenChange={(open) => !open && pendingId === null && setRollbackTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Roll back {rollbackTarget?.name}?</DialogTitle>
+            <DialogDescription>
+              The add-on will go back to the previous approved code. Its saved data is not changed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              disabled={pendingId !== null}
+              onClick={() => setRollbackTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button disabled={pendingId !== null} onClick={handleRollback}>
+              {pendingId === rollbackTarget?.id && (
+                <LoaderCircle className="size-4 animate-spin" />
+              )}
+              Roll back code
             </Button>
           </div>
         </DialogContent>
