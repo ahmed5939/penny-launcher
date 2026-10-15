@@ -1,9 +1,10 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
-import { Image } from 'lucide-react'
+import { Image, LoaderCircle } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../../components/ui/button'
+
+import { copyElementScreenshot } from '../-components/-screenshot'
 
 import { BasicInformation } from './-basic-information'
 import { usePlayerData } from './-hooks'
@@ -59,20 +60,7 @@ function ScreenshotGeneration() {
     setIsLoading(true)
 
     try {
-      // Pulled in on demand: the screenshot library is only needed once the
-      // user actually asks for one, so it stays out of the startup path.
-      const { domToBlob } = await import('modern-screenshot')
-
-      const data = await domToBlob($element, {
-        backgroundColor: 'hsl(335 24% 4%)',
-        type: 'image/png',
-      })
-
-      await window.navigator.clipboard.write([
-        new ClipboardItem({
-          'image/png': data,
-        }),
-      ])
+      await copyElementScreenshot($element)
 
       toast.success(t('validations.screenshot.success'))
 
@@ -99,7 +87,7 @@ function ScreenshotGeneration() {
         disabled={isLoading}
       >
         {isLoading ? (
-          <UpdateIcon className="size-3.5 animate-spin" />
+          <LoaderCircle className="size-3.5 animate-spin" />
         ) : (
           <Image className="size-3.5" />
         )}
