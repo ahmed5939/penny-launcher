@@ -149,7 +149,7 @@ describe('BR Lobby Hacks page', () => {
 
     const text = page()
 
-    expect(text).toContain('BR Lobby Hacks')
+    expect(text).toContain('BR lobby hacks')
     expect(text).toContain('No linked accounts')
     expect(submitButton(markup())).toBe('')
   })
@@ -158,7 +158,7 @@ describe('BR Lobby Hacks page', () => {
     const html = markup()
     const text = page()
 
-    expect(text).toContain('BR Lobby Hacks')
+    expect(text).toContain('BR lobby hacks')
     expect(text).toContain('Beta')
     expect(text).toContain('lobby effects only play in game')
     expect(text).toContain('Nothing is sent until you press Submit')
