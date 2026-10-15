@@ -33,7 +33,7 @@ const SheetOverlay = forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 const sheetVariants = cva(
-  'fixed z-40 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+  'fixed z-40 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-150 data-[state=open]:duration-200',
   {
     variants: {
       side: {
@@ -74,7 +74,7 @@ const SheetContent = forwardRef<
       >
         {children}
         {hideCloseButton !== true && (
-          <SheetPrimitive.Close className="absolute right-4 top-4 rounded-lg opacity-70 transition-opacity hover:opacity-100 disabled:pointer-events-none data-[state=open]:bg-secondary">
+          <SheetPrimitive.Close className="absolute right-3 top-3 grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
