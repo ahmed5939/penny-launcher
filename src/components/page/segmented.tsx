@@ -59,6 +59,9 @@ export function Segmented<T extends string>({
     onChange(options[next].value)
   }
 
+  const selected = options.findIndex((option) => option.value === value && !option.disabled)
+  const tabStop = selected >= 0 ? selected : enabledFrom(-1, 1)
+
   return (
     <div
       role="radiogroup"
@@ -87,7 +90,7 @@ export function Segmented<T extends string>({
             role="radio"
             aria-label={Icon ? option.label : undefined}
             aria-checked={active}
-            tabIndex={active ? 0 : -1}
+            tabIndex={index === tabStop ? 0 : -1}
             disabled={option.disabled}
             className={cn(
               'h-7 rounded-lg text-xs font-semibold transition-colors',
