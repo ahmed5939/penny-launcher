@@ -284,7 +284,7 @@ export function AccountResourceGate<T>({
   }
   return (
     <div role="status">
-      <EmptyState description={loading ? loading.description : 'Reading the account from Epic.'} icon={icon} title={loading?.title ?? `Loading ${what}…`} />
+      <EmptyState description={loading?.description} icon={icon} title={loading?.title ?? `Loading ${what}…`} />
     </div>
   )
 }

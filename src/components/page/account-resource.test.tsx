@@ -130,6 +130,12 @@ describe('AccountResourceGate', () => {
     expect(markup).toContain('content:bag')
     expect(markup).not.toContain('role="alert"')
   })
+
+  it('shows only the loading title when no description is given', () => {
+    const markup = gate({ loading: true })
+    expect(markup).toContain('Loading the backpack…')
+    expect(markup).not.toContain('Epic')
+  })
 })
 
 describe('penny:refresh', () => {
