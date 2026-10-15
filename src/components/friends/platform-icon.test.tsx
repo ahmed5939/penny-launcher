@@ -22,4 +22,24 @@ describe('PlatformIcon', () => {
     expect(markup).toContain('GitHub')
     expect(markup).not.toContain('>git<')
   })
+
+  it('lets a text label size to its words, not the glyph box', () => {
+    const markup = renderToStaticMarkup(
+      createElement(PlatformIcon, { platform: 'github', className: 'size-3.5' })
+    )
+
+    expect(markup).toContain('>GitHub<')
+    expect(markup).toContain('size-auto')
+    expect(markup).toContain('shrink-0')
+    expect(markup).not.toContain('size-3.5')
+  })
+
+  it('keeps the caller size on a glyph', () => {
+    const markup = renderToStaticMarkup(
+      createElement(PlatformIcon, { platform: 'psn', className: 'size-3.5' })
+    )
+
+    expect(markup).toContain('size-3.5')
+    expect(markup).not.toContain('size-auto')
+  })
 })

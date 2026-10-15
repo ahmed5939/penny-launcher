@@ -68,9 +68,14 @@ export function PlatformIcon({
       <span
         /*
          * The caption rank, not a size of its own: a platform name is a label,
-         * and the app has exactly two label ranks.
+         * and the app has exactly two label ranks. It sizes to its text, so
+         * the glyph size a caller passes does not apply to it.
          */
-        className={cn('micro-label', className)}
+        className={cn(
+          'micro-label',
+          className,
+          'size-auto shrink-0 whitespace-nowrap'
+        )}
         title={name}
       >
         {name}
