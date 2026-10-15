@@ -52,11 +52,12 @@ export function CosmeticTile({
 
   return (
     <Element
+      aria-pressed={onClick ? Boolean(selected) : undefined}
       className={cn(
         'group relative flex flex-col overflow-hidden rounded-lg border text-left',
         'border-border/60 transition-[transform,box-shadow,border-color]',
         onClick && !disabled && 'hover:-translate-y-0.5 hover:border-primary/60',
-        disabled && 'cursor-not-allowed opacity-60',
+        disabled && 'opacity-60',
         selected && 'border-primary ring-1 ring-primary',
         size === 'small' ? 'w-20' : 'w-28'
       )}
