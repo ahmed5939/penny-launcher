@@ -216,7 +216,7 @@ function ChainCard({ chain, current, records, steps }: { chain: string; current:
         </div>
         {current ? (
           <>
-            <p className="mt-2 truncate text-ui font-semibold leading-tight" title={record?.name}>{record?.name ?? `${chainName} quest ${current.step}`}</p>
+            <p className="mt-2 truncate text-ui font-semibold leading-tight" title={record?.name ?? `${chainName} quest ${current.step}`}>{record?.name ?? `${chainName} quest ${current.step}`}</p>
             {objectives.length > 0 && current.state !== 'not-started' ? (
               <ul className="mt-1.5 space-y-1.5">
                 {objectives.map((o) => (
@@ -254,7 +254,7 @@ function QuestRow({ quest, records }: { quest: VentureQuest; records: Records })
     <li className="flex items-center gap-3 border-b border-border/30 px-4 py-2">
       <ItemIcon className={cn(quest.state === 'not-started' && 'opacity-50 grayscale')} records={records} size="small" templateId={quest.templateId} />
       <div className="min-w-0 flex-1">
-        <p className={cn('truncate text-ui font-medium leading-tight', quest.state === 'not-started' && 'text-muted-foreground')} title={record?.name}>{record?.name ?? `${chainName} quest ${quest.step}`}</p>
+        <p className={cn('truncate text-ui font-medium leading-tight', quest.state === 'not-started' && 'text-muted-foreground')} title={record?.name ?? `${chainName} quest ${quest.step}`}>{record?.name ?? `${chainName} quest ${quest.step}`}</p>
         <p className="truncate text-xs text-muted-foreground" title={objective}>
           {chainName} <span className="figure">{quest.step}</span>{objective && <> · {objective}</>}
         </p>
