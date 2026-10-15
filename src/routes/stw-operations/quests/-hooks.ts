@@ -80,6 +80,8 @@ function prettifyTemplateId(templateId: string) {
 /** How long to wait for the main process before giving up on a reply. */
 const REPLY_TIMEOUT_MS = 60_000
 
+export const MAX_PINNED_QUESTS = 3
+
 /**
  * The quests IPC is fire-and-forget: a request goes out and the reply comes
  * back on a shared channel. This turns the next reply for one account into a
@@ -125,7 +127,7 @@ function accountById(accountId: string): AccountData {
  */
 export function useQuestsResource() {
   const pinReply = useRef<{ accountId: string; reply: Promise<QuestsPayload> } | null>(null)
-  const [isPinning, setPinning] = useState(false)
+  const [pinningId, setPinningId] = useState<string | null>(null)
 
   const resource = useAccountResource(
     async (accountId) => {
@@ -147,7 +149,7 @@ export function useQuestsResource() {
   useEffect(() => {
     const listener = window.electronAPI.notificationQuestsPin(
       async (response) => {
-        setPinning(false)
+        setPinningId(null)
 
         if (response.errorMessage) {
           toast.error(`Could not update pins: ${response.errorMessage}`)
@@ -168,14 +170,21 @@ export function useQuestsResource() {
    * anything dropped from the display still has to survive the round trip.
    */
   const togglePin = (data: QuestsPayload, itemId: string) => {
-    if (isPinning) {
+    if (pinningId !== null) {
       return
     }
 
     const pinnedIds = data.quests
       .filter((quest) => quest.pinned)
       .map((quest) => quest.itemId)
-    const next = pinnedIds.includes(itemId)
+    const pinned = pinnedIds.includes(itemId)
+
+    if (!pinned && pinnedIds.length >= MAX_PINNED_QUESTS) {
+      toast.warning('Unpin a quest first — Epic allows three.')
+      return
+    }
+
+    const next = pinned
       ? pinnedIds.filter((value) => value !== itemId)
       : [...pinnedIds, itemId]
 
@@ -191,11 +200,11 @@ export function useQuestsResource() {
     // Only the load that picks this up reports a failure.
     reply.catch(() => undefined)
     pinReply.current = { accountId: data.accountId, reply }
-    setPinning(true)
+    setPinningId(itemId)
     window.electronAPI.pinQuests(account, next)
   }
 
-  return { isPinning, resource, togglePin }
+  return { pinningId, resource, togglePin }
 }
 
 /** The quest log as the page shows it: named, paired with its targets, grouped. */

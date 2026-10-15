@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 
 import { GoToTop } from '../../../components/go-to-top'
 import { ItemIcon } from '../../../components/items/item-icon'
+import { Button } from '../../../components/ui/button'
 import {
   AccountResourceGate,
   EmptyState,
@@ -19,7 +20,7 @@ import {
   StatTile,
 } from '../../../components/page'
 
-import { useQuestViews, useQuestsResource } from './-hooks'
+import { MAX_PINNED_QUESTS, useQuestViews, useQuestsResource } from './-hooks'
 
 import { questRewardAmount } from '../../../config/constants/fortnite/accolade-xp'
 import { cn } from '../../../lib/utils'
@@ -50,7 +51,7 @@ function categoryLabel(category: string) {
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
-  const { isPinning, resource, togglePin } = useQuestsResource()
+  const { pinningId, resource, togglePin } = useQuestsResource()
 
   return (
     <div
@@ -72,19 +73,15 @@ export function RouteComponent() {
       />
       <AccountResourceGate
         icon={ScrollText}
-        loading={{
-          title: 'Loading the quest log…',
-          description: 'Reading the campaign profile from Epic.',
-        }}
         resource={resource}
         what="the quest log"
       >
         {(data) => (
           <Content
             data={data}
-            isPinning={isPinning}
             key={data.accountId}
             onTogglePin={(itemId) => togglePin(data, itemId)}
+            pinningId={pinningId}
           />
         )}
       </AccountResourceGate>
@@ -95,14 +92,15 @@ export function RouteComponent() {
 
 function Content({
   data,
-  isPinning,
   onTogglePin,
+  pinningId,
 }: {
   data: QuestsPayload
-  isPinning: boolean
   onTogglePin: (itemId: string) => void
+  pinningId: string | null
 }) {
   const { grouped, pinnedCount, records, total } = useQuestViews(data.quests)
+  const atLimit = pinnedCount >= MAX_PINNED_QUESTS
 
   return (
     <>
@@ -137,7 +135,8 @@ function Content({
           <ul className="grid xl:grid-cols-2">
             {quests.map((quest) => (
               <QuestCard
-                isPinning={isPinning}
+                atLimit={atLimit}
+                isPinning={pinningId === quest.itemId}
                 key={quest.itemId}
                 onTogglePin={() => onTogglePin(quest.itemId)}
                 quest={quest}
@@ -160,17 +159,20 @@ function Content({
 }
 
 function QuestCard({
+  atLimit,
   isPinning,
   onTogglePin,
   quest,
   records,
 }: {
+  atLimit: boolean
   isPinning: boolean
   onTogglePin: () => void
   quest: QuestView
   records: ItemRecordMap
 }) {
   const complete = quest.progress >= 1
+  const blocked = !quest.pinned && atLimit
 
   return (
     <li
@@ -190,21 +192,22 @@ function QuestCard({
           <span className="min-w-0 flex-1 text-ui font-semibold leading-tight">
             {quest.name}
           </span>
-          <button
+          <Button
             aria-label={quest.pinned ? 'Unpin quest' : 'Pin quest'}
             aria-pressed={quest.pinned}
             className={cn(
-              'grid size-6 shrink-0 place-items-center rounded-md border transition-colors',
-              quest.pinned
-                ? 'border-primary/50 bg-primary/15 text-primary'
-                : 'border-border/70 text-muted-foreground hover:text-foreground'
+              'size-6 shrink-0 text-muted-foreground',
+              quest.pinned && 'text-primary'
             )}
-            disabled={isPinning}
+            disabled={isPinning || blocked}
             onClick={onTogglePin}
+            size="icon"
+            title={blocked ? 'Unpin a quest first — Epic allows three' : undefined}
             type="button"
+            variant="ghost"
           >
-            <Pin className="size-3" />
-          </button>
+            <Pin className={cn('size-3', quest.pinned && 'fill-current')} />
+          </Button>
         </p>
 
         <ul className="mt-2 space-y-1.5">
@@ -234,7 +237,7 @@ function QuestCard({
           <ul className="mt-2.5 flex flex-wrap gap-1.5">
             {quest.rewards.map((reward) => (
               <li
-                className="flex items-center gap-1 rounded-md border border-border/60 bg-surface/50 py-0.5 pl-0.5 pr-2 figure text-xs"
+                className="flex items-center gap-1 rounded-md bg-muted/50 py-0.5 pl-0.5 pr-2 figure text-xs"
                 key={reward.item}
               >
                 <ItemIcon
