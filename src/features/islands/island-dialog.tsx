@@ -126,7 +126,14 @@ export function IslandDialog({
 
           {metrics?.errorMessage && (
             <div role="alert">
-              <Callout tone={metrics.status === 'error' ? 'danger' : 'warning'}>{metrics.errorMessage}</Callout>
+              <Callout tone={metrics.status === 'error' ? 'danger' : 'warning'}>
+                {metrics.errorMessage}
+                <div className="pt-1">
+                  <Button disabled={loading} onClick={() => loadMetrics(island.code, true)} size="sm" variant="outline">
+                    {loading ? 'Loading…' : 'Try again'}
+                  </Button>
+                </div>
+              </Callout>
             </div>
           )}
 
