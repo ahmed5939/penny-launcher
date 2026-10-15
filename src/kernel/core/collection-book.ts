@@ -1,6 +1,7 @@
 import { validBookUpgrade, type BookItem, type CollectionBookData } from '../../features/collection-book/types'
 import { Authentication } from './authentication'
 import { AccountsManager } from '../startup/accounts'
+import { UserError } from '../user-error'
 
 type RawItem = { templateId: string; quantity?: number; attributes?: Record<string, unknown> }
 export function bookItems(items: Record<string, RawItem>): BookItem[] {
@@ -15,19 +16,19 @@ export function bookItems(items: Record<string, RawItem>): BookItem[] {
 // The renderer only names the account; the main process resolves the linked
 // record so tokens never travel over IPC.
 export async function requestCollectionBook(accountId: string): Promise<CollectionBookData> {
-  if (typeof accountId !== 'string' || !/^[a-f0-9]{32}$/i.test(accountId)) throw new Error('Choose a valid Epic account.')
+  if (typeof accountId !== 'string' || !/^[a-f0-9]{32}$/i.test(accountId)) throw new UserError('Choose a valid Epic account.')
   const account = AccountsManager.getAccounts().get(accountId)
-  if (!account) throw new Error('Select a linked account.')
+  if (!account) throw new UserError('Select a linked account.')
   const accessToken = await Authentication.verifyAccessToken(account)
-  if (!accessToken) throw new Error('Epic authentication expired. Sign in again.')
+  if (!accessToken) throw new UserError('Epic authentication expired. Sign in again.')
   const profiles = await Promise.all(['campaign', 'collection_book_people0', 'collection_book_schematics0'].map(async profileId => {
     const response = await fetch(`https://fortnite-public-service-prod11.ol.epicgames.com/fortnite/api/game/v2/profile/${accountId}/client/QueryProfile?profileId=${profileId}&rvn=-1`, {
       method: 'POST', headers: { Authorization: `bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(30000),
     })
-    if (!response.ok) throw new Error(`Epic could not load ${profileId} (HTTP ${response.status}). Try Refresh.`)
+    if (!response.ok) throw new UserError(`Epic could not load ${profileId} (HTTP ${response.status}). Try Refresh.`)
     const body = await response.json() as { profileChanges?: { profile?: { accountId?: string; profileId?: string; items: Record<string, RawItem>; stats?: { attributes?: { collection_book?: { maxBookXpLevelAchieved?: number } } } } }[] }
     const profile = body.profileChanges?.find(change => change.profile)?.profile
-    if (!profile?.items || (profile.accountId && profile.accountId !== accountId) || (profile.profileId && profile.profileId !== profileId)) throw new Error('Epic returned an incomplete or mismatched profile. Try Refresh.')
+    if (!profile?.items || (profile.accountId && profile.accountId !== accountId) || (profile.profileId && profile.profileId !== profileId)) throw new UserError('Epic returned an incomplete or mismatched profile. Try Refresh.')
     return profile
   }))
   const resources: Record<string, number> = {}
@@ -44,12 +45,12 @@ export async function requestCollectionBook(accountId: string): Promise<Collecti
  * the campaign inventory, exactly as when the game does it.
  */
 export async function upgradeCollectionBookItem(accountId: string, request: unknown) {
-  if (typeof accountId !== 'string' || !/^[a-f0-9]{32}$/i.test(accountId)) throw new Error('Choose a valid Epic account.')
+  if (typeof accountId !== 'string' || !/^[a-f0-9]{32}$/i.test(accountId)) throw new UserError('Choose a valid Epic account.')
   const upgrade = validBookUpgrade(request)
   const account = AccountsManager.getAccounts().get(accountId)
-  if (!account) throw new Error('Select a linked account.')
+  if (!account) throw new UserError('Select a linked account.')
   const accessToken = await Authentication.verifyAccessToken(account)
-  if (!accessToken) throw new Error('Epic authentication expired. Sign in again.')
+  if (!accessToken) throw new UserError('Epic authentication expired. Sign in again.')
   const [operation, body] = upgrade.action === 'level'
     ? ['UpgradeSlottedItem', { targetItemId: upgrade.itemId, desiredLevel: upgrade.desiredLevel }]
     : ['ConvertSlottedItem', { targetItemId: upgrade.itemId, ConversionIndex: upgrade.conversionIndex }]
@@ -58,7 +59,7 @@ export async function upgradeCollectionBookItem(accountId: string, request: unkn
   })
   if (!response.ok) {
     const error = (await response.json().catch(() => null)) as { errorMessage?: string } | null
-    throw new Error(error?.errorMessage ? `Epic refused the upgrade: ${error.errorMessage}` : `Could not upgrade the item (HTTP ${response.status}). Refresh and try again.`)
+    throw new UserError(error?.errorMessage ? `Epic refused the upgrade: ${error.errorMessage}` : `Could not upgrade the item (HTTP ${response.status}). Refresh and try again.`)
   }
   return { ok: true as const }
 }
