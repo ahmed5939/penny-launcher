@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
-import type { PluginManageRequest, PluginReview, PluginSummary } from '../../types/plugins'
+import type { PluginJob, PluginManageRequest, PluginReview, PluginSummary } from '../../types/plugins'
+import type { PluginFortniteAccess, PluginFortniteProfile } from '../../types/plugin-fortnite'
 import { Callout, Chip, FieldGroup, FieldRow } from '../../components/page'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Switch } from '../../components/ui/switch'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../../components/ui/dialog'
-import { permissionLabels } from './-permissions'
-import { pluginCommandNeedsDialog } from '../../types/plugin-fortnite'
+import { permissionLabels, profileLabels } from './-permissions'
+
+const pluginStatusLabels: Record<PluginSummary['status'], string> = { running: 'Running', review: 'Needs review', disabled: 'Disabled', error: 'Error' }
+const jobStatusLabels: Record<PluginJob['status'], string> = { running: 'Running', completed: 'Completed', cancelled: 'Cancelled', error: 'Failed' }
 
 type Manage = (request: PluginManageRequest) => Promise<void>
 export function PluginContributions({ plugin, manage, busy }: { plugin: PluginSummary; manage: Manage; busy: boolean }) {
@@ -46,28 +49,52 @@ export function PluginContributions({ plugin, manage, busy }: { plugin: PluginSu
     {plugin.jobs.length > 0 && <section className="space-y-2 rounded-lg bg-muted/30 p-3">
       <h3 className="section-label">Background jobs</h3>
       {plugin.jobs.map((job) => <div key={job.id} className="text-ui">
-        <div className="flex items-center justify-between gap-2"><span>{job.label} <span className="text-muted-foreground">· {job.status}</span></span>
+        <div className="flex items-center justify-between gap-2"><span>{job.label} <span className="text-muted-foreground">· {jobStatusLabels[job.status]}</span></span>
           {job.status === 'running' && <Button size="sm" variant="secondary" disabled={busy} onClick={() => manage({ action: 'cancel-job', id: plugin.id, jobId: job.id })}>Cancel</Button>}
         </div>{job.error && <div className="mt-2" role="alert"><Callout tone="danger">{job.error}</Callout></div>}
       </div>)}
     </section>}
     <details className="text-xs">
       <summary className="text-muted-foreground hover:text-foreground">Diagnostics · {plugin.logs.length} recent entries</summary>
-      <p className="my-2 text-muted-foreground">Status: {plugin.status} · {plugin.permissions.length} requested package permissions</p>
+      <p className="my-2 text-muted-foreground">Status: {pluginStatusLabels[plugin.status]} · {plugin.permissions.length} requested package permissions</p>
       <ul className="mb-3 space-y-1">{plugin.permissions.map((permission) => <li key={permission}>{permissionLabels[permission]}</li>)}</ul>
       <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/30 p-3 font-mono">{plugin.logs.map((log) => `${log.time} [${log.level}] ${log.message}`).join('\n') || 'No runtime logs yet.'}</pre>
     </details>
   </div>
 }
-function FortniteCommands({ manifest }: { manifest: PluginReview['manifest'] }) {
-  const commands = (manifest.fortnite?.operations ?? []).filter((operation) => operation !== 'QueryProfile')
-  const asks = commands.filter((operation) => pluginCommandNeedsDialog(operation, manifest.apiVersion))
-  const runs = commands.filter((operation) => !asks.includes(operation))
+function CommandRow({ command, added }: { command: PluginReview['commands'][number]; added: boolean }) {
+  return <li className="flex items-start justify-between gap-3">
+    <span className="min-w-0">
+      <span className={command.known ? undefined : 'text-warning'}>{command.description}</span>
+      <span className="block break-all text-xs text-muted-foreground">{command.operation}</span>
+    </span>
+    {added && <Chip tone="warning">New access</Chip>}
+  </li>
+}
+function FortniteAccess({ review, access }: { review: PluginReview; access: PluginFortniteAccess }) {
+  const addedOperations = review.installed ? review.addedOperations : []
+  const addedProfiles = review.installed ? review.addedProfiles : []
+  const profiles = (Object.keys(profileLabels) as PluginFortniteProfile[]).filter((profile) => access.profiles.includes(profile))
+  const runs = review.commands.filter((command) => !command.asks)
+  const asks = review.commands.filter((command) => command.asks)
   return <>
-    {runs.length > 0 && <p className="mt-2 break-words">Runs without asking: {runs.join(', ')}</p>}
-    {asks.length > 0 && <p className="mt-2 break-words">Asks before each use: {asks.join(', ')}</p>}
-    {!commands.length && <p className="mt-2">Fortnite commands: None</p>}
-    {runs.length > 0 && <p className="mt-2 text-muted-foreground">Approving lets this add-on run these on your selected accounts at any time.</p>}
+    <p className="section-label">Fortnite profiles</p>
+    {profiles.length > 0
+      ? <ul className="mt-2 space-y-2">{profiles.map((profile) => <li key={profile} className="flex items-center justify-between gap-3">
+        <span>{profileLabels[profile]}</span>
+        {addedProfiles.includes(profile) && <Chip tone="warning">New access</Chip>}
+      </li>)}</ul>
+      : <p className="mt-2">None</p>}
+    {runs.length > 0 && <>
+      <p className="section-label mt-4">Runs without asking</p>
+      <ul className="mt-2 space-y-2">{runs.map((command) => <CommandRow key={command.operation} command={command} added={addedOperations.includes(command.operation)} />)}</ul>
+      <p className="mt-2 text-muted-foreground">Approving lets this add-on run these on your selected accounts at any time.</p>
+    </>}
+    {asks.length > 0 && <>
+      <p className="section-label mt-4">Asks before each use</p>
+      <ul className="mt-2 space-y-2">{asks.map((command) => <CommandRow key={command.operation} command={command} added={addedOperations.includes(command.operation)} />)}</ul>
+    </>}
+    {!review.commands.length && <p className="mt-4">Fortnite commands: None</p>}
   </>
 }
 export function PluginReviewDialog({ review, busy, accept, cancel }: { review: PluginReview | null; busy: boolean; accept: () => void; cancel: () => void }) {
@@ -85,8 +112,7 @@ export function PluginReviewDialog({ review, busy, accept, cancel }: { review: P
           {permissionLabels[permission]} {review?.installed && review.addedPermissions.includes(permission) && <Chip className="ml-2" tone="warning">New access</Chip>}
         </li>)}</ul>
         {review?.manifest.fortnite && <div className="rounded-lg bg-muted/40 p-3">
-          <p>Fortnite profiles: {review.manifest.fortnite.profiles.join(', ') || 'None'}</p>
-          <FortniteCommands manifest={review.manifest} />
+          <FortniteAccess review={review} access={review.manifest.fortnite} />
         </div>}
         {!review?.manifest.permissions?.length && <p className="text-muted-foreground">No launcher permissions requested.</p>}
         {review?.installed && <p>The current code version is kept for rollback. Saved data is shared across versions; rollback does not undo data changes.</p>}

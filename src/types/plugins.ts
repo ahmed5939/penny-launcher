@@ -1,4 +1,4 @@
-import type { PluginFortniteAccess } from './plugin-fortnite'
+import type { PluginFortniteAccess, PluginFortniteProfile } from './plugin-fortnite'
 
 /** User-visible effects an add-on declares in plugin.json. */
 export const PLUGIN_CAPABILITIES = [
@@ -136,6 +136,10 @@ export type PluginReview = {
   digest: string
   previousVersion: string | null
   addedPermissions: PluginPermission[]
+  /** Declared Fortnite commands, without the read-only QueryProfile. */
+  commands: Array<{ operation: string; description: string; known: boolean; asks: boolean }>
+  addedOperations: string[]
+  addedProfiles: PluginFortniteProfile[]
   installed: boolean
   readme: string
 }
