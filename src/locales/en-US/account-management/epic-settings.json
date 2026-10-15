@@ -1,11 +1,12 @@
 {
   "form": {
     "generate-button": "Generate link",
+    "generating-button": "Generating…",
+    "regenerate-button": "Generate a new link",
     "open-button": "Open account settings"
   },
   "notifications": {
-    "clipboard": "Link has been copied into clipboard",
-    "success": "Epic Games settings link has been generated",
-    "error": "An error occurred while processing your request"
+    "success": "Sign-in link ready for {{name}}",
+    "error": "Could not make a sign-in link for {{name}}. Try again — if it keeps failing, sign the account in again from Accounts."
   }
 }

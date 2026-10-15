@@ -1,4 +1,3 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
 import { Cog, ExternalLinkIcon, UserX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -84,7 +83,7 @@ function Content() {
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {settingsUrl
-              ? 'Link ready — open it or copy it below.'
+              ? 'Link ready — it works once. Open it or copy it below.'
               : 'Generate a one-time sign-in link for this account.'}
           </p>
         </div>
@@ -94,11 +93,13 @@ function Content() {
           onClick={handleGenerateCode}
           variant={settingsUrl ? 'secondary' : 'default'}
         >
-          {isLoading ? (
-            <UpdateIcon className="animate-spin" />
-          ) : (
-            t('epic-settings.form.generate-button')
-          )}
+          {isLoading
+            ? t('epic-settings.form.generating-button')
+            : t(
+                settingsUrl
+                  ? 'epic-settings.form.regenerate-button'
+                  : 'epic-settings.form.generate-button'
+              )}
         </Button>
       </div>
 

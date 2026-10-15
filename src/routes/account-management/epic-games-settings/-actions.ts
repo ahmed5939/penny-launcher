@@ -1,7 +1,7 @@
 import type { MouseEventHandler } from 'react'
 
 import { useTranslation } from 'react-i18next'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { epicGamesAccountSettingsURL } from '../../../config/fortnite/links'
 
@@ -17,11 +17,17 @@ export function useHandlers() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [currentCode, setCurrentCode] = useState<string | undefined>()
+  const requestedFor = useRef<string | null>(null)
   const { selected } = useGetSelectedAccount()
 
   useEffect(() => {
     const listener = window.electronAPI.responseEpicGamesSettings(
       async ({ account, status, code }) => {
+        if (account.accountId !== requestedFor.current) {
+          return
+        }
+
+        requestedFor.current = null
         setIsLoading(false)
         setCurrentCode(code)
 
@@ -30,7 +36,9 @@ export function useHandlers() {
             ? t('notifications.success', {
                 name: parseCustomDisplayName(account),
               })
-            : t('notifications.error'),
+            : t('notifications.error', {
+                name: parseCustomDisplayName(account),
+              }),
           {
             duration: status ? 6000 : undefined,
           }
@@ -49,6 +57,7 @@ export function useHandlers() {
     }
 
     setIsLoading(true)
+    requestedFor.current = selected.accountId
     window.electronAPI.openEpicGamesSettings(selected)
   }
 
@@ -64,25 +73,11 @@ export function useHandlers() {
     )
   }
 
-  const handleCopyCode = () => {
-    if (!selected || !currentCode) {
-      return
-    }
-
-    window.navigator.clipboard
-      .writeText(epicGamesAccountSettingsURL(currentCode))
-      .then(() => {
-        toast.success(t('notifications.clipboard'))
-      })
-      .catch(() => {})
-  }
-
   return {
     currentCode,
     isLoading,
 
     handleGenerateCode,
     handleOpenURL,
-    handleCopyCode,
   }
 }
