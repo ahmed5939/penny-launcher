@@ -20,25 +20,12 @@ export function QuickLoginPage() {
   return (
     <div className="w-full max-w-md">
       <Panel>
-        <div className="space-y-2 border-b border-border/60 px-5 py-4 text-ui leading-relaxed text-muted-foreground">
-          <p>
-            <span className="font-semibold text-foreground">1.</span> Press
-            Sign in. Penny opens Epic's sign-in page in your browser.
-          </p>
-          <p>
-            <span className="font-semibold text-foreground">2.</span> Sign in
-            to the account you want to add and approve. Check which account
-            is signed in before you approve.
-          </p>
-          <p>
-            <span className="font-semibold text-foreground">3.</span> Come
-            back here. Penny picks it up on its own; there is nothing to
-            paste.
-          </p>
-        </div>
+        <p className="border-b border-border/60 px-5 py-4 text-ui leading-relaxed text-muted-foreground">
+          Sign in opens Epic in your browser. Approve with the account you want to add.
+        </p>
 
         {busy && (
-          <PanelBody className="flex items-center gap-3 text-ui">
+          <PanelBody className="flex items-center gap-3 text-ui" role="status">
             <UpdateIcon className="size-4 shrink-0 animate-spin text-muted-foreground" />
             <span className="min-w-0 flex-1">
               {phase.name === 'starting' && 'Opening Epic sign-in…'}
@@ -79,7 +66,14 @@ export function QuickLoginPage() {
               disabled={busy}
               onClick={start}
             >
-              {busy ? <UpdateIcon className="animate-spin" /> : 'Sign in'}
+              {busy ? (
+                <>
+                  <UpdateIcon className="animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                'Sign in'
+              )}
             </Button>
           )}
         </PanelFooter>
