@@ -13,15 +13,15 @@ import { useBaseSetupForm } from '../-hooks'
 import { toast } from '../../../../lib/notifications'
 
 export function useSetupForm() {
-  const { t, i18n } = useTranslation(['general'], {
-    keyPrefix: 'validations.form.input',
+  const { t, i18n } = useTranslation(['accounts'], {
+    keyPrefix: 'exchange-code.validations',
   })
 
   const formSchema = useMemo(
     () =>
       z.object({
         code: z.string().length(32, {
-          message: t('code.invalid'),
+          message: t('code'),
         }),
       }),
     [i18n.language]
@@ -42,6 +42,20 @@ export function useSetupForm() {
     type: 'exchangeCode',
   })
 
+  useEffect(() => {
+    const listener = window.electronAPI.responseAuthWithExchange(
+      async ({ data }) => {
+        if (data) {
+          form.reset()
+        }
+      }
+    )
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [])
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isSubmitting) {
       return
@@ -49,7 +63,6 @@ export function useSetupForm() {
 
     updateSubmittingState(true)
     window.electronAPI.createAuthWithExchange(values.code)
-    form.reset()
   }
 
   return { form, isSubmitting, selected, onSubmit }

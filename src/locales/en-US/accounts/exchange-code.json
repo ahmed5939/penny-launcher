@@ -13,5 +13,9 @@
       "error": "An error has occurred trying generate exchange code, try again later"
     },
     "clipboard": "Exchange code has been copied into clipboard"
-  }
+  },
+  "validations": {
+    "code": "An exchange code is 32 characters. Paste the code exactly as generated."
+  },
+  "signing-in": "Signing in…"
 }
