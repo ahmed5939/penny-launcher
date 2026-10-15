@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { cityHash64Bytes } from './city-hash'
 
 import { asFsBuffer } from './binary'
+import { describeFileError } from './errors'
 
 /**
  * IoStore `.utoc` repair — the missing half of every public pakchunk
@@ -281,9 +282,7 @@ export function updateTocChunkHash(
   } catch (error) {
     return {
       hashType: 'none',
-      message: `TOC repair failed: ${
-        error instanceof Error ? error.message : 'unknown error'
-      }`,
+      message: describeFileError(error, 'repair the game file index'),
       success: false,
     }
   }

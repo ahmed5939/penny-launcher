@@ -24,6 +24,7 @@ import {
   resolvePakchunkPath,
 } from './binary'
 
+import { describeFileError } from './errors'
 import { patchWithTocRepair } from './utoc'
 
 /**
@@ -372,7 +373,7 @@ export async function getTrapStatus(guid: string): Promise<TrapStatus> {
   } catch (error) {
     return {
       currentHeight: null,
-      error: error instanceof Error ? error.message : 'Scan failed',
+      error: describeFileError(error, 'read the trap file'),
       found: false,
       isModified: false,
     }
@@ -459,9 +460,7 @@ export async function applyTrapHeight(
     }
   } catch (error) {
     return {
-      message: `Patch failed: ${
-        error instanceof Error ? error.message : 'unknown error'
-      }`,
+      message: describeFileError(error, 'patch the trap file'),
       success: false,
     }
   }
@@ -510,9 +509,7 @@ export async function revertTrapHeight(
     }
   } catch (error) {
     return {
-      message: `Revert failed: ${
-        error instanceof Error ? error.message : 'unknown error'
-      }`,
+      message: describeFileError(error, 'revert the trap file'),
       success: false,
     }
   }
@@ -744,9 +741,7 @@ export async function applyBaseHeight(
     }
   } catch (error) {
     return {
-      message: `B.A.S.E. patch failed: ${
-        error instanceof Error ? error.message : 'unknown error'
-      }`,
+      message: describeFileError(error, 'patch the B.A.S.E. height'),
       success: false,
     }
   }
@@ -782,9 +777,7 @@ export async function revertBaseHeight(): Promise<TrapActionResult> {
     }
   } catch (error) {
     return {
-      message: `B.A.S.E. revert failed: ${
-        error instanceof Error ? error.message : 'unknown error'
-      }`,
+      message: describeFileError(error, 'revert the B.A.S.E. height'),
       success: false,
     }
   }
