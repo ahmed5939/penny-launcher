@@ -64,7 +64,7 @@ export function DefendersView({ accountSelected, loading, error, items, records,
           <Picker label="Sort" value={sort} onChange={setSort} options={[{value:'usefulness',label:'Weapon-roll usefulness'},{value:'level',label:'Current level'}]} />
         </FilterBar></Panel>
         {!active ? <EmptyState icon={ShieldHalf} title="No matching defenders" description="Try a different class, rarity or search." /> : <div className="grid items-start gap-5 lg:grid-cols-[minmax(240px,0.9fr)_minmax(0,1.6fr)]">
-          <Panel><PanelHeader as="div" compact title={<span className="flex items-baseline gap-2"><span className="figure">{visible.length}</span><span className="text-muted-foreground">defender{visible.length === 1 ? '' : 's'}</span></span>} /><PanelBody className="max-h-[700px] divide-y divide-border/50 overflow-y-auto p-0">
+          <Panel><PanelHeader as="div" compact title={<span className="flex items-baseline gap-2"><span className="figure">{visible.length}</span><span className="text-muted-foreground">defender{visible.length === 1 ? '' : 's'}</span></span>} /><PanelBody className="max-h-[700px] divide-y divide-border/50 overflow-y-auto p-1">
             {visible.map(d => <button key={d.item.itemId} type="button" aria-pressed={active.item.itemId === d.item.itemId} onClick={() => { setSelection(d.item.itemId); setWeaponPage(0) }} className={`flex w-full items-center gap-3 border-l-2 px-4 py-3 text-left transition-colors hover:bg-muted/40 ${active.item.itemId === d.item.itemId ? 'border-l-primary bg-primary/5' : 'border-l-transparent'}`}>
               <PowerItemIcon item={d.item} records={records} power={power(d.item)} />
               <span className="min-w-0 flex-1">

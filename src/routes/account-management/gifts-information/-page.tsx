@@ -585,7 +585,7 @@ function GiftsTable({
   }, [groups])
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto px-1 pb-1">
       <div className="min-w-[52rem]">
         {/*
           Not sticky: `overflow-x-auto` makes this wrapper a scroll container
