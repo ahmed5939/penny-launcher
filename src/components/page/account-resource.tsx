@@ -7,6 +7,7 @@ import { Callout } from './callout'
 import { EmptyState } from './empty-state'
 
 import { useGetSelectedAccount } from '../../hooks/accounts'
+import { ipcErrorMessage } from '../../lib/ipc-error'
 
 export type AccountResource<T> = {
   accountId: string | null
@@ -206,7 +207,7 @@ export function useAccountResource<T>(
       })
       .catch((cause: unknown) => {
         if (!active) return
-        const message = cause instanceof Error && cause.message ? cause.message : fallbackError
+        const message = ipcErrorMessage(cause, fallbackError)
         setState((previous) => resourceLoadFailed(previous, key, message))
       })
     return () => {
