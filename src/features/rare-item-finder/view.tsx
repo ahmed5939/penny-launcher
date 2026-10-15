@@ -54,6 +54,14 @@ const statusFilters: Array<{ value: StatusFilter; label: string }> = [
   { value: 'all', label: 'Everything checked' },
 ]
 
+const emptyStatusCopy: Record<Exclude<StatusFilter, 'all'>, string> = {
+  highlighted: 'No legacy, historical or modded copies here.',
+  hybrid: 'No legacy hybrids here.',
+  modded: 'No modded candidates here.',
+  legacy: 'No legacy-only copies here.',
+  review: 'Nothing here needs review.',
+}
+
 /** The perk a copy is on this page for — the AOE, legacy or historical roll. */
 function standoutPerk(item: FinderItem) {
   return item.perks.find((perk) => perk.aoe) ?? item.perks.find((perk) => perk.legacy) ?? null
@@ -103,9 +111,10 @@ export function RareItemFinderPage() {
    * re-render without restarting the scan; a real switch discards whatever
    * the previous account's scan returns late.
    */
-  const resource = useAccountResource((accountId) => window.electronAPI.requestRareItemScan(accountId), {
+  const resource = useAccountResource((accountId) => window.electronAPI.requestRareItemScan(accountId).catch(() => {
+    throw new Error('The scan could not be completed. Rescan to retry.')
+  }), {
     cacheKey: 'stw.rare-item-finder',
-    fallbackError: 'The scan could not be completed. Rescan to retry.',
     owner: (result) => result.accountId,
   })
 
@@ -113,15 +122,15 @@ export function RareItemFinderPage() {
     <div className="space-y-5">
       <PageHeader
         actions={<RefreshButton disabled={!resource.accountId} label="Rescan" loading={resource.loading} onClick={resource.refresh} />}
-        description="Finds legacy, historical, Knockback AOE and modded weapons and traps across your schematics, Collection Book, backpack and storage. Read-only."
+        description="Finds legacy, historical, AOE and modded weapons and traps across all four inventories."
         icon={Radar}
         section="Save the World"
         status={<ToolBadges beta readOnly />}
-        title="Rare Item Finder"
+        title="Rare item finder"
       />
       <AccountResourceGate
         icon={Radar}
-        loading={{ title: 'Scanning four inventories…', description: 'Reading inventory schematics, the Collection Book, the backpack and storage, then checking every perk against the 42.10 rules.' }}
+        loading={{ title: 'Scanning four inventories…' }}
         resource={resource}
         what="the scan"
       >
@@ -209,7 +218,7 @@ function Results({ scan: current }: { scan: RareItemScan }) {
 
       {failed.length > 0 && (
         <Callout title="Scan incomplete" tone="warning">
-          {failed.map((p) => `${locationLabel[p.sourceId]}: ${p.error?.message ?? 'could not be read'}`).join(' · ')} Counts above only cover the inventories that were read.
+          {failed.map((p) => `${locationLabel[p.sourceId]}: ${(p.error?.message ?? 'could not be read').replace(/\.$/, '')}`).join('. ')}. Counts cover only the inventories that were read.
         </Callout>
       )}
 
@@ -282,7 +291,7 @@ function Results({ scan: current }: { scan: RareItemScan }) {
                       ? 'Nothing matches the current search or type filter.'
                       : status === 'all'
                         ? 'This inventory holds no weapons or traps.'
-                        : `Nothing in this inventory is ${statusFilters.find((f) => f.value === status)?.label.toLowerCase()}. ${status === 'legacy' ? 'Try “Needs review” for unfamiliar perks and Epic flags.' : 'It was checked successfully.'}`
+                        : emptyStatusCopy[status]
                 }
                 icon={Radar}
                 title={profile?.status === 'error' ? 'This inventory could not be read' : 'No matches'}
@@ -293,10 +302,6 @@ function Results({ scan: current }: { scan: RareItemScan }) {
           <Pager onPageChange={setPage} page={shown.page} pageSize={PAGE_SIZE} total={displayed.length} />
         </Panel>
       </PageTabs>
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        {current.rulesVersion}. Slot checks use the extracted 42.10 rules read with 42.00 mappings; historical slot tables and server hotfixes are not included, so a mismatch is a reason to look, not proof of modification. Copies are listed per location and never merged.
-      </p>
 
       <FinderItemDialog alterationPools={alterationPools} item={detail} onClose={() => setDetail(null)} ratings={ratings} records={records} />
     </>
@@ -403,7 +408,7 @@ function FinderItemDialog({ alterationPools, item, onClose, ratings, records }: 
                   <li className="panel px-3 py-2 text-xs leading-relaxed" key={i}>{f.message}</li>
                 ))
               ) : (
-                <li className="panel px-3 py-2 text-xs leading-relaxed text-muted-foreground">Every perk fits the extracted slot rules. That is consistent with a normal roll; it does not prove one.</li>
+                <li className="panel px-3 py-2 text-xs leading-relaxed text-muted-foreground">Every perk fits the slot rules.</li>
               )}
             </ul>
             {/* The findings above are folded into the reasons too; only the rest is new. */}
