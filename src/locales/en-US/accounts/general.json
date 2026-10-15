@@ -2,8 +2,8 @@
   "notifications": {
     "new-account": {
       "success": "New account added: {{name}}",
-      "error": "Unknown error",
-      "launcher-auth-login": "Unable to add account, please check if the credentials are valid"
+      "error": "Could not add the account. Try signing in again.",
+      "launcher-auth-login": "Could not add the account: Epic did not accept the sign-in. Get a new code, or check the device auth details, and try again."
     }
   }
 }
