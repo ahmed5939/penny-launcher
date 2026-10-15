@@ -33,7 +33,10 @@ export function AccountSecurityLine({ accountId }: { accountId: string }) {
 
   if (entry.status !== 'ok') {
     return (
-      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+      <div
+        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground"
+        role="alert"
+      >
         <ShieldQuestion className="size-3.5 shrink-0" />
         <span>Security unavailable</span>
         {entry.errorMessage && (
