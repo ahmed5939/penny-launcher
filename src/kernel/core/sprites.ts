@@ -198,9 +198,9 @@ export class Sprites {
 
       if (read.problem) {
         problems.push(`Collection: ${read.problem}`)
+      } else {
+        payload.collection = buildSpriteCollection(catalog, read.inventory)
       }
-
-      payload.collection = buildSpriteCollection(catalog, read.inventory)
 
       RuntimeLog.info(
         'core/sprites.ts',

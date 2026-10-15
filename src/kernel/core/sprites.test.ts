@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import type { AccountData } from '../../types/accounts'
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   buildSpriteCollection,
@@ -6,6 +8,45 @@ import {
   prettifyFamily,
   variantLabel,
 } from './sprite-collection'
+import { Sprites } from './sprites'
+
+const mock = vi.hoisted(() => ({
+  send: vi.fn(),
+  getSpriteCatalog: vi.fn(),
+  getSpriteInventory: vi.fn(),
+}))
+
+vi.mock('../startup/accounts', () => ({
+  AccountsManager: { getAccountById: () => undefined },
+}))
+vi.mock('../startup/windows/main', () => ({
+  MainWindow: {
+    instance: { isDestroyed: () => false, webContents: { send: mock.send } },
+  },
+}))
+vi.mock('../runtime-log', () => ({
+  RuntimeLog: { error: vi.fn(), info: vi.fn() },
+}))
+vi.mock('./authentication', () => ({
+  Authentication: { verifyAccessToken: async () => 'test-only-token' },
+}))
+vi.mock('./locker', () => ({ eosToken: async () => 'test-only-eos-token' }))
+vi.mock('./sprite-history', () => ({
+  SpriteHistory: {
+    record: vi.fn(),
+    catalogueStatus: async () => null,
+    observeCatalogue: async () => undefined,
+    setCatalogueVersion: vi.fn(),
+  },
+}))
+vi.mock('../../services/endpoints/sprites', () => ({
+  getSpriteCatalog: mock.getSpriteCatalog,
+  getSpriteInventory: mock.getSpriteInventory,
+}))
+vi.mock('../../services/config/sprites', () => ({
+  spriteModuleVersion: '13',
+  spriteModuleVersionCandidates: [14, 15, 16, 17],
+}))
 
 const data = {
   families: {
@@ -337,5 +378,43 @@ describe('buildSpriteCollection', () => {
       resolved: false,
     })
     expect(built.ownedVariants).toBe(1)
+  })
+})
+
+describe('Sprites.request', () => {
+  const account = {
+    accountId: 'account-1',
+    displayName: 'Tester',
+  } as AccountData
+
+  beforeEach(() => {
+    mock.send.mockClear()
+    mock.getSpriteCatalog.mockReset()
+    mock.getSpriteInventory.mockReset()
+  })
+
+  it('sends no collection when the inventory cannot be read', async () => {
+    mock.getSpriteCatalog.mockResolvedValue({ data: catalog })
+    mock.getSpriteInventory.mockRejectedValue(new Error('Inventory is down'))
+
+    await Sprites.request(account, true)
+
+    expect(mock.send.mock.calls[0][1]).toMatchObject({
+      accountId: 'account-1',
+      collection: null,
+      errorMessage: 'Collection: Inventory is down',
+    })
+  })
+
+  it('keeps the collection when only the catalogue cannot be read', async () => {
+    mock.getSpriteCatalog.mockRejectedValue(new Error('Catalogue is down'))
+    mock.getSpriteInventory.mockResolvedValue({ data: inventory })
+
+    await Sprites.request(account, true)
+
+    expect(mock.send.mock.calls[0][1]).toMatchObject({
+      collection: { ownedVariants: 3 },
+      errorMessage: 'Catalogue: Catalogue is down',
+    })
   })
 })
