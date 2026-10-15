@@ -8,7 +8,7 @@ import { toast } from '../../lib/notifications'
  * asks once and stays quiet unless there is a release to point at.
  */
 export function CheckNewVersion() {
-  const { t } = useTranslation(['general'])
+  const { i18n } = useTranslation(['general'])
 
   useEffect(() => {
     const listener = window.electronAPI.responseNewVersionStatus(
@@ -17,12 +17,12 @@ export function CheckNewVersion() {
           return
         }
 
-        toast.info(t('version.title', { version: data.version }), {
+        toast.info(i18n.t('version.title', { version: data.version }), {
           id: 'new-version',
-          description: t('version.description'),
+          description: i18n.t('version.description'),
           duration: Infinity,
           action: {
-            label: t('version.action'),
+            label: i18n.t('version.action'),
             onClick: () => window.electronAPI.openExternalURL(data.link),
           },
         })
@@ -34,7 +34,7 @@ export function CheckNewVersion() {
     return () => {
       listener.removeListener()
     }
-  }, [t])
+  }, [i18n])
 
   return null
 }
