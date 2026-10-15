@@ -1,11 +1,11 @@
 {
   "history": {
-    "note": "Automation activity and rewards from the past 30 days. Saved across restarts.",
+    "note": "Automation activity and rewards from the past 30 days.",
     "empty": "No automation activity yet"
   },
   "summary": {
     "note": "Actions and rewards recorded across all automations over the past 30 days.",
-    "empty": "No automation activity to summarize",
+    "empty": "No automation activity to summarise",
     "all-accounts": "Summary of all accounts"
   }
 }
