@@ -67,9 +67,9 @@ function ScreenshotGeneration() {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error(t('validations.screenshot.error'))
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
