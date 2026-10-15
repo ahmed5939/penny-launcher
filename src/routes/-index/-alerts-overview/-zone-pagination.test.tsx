@@ -12,13 +12,18 @@ import { ZonePagination } from './-zone-pagination'
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, values: Record<string, unknown> = {}) => {
-      const found = key.split('.').reduce<unknown>(
-        (node, part) =>
-          node && typeof node === 'object'
-            ? (node as Record<string, unknown>)[part]
-            : undefined,
-        alertsStrings
-      )
+      const lookup = (path: string) =>
+        path.split('.').reduce<unknown>(
+          (node, part) =>
+            node && typeof node === 'object'
+              ? (node as Record<string, unknown>)[part]
+              : undefined,
+          alertsStrings
+        )
+      const found =
+        (typeof values.count === 'number'
+          ? lookup(`${key}_${values.count === 1 ? 'one' : 'other'}`)
+          : undefined) ?? lookup(key)
 
       return String(found).replace(/\{\{(\w+)\}\}/g, (_, name) =>
         String(values[name])
