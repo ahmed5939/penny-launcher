@@ -246,7 +246,7 @@ export function AllAccountsTab() {
         </div>
 
         {matrix.readCount === 0 && !running && failed.length > 0 ? (
-          <div className="px-4 pb-4">
+          <div className="px-4 pb-4" role="alert">
             <Callout
               title="Could not read any account"
               tone="danger"
