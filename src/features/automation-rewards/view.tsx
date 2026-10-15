@@ -66,14 +66,16 @@ function useLlamaRecycling(accountId: string) {
 /** The llama recycling ceiling alone, for a row that already says what it is for. */
 export function LlamaRecyclePicker({ accountId }: { accountId: string }) {
   const { busy, level, loadFailed, update } = useLlamaRecycling(accountId)
+  if (loadFailed) {
+    return (
+      <span className="flex items-center gap-2" role="alert" title="Could not load recycling settings. Reopen the page to retry.">
+        <Chip tone="danger">Recycling unavailable</Chip>
+      </span>
+    )
+  }
   return (
     <span className="flex items-center gap-2">
-      <RecycleCeilingPicker disabled={busy || loadFailed} onChange={(next) => void update(next)} value={level} />
-      {loadFailed && (
-        <span title="Could not load recycling settings. Reopen the page to retry.">
-          <Chip tone="danger">Recycling unavailable</Chip>
-        </span>
-      )}
+      <RecycleCeilingPicker disabled={busy} onChange={(next) => void update(next)} value={level} />
     </span>
   )
 }
