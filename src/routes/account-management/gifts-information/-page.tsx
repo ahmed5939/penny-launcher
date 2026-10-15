@@ -270,6 +270,19 @@ function Content() {
   const failures = data.filter((entry) => entry.errorMessage !== undefined)
   const showAccount = data.length > 1
   const scopeEmpty = isSelectedEmpty || !areThereAccounts
+  const noneSucceeded = data.length > 0 && failures.length === data.length
+
+  const failureCallouts = failures.map((entry) => (
+    <Callout
+      key={entry.accountId}
+      title={t('gifts-information.account.error', {
+        name: parseCustomDisplayName(accountList[entry.accountId]),
+      })}
+      tone="danger"
+    >
+      {entry.errorMessage} {t('gifts-information.account.retry')}
+    </Callout>
+  ))
 
   const header = (
     <PageHeader
@@ -317,6 +330,16 @@ function Content() {
     )
   }
 
+  if (noneSucceeded) {
+    return (
+      <>
+        {header}
+
+        {failureCallouts}
+      </>
+    )
+  }
+
   return (
     <>
       {header}
@@ -354,17 +377,7 @@ function Content() {
         </StatRow>
       )}
 
-      {failures.map((entry) => (
-        <Callout
-          key={entry.accountId}
-          title={t('gifts-information.account.error', {
-            name: parseCustomDisplayName(accountList[entry.accountId]),
-          })}
-          tone="danger"
-        >
-          {entry.errorMessage} {t('gifts-information.account.retry')}
-        </Callout>
-      ))}
+      {failureCallouts}
 
       <LatestGifts
         onSelect={setSelected}
