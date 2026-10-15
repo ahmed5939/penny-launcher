@@ -77,26 +77,37 @@ export function useSetupForm() {
 
     const current = useSettingsStore.getState()
 
-    window.electronAPI.updateSettings({
-      autoDailyQuests: current.autoDailyQuests,
-      claimingRewards: current.claimingRewards,
-      customProcess: current.customProcess,
-      missionInterval: current.missionInterval,
-      path: result.path,
-      systemTray: current.systemTray,
-      discordRichPresence: current.discordRichPresence,
-      overlay: current.overlay,
-      userAgent: current.userAgent,
-    })
+    try {
+      await window.electronAPI.updateSettings({
+        autoDailyQuests: current.autoDailyQuests,
+        claimingRewards: current.claimingRewards,
+        customProcess: current.customProcess,
+        missionInterval: current.missionInterval,
+        path: result.path,
+        systemTray: current.systemTray,
+        discordRichPresence: current.discordRichPresence,
+        overlay: current.overlay,
+        userAgent: current.userAgent,
+      })
+    } catch {
+      toast.error(t('form.submit.status.error'))
+      return
+    }
+
     form.resetField('path', { defaultValue: result.path })
     toast.success(t('form.submit.status.success'))
     await refreshGameInstall(true)
   }
 
-  const onSubmit = (values: z.infer<typeof settingsSchema>) => {
-    window.electronAPI.updateSettings({
-      ...values,
-    })
+  const onSubmit = async (values: z.infer<typeof settingsSchema>) => {
+    try {
+      await window.electronAPI.updateSettings({
+        ...values,
+      })
+    } catch {
+      toast.error(t('form.submit.status.error'))
+      return
+    }
 
     toast.success(t('form.submit.status.success'))
   }

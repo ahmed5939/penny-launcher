@@ -60,20 +60,26 @@ export function OverlaySettingsForm() {
   })
   const enabled = form.watch('enabled')
 
-  const onSubmit = (nextOverlay: OverlaySettings) => {
+  const onSubmit = async (nextOverlay: OverlaySettings) => {
     const current = useSettingsStore.getState()
 
-    window.electronAPI.updateSettings({
-      autoDailyQuests: current.autoDailyQuests,
-      claimingRewards: current.claimingRewards,
-      customProcess: current.customProcess,
-      missionInterval: current.missionInterval,
-      path: current.path,
-      systemTray: current.systemTray,
-      discordRichPresence: current.discordRichPresence,
-      overlay: nextOverlay,
-      userAgent: current.userAgent,
-    })
+    try {
+      await window.electronAPI.updateSettings({
+        autoDailyQuests: current.autoDailyQuests,
+        claimingRewards: current.claimingRewards,
+        customProcess: current.customProcess,
+        missionInterval: current.missionInterval,
+        path: current.path,
+        systemTray: current.systemTray,
+        discordRichPresence: current.discordRichPresence,
+        overlay: nextOverlay,
+        userAgent: current.userAgent,
+      })
+    } catch {
+      toast.error(t('form.submit.status.error'))
+      return
+    }
+
     toast.success(t('form.submit.status.success'))
   }
 

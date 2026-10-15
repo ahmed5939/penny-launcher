@@ -582,7 +582,7 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
-    secureIpcOn(
+    secureIpcHandle(
       ElectronAPIEventKeys.UpdateSettings,
       async (_, settings: Settings) => {
         const { SettingsManager } = await features.settings()

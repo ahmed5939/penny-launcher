@@ -23,7 +23,7 @@ export function requestSettings() {
 }
 
 export function updateSettings(settings: Settings) {
-  ipcRenderer.send(ElectronAPIEventKeys.UpdateSettings, settings)
+  return ipcRenderer.invoke(ElectronAPIEventKeys.UpdateSettings, settings)
 }
 
 export function killProcess() {
