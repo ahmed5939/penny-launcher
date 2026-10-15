@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
 import {
+  listenForRedeemCodes,
   RedeemCodesCodeData,
   RedeemCodesStatus,
 } from '../../../state/management/redeem-code'
@@ -29,7 +30,6 @@ export function useRedeemCodesData() {
   const {
     redeemCodesClearResponse,
     redeemCodesSetInitialResponse,
-    redeemCodesSetNotification,
     redeemCodesUpdateCodes,
   } = useGetRedeemCodesActions()
   const {
@@ -56,17 +56,7 @@ export function useRedeemCodesData() {
   const isClearDisabled =
     isLoading || (codes.trim().length === 0 && newNotifications.length === 0)
 
-  useEffect(() => {
-    const listener = window.electronAPI.redeemCodesNotification(
-      async (notification) => {
-        redeemCodesSetNotification(notification)
-      }
-    )
-
-    return () => {
-      listener.removeListener()
-    }
-  }, [])
+  useEffect(listenForRedeemCodes, [])
 
   const handleRedeem = () => {
     if (isDisabledForm) {

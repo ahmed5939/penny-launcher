@@ -66,8 +66,14 @@ function Content() {
 
   const codeCount = useMemo(() => parseRedeemCodes(codes).length, [codes])
   const accountNames = parsedSelectedAccounts.map((account) => account.label)
+  const accountKey = parsedSelectedAccounts.map(({ value }) => value).join()
   const needsConfirm = parsedSelectedAccounts.length > 1
   const isConfirming = armed && needsConfirm
+
+  /* A different set of accounts or codes is a new question, so start over. */
+  useEffect(() => {
+    setArmed(false)
+  }, [accountKey, codes])
 
   /* Disarm after a few seconds, so a stray second click later does nothing. */
   useEffect(() => {
@@ -140,7 +146,10 @@ function Content() {
             </Button>
           )}
           <Button
-            onClick={handleClearForm}
+            onClick={() => {
+              setArmed(false)
+              handleClearForm()
+            }}
             variant="ghost"
             disabled={isClearDisabled}
           >

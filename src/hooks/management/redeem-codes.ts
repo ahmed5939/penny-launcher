@@ -1,6 +1,5 @@
 import type { SelectOption } from '../../components/ui/third-party/extended/input-tags'
 import type { AccountData } from '../../types/accounts'
-import type { RedeemCodeAccountNotification } from '../../types/redeem-codes'
 
 import { useShallow } from 'zustand/react/shallow'
 
@@ -12,10 +11,9 @@ import {
 import { useAccountScopeStore } from '../../state/accounts/scope'
 
 export function useGetRedeemCodesData() {
-  const { codes, isLoading, notifications, tags } = useRedeemCodesStore(
+  const { codes, notifications, tags } = useRedeemCodesStore(
     useShallow((state) => ({
       codes: state.codes,
-      isLoading: state.isLoading,
       notifications: state.notifications,
       tags: state.tags,
     }))
@@ -25,7 +23,6 @@ export function useGetRedeemCodesData() {
 
   return {
     codes,
-    isLoading,
     notifications,
     selectedAccounts,
     selectedTags: tags,
@@ -36,15 +33,11 @@ export function useGetRedeemCodesActions() {
   const {
     setInitialResponse,
     updateCodes,
-    updateLoading,
-    updateResponse,
     updateTags,
   } = useRedeemCodesStore(
     useShallow((state) => ({
       setInitialResponse: state.setInitialResponse,
       updateCodes: state.updateCodes,
-      updateLoading: state.updateLoading,
-      updateResponse: state.updateResponse,
       updateTags: state.updateTags,
     }))
   )
@@ -69,9 +62,6 @@ export function useGetRedeemCodesActions() {
   const redeemCodesUpdateCodes = (value: string) => {
     updateCodes(value)
   }
-  const redeemCodesUpdateLoading = (value: boolean) => {
-    updateLoading(value)
-  }
 
   const redeemCodesClearResponse = () => {
     setInitialResponse({})
@@ -94,24 +84,13 @@ export function useGetRedeemCodesActions() {
       )
     )
   }
-  const redeemCodesSetNotification = (
-    notification: RedeemCodeAccountNotification
-  ) => {
-    updateResponse(notification.accountId, {
-      status: notification.status,
-      value: notification.code,
-    })
-  }
-
   return {
     rawRedeemCodesUpdateAccounts,
     rawRedeemCodesUpdateTags,
     redeemCodesClearResponse,
     redeemCodesSetInitialResponse,
-    redeemCodesSetNotification,
     redeemCodesUpdateAccounts,
     redeemCodesUpdateCodes,
-    redeemCodesUpdateLoading,
     redeemCodesUpdateTags,
   }
 }
