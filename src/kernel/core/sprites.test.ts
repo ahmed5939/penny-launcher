@@ -12,6 +12,7 @@ import { Sprites } from './sprites'
 
 const mock = vi.hoisted(() => ({
   send: vi.fn(),
+  record: vi.fn(),
   getSpriteCatalog: vi.fn(),
   getSpriteInventory: vi.fn(),
 }))
@@ -33,7 +34,7 @@ vi.mock('./authentication', () => ({
 vi.mock('./locker', () => ({ eosToken: async () => 'test-only-eos-token' }))
 vi.mock('./sprite-history', () => ({
   SpriteHistory: {
-    record: vi.fn(),
+    record: mock.record,
     catalogueStatus: async () => null,
     observeCatalogue: async () => undefined,
     setCatalogueVersion: vi.fn(),
@@ -389,6 +390,7 @@ describe('Sprites.request', () => {
 
   beforeEach(() => {
     mock.send.mockClear()
+    mock.record.mockClear()
     mock.getSpriteCatalog.mockReset()
     mock.getSpriteInventory.mockReset()
   })
@@ -404,6 +406,7 @@ describe('Sprites.request', () => {
       collection: null,
       errorMessage: 'Collection: Inventory is down',
     })
+    expect(mock.record).not.toHaveBeenCalled()
   })
 
   it('keeps the collection when only the catalogue cannot be read', async () => {
@@ -416,5 +419,6 @@ describe('Sprites.request', () => {
       collection: { ownedVariants: 3 },
       errorMessage: 'Catalogue: Catalogue is down',
     })
+    expect(mock.record).toHaveBeenCalledTimes(1)
   })
 })

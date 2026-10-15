@@ -208,7 +208,7 @@ export class Sprites {
           `inventory modules=${read.inventory?.inventory?.length ?? 'none'}`
       )
 
-      if (read.answered) {
+      if (read.answered && payload.collection) {
         await SpriteHistory.record(
           { accountId: account.accountId, displayName: displayNameOf(account) },
           payload.collection
