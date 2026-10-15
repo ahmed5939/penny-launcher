@@ -17,6 +17,7 @@ import {
 import { pennyDBProfileURL } from '../../../config/fortnite/links'
 
 import {
+  KeyValue,
   Panel,
   PanelBody,
   RefreshButton,
@@ -327,9 +328,13 @@ export function LiveMissionCard({
         <span className="truncate">{displayName}</span>
         <ExternalLink className="size-3.5 shrink-0 text-muted-foreground" />
       </button>
-      <p className="truncate font-mono text-caption text-muted-foreground">
-        {accountId}
-      </p>
+      <dl className="mt-2">
+        <KeyValue
+          copyable
+          label={t('form.credentials.account-id', { ns: 'general' })}
+          value={<span className="font-mono">{accountId}</span>}
+        />
+      </dl>
     </div>
   )
 

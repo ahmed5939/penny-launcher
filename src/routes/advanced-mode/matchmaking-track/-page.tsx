@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next'
 
 import { Combobox } from '../../../components/ui/extended/combobox'
 import { Button } from '../../../components/ui/button'
-import { PageHeader, Panel, PanelBody, PanelHeader } from '../../../components/page'
+import {
+  EmptyState,
+  PageHeader,
+  Panel,
+  PanelBody,
+  PanelHeader,
+} from '../../../components/page'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { PlatformIcon } from '../../../components/friends/platform-icon'
@@ -12,6 +18,7 @@ import { LiveMissionCard } from './-live-mission'
 
 import { useState } from 'react'
 
+import { useGetSelectedAccount } from '../../../hooks/accounts'
 import { useCurrentActions, usePlayerSuggestions } from './-hooks'
 
 
@@ -44,6 +51,7 @@ function Content() {
    * keystroke — otherwise the in-flight prefix search reopens the list.
    */
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  const { selected } = useGetSelectedAccount()
   const {
     isTracking,
     options,
@@ -70,6 +78,16 @@ function Content() {
     clearSuggestions()
     setInput(label)
     track(query)
+  }
+
+  if (!selected) {
+    return (
+      <EmptyState
+        icon={Radar}
+        title={t('matchmaking-track.no-account.title')}
+        description={t('matchmaking-track.no-account.description')}
+      />
+    )
   }
 
   return (
@@ -175,7 +193,7 @@ function Content() {
                                   })
                                 : t('matchmaking-track.form.player-result', {
                                     ns: 'advanced-mode',
-                                    mutual: result.mutual,
+                                    count: result.mutual,
                                   })}
                             </span>
                           </span>
@@ -200,7 +218,9 @@ function Content() {
                     'form.player.recently.empty-placeholder',
                     { ns: 'general' }
                   )}
-                  emptyContent={t('form.player.search-empty')}
+                  emptyContent={t('form.player.search-empty', {
+                    ns: 'general',
+                  })}
                   placeholder={t(
                     'matchmaking-track.form.recently.placeholder'
                   )}
@@ -232,11 +252,13 @@ function Content() {
             )}
 
             {status && !status.player && (
-              <p className="text-ui text-muted-foreground">
-                {t('form.player.search-empty', {
+              <EmptyState
+                className="border-0 bg-transparent py-6"
+                title={t('form.player.search-empty', {
                   ns: 'general',
                 })}
-              </p>
+                description={t('matchmaking-track.not-found.description')}
+              />
             )}
           </div>
         </PanelBody>
