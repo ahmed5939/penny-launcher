@@ -10,8 +10,14 @@ export const toast = Object.assign(
   sonnerToast,
   {
     error: (message: Message, data?: ExternalToast) =>
-      sonnerToast.error(message, { duration: attentionDuration, ...data }),
+      sonnerToast.error(message, {
+        ...data,
+        duration: data?.duration ?? attentionDuration,
+      }),
     warning: (message: Message, data?: ExternalToast) =>
-      sonnerToast.warning(message, { duration: attentionDuration, ...data }),
+      sonnerToast.warning(message, {
+        ...data,
+        duration: data?.duration ?? attentionDuration,
+      }),
   }
 )
