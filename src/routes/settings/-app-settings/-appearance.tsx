@@ -63,7 +63,11 @@ function HomeArtPicker() {
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3 lg:grid-cols-4">
+    <div
+      aria-label="Home art"
+      className="grid grid-cols-2 gap-2 pt-1 sm:grid-cols-3 lg:grid-cols-4"
+      role="group"
+    >
       {options.map((option) => {
         const isActive = homeArt === option.id
 
