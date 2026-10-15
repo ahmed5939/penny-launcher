@@ -89,6 +89,14 @@ describe('6th Perks pages', () => {
     expect(html).toContain('href="/stw-operations/sixth-perks"')
   })
 
+  it('does not plan from an unread inventory', () => {
+    const html = render('completion', scanned('error'))
+    expect(html).toContain('No plan without your inventory')
+    expect(html).toContain('Unavailable')
+    expect(html).not.toMatch(/Legendary Flux<\/span>[\s\S]*?>0</)
+    expect(html).not.toContain('Acquire an extra Legendary schematic')
+  })
+
   it('asks for a scan before planning', () => {
     expect(render('completion', null)).toContain('Scan to build your plan')
   })
