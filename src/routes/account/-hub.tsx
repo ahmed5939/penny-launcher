@@ -77,17 +77,17 @@ const features: Array<Feature> = [
     to: '/account-management/vbucks-information',
   },
   {
-    title: 'BR Locker',
-    description: 'Loadout, collection and sidekicks',
-    icon: Shirt,
-    to: '/account-management/locker',
-  },
-  {
     title: 'Sprites',
     description: 'Owned, lost and missing treatments',
     art: spriteIconUrl('airsprite_gold.webp'),
     icon: Ghost,
     to: '/account-management/sprites',
+  },
+  {
+    title: 'Quest history',
+    description: 'Quests this account has completed',
+    icon: History,
+    to: '/account-management/history',
   },
   {
     title: 'Library',
@@ -103,16 +103,16 @@ const features: Array<Feature> = [
     to: '/account-management/friends',
   },
   {
+    title: 'BR Locker',
+    description: 'Loadout, collection and sidekicks',
+    icon: Shirt,
+    to: '/account-management/locker',
+  },
+  {
     title: 'Gifts',
     description: 'Every cosmetic gifted to you, and by whom',
     icon: Gift,
     to: '/account-management/gifts-information',
-  },
-  {
-    title: 'Quest history',
-    description: 'Quests this account has completed',
-    icon: History,
-    to: '/account-management/history',
   },
 ]
 
@@ -222,7 +222,7 @@ function SignedInLine() {
         No account linked yet.{' '}
         <Link
           className="font-medium text-primary hover:underline"
-          params={{ type: 'authorization-code' }}
+          params={{ type: 'quick-login' }}
           to="/accounts/add/$type"
         >
           Add one →
@@ -325,7 +325,7 @@ function UtilityRow({ utility }: { utility: Utility }) {
         >
           {utility.title}
         </span>
-        <span className="block truncate text-xs text-muted-foreground">
+        <span className="line-clamp-2 text-xs text-muted-foreground">
           {utility.description}
         </span>
       </span>
