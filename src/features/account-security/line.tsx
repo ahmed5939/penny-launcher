@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { KeyRound, Link2, MailCheck, MailWarning } from 'lucide-react'
+import { KeyRound, Link2, MailCheck, MailWarning, ShieldQuestion } from 'lucide-react'
 
 import { Callout } from '../../components/page'
 
@@ -18,12 +18,41 @@ import { cn, parseCustomDisplayName } from '../../lib/utils'
 
 /** "Two-factor on · Email verified · PlayStation, Xbox linked" — plus other accounts missing two-factor. */
 export function AccountSecurityLine({ accountId }: { accountId: string }) {
-  const { accounts } = useAccountSecurity()
+  const { accounts, isChecking, refresh } = useAccountSecurity()
   const { accountList, idsList } = useGetAccounts()
   const entry = accounts[accountId]
 
-  if (!entry || entry.status !== 'ok') {
-    return null
+  if (!entry) {
+    return isChecking ? (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
+        <KeyRound className="size-3.5 shrink-0" />
+        Checking account security…
+      </div>
+    ) : null
+  }
+
+  if (entry.status !== 'ok') {
+    return (
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+        <ShieldQuestion className="size-3.5 shrink-0" />
+        <span>Security unavailable</span>
+        {entry.errorMessage && (
+          <>
+            <span>·</span>
+            <span>{entry.errorMessage}</span>
+          </>
+        )}
+        <span>·</span>
+        <button
+          className="font-medium text-primary hover:underline disabled:opacity-50"
+          disabled={isChecking}
+          type="button"
+          onClick={refresh}
+        >
+          Check again
+        </button>
+      </div>
+    )
   }
 
   const withoutTfa = idsList.filter(
