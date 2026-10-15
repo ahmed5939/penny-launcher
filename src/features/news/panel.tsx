@@ -42,9 +42,11 @@ export function GameNewsPanel() {
 
       {errorMessage && isEmpty ? (
         <PanelBody>
-          <Callout tone="warning">
-            Could not reach the Epic Games news service. Try Refresh.
-          </Callout>
+          <div role="alert">
+            <Callout tone="danger" title="Could not load the news">
+              Could not reach the Epic Games news service. Try Refresh.
+            </Callout>
+          </div>
         </PanelBody>
       ) : isLoading && isEmpty ? (
         <PanelBody>
