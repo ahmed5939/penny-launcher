@@ -60,6 +60,7 @@ function Content() {
     cardError,
     companions,
     companionsError,
+    companionsReady,
     equipping,
     errorMessage,
     filters,
@@ -73,7 +74,7 @@ function Content() {
     loadedFor,
     owned,
     ownedError,
-    ownedLoadedFor,
+    ownedReady,
     progress,
     slots,
   } = useLockerPage()
@@ -130,7 +131,6 @@ function Content() {
   ).length
 
   const boardReady = loadedFor === account.accountId
-  const ownedReady = ownedLoadedFor === account.accountId
 
   return (
     <>
@@ -202,6 +202,7 @@ function Content() {
                   <SlotBoardTile
                     key={slotKey}
                     isBusy={equipping === slotKey}
+                    isLocked={!ownedReady}
                     onPick={() => openPicker(slotKey)}
                     slot={slots[slotKey] ?? null}
                     slotKey={slotKey}
@@ -214,7 +215,7 @@ function Content() {
 
       {view === 'collection' && (
         <Collection
-          isLoading={isLoadingOwned}
+          isLoading={isLoadingOwned || !ownedReady}
           owned={owned}
         />
       )}
@@ -224,6 +225,7 @@ function Content() {
           companions={companions}
           errorMessage={companionsError}
           isLoading={isLoadingCompanions}
+          isReady={companionsReady}
         />
       )}
 
@@ -236,6 +238,7 @@ function Content() {
           onGenerate={handleGenerate}
           onUpdateFilters={setFilters}
           owned={owned}
+          ownedReady={ownedReady}
           progress={progress}
         />
       )}
@@ -270,11 +273,13 @@ function Content() {
  */
 function SlotBoardTile({
   isBusy,
+  isLocked,
   onPick,
   slot,
   slotKey,
 }: {
   isBusy: boolean
+  isLocked: boolean
   onPick: () => void
   slot: LockerSlotState | null
   slotKey: LockerSlotKey
@@ -283,7 +288,7 @@ function SlotBoardTile({
     return (
       <button
         className="flex w-28 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border/60 py-6 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
-        disabled={isBusy}
+        disabled={isBusy || isLocked}
         onClick={onPick}
         type="button"
       >
@@ -304,7 +309,7 @@ function SlotBoardTile({
         rarity: slot.rarity ?? 'common',
         seriesColors: slot.seriesColors,
       }}
-      disabled={isBusy}
+      disabled={isBusy || isLocked}
       footer={slotLabels[slotKey]}
       onClick={onPick}
     />

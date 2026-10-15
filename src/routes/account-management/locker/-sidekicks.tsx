@@ -43,10 +43,12 @@ export function Sidekicks({
   companions,
   errorMessage,
   isLoading,
+  isReady,
 }: {
   companions: Array<CompanionCollectionEntry>
   errorMessage: string | null
   isLoading: boolean
+  isReady: boolean
 }) {
   const [ownership, setOwnership] = useState<Ownership>('all')
   const [query, setQuery] = useState('')
@@ -97,17 +99,17 @@ export function Sidekicks({
         <StatTile
           icon={PawPrint}
           label="Owned"
-          value={ownedCount.toLocaleString()}
+          value={isReady ? ownedCount.toLocaleString() : '—'}
         />
         <StatTile
           label="Missing"
-          tone={missingCount > 0 ? 'warning' : 'success'}
-          value={missingCount.toLocaleString()}
+          tone={!isReady ? 'default' : missingCount > 0 ? 'warning' : 'success'}
+          value={isReady ? missingCount.toLocaleString() : '—'}
         />
         <StatTile
-          hint={`of ${companions.length.toLocaleString()} released`}
+          hint={isReady ? `of ${companions.length.toLocaleString()} released` : undefined}
           label="Complete"
-          value={`${completion}%`}
+          value={isReady ? `${completion}%` : '—'}
         />
       </StatRow>
 
@@ -162,7 +164,7 @@ export function Sidekicks({
             <div role="status">
               <EmptyState
                 description={
-                  isLoading
+                  isLoading || !isReady
                     ? 'Reading this account’s sidekicks…'
                     : companions.length === 0
                       ? 'Nothing loaded yet — try Refresh.'
@@ -171,7 +173,7 @@ export function Sidekicks({
                         : 'Nothing matches that search.'
                 }
                 icon={Cat}
-                title={isLoading ? 'Loading sidekicks…' : 'Nothing to show'}
+                title={isLoading || !isReady ? 'Loading sidekicks…' : 'Nothing to show'}
               />
             </div>
           )}
