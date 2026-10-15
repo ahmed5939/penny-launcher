@@ -3,7 +3,7 @@ import type { ChipTone } from '../../../components/page'
 import { UpdateIcon } from '@radix-ui/react-icons'
 import { Ticket } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { Button } from '../../../components/ui/button'
 import { Textarea } from '../../../components/ui/textarea'
@@ -43,11 +43,16 @@ export function RouteComponent() {
   )
 }
 
+/**
+ * Spending codes on several accounts asks twice (§7): the first press arms the
+ * button and says how many accounts, the second redeems.
+ */
 function Content() {
   const { t } = useTranslation(['account-management', 'general'])
 
   const {
     codes,
+    isClearDisabled,
     isDisabledForm,
     isLoading,
     notifications,
@@ -57,9 +62,34 @@ function Content() {
     handleRedeem,
     handleUpdateCodes,
   } = useRedeemCodesData()
+  const [armed, setArmed] = useState(false)
 
   const codeCount = useMemo(() => parseRedeemCodes(codes).length, [codes])
   const accountNames = parsedSelectedAccounts.map((account) => account.label)
+  const needsConfirm = parsedSelectedAccounts.length > 1
+  const isConfirming = armed && needsConfirm
+
+  /* Disarm after a few seconds, so a stray second click later does nothing. */
+  useEffect(() => {
+    if (!armed) {
+      return
+    }
+
+    const timer = setTimeout(() => setArmed(false), 5000)
+
+    return () => clearTimeout(timer)
+  }, [armed])
+
+  const handleRedeemPress = () => {
+    if (needsConfirm && !armed) {
+      setArmed(true)
+
+      return
+    }
+
+    setArmed(false)
+    handleRedeem()
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -101,19 +131,36 @@ function Content() {
               </>
             )}
           </span>
+          {isConfirming && (
+            <Button
+              onClick={() => setArmed(false)}
+              variant="ghost"
+            >
+              Cancel
+            </Button>
+          )}
           <Button
             onClick={handleClearForm}
             variant="ghost"
+            disabled={isClearDisabled}
           >
             {t('redeem-codes.form.clear-button')}
           </Button>
           <Button
             className="min-w-32"
-            onClick={handleRedeem}
+            onClick={handleRedeemPress}
             disabled={isDisabledForm}
+            variant={isConfirming ? 'destructive' : 'default'}
           >
             {isLoading ? (
-              <UpdateIcon className="animate-spin" />
+              <>
+                <UpdateIcon className="animate-spin" />
+                {t('redeem-codes.form.redeeming-button')}
+              </>
+            ) : isConfirming ? (
+              t('redeem-codes.form.confirm-button', {
+                count: parsedSelectedAccounts.length,
+              })
             ) : (
               t('redeem-codes.form.redeem-button')
             )}
