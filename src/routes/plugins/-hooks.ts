@@ -1,6 +1,6 @@
 import type { MarketplacePlugin, PluginManageRequest, PluginReview, PluginSummary } from '../../types/plugins'
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/notifications'
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Request failed.'
 export function usePluginsData() {
