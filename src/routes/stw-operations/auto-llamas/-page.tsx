@@ -1,5 +1,5 @@
-import { UpdateIcon } from '@radix-ui/react-icons'
 import { Gift, Trash2, UserPlus } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { ArtToggle, LlamaRecyclePicker } from '../../../features/automation-rewards/view'
@@ -20,7 +20,8 @@ import { useAutoLlamaData } from '../../../hooks/stw-operations/auto-llamas'
 import { useGetComboboxAccounts } from '../../../hooks/accounts'
 import { useCustomizableMenuSettingsVisibility } from '../../../hooks/settings'
 
-import { parseCustomDisplayName } from '../../../lib/utils'
+import { toast } from '../../../lib/notifications'
+import { cn, parseCustomDisplayName } from '../../../lib/utils'
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar', 'stw-operations'])
@@ -31,7 +32,7 @@ export function RouteComponent() {
         icon={Gift}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.auto-llamas')}
-        description="Opens free upgrade llamas for you, and can buy the 50 V-Buck one when it holds a Legendary or Mythic survivor."
+        description="Opens free upgrade llamas, and buys the 50 X-Ray Ticket upgrade llama when it holds a Legendary or Mythic survivor."
       />
       <Content />
     </>
@@ -69,10 +70,23 @@ export function Content() {
   const { getMenuOptionVisibility } =
     useCustomizableMenuSettingsVisibility()
 
+  const [confirmingRemoveAll, setConfirmingRemoveAll] = useState(false)
+
   const set = (accountId: string, type: 'free-llamas' | 'survivors' | 'use-token', value: boolean) =>
     handleUpdateAccounts({
       [accountId]: { accountId, config: { type, value } },
     })
+
+  const handleRemoveAll = () => {
+    if (!confirmingRemoveAll) {
+      setConfirmingRemoveAll(true)
+
+      return
+    }
+
+    setConfirmingRemoveAll(false)
+    handleRemoveAllAccounts()
+  }
 
   return (
     <>
@@ -113,10 +127,14 @@ export function Content() {
               </Button>
               <Button
                 size="sm"
-                onClick={handleCheck}
+                onClick={() => {
+                  toast.info(`Checking ${totalEnabledPurchases} account(s) for llamas…`)
+                  handleCheck()
+                }}
                 disabled={totalEnabledPurchases <= 0 || checkLoading}
+                title={totalEnabledPurchases <= 0 ? 'Turn on Free llamas or Buy survivor llamas for an account first' : undefined}
               >
-                {checkLoading ? <UpdateIcon className="animate-spin" /> : 'Check now'}
+                {checkLoading ? 'Checking…' : 'Check now'}
               </Button>
             </>
           }
@@ -206,20 +224,17 @@ export function Content() {
               All off
             </Button>
             <Button
-              className="ml-auto text-muted-foreground [&:not(:disabled)]:hover:text-destructive"
+              className={cn('ml-auto', !confirmingRemoveAll && 'text-muted-foreground [&:not(:disabled)]:hover:text-destructive')}
+              onBlur={() => setConfirmingRemoveAll(false)}
+              onClick={handleRemoveAll}
               size="sm"
-              variant="ghost"
-              onClick={handleRemoveAllAccounts}
+              variant={confirmingRemoveAll ? 'destructive' : 'ghost'}
             >
-              {t('llamas.form.actions.buttons.remove.accounts')}
+              {confirmingRemoveAll ? 'Confirm — removes every account' : t('llamas.form.actions.buttons.remove.accounts')}
             </Button>
           </PanelFooter>
         )}
       </Panel>
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Survivor llamas (50, paid in X-Ray Tickets or with a llama token) are only bought when one holds a Legendary or Mythic survivor. Recycling covers new rewards from free and survivor llamas; favourites, assigned items, Legendary and Mythic are always kept. Totals are on Recycled Rewards.
-      </p>
 
       <GoToTop containerId="llamas-card-header" />
     </>
