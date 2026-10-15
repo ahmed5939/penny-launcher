@@ -12,21 +12,27 @@ export function ResetFiltersButton() {
     keyPrefix: 'filters',
   })
 
-  const { missionTypes, rarities, rewards, zones } =
+  const { group, missionTypes, rarities, rewards, zones } =
     useAlertsOverviewFiltersData()
-  const { resetFilters } = useAlertsOverviewFiltersActions()
+  const { resetFilters, toggleGroup } = useAlertsOverviewFiltersActions()
 
   const isDisabled = !(
     missionTypes.length > 0 ||
     rarities.length > 0 ||
     rewards.length > 0 ||
-    zones.length > 0
+    zones.length > 0 ||
+    group
   )
+
+  const handleReset = () => {
+    resetFilters()
+    toggleGroup(false)
+  }
 
   return (
     <Button
       variant="secondary"
-      onClick={resetFilters}
+      onClick={handleReset}
       disabled={isDisabled}
     >
       {t('actions.clear')}

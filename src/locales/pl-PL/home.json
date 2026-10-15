@@ -31,7 +31,8 @@
     }
   },
   "information": {
-    "missions": "{{total}} misji",
+    "missions_one": "{{count}} misji",
+    "missions_other": "{{count}} misji",
     "tile-index": "Indeks kafelka:",
     "alert-guid": "Unikalny identyfikator misji alarmowej:",
     "mission-guid": "Unikalny identyfikator misji:",

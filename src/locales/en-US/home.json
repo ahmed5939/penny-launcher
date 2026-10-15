@@ -23,7 +23,7 @@
       "title-endgame": "Ventures ⚡140"
     },
     "survivors": {
-      "title": "Legendary/Mythic survivors",
+      "title": "Legendary and Mythic survivors",
       "empty": "No survivors to rescue"
     },
     "uc-perk": {
@@ -31,7 +31,8 @@
     }
   },
   "information": {
-    "missions": "{{total}} mission/s",
+    "missions_one": "{{count}} mission",
+    "missions_other": "{{count}} missions",
     "tile-index": "Tile index:",
     "alert-guid": "Mission alert GUID:",
     "mission-guid": "Mission GUID:",
@@ -55,15 +56,15 @@
   "filters": {
     "search": {
       "input": {
-        "placeholder": "Search: mission/alert guid, tileIndex or reward ID"
+        "placeholder": "Search missions, rewards or IDs"
       },
       "submit-button": "Show filters"
     },
     "sections": {
-      "zones": "Select zones",
-      "types": "Select mission types",
-      "rarities": "Select rarities",
-      "rewards": "Select rewards"
+      "zones": "Zones",
+      "types": "Mission types",
+      "rarities": "Rarities",
+      "rewards": "Rewards"
     },
     "actions": {
       "back": "Back to alerts",

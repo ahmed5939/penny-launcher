@@ -31,7 +31,8 @@
     }
   },
   "information": {
-    "missions": "{{total}} миссий",
+    "missions_one": "{{count}} миссий",
+    "missions_other": "{{count}} миссий",
     "tile-index": "Индекс плитки:",
     "alert-guid": "Guid Алерта Миссии:",
     "mission-guid": "Guid Миссии:",
