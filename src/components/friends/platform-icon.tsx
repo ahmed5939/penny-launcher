@@ -1,3 +1,4 @@
+import { platformLabel } from '../../features/account-security/model'
 import { cn } from '../../lib/utils'
 
 /**
@@ -61,16 +62,18 @@ export function PlatformIcon({
   const key = normalise(platform)
 
   if (!key) {
+    const name = platformLabel(platform)
+
     return (
       <span
         /*
-         * The caption rank, not a size of its own: a three-letter platform
-         * abbreviation is a label, and the app has exactly two label ranks.
+         * The caption rank, not a size of its own: a platform name is a label,
+         * and the app has exactly two label ranks.
          */
         className={cn('micro-label', className)}
-        title={platform}
+        title={name}
       >
-        {platform.slice(0, 3)}
+        {name}
       </span>
     )
   }
