@@ -61,11 +61,12 @@ export function AccountSwitcher() {
         align="end"
         className="w-[min(24rem,calc(100vw-2rem))] p-2"
         onOpenAutoFocus={(event) => {
+          const search = (event.currentTarget as HTMLElement).querySelector<HTMLInputElement>(
+            'input[type="search"]',
+          )
+          if (!search) return
           event.preventDefault()
-          const content = event.currentTarget as HTMLElement
-          content
-            .querySelector<HTMLInputElement>('input[type="search"]')
-            ?.focus()
+          search.focus()
         }}
       >
         <AccountRoster model={model} />
