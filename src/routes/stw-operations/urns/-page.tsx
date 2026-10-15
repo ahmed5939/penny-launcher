@@ -1,4 +1,5 @@
 import type { ItemRecordMap } from '../../../state/items/database'
+import type { QuestList } from './-hooks'
 
 import { useState } from 'react'
 import { Pin, ScrollText, Trash2, UserPlus } from 'lucide-react'
@@ -8,6 +9,7 @@ import { Combobox } from '../../../components/ui/extended/combobox'
 import { Button } from '../../../components/ui/button'
 import { ItemIcon } from '../../../components/items/item-icon'
 import {
+  Callout,
   Chip,
   EmptyState,
   FilterBar,
@@ -38,8 +40,6 @@ export function RouteComponent() {
   )
 }
 
-type QuestOption = { active: boolean; name: string; templateId: string }
-
 export function Content() {
   const { t } = useTranslation(['stw-operations', 'general'])
 
@@ -49,12 +49,13 @@ export function Content() {
     options,
     records,
     selectedAccounts,
-    questOptions,
+    questLists,
 
     customFilter,
     handleRemoveAccount,
     handleUpdateAccount,
     onSelectItem,
+    retry,
   } = useData()
   const { getMenuOptionVisibility } =
     useCustomizableMenuSettingsVisibility()
@@ -103,43 +104,43 @@ export function Content() {
           {accounts.map((account) => (
             <AccountQuests
               key={account.accountId}
+              list={questLists[account.accountId] ?? { status: 'loading' }}
               loadingLabel={t('urns.loading')}
               name={parseCustomDisplayName(account) ?? account.displayName}
               onRemove={handleRemoveAccount(account.accountId)}
+              onRetry={() => retry(account.accountId)}
               onToggle={(templateId, value) => handleUpdateAccount(account.accountId, templateId)(value)}
               pinned={selectedAccounts[account.accountId] ?? []}
-              quests={questOptions[account.accountId] ?? []}
               records={records}
             />
           ))}
         </>
       )}
-
-      <p className="text-xs text-muted-foreground">
-        Any active quest can be kept pinned. Quests that are no longer in the log stay selected and are pinned again when they come back.
-      </p>
     </div>
   )
 }
 
 function AccountQuests({
+  list,
   loadingLabel,
   name,
   onRemove,
+  onRetry,
   onToggle,
   pinned,
-  quests,
   records,
 }: {
+  list: QuestList
   loadingLabel: string
   name: string
   onRemove: () => void
+  onRetry: () => void
   onToggle: (templateId: string, value: boolean) => void
   pinned: Array<string>
-  quests: Array<QuestOption>
   records: ItemRecordMap
 }) {
   const [search, setSearch] = useState('')
+  const quests = list.status === 'ready' ? list.quests : []
   /* Pinned quests first, so what the automation is doing reads at a glance. */
   const shown = quests
     .filter((quest) => quest.name.toLowerCase().includes(search.toLowerCase()))
@@ -170,12 +171,33 @@ function AccountQuests({
         title={name}
       />
 
-      {quests.length <= 0 ? (
+      {list.status === 'loading' && (
         <p className="flex items-center justify-center gap-2 px-4 py-8 text-xs text-muted-foreground" role="status">
           <ScrollText className="size-4" />
           {loadingLabel}
         </p>
-      ) : (
+      )}
+
+      {list.status === 'error' && (
+        <div className="flex flex-col items-start gap-3 p-4" role="alert">
+          <Callout tone="danger">
+            Could not load quests for {name} ({list.message}).
+          </Callout>
+          <Button onClick={onRetry} size="sm" variant="outline">
+            Try again
+          </Button>
+        </div>
+      )}
+
+      {list.status === 'ready' && quests.length <= 0 && (
+        <EmptyState
+          className="border-0 bg-transparent py-8"
+          description="This account's quest log is empty."
+          title="No active quests"
+        />
+      )}
+
+      {list.status === 'ready' && quests.length > 0 && (
         <>
           <FilterBar>
             <SearchField label={`Find quests for ${name}`} onChange={setSearch} placeholder="Search quests…" value={search} />
@@ -201,21 +223,14 @@ function AccountQuests({
                       <span className="line-clamp-2 text-ui font-medium leading-snug">{quest.name}</span>
                       {!quest.active && <span className="mt-0.5 block text-xs text-warning">Not in the quest log</span>}
                     </span>
-                    <span
-                      className={cn(
-                        'grid size-6 shrink-0 place-items-center rounded-md border transition-colors',
-                        on ? 'border-primary/50 bg-primary/15 text-primary' : 'border-border/70 text-muted-foreground',
-                      )}
-                    >
-                      <Pin aria-hidden className="size-3" />
-                    </span>
+                    <Pin aria-hidden className={cn('size-4 shrink-0', on ? 'text-primary' : 'text-muted-foreground')} />
                   </button>
                 </li>
               )
             })}
           </ul>
           {shown.length === 0 && (
-            <p className="px-4 py-6 text-center text-xs text-muted-foreground">No quest matches “{search}”.</p>
+            <EmptyState className="border-0 bg-transparent py-8" title={`No quest matches “${search}”`} />
           )}
         </>
       )}

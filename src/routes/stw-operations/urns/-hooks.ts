@@ -4,7 +4,7 @@ import type {
 } from '../../../components/ui/extended/combobox/hooks'
 import type { QuestEntry } from '../../../kernel/core/quests'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   useGetAutoPinUrnActions,
@@ -17,6 +17,15 @@ import { getItemRecord, useItemDatabaseStore } from '../../../state/items/databa
 import { checkIfCustomDisplayNameIsValid } from '../../../lib/validations/properties'
 import { parseCustomDisplayName } from '../../../lib/utils'
 
+type QuestsState<T> =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; quests: Array<T> }
+
+export type QuestOption = { active: boolean; name: string; templateId: string }
+
+export type QuestList = QuestsState<QuestOption>
+
 export function useData() {
   useRequestItemDatabase()
 
@@ -26,8 +35,23 @@ export function useData() {
     useGetAutoPinUrnActions()
   const records = useItemDatabaseStore((state) => state.records)
   const [availableQuests, setAvailableQuests] = useState<
-    Record<string, Array<QuestEntry>>
+    Record<string, QuestsState<QuestEntry>>
   >({})
+
+  const requestAccountQuests = useCallback(
+    (accountId: string) => {
+      const account = accountList[accountId]
+
+      if (!account) return
+
+      setAvailableQuests((current) => ({
+        ...current,
+        [accountId]: { status: 'loading' },
+      }))
+      window.electronAPI.requestQuests(account)
+    },
+    [accountList]
+  )
 
   const options = accountsArray
     .filter((account) => selectedAccounts[account.accountId] === undefined)
@@ -60,8 +84,7 @@ export function useData() {
               value: true,
             })
           })
-          const account = accountList[accountId]
-          if (account) window.electronAPI.requestQuests(account)
+          requestAccountQuests(accountId)
         })
       }
     )
@@ -71,13 +94,15 @@ export function useData() {
     return () => {
       listener.removeListener()
     }
-  }, [accountList])
+  }, [accountList, requestAccountQuests])
 
   useEffect(() => {
     const listener = window.electronAPI.responseQuests(async (response) => {
       setAvailableQuests((current) => ({
         ...current,
-        [response.accountId]: response.quests,
+        [response.accountId]: response.errorMessage
+          ? { status: 'error', message: response.errorMessage }
+          : { status: 'ready', quests: response.quests },
       }))
     })
 
@@ -104,8 +129,7 @@ export function useData() {
   const onSelectItem = (accountId: string) => {
     addAccount(accountId)
     window.electronAPI.autoPinUrnsAdd(accountId)
-    const account = accountList[accountId]
-    if (account) window.electronAPI.requestQuests(account)
+    requestAccountQuests(accountId)
   }
 
   const handleRemoveAccount = (accountId: string) => () => {
@@ -123,7 +147,7 @@ export function useData() {
       window.electronAPI.autoPinUrnsUpdate(accountId, templateId, value)
     }
 
-  const questOptions = useMemo(() => {
+  const questLists = useMemo(() => {
     /* The game's name; the id in words only until the item database loads. */
     const nameOf = (templateId: string) =>
       getItemRecord(records, templateId)?.name ??
@@ -132,28 +156,53 @@ export function useData() {
         .filter(Boolean)
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ')
+    /* The bookkeeping quests the Quests page hides too. */
+    const isHidden = (templateId: string) => {
+      const name = getItemRecord(records, templateId)?.name ?? ''
+
+      return name.startsWith('<') || name.startsWith('(Hidden)')
+    }
 
     return Object.fromEntries(
-      Object.entries(availableQuests).map(([accountId, quests]) => [
-        accountId,
-        [
-          ...quests.map((quest) => ({
-            active: true,
-            name: nameOf(quest.templateId),
-            templateId: quest.templateId,
-          })),
-          ...(selectedAccounts[accountId] ?? [])
-            .filter(
-              (templateId) =>
-                !quests.some((quest) => quest.templateId === templateId)
-            )
-            .map((templateId) => ({
-              active: false,
-              name: nameOf(templateId),
-              templateId,
-            })),
-        ].sort((a, b) => a.name.localeCompare(b.name)),
-      ])
+      Object.entries(availableQuests).map(
+        ([accountId, state]): [string, QuestList] => {
+          if (state.status !== 'ready') return [accountId, state]
+
+          const pinned = selectedAccounts[accountId] ?? []
+
+          return [
+            accountId,
+            {
+              status: 'ready',
+              quests: [
+                ...state.quests
+                  .filter(
+                    (quest) =>
+                      !isHidden(quest.templateId) ||
+                      pinned.includes(quest.templateId)
+                  )
+                  .map((quest) => ({
+                    active: true,
+                    name: nameOf(quest.templateId),
+                    templateId: quest.templateId,
+                  })),
+                ...pinned
+                  .filter(
+                    (templateId) =>
+                      !state.quests.some(
+                        (quest) => quest.templateId === templateId
+                      )
+                  )
+                  .map((templateId) => ({
+                    active: false,
+                    name: nameOf(templateId),
+                    templateId,
+                  })),
+              ].sort((a, b) => a.name.localeCompare(b.name)),
+            },
+          ]
+        }
+      )
     )
   }, [availableQuests, records, selectedAccounts])
 
@@ -163,11 +212,12 @@ export function useData() {
     accountSelectorIsDisabled,
     options,
     selectedAccounts,
-    questOptions,
+    questLists,
 
     customFilter,
     handleRemoveAccount,
     handleUpdateAccount,
     onSelectItem,
+    retry: requestAccountQuests,
   }
 }
