@@ -120,6 +120,7 @@ export function Sidekicks({
         />
         <FilterBar>
           <Segmented
+            label="Ownership"
             onChange={setOwnership}
             options={ownershipOptions}
             value={ownership}

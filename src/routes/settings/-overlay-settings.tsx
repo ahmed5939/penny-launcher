@@ -150,6 +150,7 @@ export function OverlaySettingsForm() {
               render={({ field }) => (
                 <FieldRow label={t('overlay.form.scale.label')}>
                   <Segmented
+                    label={t('overlay.form.scale.label')}
                     onChange={field.onChange}
                     options={scales.map((scale) => ({
                       disabled: !enabled,

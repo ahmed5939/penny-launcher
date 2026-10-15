@@ -143,7 +143,7 @@ export function StoragePage() {
 function WorldInventoryPage() {
   useRequestItemDatabase()
   const [view, setView] = useState<View>('world')
-  const switcher = <Segmented onChange={setView} options={viewOptions} value={view} />
+  const switcher = <Segmented label="View" onChange={setView} options={viewOptions} value={view} />
 
   return view === 'ventures' ? <VenturesBackpack switcher={switcher} /> : <BackpackAndStorage switcher={switcher} />
 }
@@ -217,7 +217,7 @@ function VenturesContents({ inventory }: { inventory: WorldInventory }) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Segmented onChange={setTab} options={tabOptionsFor(inventory.items)} value={tab} />
+        <Segmented label="Item type" onChange={setTab} options={tabOptionsFor(inventory.items)} value={tab} />
         <SearchField className="w-64" label="Search the Ventures backpack" onChange={setQuery} placeholder="Item name" value={query} />
       </div>
 
@@ -358,7 +358,7 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <Segmented onChange={(value) => { setTab(value); setSelection(null) }} options={tabOptions} value={tab} />
+        <Segmented label="Item type" onChange={(value) => { setTab(value); setSelection(null) }} options={tabOptions} value={tab} />
         <SearchField className="w-64" label="Search both sides" onChange={setQuery} placeholder="Item name" value={query} />
       </div>
 

@@ -82,6 +82,7 @@ function Content() {
       <Panel id="codex-card">
         <FilterBar>
           <Segmented
+            label="Family"
             onChange={(next) => {
               setFamily(next)
               setRarity('all')

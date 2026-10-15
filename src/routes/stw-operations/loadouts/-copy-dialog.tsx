@@ -274,6 +274,7 @@ export function CopyLoadoutDialog({
 
         <Segmented
           className="self-start"
+          label="Copy method"
           onChange={setMode}
           options={[
             { label: 'Another account', value: 'account' },

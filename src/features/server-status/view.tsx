@@ -302,6 +302,7 @@ function IncidentsPanel({ incidents }: { incidents: Array<EpicIncident> }) {
       <PanelHeader
         actions={
           <Segmented
+            label="Incident scope"
             onChange={setScope}
             options={[
               { label: 'Fortnite', value: 'fortnite' },

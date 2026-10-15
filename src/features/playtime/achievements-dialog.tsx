@@ -146,6 +146,7 @@ function AchievementList({ data }: { data: Extract<GameAchievementsResult, { ok:
 
       <div className="flex flex-wrap items-center gap-2">
         <Segmented<Filter>
+          label="Filter achievements"
           options={[
             { label: `All ${data.rows.length}`, value: 'all' },
             { label: `Unlocked ${data.unlocked}`, value: 'unlocked' },

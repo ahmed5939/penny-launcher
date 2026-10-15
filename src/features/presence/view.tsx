@@ -384,6 +384,7 @@ export function ComposePanel({
 
             <FieldRow label="Show as">
               <Segmented
+                label="Show as"
                 onChange={prefs.setAvailability}
                 options={[
                   { label: 'Online', value: 'online' },

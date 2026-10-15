@@ -94,7 +94,7 @@ function HistoryBody({ data }: { data: QuestHistory }) {
 
       <Panel>
         <PanelHeader
-          actions={<Segmented onChange={setZone} options={zones.map((z) => ({ value: z, label: z }))} value={zone} />}
+          actions={<Segmented label="Zone" onChange={setZone} options={zones.map((z) => ({ value: z, label: z }))} value={zone} />}
           compact
           icon={MapIcon}
           title="Zone questline"

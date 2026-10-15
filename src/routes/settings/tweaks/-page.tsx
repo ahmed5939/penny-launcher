@@ -968,6 +968,7 @@ function WorkerPowerSection({
       <PanelHeader
         actions={
           <Segmented
+            label="Worker level"
             onChange={onChangeMode}
             options={[
               { label: 'Level 50', value: 'high' },

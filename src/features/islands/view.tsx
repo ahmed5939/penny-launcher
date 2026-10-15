@@ -262,6 +262,7 @@ function Discover({
             value={query}
           />
           <Segmented<SortKey>
+            label="Sort by"
             onChange={(value) => {
               setSort(value)
               setPage(0)

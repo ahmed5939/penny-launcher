@@ -592,6 +592,7 @@ function Content({
         {activeKind === 'defender' && (
           <FilterBar className={defenderFit ? 'border-b-0' : undefined}>
             <Segmented
+              label="Defender view"
               onChange={(defenderView) => updateFilters({ defenderView })}
               options={[
                 { label: 'Browse', value: 'browse' },

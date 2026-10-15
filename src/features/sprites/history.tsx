@@ -147,6 +147,7 @@ export function HistoryTab() {
           actions={
             selected ? (
               <Segmented
+                label="Accounts"
                 onChange={(value) => {
                   setScope(value)
                   setPage(0)

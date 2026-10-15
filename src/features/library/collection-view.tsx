@@ -207,7 +207,7 @@ function GamesShelf({ games, isReading, tools }: { games: Array<CollectionGame>;
 
   return (
     <Panel>
-      <PanelHeader actions={<Segmented onChange={setSort} options={sorts} value={sort} />} title="Games" />
+      <PanelHeader actions={<Segmented label="Sort by" onChange={setSort} options={sorts} value={sort} />} title="Games" />
       <PanelBody>
         {sorted.length > 0 ? (
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-x-4 gap-y-5">

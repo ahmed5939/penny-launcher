@@ -573,6 +573,7 @@ function SeasonDetail({
         </div>
 
         <Segmented<DetailTab>
+          label="Season section"
           onChange={onTabChange}
           options={[
             { label: 'Overview', value: 'overview' },

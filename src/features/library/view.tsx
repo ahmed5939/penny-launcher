@@ -332,6 +332,7 @@ function StorePanel({ ownedItemIds, store }: { ownedItemIds: ReadonlySet<string>
       <PanelHeader
         actions={
           <Segmented
+            label="Offer type"
             onChange={(value) => { setKind(value); setPage(0) }}
             options={offerKinds}
             value={kind}

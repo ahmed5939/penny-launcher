@@ -174,7 +174,7 @@ function Progress({ current }: { current: VenturesProgress }) {
             title="All quests"
           />
           <FilterBar>
-            <Segmented onChange={setChain} options={[{ value: 'all', label: 'All chains' }, ...Object.entries(chainNames).map(([value, label]) => ({ value: value as keyof typeof chainNames, label }))]} value={chain} />
+            <Segmented label="Chain" onChange={setChain} options={[{ value: 'all', label: 'All chains' }, ...Object.entries(chainNames).map(([value, label]) => ({ value: value as keyof typeof chainNames, label }))]} value={chain} />
             <span className="text-xs text-muted-foreground"><span className="figure text-foreground">{visibleQuests.length}</span> shown</span>
           </FilterBar>
           {visibleQuests.length === 0 ? (

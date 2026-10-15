@@ -104,6 +104,7 @@ export function RouteComponent() {
         actions={
           <>
             <Segmented
+              label="Shop view"
               onChange={updateView}
               options={viewOptions}
               value={view}
@@ -231,6 +232,7 @@ function AccountShop({
         id="shop-card"
       >
         <Segmented
+          label="Shop section"
           onChange={updateSection}
           options={sectionTabs}
           value={section}

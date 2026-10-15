@@ -38,7 +38,7 @@ export function Resources({ data, label }: { data: CollectionBookData; label: (i
             totals.choices > 0 ? (
               <span className="flex items-center gap-2">
                 <span className="micro-label">Unevolved path</span>
-                <Segmented onChange={setPath} options={[{ value: 'ore', label: 'Ore' }, { value: 'crystal', label: 'Crystal' }]} value={path} />
+                <Segmented label="Unevolved path" onChange={setPath} options={[{ value: 'ore', label: 'Ore' }, { value: 'crystal', label: 'Crystal' }]} value={path} />
               </span>
             ) : undefined
           }

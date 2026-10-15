@@ -101,6 +101,7 @@ export function SlotPicker({
       <div className="flex flex-wrap items-center gap-2">
         {canFilter && (
           <Segmented
+            label="Candidates"
             onChange={(value) => {
               setScope(value)
               setPage(0)

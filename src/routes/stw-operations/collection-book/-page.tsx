@@ -335,7 +335,7 @@ function Book({ current, onChanged }: { current: CollectionBookData; onChanged: 
                 title={page.name}
               />
               <FilterBar>
-                <Segmented onChange={setStatus} options={statusOptions} value={status} />
+                <Segmented label="Slot status" onChange={setStatus} options={statusOptions} value={status} />
                 <SearchField label="Find a slot on this page" onChange={setQuery} placeholder="Slot or section name" value={query} />
               </FilterBar>
               <PanelBody className="min-h-0 flex-1 space-y-5 overflow-y-auto">
@@ -407,7 +407,7 @@ function Book({ current, onChanged }: { current: CollectionBookData; onChanged: 
               title="Needs upgrading"
             />
             <FilterBar>
-              <Segmented onChange={setUpgradeKind} options={upgradeKindOptions.map((o) => ({ ...o, label: `${o.label} · ${upgrades.filter((u) => o.value === 'all' || u.kind === o.value).length}` }))} value={upgradeKind} />
+              <Segmented label="Upgrade kind" onChange={setUpgradeKind} options={upgradeKindOptions.map((o) => ({ ...o, label: `${o.label} · ${upgrades.filter((u) => o.value === 'all' || u.kind === o.value).length}` }))} value={upgradeKind} />
               <SearchField label="Find an item to upgrade" onChange={setQuery} placeholder="Item, page or section" value={query} />
               <Picker label="Category" onChange={setUpgradeCategory} options={[{ value: 'all', label: 'All categories' }, ...catalog.map((c) => ({ value: c.id, label: c.name }))]} value={upgradeCategory} />
               <Picker label="Order" onChange={setUpgradeOrder} options={upgradeOrderOptions} value={upgradeOrder} />

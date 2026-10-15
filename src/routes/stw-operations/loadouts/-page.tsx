@@ -483,6 +483,7 @@ function Content({
           {pendingSlot?.kind === 'hero' && (
             <div className="space-y-2">
               <Segmented
+                label="Hero class"
                 onChange={setHeroClass}
                 options={heroClassOptions}
                 value={heroClass}

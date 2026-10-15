@@ -758,6 +758,7 @@ function BlueprintShowcase({
       <div className="flex min-w-0 flex-col gap-3">
         <Segmented
           className="self-start"
+          label="Outpost view"
           onChange={setView}
           options={[
             { label: '3D', value: '3d' },

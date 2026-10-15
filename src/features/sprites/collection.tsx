@@ -195,6 +195,7 @@ export function CollectionTab({
         />
         <FilterBar className="px-4">
           <Segmented
+            label="Ownership"
             onChange={setOwnership}
             options={ownershipOptions}
             value={ownership}

@@ -404,6 +404,7 @@ function Content() {
 
         <FilterBar>
           <Segmented
+            label="Group by"
             onChange={setGroupMode}
             options={groupOptions}
             value={groupMode}

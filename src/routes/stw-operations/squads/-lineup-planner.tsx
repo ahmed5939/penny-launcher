@@ -78,6 +78,7 @@ export function LineupPlanner({
         actions={
           <>
             <Segmented
+              label="Lineup scope"
               onChange={(value) => {
                 setScope(value)
                 setSelected(null)

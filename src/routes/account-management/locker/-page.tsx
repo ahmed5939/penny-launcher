@@ -173,6 +173,7 @@ function Content() {
         </StatRow>
 
         <Segmented
+          label="Locker view"
           onChange={setView}
           options={viewOptions}
           value={view}

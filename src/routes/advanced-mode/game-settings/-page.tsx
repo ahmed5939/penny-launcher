@@ -354,6 +354,7 @@ function Content() {
                           }
                         >
                           <Segmented
+                            label={t('form.fullscreen-mode.label')}
                             onChange={field.onChange}
                             options={[
                               {
