@@ -19,6 +19,7 @@ import { cn } from '../../lib/utils'
  *
  * Structure follows the site's `ItemCell`: an elevated panel with a 3px
  * rarity edge and a soft wash off it, a 2px rarity rule along the top, an
+ * artboard whose gradient carries the tier behind the art, overlays in the
  * artboard corners (power bottom-right, favourite bottom-left, quantity
  * top-right), then a rarity eyebrow and the name. Colour is the
  * launcher's own rarity ladder, so a Legendary here is the same orange as a
