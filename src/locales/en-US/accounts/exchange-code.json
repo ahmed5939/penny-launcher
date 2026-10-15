@@ -9,10 +9,10 @@
   },
   "notifications": {
     "generate-code": {
-      "success": "Exchange code has been generated and copied into clipboard",
-      "error": "An error has occurred trying generate exchange code, try again later"
+      "success": "Exchange code generated and copied to the clipboard.",
+      "error": "Could not generate an exchange code. Check the account is signed in, then try again."
     },
-    "clipboard": "Exchange code has been copied into clipboard"
+    "clipboard": "Exchange code copied to the clipboard."
   },
   "validations": {
     "code": "An exchange code is 32 characters. Paste the code exactly as generated."
