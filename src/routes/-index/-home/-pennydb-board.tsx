@@ -304,6 +304,7 @@ function RewardStrip({
   rewards: Array<PennyDBMissionReward>
   variant: 'alert' | 'base'
 }) {
+  const { t } = useTranslation(['general'])
   const shown = rewards.slice(0, variant === 'alert' ? 4 : 3)
   const extra = rewards.length - shown.length
 
@@ -312,10 +313,8 @@ function RewardStrip({
       {shown.map((reward, index) => {
         const isVBuck = isPennyDBVBuckReward(reward)
         const quantity = reward.quantity ?? 0
-        const label =
-          quantity > 1
-            ? `${reward.name ?? ''} ×${quantity}`
-            : (reward.name ?? undefined)
+        const name = reward.name || reward.itemType || t('unknown')
+        const label = quantity > 1 ? `${name} ×${quantity}` : name
 
         return (
           <span
