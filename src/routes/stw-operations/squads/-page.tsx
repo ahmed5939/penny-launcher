@@ -218,7 +218,7 @@ function Squads({
 
       <Dialog
         onOpenChange={(open) => {
-          if (!open) {
+          if (!open && !isAssigning) {
             cancelFill()
           }
         }}
