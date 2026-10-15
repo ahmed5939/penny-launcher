@@ -30,7 +30,7 @@ export function PresenceStatusItem() {
         aria-label={`Presence for ${snapshot.displayName ?? 'an account'}: ${phase.label}`}
         className={cn(
           'flex min-w-0 items-center gap-1.5 rounded px-1 text-caption',
-          'hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+          'hover:bg-muted/60'
         )}
         to="/account-management/presence"
       >

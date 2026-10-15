@@ -161,7 +161,7 @@ export function Sparkline({
 
       <div
         aria-label={`${label}. Use the arrow keys to read each point.`}
-        className="relative h-20 touch-none select-none rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative h-20 touch-none select-none rounded-lg"
         onBlur={() => setActive(null)}
         onKeyDown={step}
         onPointerLeave={() => setActive(null)}

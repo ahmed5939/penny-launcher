@@ -560,7 +560,7 @@ function LlamaCard({
     <button
       aria-selected={isPicked}
       className={cn(
-        'group flex w-44 flex-col overflow-hidden rounded-xl text-left outline-none ring-offset-2 ring-offset-background transition focus-visible:ring-2 focus-visible:ring-ring',
+        'group flex w-44 flex-col overflow-hidden rounded-xl text-left ring-offset-2 ring-offset-background transition',
         isPicked ? 'ring-2 ring-primary' : 'hover:brightness-110',
         soldOut && 'opacity-60'
       )}

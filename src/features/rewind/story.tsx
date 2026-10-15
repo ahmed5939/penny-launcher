@@ -260,8 +260,8 @@ export function RewindStory({ onClose }: { onClose: () => void }) {
 
             {slide.key !== 'poster' && (
               <>
-                <button aria-hidden aria-label="Previous" className="absolute inset-y-16 left-0 w-1/4 focus-visible:outline-none" tabIndex={-1} type="button" onClick={() => go(-1)} />
-                <button aria-hidden aria-label="Next" className="absolute inset-y-16 right-0 w-1/3 focus-visible:outline-none" tabIndex={-1} type="button" onClick={() => go(1)} />
+                <button aria-hidden aria-label="Previous" className="absolute inset-y-16 left-0 w-1/4" tabIndex={-1} type="button" onClick={() => go(-1)} />
+                <button aria-hidden aria-label="Next" className="absolute inset-y-16 right-0 w-1/3" tabIndex={-1} type="button" onClick={() => go(1)} />
               </>
             )}
 

@@ -63,7 +63,7 @@ export function AreaNavigation() {
     return current && !items.includes(current) ? [...items, current] : items
   }
   const buttonClass =
-    'relative flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+    'relative flex size-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent/40 hover:text-foreground'
   const collapsePane = () => {
     const pane = document.querySelector('[data-app-focus-region="pane"]')
     if (pane?.contains(document.activeElement)) {

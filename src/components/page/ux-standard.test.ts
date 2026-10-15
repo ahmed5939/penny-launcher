@@ -142,6 +142,11 @@ describe('UX standard', () => {
     expect(offenders(/\bcursor-pointer\b/, [], uiFiles)).toEqual([])
   })
 
+  it('keeps the Windows focus rectangle', () => {
+    // globals.css draws it for every control; hiding it leaves keyboard users with no cursor.
+    expect(offenders(/focus-visible:outline-none|\boutline-none\b[^'"`\n]*focus-visible:ring/, [], uiFiles)).toEqual([])
+  })
+
   it('opens flyouts the way Windows does, not with a zoom from 95%', () => {
     // Menus fade and slide from their anchor; dialogs settle from 105%.
     expect(offenders(/\bzoom-(in|out)-95\b/, [], uiFiles)).toEqual([])

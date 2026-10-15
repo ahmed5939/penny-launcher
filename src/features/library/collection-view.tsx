@@ -174,7 +174,7 @@ function ModesShelf({ fortnite, overviews, playtime }: Omit<Props, 'isReading' |
             <li key={mode.catalogItemId}>
               <button
                 className={cn(
-                  'group relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-muted/30 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  'group relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-muted/30 text-left',
                   index === 0 && 'ring-2 ring-primary/60'
                 )}
                 type="button"
@@ -213,7 +213,7 @@ function GamesShelf({ games, isReading, tools }: { games: Array<CollectionGame>;
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-x-4 gap-y-5">
             {sorted.map((game) => (
               <li key={game.namespace}>
-                <button className="group block w-full rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="button" onClick={() => setOpened(game)}>
+                <button className="group block w-full rounded-lg text-left" type="button" onClick={() => setOpened(game)}>
                   <span className="relative block aspect-[3/4] overflow-hidden rounded-lg bg-muted/30">
                     <Art className="size-full transition-transform group-hover:scale-[1.03]" fallback={Gamepad2} src={tall(game.art)} />
                     <span className="absolute bottom-2 left-2 flex -space-x-1.5">

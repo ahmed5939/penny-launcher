@@ -67,7 +67,7 @@ export function ListRow({
   return (
     <li className={className}>
       <button
-        className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-accent/30 focus-visible:bg-accent/30 focus-visible:outline-none"
+        className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-accent/30"
         type="button"
         onClick={onClick}
       >

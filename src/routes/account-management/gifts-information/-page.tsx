@@ -680,7 +680,7 @@ const GiftTableRow = memo(function GiftTableRow({
 
   return (
     <div
-      className="grid items-center gap-3 border-b border-border/30 px-4 py-2 text-ui transition-colors hover:bg-accent/40 focus-visible:bg-accent/40 focus-visible:outline-none"
+      className="grid items-center gap-3 border-b border-border/30 px-4 py-2 text-ui transition-colors hover:bg-accent/40"
       onClick={() => onSelect(row)}
       onKeyDown={(event) => {
         if (event.key === 'Enter' || event.key === ' ') {

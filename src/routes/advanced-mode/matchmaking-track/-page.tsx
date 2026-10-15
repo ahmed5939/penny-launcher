@@ -171,7 +171,7 @@ function Content() {
                       {suggestions.map((result) => (
                         <button
                           type="button"
-                          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-accent"
                           key={`${result.accountId}:${result.platform}`}
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() =>
