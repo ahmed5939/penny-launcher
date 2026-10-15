@@ -134,6 +134,8 @@ function Content() {
     saving,
   } = useGameUserSettings()
 
+  const isDirty = form.formState.isDirty
+
   /* Restoring and refreshing overwrite work, so each asks twice (§7). */
   const [armed, setArmed] = useState<'restore' | 'reload' | null>(null)
 
@@ -147,6 +149,11 @@ function Content() {
 
     return () => clearTimeout(timer)
   }, [armed])
+
+  /* Saving, discarding or editing changes what the press would do, so it starts again. */
+  useEffect(() => {
+    setArmed(null)
+  }, [isDirty])
 
   if (loading) {
     return (
@@ -190,7 +197,6 @@ function Content() {
     Number(values.resolutionX),
     Number(values.resolutionY)
   )
-  const isDirty = form.formState.isDirty
   const restoreConfirming = armed === 'restore'
   // Refresh only asks when it would throw away edits; a clean form reloads at once.
   const reloadConfirming = armed === 'reload' && isDirty
@@ -213,6 +219,7 @@ function Content() {
 
   const onReloadClick = () => {
     if (!isDirty) {
+      setArmed(null)
       void reload()
 
       return
