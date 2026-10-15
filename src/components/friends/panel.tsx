@@ -70,6 +70,7 @@ export function FriendsPanel() {
           <>
             <Button
               asChild
+              aria-label="Open Friends page"
               className="size-7"
               size="icon"
               title="Open Friends page"
@@ -80,6 +81,7 @@ export function FriendsPanel() {
               </Link>
             </Button>
             <Button
+              aria-label="Reload friends"
               className="size-7"
               disabled={isLoading || !selected}
               size="icon"
@@ -92,6 +94,7 @@ export function FriendsPanel() {
               />
             </Button>
             <Button
+              aria-label="Close friends"
               className="size-7"
               size="icon"
               title="Close"
