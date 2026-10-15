@@ -166,6 +166,47 @@ describe('Presence page', () => {
     expect(page).not.toContain('Stop presence')
   })
 
+  it('says what to write when the status line is blank', () => {
+    stores.prefs = { ...stores.prefs, text: '   ' }
+
+    const page = text(render({}))
+
+    expect(page).toContain('0 of 128 bytes. Write a status to start.')
+    expect(page).not.toContain('Shown instead of')
+    expect(page).toContain('Start presence')
+  })
+
+  it('says where to fix the status line when a failure cannot be retried', () => {
+    stores.prefs = { ...stores.prefs, text: '' }
+
+    const page = text(
+      render({
+        accountId: alice.accountId,
+        displayName: 'Alice',
+        state: 'error',
+        errorCode: 'connection-lost',
+        errorMessage: 'The connection dropped.',
+      })
+    )
+
+    expect(page).toContain('Fix the status line below, then try again.')
+    expect(page).toContain('Try again')
+  })
+
+  it('leaves the retry hint out when the saved status line is valid', () => {
+    const page = text(
+      render({
+        accountId: alice.accountId,
+        displayName: 'Alice',
+        state: 'error',
+        errorCode: 'connection-lost',
+        errorMessage: 'The connection dropped.',
+      })
+    )
+
+    expect(page).not.toContain('Fix the status line below')
+  })
+
   it('says why it stepped aside for Fortnite', () => {
     const page = text(
       render({
