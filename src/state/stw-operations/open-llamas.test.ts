@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { buildPreview, includedTypeIds } from '../../features/open-llamas/model'
-import { defaultChoices, toggleExcluded, useOpenLlamasStore } from './open-llamas'
+import { defaultChoices, runSummary, toggleExcluded, useOpenLlamasStore } from './open-llamas'
 
 const A = 'a'.repeat(32)
 const B = 'b'.repeat(32)
@@ -43,5 +43,25 @@ describe('Open Llamas choices', () => {
     store.updateRun({ ...run, status: 'done', opened: 1 })
     store.dismissRun(A)
     expect(useOpenLlamasStore.getState().runs[A]).toBeUndefined()
+  })
+})
+
+describe('Open Llamas run summary', () => {
+  it('names the account when it has one', () => {
+    expect(runSummary({ status: 'done', opened: 30 }, 'Vexbolt')).toEqual({ tone: 'success', text: 'Opened 30 llamas on Vexbolt' })
+    expect(runSummary({ status: 'cancelled', opened: 1 }, 'Vexbolt')).toEqual({ tone: 'info', text: 'Stopped after opening 1 llama on Vexbolt' })
+    expect(runSummary({ status: 'failed', opened: 12 }, 'Vexbolt')).toEqual({
+      tone: 'warning',
+      text: 'Opening llamas on Vexbolt stopped after 12 llamas. Switch to Vexbolt and open Open llamas for why.',
+    })
+  })
+
+  it('leaves the account out when it cannot be named', () => {
+    expect(runSummary({ status: 'done', opened: 30 }, null)).toEqual({ tone: 'success', text: 'Opened 30 llamas' })
+    expect(runSummary({ status: 'cancelled', opened: 0 }, null)).toEqual({ tone: 'info', text: 'Stopped after opening 0 llamas' })
+    expect(runSummary({ status: 'failed', opened: 12 }, null)).toEqual({
+      tone: 'warning',
+      text: 'Opening llamas stopped after 12 llamas. See Open llamas for why.',
+    })
   })
 })

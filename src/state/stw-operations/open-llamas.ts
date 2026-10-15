@@ -4,6 +4,8 @@ import { create } from 'zustand'
 
 import { isRunActive } from '../../features/open-llamas/model'
 import { toast } from '../../lib/notifications'
+import { parseCustomDisplayName } from '../../lib/utils'
+import { useAccountListStore } from '../accounts/list'
 
 /**
  * Open Llamas choices, per account, for this session only. Nothing here is
@@ -58,13 +60,27 @@ export const useOpenLlamasStore = create<OpenLlamasState>()((set) => ({
 
 let listening = false
 
+/**
+ * The summary for a run that has ended. Names the account, because the user
+ * may have switched away by the time it ends.
+ */
+export function runSummary(progress: Pick<OpenLlamasProgress, 'status' | 'opened'>, name: string | null) {
+  const packs = `${progress.opened.toLocaleString()} ${progress.opened === 1 ? 'llama' : 'llamas'}`
+  const on = name ? ` on ${name}` : ''
+
+  if (progress.status === 'done') return { tone: 'success' as const, text: `Opened ${packs}${on}` }
+  if (progress.status === 'cancelled') return { tone: 'info' as const, text: `Stopped after opening ${packs}${on}` }
+
+  const why = name ? `Switch to ${name} and open Open llamas for why.` : 'See Open llamas for why.'
+  return { tone: 'warning' as const, text: `Opening llamas${on} stopped after ${packs}. ${why}` }
+}
+
 /** One summary when a run ends, wherever the user is by then. Never one per batch. */
 function announce(progress: OpenLlamasProgress) {
-  const packs = `${progress.opened.toLocaleString()} ${progress.opened === 1 ? 'llama' : 'llamas'}`
+  const account = useAccountListStore.getState().accounts[progress.accountId]
+  const { tone, text } = runSummary(progress, account ? parseCustomDisplayName(account) : null)
 
-  if (progress.status === 'done') toast.success(`Opened ${packs}`)
-  else if (progress.status === 'cancelled') toast.info(`Stopped after opening ${packs}`)
-  else toast.warning(`Opening llamas stopped after ${packs}. See Open llamas for why.`)
+  toast[tone](text)
 }
 
 /**
