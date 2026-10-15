@@ -1,5 +1,5 @@
 import type { AccountLibraryOverview } from './collection'
-import type { FreeGame, FreeGamesResponse } from './free-games'
+import type { FreeGame } from './free-games'
 
 import { useEffect, useState } from 'react'
 import { ExternalLink, Gift } from 'lucide-react'
@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button'
 import { useGetAccounts } from '../../hooks/accounts'
 
 import { accountsOwning } from './collection'
+import { createFreeGamesCache, type FreeGamesState } from './free-games-cache'
 import { Art, tall } from './parts'
 
 import { toast } from '../../lib/notifications'
@@ -22,46 +23,22 @@ import { parseCustomDisplayName } from '../../lib/utils'
  * the browser already signed in as that account, ready to claim.
  */
 
-type FreeGamesState = { data: FreeGamesResponse | null; error: boolean }
-
-let cache: Promise<FreeGamesResponse> | null = null
-const listeners = new Set<(state: FreeGamesState) => void>()
-
-function loadFreeGames(refresh = false) {
-  if (refresh || !cache) {
-    cache = window.electronAPI.requestFreeGames(refresh)
-    cache.catch(() => {
-      cache = null
-    })
-  }
-
-  return cache
-}
+const freeGames = createFreeGamesCache((refresh) => window.electronAPI.requestFreeGames(refresh))
 
 /** Reloads the free games into every mounted panel, keeping the last list on screen until the new one lands. */
 export function refreshFreeGames() {
-  loadFreeGames(true).then(
-    (data) => listeners.forEach((update) => update({ data, error: false })),
-    () => listeners.forEach((update) => update({ data: null, error: true }))
-  )
+  freeGames.refresh()
 }
 
 export function useFreeGames() {
-  const [state, setState] = useState<FreeGamesState>({ data: null, error: false })
+  const [state, setState] = useState<FreeGamesState>({ data: null, error: false, loading: true })
 
   useEffect(() => {
-    let live = true
-    const update = (next: FreeGamesState) => live && setState(next)
+    const unsubscribe = freeGames.subscribe((patch) => setState((current) => ({ ...current, ...patch })))
 
-    listeners.add(update)
-    loadFreeGames()
-      .then((data) => update({ data, error: false }))
-      .catch(() => update({ data: null, error: true }))
+    freeGames.load()
 
-    return () => {
-      live = false
-      listeners.delete(update)
-    }
+    return unsubscribe
   }, [])
 
   return state
@@ -76,7 +53,7 @@ export function FreeGamesPanel({
 }: {
   overviews: Record<string, AccountLibraryOverview | undefined>
 }) {
-  const { data, error } = useFreeGames()
+  const { data, error, loading } = useFreeGames()
 
   return (
     <Panel>
@@ -88,7 +65,7 @@ export function FreeGamesPanel({
       {error ? (
         <PanelBody className="space-y-3">
           <Callout tone="warning">Could not load this week's free games.</Callout>
-          <Button onClick={() => refreshFreeGames()} size="sm" variant="outline">
+          <Button disabled={loading} onClick={() => refreshFreeGames()} size="sm" variant="outline">
             Try again
           </Button>
         </PanelBody>
