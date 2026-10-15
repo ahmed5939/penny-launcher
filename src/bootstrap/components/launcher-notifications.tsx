@@ -1,8 +1,33 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import type { LauncherNotificationCallbackResponseParam } from '../../types/preload'
+
 import { toast } from '../../lib/notifications'
 import { parseCustomDisplayName } from '../../lib/utils'
+
+type Translate = (key: string, options: { name: string }) => string
+
+export function launcherNotificationMessage(
+  data: LauncherNotificationCallbackResponseParam,
+  t: Translate
+) {
+  const name = parseCustomDisplayName(data.account)
+
+  if (data.status) {
+    return t('launch-game.notifications.success', { name })
+  }
+
+  if (data.reason === 'missing-install') {
+    return t('launch-game.notifications.missing', { name })
+  }
+
+  if (data.reason === 'signed-out') {
+    return `Could not launch with ${name}: its sign-in has expired. Re-add the account, then launch again.`
+  }
+
+  return t('launch-game.notifications.error', { name })
+}
 
 /**
  * Toasts the result of launching the game.
@@ -20,16 +45,7 @@ export function LauncherNotifications() {
     const listener = window.electronAPI.onNotificationLauncher(
       async (data) => {
         toast[data.status ? 'success' : 'error'](
-          t(
-            data.status
-              ? 'launch-game.notifications.success'
-              : data.reason === 'missing-install'
-                ? 'launch-game.notifications.missing'
-                : 'launch-game.notifications.error',
-            {
-              name: parseCustomDisplayName(data.account),
-            }
-          )
+          launcherNotificationMessage(data, t)
         )
       }
     )
