@@ -1,4 +1,6 @@
 
+import type { AccountData } from '../../../types/accounts'
+
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
@@ -25,28 +27,33 @@ export function useHandleRemove() {
   const { removeAccount: removeAccountFromUrns } =
     useGetAutoPinUrnActions()
 
-  const handleRemove = (config?: { defaultRedirect?: boolean }) => {
-    if (!selected) {
+  const handleRemove = (config?: {
+    account?: AccountData
+    defaultRedirect?: boolean
+  }) => {
+    const target = config?.account ?? selected
+
+    if (!target) {
       return
     }
-    removeAccountFromAutoKick(selected.accountId)
-    removeAccountFromUrns(selected.accountId)
+    removeAccountFromAutoKick(target.accountId)
+    removeAccountFromUrns(target.accountId)
 
-    window.electronAPI.autoPinUrnsRemove(selected.accountId)
-    window.electronAPI.onRemoveAccount(selected.accountId)
+    window.electronAPI.autoPinUrnsRemove(target.accountId)
+    window.electronAPI.onRemoveAccount(target.accountId)
 
-    const total = Object.values(removeAccount(selected.accountId)).length
+    const total = Object.values(removeAccount(target.accountId)).length
 
     toast.success(
       t('notifications.remove.success', {
-        name: parseCustomDisplayName(selected),
+        name: parseCustomDisplayName(target),
       })
     )
 
     const withRedirect = config?.defaultRedirect ?? true
 
-    if (total <= 0 && withRedirect) {
-      navigate({ to: '/' })
+    if (withRedirect) {
+      navigate({ to: total > 0 ? '/account' : '/' })
     }
   }
 
