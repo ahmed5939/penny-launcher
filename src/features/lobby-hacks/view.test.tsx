@@ -149,7 +149,7 @@ describe('BR Lobby Hacks page', () => {
 
     const text = page()
 
-    expect(text).toContain('BR Lobby Hacks')
+    expect(text).toContain('BR lobby hacks')
     expect(text).toContain('No linked accounts')
     expect(submitButton(markup())).toBe('')
   })
@@ -158,12 +158,12 @@ describe('BR Lobby Hacks page', () => {
     const html = markup()
     const text = page()
 
-    expect(text).toContain('BR Lobby Hacks')
+    expect(text).toContain('BR lobby hacks')
     expect(text).toContain('Beta')
     expect(text).toContain('lobby effects only play in game')
     expect(text).toContain('Nothing is sent until you press Submit')
     expect(text).toContain('Submits for Alice')
-    expect(text).toContain('0 of 256 characters')
+    expect(text).toContain('Type a code, or pick one from the list below.')
     expect(isDisabled(submitButton(html))).toBe(true)
     expect(fixtures.missingKeys).toEqual([])
   })
@@ -339,6 +339,7 @@ describe('BR Lobby Hacks page', () => {
     expect(text).toContain('OverrideXP')
     expect(text).toContain('40,000 XP')
     expect(text).toContain('Finish the Geno story quests first.')
+    expect(html).toMatch(/title="[^"]*Finish the Geno story quests first\."/)
 
     const rowButton = (code: string) =>
       new RegExp(`<button[^>]*>(?:(?!</button>).)*>${code}<`, 's').test(html)
@@ -348,6 +349,9 @@ describe('BR Lobby Hacks page', () => {
     // In game only, or no longer running: listed, not offered.
     expect(text).toContain('CrowsAreAfraid')
     expect(rowButton('CrowsAreAfraid')).toBe(false)
+    // Lobby effects are typed in game, so they can be copied from the list.
+    expect(html).toContain('aria-label="Copy CrowsAreAfraid"')
+    expect(html).not.toContain('aria-label="Copy OverrideXP"')
     expect(text).toContain('NOPROLLAMA')
     expect(rowButton('NOPROLLAMA')).toBe(false)
     // Listing codes sends nothing.

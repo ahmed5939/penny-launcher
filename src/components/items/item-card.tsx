@@ -21,7 +21,7 @@ import { cn } from '../../lib/utils'
  * rarity edge and a soft wash off it, a 2px rarity rule along the top, an
  * artboard whose gradient carries the tier behind the art, overlays in the
  * artboard corners (power bottom-right, favourite bottom-left, quantity
- * top-right), then an uppercase rarity eyebrow and the name. Colour is the
+ * top-right), then a rarity eyebrow and the name. Colour is the
  * launcher's own rarity ladder, so a Legendary here is the same orange as a
  * Legendary in the vault.
  *
@@ -177,7 +177,7 @@ export function ItemCard({
       {/* Caption. */}
       <span className="flex min-w-0 flex-1 flex-col gap-1 px-3 pb-3 pt-2.5">
         <span className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-2xs font-semibold uppercase leading-none tracking-wider text-muted-foreground" style={accent ? { color: rarityInk(accent) } : undefined}>
+          <span className="truncate text-2xs font-semibold leading-none text-muted-foreground" style={accent ? { color: rarityInk(accent) } : undefined}>
             {eyebrow ?? rarityName ?? 'Item'}
           </span>
           {typeof level === 'number' && (

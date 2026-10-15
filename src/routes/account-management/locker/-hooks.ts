@@ -6,11 +6,21 @@ import { useEffect, useMemo } from 'react'
 
 import { ownedForSlot } from '../../../kernel/core/locker-loadout'
 
+import { useAccountScopeStore } from '../../../state/accounts/scope'
+
 import { useLockerStore } from '../../../state/management/locker'
 
 import { useGetSelectedAccount } from '../../../hooks/accounts'
 
 import { toast } from '../../../lib/notifications'
+
+/**
+ * Whether a reply is for the account selected now. Replies for an account the
+ * user has since left are dropped, so they cannot overwrite the current one.
+ */
+function isSelectedAccount(accountId: string) {
+  return useAccountScopeStore.getState().primary === accountId
+}
 
 /**
  * The page's one connection to the main process.
@@ -66,6 +76,7 @@ export function useLockerPage() {
     }))
   )
   const {
+    claimFor,
     reset,
     setCard,
     setCompanions,
@@ -79,6 +90,7 @@ export function useLockerPage() {
     setResponse,
   } = useLockerStore(
     useShallow((state) => ({
+      claimFor: state.claimFor,
       reset: state.reset,
       setCard: state.setCard,
       setCompanions: state.setCompanions,
@@ -96,15 +108,31 @@ export function useLockerPage() {
   useEffect(() => {
     const listeners = [
       window.electronAPI.responseLocker(async (response) => {
+        if (!isSelectedAccount(response.accountId)) {
+          return
+        }
+
         setResponse(response)
       }),
       window.electronAPI.responseLockerOwned(async (response) => {
+        if (!isSelectedAccount(response.accountId)) {
+          return
+        }
+
         setOwned(response)
       }),
       window.electronAPI.responseLockerCompanions(async (response) => {
+        if (!isSelectedAccount(response.accountId)) {
+          return
+        }
+
         setCompanions(response)
       }),
       window.electronAPI.notificationLockerEquip(async (response) => {
+        if (!isSelectedAccount(response.accountId)) {
+          return
+        }
+
         setEquipping(null)
 
         toast[response.errorMessage ? 'error' : 'success'](
@@ -116,6 +144,10 @@ export function useLockerPage() {
         )
       }),
       window.electronAPI.notificationLockerCard(async (response) => {
+        if (!isSelectedAccount(response.accountId)) {
+          return
+        }
+
         setCard(response)
 
         if (response.errorMessage) {
@@ -133,6 +165,12 @@ export function useLockerPage() {
   }, [])
 
   useEffect(() => {
+    if (accountId) {
+      claimFor(accountId)
+    }
+  }, [accountId])
+
+  useEffect(() => {
     if (!selected) {
       reset()
 
@@ -142,15 +180,21 @@ export function useLockerPage() {
     /*
      * Guarded on `loadedFor` so returning to the page does not refetch a
      * locker that is already on screen — only a genuine account switch does.
+     * The else branches clear a loading flag left by a request for the
+     * previous account, whose reply is now dropped.
      */
     if (loadedFor !== selected.accountId) {
       setLoading(true)
       window.electronAPI.requestLocker(selected)
+    } else {
+      setLoading(false)
     }
 
     if (ownedLoadedFor !== selected.accountId) {
       setLoadingOwned(true)
       window.electronAPI.requestLockerOwned(selected)
+    } else {
+      setLoadingOwned(false)
     }
 
     /*
@@ -161,9 +205,14 @@ export function useLockerPage() {
     if (companionsLoadedFor !== selected.accountId) {
       setLoadingCompanions(true)
       window.electronAPI.requestLockerCompanions(selected)
+    } else {
+      setLoadingCompanions(false)
     }
     /* Keyed on the account id alone — `selected` is a new object each render. */
   }, [accountId])
+
+  const ownedReady = ownedLoadedFor === accountId
+  const companionsReady = companionsLoadedFor === accountId
 
   const handleReload = () => {
     if (!selected || isLoading) {
@@ -184,7 +233,7 @@ export function useLockerPage() {
     templateId: string | null,
     itemName: string
   ) => {
-    if (!selected || equipping) {
+    if (!selected || equipping || !ownedReady) {
       return
     }
 
@@ -201,12 +250,17 @@ export function useLockerPage() {
     window.electronAPI.generateLockerCard(selected, filters)
   }
 
+  /*
+   * The store keeps the last account's lists until this account's replies
+   * land, so nothing reads them until the matching `*LoadedFor` agrees.
+   */
   return {
     account: selected,
     card,
     cardError,
-    companions,
+    companions: companionsReady ? companions : [],
     companionsError,
+    companionsReady,
     equipping,
     errorMessage,
     filters,
@@ -217,8 +271,10 @@ export function useLockerPage() {
     isLoading,
     isLoadingCompanions,
     isLoadingOwned,
-    owned,
+    loadedFor,
+    owned: ownedReady ? owned : [],
     ownedError,
+    ownedReady,
     progress,
     slots,
   }

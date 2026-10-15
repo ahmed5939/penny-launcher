@@ -105,13 +105,32 @@ describe('reviewed plugin lifecycle', () => {
     expect((await manager.list())[0].status).toBe('running')
   })
   it('shows new permissions and rolls back both code and grants after failed update', async () => {
-    await install()
-    await packageAt(mock.selection, '2', { permissions: ['storage', 'accounts:read'] }, 'FAIL')
+    await packageAt(mock.selection, '1', { fortnite: { profiles: ['campaign'], operations: ['UpgradeItem', 'QueryProfile'] } })
+    expect((await manager.acceptReview((await manager.review('import')).review!.token)).ok).toBe(true)
+    await packageAt(mock.selection, '2', { permissions: ['storage', 'accounts:read'], fortnite: { profiles: ['campaign', 'athena'], operations: ['UpgradeItem', 'ClaimQuestReward', 'QueryProfile'] } }, 'FAIL')
     const { review } = await manager.review('import')
     expect(review!.addedPermissions).toEqual(['accounts:read'])
+    expect(review!.addedOperations).toEqual(['ClaimQuestReward'])
+    expect(review!.addedProfiles).toEqual(['athena'])
+    expect(review!.commands).toEqual([
+      { operation: 'UpgradeItem', description: 'Level up an item, spending materials.', known: true, asks: true },
+      { operation: 'ClaimQuestReward', description: 'Claim a quest reward.', known: true, asks: true },
+    ])
     expect((await manager.acceptReview(review!.token)).ok).toBe(false)
     expect((await manager.list())[0]).toMatchObject({ version: '1', status: 'running', permissions: ['storage'] })
     expect(await readFile(path.join(mock.root, 'plugins', 'sample', 'main.js'), 'utf8')).not.toContain('FAIL')
+  })
+  it('approves ordinary and unknown commands under API v6, but still asks for money', async () => {
+    await packageAt(mock.selection, '1', { apiVersion: 6, fortnite: { profiles: ['campaign'], operations: ['UpgradeItem', 'PurchaseCatalogEntry', 'SomeFutureCommand', 'QueryProfile'] } })
+    const { review } = await manager.review('import')
+    expect(review!.commands.map(({ operation, known, asks }) => ({ operation, known, asks }))).toEqual([
+      { operation: 'UpgradeItem', known: true, asks: false },
+      { operation: 'PurchaseCatalogEntry', known: true, asks: true },
+      { operation: 'SomeFutureCommand', known: false, asks: false },
+    ])
+    expect((await manager.acceptReview(review!.token)).ok).toBe(true)
+    await packageAt(mock.selection, '2', { apiVersion: 6, fortnite: { profiles: ['campaign'], operations: ['UpgradeItem', 'PurchaseCatalogEntry', 'SomeFutureCommand', 'ClaimQuestReward', 'QueryProfile'] } })
+    expect((await manager.review('import')).review!.addedOperations).toEqual(['ClaimQuestReward'])
   })
   it('supports explicit rollback and preserves saved data when removed', async () => {
     await install()

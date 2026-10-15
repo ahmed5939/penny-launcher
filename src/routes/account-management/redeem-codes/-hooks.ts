@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
 import {
+  listenForRedeemCodes,
   RedeemCodesCodeData,
   RedeemCodesStatus,
 } from '../../../state/management/redeem-code'
@@ -23,17 +24,13 @@ export function useRedeemCodesData() {
 
   const {
     codes,
-    isLoading,
     notifications,
     selectedAccounts,
   } = useGetRedeemCodesData()
   const {
     redeemCodesClearResponse,
     redeemCodesSetInitialResponse,
-    redeemCodesSetNotification,
-    redeemCodesUpdateAccounts,
     redeemCodesUpdateCodes,
-    redeemCodesUpdateLoading,
   } = useGetRedeemCodesActions()
   const {
     accounts,
@@ -45,24 +42,21 @@ export function useRedeemCodesData() {
   } = useAccountSelectorData()
 
   const newNotifications = Object.values(notifications)
+  // Busy until every account has answered every code, not just the first.
+  const isLoading = newNotifications.some((item) =>
+    Object.values(item.codes).some(
+      (code) => code.status === RedeemCodesStatus.LOADING
+    )
+  )
   const isDisabledForm =
     isSelectedEmpty ||
     isLoading ||
     !areThereAccounts ||
     codes.trim().length === 0
+  const isClearDisabled =
+    isLoading || (codes.trim().length === 0 && newNotifications.length === 0)
 
-  useEffect(() => {
-    const listener = window.electronAPI.redeemCodesNotification(
-      async (notification) => {
-        redeemCodesUpdateLoading(false)
-        redeemCodesSetNotification(notification)
-      }
-    )
-
-    return () => {
-      listener.removeListener()
-    }
-  }, [])
+  useEffect(listenForRedeemCodes, [])
 
   const handleRedeem = () => {
     if (isDisabledForm) {
@@ -90,13 +84,11 @@ export function useRedeemCodesData() {
       {} as Record<string, RedeemCodesCodeData>
     )
 
-    redeemCodesUpdateLoading(true)
     redeemCodesSetInitialResponse(selectedAccounts, codeRecord)
 
     window.electronAPI.redeemCodes(selectedAccounts, currentCodes)
   }
   const handleClearForm = () => {
-    redeemCodesUpdateAccounts([])
     redeemCodesUpdateCodes('')
     redeemCodesClearResponse()
   }
@@ -110,6 +102,7 @@ export function useRedeemCodesData() {
     accounts,
     areThereAccounts,
     codes,
+    isClearDisabled,
     isDisabledForm,
     isLoading,
     isSelectedEmpty,
@@ -120,6 +113,5 @@ export function useRedeemCodesData() {
     handleClearForm,
     handleRedeem,
     handleUpdateCodes,
-    redeemCodesUpdateAccounts,
   }
 }

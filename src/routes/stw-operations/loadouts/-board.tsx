@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import type { ItemDetailSubject } from '../../../components/items/item-detail'
 import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import type { LoadoutDefender, LoadoutEntry, LoadoutMember } from '../../../kernel/core/loadouts'
@@ -126,6 +126,7 @@ function LoadoutCard({
   const teamPerk = loadout.teamPerk ? getItemRecord(records, loadout.teamPerk) : null
   const accent = art ? (raritiesColor[art.rarity as RarityType] ?? raritiesColor[RarityType.Common]) : null
   const filledDefenders = loadout.defenders.filter((defender) => defender.templateId).length
+  const [armed, setArmed] = useState(false)
 
   return (
     <section
@@ -136,6 +137,13 @@ function LoadoutCard({
         highlighted && 'ring-2 ring-primary'
       )}
       id={`loadout-${loadout.itemId}`}
+      onBlur={(event) => {
+        const next = event.relatedTarget
+
+        if (!(next instanceof Node) || !event.currentTarget.contains(next)) {
+          setArmed(false)
+        }
+      }}
       style={{ borderLeft: `3px solid ${loadout.active ? 'hsl(var(--primary))' : (accent ?? 'hsl(var(--border))')}` }}
     >
       {/* Header: number, commander, class, and the loadout's own actions. */}
@@ -168,10 +176,10 @@ function LoadoutCard({
           className="size-7 p-0"
           data-share-hide
           disabled={actions.isEditing}
-          onClick={() => actions.onClear(loadout.itemId)}
+          onClick={() => setArmed(!armed)}
           size="sm"
           title="Empty every slot in this loadout"
-          variant="ghost"
+          variant={armed ? 'destructive' : 'ghost'}
         >
           <Eraser className="size-3.5" />
         </Button>
@@ -183,6 +191,23 @@ function LoadoutCard({
           onCopyToAccount={() => actions.onCopyToAccount(loadout, title)}
         />
       </div>
+
+      {/* Armed by the Clear icon. Full width, so the label never has to fit beside the header's buttons. */}
+      {armed && (
+        <Button
+          className="mt-2 w-full text-xs"
+          data-share-hide
+          disabled={actions.isEditing}
+          onClick={() => {
+            setArmed(false)
+            actions.onClear(loadout.itemId)
+          }}
+          size="sm"
+          variant="destructive"
+        >
+          Confirm — empties loadout
+        </Button>
+      )}
 
       <span className="my-3 h-px bg-border/60" />
 

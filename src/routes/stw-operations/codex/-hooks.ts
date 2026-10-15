@@ -103,6 +103,7 @@ export function useCodexData() {
   const alterationPools = useItemDatabaseStore(
     (state) => state.alterationPools
   )
+  const errorMessage = useItemDatabaseStore((state) => state.errorMessage)
   const isLoading = useItemDatabaseStore((state) => state.isLoading)
   const total = useItemDatabaseStore((state) => state.total)
 
@@ -202,6 +203,7 @@ export function useCodexData() {
   return {
     alterationPools,
     entries: filtered,
+    errorMessage,
     family,
     familyTotal: entries.length,
     isLoading,

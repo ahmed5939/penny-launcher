@@ -172,17 +172,19 @@ export function Collection({
           sizerRef={$grid}
         />
       ) : (
-        <EmptyState
-          description={
-            isLoading
-              ? 'Reading this account’s cosmetics…'
-              : owned.length === 0
-                ? 'Nothing loaded yet — try Reload.'
-                : 'Nothing matches that search.'
-          }
-          icon={PackageOpen}
-          title={isLoading ? 'Loading' : 'Nothing to show'}
-        />
+        <div role="status">
+          <EmptyState
+            description={
+              isLoading
+                ? 'Reading this account’s cosmetics…'
+                : owned.length === 0
+                  ? 'Nothing loaded yet — try Refresh.'
+                  : 'Nothing matches that search.'
+            }
+            icon={PackageOpen}
+            title={isLoading ? 'Loading cosmetics…' : 'Nothing to show'}
+          />
+        </div>
       )}
     </>
   )

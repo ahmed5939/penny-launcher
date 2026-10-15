@@ -5,14 +5,12 @@
  * intentions rather than a pile of layout classes, and fixing the look of
  * one thing fixes it everywhere.
  */
-export { AccountToolbar } from './account-toolbar'
 export { AccountResourceGate, useAccountResource, type AccountResource } from './account-resource'
 export { AnimatedNumber } from './animated-number'
-export { ActionTile } from './action-tile'
 export { Callout, type CalloutTone } from './callout'
 export { Chip, type ChipTone } from './chip'
 export { downloadJson, FilterBar, paginate, Pager, Picker, type PickerOption, RefreshButton, SearchField, ToolBadges } from './controls'
-export { CopyField } from './copy-field'
+export { CopyButton, CopyField } from './copy-field'
 export { EmptySlot, type EmptySlotSize } from './empty-slot'
 export { EmptyState } from './empty-state'
 export { FieldGroup, FieldRow } from './field-row'

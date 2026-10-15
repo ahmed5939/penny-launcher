@@ -31,7 +31,7 @@ type Detail = { slot: BookSlot; items: BookItem[]; owned: BookItem[]; location?:
 type Location = { category: (typeof catalog)[number]; page: (typeof catalog)[number]['pages'][number]; section: (typeof catalog)[number]['pages'][number]['sections'][number]; slot: BookSlot }
 
 const statusOptions: Array<{ value: SlotStatus; label: string }> = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All slots' },
   { value: 'slotted', label: 'Slotted' },
   { value: 'missing', label: 'Missing' },
 ]
@@ -44,7 +44,7 @@ type SlotStatus = 'all' | 'slotted' | 'missing'
 type Tab = 'book' | 'missing' | 'upgrades' | 'resources'
 type UpgradeKind = 'all' | 'level' | 'evolve'
 const upgradeKindOptions: Array<{ value: UpgradeKind; label: string }> = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All upgrades' },
   { value: 'level', label: 'Level up' },
   { value: 'evolve', label: 'Evolve' },
 ]
@@ -72,9 +72,10 @@ const slotGrid = 'grid grid-cols-[repeat(auto-fill,minmax(4.75rem,1fr))] gap-1.5
 
 export function RouteComponent() {
   useRequestItemDatabase()
-  const resource = useAccountResource((accountId) => window.electronAPI.requestCollectionBook(accountId), {
+  const resource = useAccountResource((accountId) => window.electronAPI.requestCollectionBook(accountId).catch(() => {
+    throw new Error('Could not load the Collection Book. Try Refresh.')
+  }), {
     cacheKey: 'stw.collection-book',
-    fallbackError: 'Could not load the Collection Book. Refresh to retry.',
     owner: (result) => result.accountId,
   })
 
@@ -82,7 +83,7 @@ export function RouteComponent() {
     <div className="space-y-5">
       <PageHeader
         actions={<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />}
-        description="Your Collection Book laid out like the in-game book: categories and pages on the left, every slot of the page on the right. The Missing tab lists every empty slot at once."
+        description="Your Collection Book, page by page."
         icon={BookOpen}
         section="Save the World"
         status={<ToolBadges beta />}
@@ -90,7 +91,6 @@ export function RouteComponent() {
       />
       <AccountResourceGate
         icon={BookOpen}
-        loading={{ title: 'Loading the Collection Book…', description: 'Reading the campaign profile and both book profiles from Epic.' }}
         resource={resource}
         what="the Collection Book"
       >
@@ -403,7 +403,7 @@ function Book({ current, onChanged }: { current: CollectionBookData; onChanged: 
                   ))}
                 </span>
               }
-              description="Slotted items below the highest level their rarity allows. The bar under each shows how far along it is; evolve means the item is at its star cap and needs evolving before it can level again. Superchargers are not counted."
+              description="Slotted items below their max level."
               title="Needs upgrading"
             />
             <FilterBar>
@@ -539,10 +539,10 @@ function SlotTile({ context, item, onClick, owned, power, records, slot }: {
 
 type UpgradeOption = { key: string; icon: LucideIcon; title: string; hint: string; cost: Costs | null; request: BookUpgradeRequest }
 
-/** Electron wraps a main-process throw in its own sentence; the user only needs ours. */
-function ipcMessage(cause: unknown) {
-  const message = cause instanceof Error ? cause.message : ''
-  return message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') || 'The upgrade failed. Refresh and try again.'
+/** Electron wraps a main-process throw in its own sentence; the user only needs ours. A bare "Request failed." says nothing, so it gets the fallback. */
+function ipcMessage(cause: unknown, fallback: string) {
+  const message = (cause instanceof Error ? cause.message : '').replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+  return message && message !== 'Request failed.' ? message : fallback
 }
 
 function evolveLabel(to: string, tier: number) {
@@ -639,7 +639,7 @@ function SlotDetail({ accountId, detail, label, onUpgraded, power, records, reso
       toast.success(`${slot.name}: ${option.title.toLowerCase()} done.`)
       onUpgraded()
     } catch (cause) {
-      toast.error(ipcMessage(cause))
+      toast.error(ipcMessage(cause, `Could not upgrade ${slot.name}. Refresh and try again.`))
     } finally {
       setBusy(null)
     }
@@ -760,10 +760,6 @@ function SlotDetail({ accountId, detail, label, onUpgraded, power, records, reso
             )}
           </>
         )}
-
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Upgrades happen in the book, as in game, and spend XP and materials from the campaign inventory. They cannot be undone. Slotting and rarity upgrades are still done in game.
-        </p>
       </div>
     </div>
   )

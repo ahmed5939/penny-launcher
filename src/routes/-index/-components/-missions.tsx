@@ -2,10 +2,10 @@ import type { PropsWithChildren } from 'react'
 import type { WorldInfoMission } from '../../../types/data/advanced-mode/world-info'
 import type { RewardLike } from './-mission-data'
 
-import { UpdateIcon } from '@radix-ui/react-icons'
 import {
   ChevronDown,
   Image,
+  LoaderCircle,
   SquareCheckBigIcon,
   SquareIcon,
   Zap,
@@ -28,6 +28,8 @@ import {
   resolveBrief,
   stripColon,
 } from './-mission-data'
+
+import { copyElementScreenshot } from './-screenshot'
 
 import { useAlertsDoneMarkedActions } from '../../../hooks/alerts/alerts-done'
 
@@ -470,40 +472,31 @@ function ScreenshotButton({ id }: { id: string }) {
     setIsLoading(true)
 
     try {
-      // Pulled in on demand: the screenshot library is only needed once the
-      // user actually asks for one, so it stays out of the startup path.
-      const { domToBlob } = await import('modern-screenshot')
-
-      const data = await domToBlob($element, {
-        backgroundColor: 'hsl(335 24% 4%)',
-        type: 'image/png',
-      })
-
-      await window.navigator.clipboard.write([
-        new ClipboardItem({
-          'image/png': data,
-        }),
-      ])
+      await copyElementScreenshot($element)
 
       toast.success(t('validations.screenshot.success'))
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       toast.error(t('validations.screenshot.error'))
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
     <div className="flex h-16 items-center justify-center">
       <Button
+        aria-busy={isLoading}
+        aria-label="Copy screenshot of this mission"
         className="size-7 p-0 text-muted-foreground/50 hover:text-foreground"
+        disabled={isLoading}
+        title="Copy screenshot of this mission"
         variant="ghost"
         onClick={handleGeneration}
       >
         {isLoading ? (
-          <UpdateIcon className="size-4 animate-spin" />
+          <LoaderCircle className="size-4 animate-spin" />
         ) : (
           <Image className="size-4" />
         )}

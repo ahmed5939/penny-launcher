@@ -16,7 +16,7 @@ import { AnimatedNumber } from '../../components/page'
 
 import { commanderLevelCap } from './model'
 import { Aside, Big, Figures, Kicker, Line, StwTile, Title } from './parts'
-import { formatCount, formatHours, formatPower, sinceMonth } from './words'
+import { countOf, formatCount, formatHours, formatPower, sinceMonth } from './words'
 
 import { cn } from '../../lib/utils'
 
@@ -158,7 +158,7 @@ export function saveTheWorldSlides(rewind: Rewind): Array<Slide> {
             <AnimatedNumber value={command.mythics.length} />
           </Big>
           <Line>
-            mythics across your accounts
+            {command.mythics.length === 1 ? 'mythic' : 'mythics'} across your accounts
             {command.stormKing > 0 ? `, ${formatCount(command.stormKing)} of them the Storm King's own weapons` : ''}.
           </Line>
           <div className="space-y-3 pt-2">
@@ -185,8 +185,8 @@ export function saveTheWorldSlides(rewind: Rewind): Array<Slide> {
             })}
           </div>
           <Aside>
-            {formatCount(collection.heroes)} heroes · {formatCount(collection.survivors)} survivors · {formatCount(collection.schematics)} schematics ·{' '}
-            {formatCount(collection.defenders)} defenders in your collections
+            {countOf(collection.heroes, 'hero', 'heroes')} · {countOf(collection.survivors, 'survivor', 'survivors')} ·{' '}
+            {countOf(collection.schematics, 'schematic', 'schematics')} · {countOf(collection.defenders, 'defender', 'defenders')} in your collections
           </Aside>
         </>
       ),
@@ -244,7 +244,7 @@ export function saveTheWorldSlides(rewind: Rewind): Array<Slide> {
           <Big>
             <AnimatedNumber value={grind.missions} />
           </Big>
-          <Line>missions completed{grind.startedAt ? ` since ${sinceMonth(grind.startedAt)}` : ''}. The storm never stood a chance.</Line>
+          <Line>{grind.missions === 1 ? 'mission' : 'missions'} completed{grind.startedAt ? ` since ${sinceMonth(grind.startedAt)}` : ''}. The storm never stood a chance.</Line>
           <Figures
             items={[
               { label: 'Matches', value: formatCount(grind.matches) },

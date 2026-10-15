@@ -219,12 +219,12 @@ function Discover({
         <StatTile
           hint={summary.hidden > 0 ? `${summary.hidden.toLocaleString('en-GB')} hide their count` : undefined}
           label="Players across them"
-          value={formatPlayers(summary.players)}
+          value={summary.hidden > 0 ? `At least ${formatPlayers(summary.players)}` : formatPlayers(summary.players)}
         />
         <StatTile
           hint={summary.busiest ? `${formatPlayers(summary.busiest.ccu)} playing` : undefined}
           label="Busiest island"
-          value={<span className="line-clamp-1 text-base">{summary.busiest?.title ?? 'Unavailable'}</span>}
+          value={<span className="line-clamp-1 text-title" title={summary.busiest?.title}>{summary.busiest?.title ?? 'Unavailable'}</span>}
         />
       </StatRow>
 
@@ -319,7 +319,9 @@ function Watching({
           <Callout tone="warning">{watchlist.errorMessage}</Callout>
         </div>
       )}
-      {islands.length === 0 ? (
+      {watchlist === null ? (
+        <p className="px-5 py-6 text-ui text-muted-foreground" role="status">Loading your watchlist…</p>
+      ) : islands.length === 0 ? (
         <EmptyState
           className="border-0 bg-transparent py-8"
           description="Star an island to follow its player count and get notified when it gets busy."
@@ -346,7 +348,7 @@ function Watching({
                     </span>
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
-                        <span className="truncate text-ui font-semibold">{island.title}</span>
+                        <span className="truncate text-ui font-semibold" title={island.title}>{island.title}</span>
                         {island.above && <Chip tone="accent">Busy</Chip>}
                       </span>
                       <span className="mt-0.5 block truncate text-xs text-muted-foreground">

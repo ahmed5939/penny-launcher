@@ -95,9 +95,9 @@ export function SearchedUserData({
 }: {
   accountId: string
   boostedXP?: MCPQueryProfileChanges
-  collectionBookLevel: number
+  collectionBookLevel: number | null
   commanderLevel: number
-  daysLoggedIn: number
+  daysLoggedIn: number | null
   founderStatus?: MCPQueryProfileChanges
   personalXPBoosts: number
   teammateXPBoosts: number
@@ -110,6 +110,9 @@ export function SearchedUserData({
   const individualBoosts = Math.round(
     extractedBoostedXP / individualLimitBoostedXP,
   )
+  const unavailable = t('xpboosts.results.unavailable', {
+    ns: 'stw-operations',
+  })
 
   return (
     <div className="space-y-4">
@@ -148,11 +151,19 @@ export function SearchedUserData({
         />
         <StatTile
           label={label(t('information.collection-book-level'))}
-          value={numberWithCommaSeparator(collectionBookLevel)}
+          value={
+            collectionBookLevel === null
+              ? unavailable
+              : numberWithCommaSeparator(collectionBookLevel)
+          }
         />
         <StatTile
           label={label(t('information.days-logged-in'))}
-          value={numberWithCommaSeparator(daysLoggedIn)}
+          value={
+            daysLoggedIn === null
+              ? unavailable
+              : numberWithCommaSeparator(daysLoggedIn)
+          }
         />
         <StatTile
           label={label(t('information.founder-status'))}

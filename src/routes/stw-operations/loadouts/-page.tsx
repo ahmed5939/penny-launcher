@@ -39,6 +39,7 @@ import {
 } from '../../../components/ui/tooltip'
 import {
   AccountResourceGate,
+  Callout,
   EmptyState,
   PageHeader,
   RefreshButton,
@@ -106,6 +107,12 @@ function loadoutTitle(loadout: LoadoutEntry) {
   return generated ? `Loadout ${loadout.position}` : name
 }
 
+/** The vault as the pickers read it: its items, or why it could not be read. */
+type VaultRead = {
+  error: string | null
+  items: Array<InventoryItem>
+}
+
 /** What the page reads: the loadouts, and the vault as the pool to fill them from. */
 type LoadoutsData = {
   accountId: string
@@ -113,18 +120,29 @@ type LoadoutsData = {
   availableTeamPerks: LoadoutsPayload['availableTeamPerks']
   defenders: Array<InventoryItem>
   heroes: Array<InventoryItem>
+  /** Set when the vault could not be read, so the pickers are empty for that reason. */
+  inventoryError: string | null
   loadouts: Array<LoadoutEntry>
   schematics: Array<InventoryItem>
 }
 
 async function loadLoadouts(accountId: string): Promise<LoadoutsData> {
   /*
-   * The vault only feeds the pickers. If it fails the loadouts still show —
-   * the pickers are just empty, as they always were in that case.
+   * The vault only feeds the pickers. If it fails the loadouts still show, and
+   * the page says why the pickers are empty.
    */
-  const [payload, inventory] = await Promise.all([
+  const [payload, vault] = await Promise.all([
     requestLoadouts(accountId),
-    loadInventory(accountId).catch(() => null),
+    loadInventory(accountId).then<VaultRead, VaultRead>(
+      (entry) => ({
+        error: entry.errorMessage || null,
+        items: entry.errorMessage ? [] : entry.items,
+      }),
+      (cause: unknown) => ({
+        error: cause instanceof Error ? cause.message : 'Could not read the vault. Try Refresh.',
+        items: [],
+      })
+    ),
   ])
 
   if (payload.errorMessage) {
@@ -135,7 +153,7 @@ async function loadLoadouts(accountId: string): Promise<LoadoutsData> {
     )
   }
 
-  const items = inventory?.errorMessage ? [] : inventory?.items ?? []
+  const items = vault.items
 
   return {
     accountId: payload.accountId,
@@ -143,6 +161,7 @@ async function loadLoadouts(accountId: string): Promise<LoadoutsData> {
     availableTeamPerks: payload.availableTeamPerks ?? [],
     defenders: items.filter((item) => item.kind === 'defender'),
     heroes: items.filter((item) => item.kind === 'hero'),
+    inventoryError: vault.error,
     loadouts: payload.loadouts,
     schematics: items.filter((item) => item.kind === 'schematic'),
   }
@@ -180,14 +199,10 @@ export function RouteComponent() {
         icon={Gamepad2}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.loadouts')}
-        description="Every loadout the account has saved, in the game's own order. Click any seat, gadget, defender or weapon to change it; right-click a hero to inspect them."
+        description="Every saved loadout, in the game's order."
       />
       <AccountResourceGate
         icon={Gamepad2}
-        loading={{
-          title: 'Loading loadouts…',
-          description: 'Reading the saved loadouts and the heroes, defenders and schematics to fill them with.',
-        }}
         resource={resource}
         what="the loadouts"
       >
@@ -220,7 +235,7 @@ function Content({
   const records = useItemDatabaseStore((state) => state.records)
   const ratings = useItemDatabaseStore((state) => state.ratings)
 
-  const { availableGadgets, availableTeamPerks, defenders, heroes, loadouts, schematics } = data
+  const { availableGadgets, availableTeamPerks, defenders, heroes, inventoryError, loadouts, schematics } = data
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
   /* A loadout linked to by id is scrolled to once the board has drawn. */
   useEffect(() => {
@@ -267,6 +282,8 @@ function Content({
         setPendingWeapon(null)
         setPendingGadget(null)
         setPendingTeamPerk(null)
+        setHeroClass('All')
+        setHeroSearch('')
 
         toast[response.errorMessage ? 'error' : 'success'](
           response.errorMessage
@@ -390,10 +407,27 @@ function Content({
       : record?.perk ?? null
   }
 
+  /** Why a hero or defender picker is empty: a vault that could not be read is not an empty one. */
+  const slotEmpty = inventoryError
+    ? { description: 'Could not read the vault. Try Refresh.', title: 'Nothing to assign' }
+    : pendingSlot?.kind === 'defender'
+      ? { description: 'No defenders on this account.', title: 'Nothing to assign' }
+      : heroes.length > 0
+        ? { description: 'No heroes match that class or search.', title: 'No matches' }
+        : { description: 'No heroes on this account.', title: 'Nothing to assign' }
+
   return (
     <>
       {/* What the go-to-top button watches: once this scrolls away, it shows. */}
       <div id="loadouts-card" />
+
+      {inventoryError && (
+        <div role="alert">
+          <Callout className="mb-4" tone="warning">
+            Could not load the vault, so heroes, defenders and weapons can't be picked. Try Refresh.
+          </Callout>
+        </div>
+      )}
 
       {loadouts.length > 0 && (
         <LoadoutBoard
@@ -430,6 +464,8 @@ function Content({
         onOpenChange={(open) => {
           if (!open) {
             setPendingSlot(null)
+            setHeroClass('All')
+            setHeroSearch('')
           }
         }}
         open={pendingSlot !== null}
@@ -441,10 +477,7 @@ function Content({
               {pendingSlot?.kind === 'hero' &&
                 ` for ${slotLabel(pendingSlot.slot)}`}
             </DialogTitle>
-            <DialogDescription>
-              Highest power first. Epic moves the hero if it is already in
-              another slot of this loadout.
-            </DialogDescription>
+            <DialogDescription>Highest power first.</DialogDescription>
           </DialogHeader>
 
           {pendingSlot?.kind === 'hero' && (
@@ -519,9 +552,9 @@ function Content({
           ) : (
             <EmptyState
               className="border-0 bg-transparent py-6"
-              description="No heroes were found on this account."
+              description={slotEmpty.description}
               icon={Users}
-              title="Nothing to assign"
+              title={slotEmpty.title}
             />
           )}
         </DialogContent>
@@ -538,26 +571,36 @@ function Content({
               Select a gadget for this loadout slot.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-wrap gap-2">
-            {availableGadgets.map((templateId) => (
-              <ItemTile
-                key={templateId}
-                name={getItemRecord(records, templateId)?.name}
-                onClick={() =>
-                  pendingGadget &&
-                  edit({
-                    kind: 'assign-gadget',
-                    loadoutId: pendingGadget.loadoutId,
-                    gadgetId: templateId,
-                    slotIndex: pendingGadget.slotIndex,
-                  })
-                }
-                records={records}
-                size="small"
-                templateId={templateId}
-              />
-            ))}
-          </div>
+          {availableGadgets.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {availableGadgets.map((templateId) => (
+                <ItemTile
+                  disabled={isEditing}
+                  key={templateId}
+                  name={getItemRecord(records, templateId)?.name}
+                  onClick={() =>
+                    pendingGadget &&
+                    edit({
+                      kind: 'assign-gadget',
+                      loadoutId: pendingGadget.loadoutId,
+                      gadgetId: templateId,
+                      slotIndex: pendingGadget.slotIndex,
+                    })
+                  }
+                  records={records}
+                  size="small"
+                  templateId={templateId}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              className="border-0 bg-transparent py-6"
+              description="No gadgets unlocked."
+              icon={Users}
+              title="Nothing to pick"
+            />
+          )}
         </DialogContent>
       </Dialog>
 
@@ -569,7 +612,7 @@ function Content({
           <DialogHeader>
             <DialogTitle>Pick a team perk</DialogTitle>
             <DialogDescription>
-              The team perk works with the classes of the support team; it switches on in game once they match.
+              Pick the team perk for this loadout.
             </DialogDescription>
           </DialogHeader>
           {availableTeamPerks.length > 0 ? (
@@ -631,10 +674,11 @@ function Content({
           <DialogHeader>
             <DialogTitle>Pick a defender weapon</DialogTitle>
             <DialogDescription>
-              Epic validates that the ranged weapon class matches this defender.
+              Only weapons this defender can use are listed.
             </DialogDescription>
           </DialogHeader>
           <Button
+            disabled={isEditing}
             onClick={() =>
               pendingWeapon &&
               edit({
@@ -648,35 +692,48 @@ function Content({
           >
             Use default weapon
           </Button>
-          <div className="flex flex-wrap gap-2">
-            {schematicCandidates.map((item) => (
-              <PerkTooltip
-                alterations={item.alterations}
-                key={item.itemId}
-                records={records}
-                title={item.displayName}
-              >
-                <ItemTile
-                  disabled={isEditing}
-                  footer={item.subtitle}
-                  name={item.displayName}
-                  onClick={() =>
-                    pendingWeapon &&
-                    edit({
-                      kind: 'assign-defender-weapon',
-                      loadoutId: pendingWeapon.loadoutId,
-                      defenderId: pendingWeapon.defenderId,
-                      schematicId: item.itemId,
-                    })
-                  }
-                  power={item.power}
+          {schematicCandidates.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {schematicCandidates.map((item) => (
+                <PerkTooltip
+                  alterations={item.alterations}
+                  key={item.itemId}
                   records={records}
-                  size="small"
-                  templateId={item.templateId}
-                />
-              </PerkTooltip>
-            ))}
-          </div>
+                  title={item.displayName}
+                >
+                  <ItemTile
+                    disabled={isEditing}
+                    footer={item.subtitle}
+                    name={item.displayName}
+                    onClick={() =>
+                      pendingWeapon &&
+                      edit({
+                        kind: 'assign-defender-weapon',
+                        loadoutId: pendingWeapon.loadoutId,
+                        defenderId: pendingWeapon.defenderId,
+                        schematicId: item.itemId,
+                      })
+                    }
+                    power={item.power}
+                    records={records}
+                    size="small"
+                    templateId={item.templateId}
+                  />
+                </PerkTooltip>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              className="border-0 bg-transparent py-6"
+              description={
+                inventoryError
+                  ? 'Could not read the vault. Try Refresh.'
+                  : 'No schematics this defender can use.'
+              }
+              icon={Users}
+              title="Nothing to pick"
+            />
+          )}
         </DialogContent>
       </Dialog>
 

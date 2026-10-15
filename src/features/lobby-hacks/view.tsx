@@ -19,6 +19,7 @@ import { useShallow } from 'zustand/react/shallow'
 import {
   Callout,
   Chip,
+  CopyButton,
   EmptyState,
   FieldGroup,
   FilterBar,
@@ -57,7 +58,9 @@ import {
   lobbyHackCodesCheckedAt,
 } from './codes'
 import {
+  armedKeyAfter,
   formAccountId,
+  formKeyOf,
   mayHaveGoneThrough,
   outcomeChipTone,
   outcomeTone,
@@ -133,6 +136,8 @@ export function SubmitPanel({
   // The draft a multi-line paste was refused on; any change clears it.
   const [refusedOn, setRefusedOn] = useState<string | null>(null)
   const pasteRefused = refusedOn !== null && refusedOn === draft.code
+  // The form key a first press armed. Settled below, so it cannot outlive the form.
+  const [armedKey, setArmedKey] = useState<string | null>(null)
 
   const linked = idsList.filter((accountId) => accountList[accountId])
   const accountId = formAccountId({
@@ -140,6 +145,14 @@ export function SubmitPanel({
     linked,
     primary: selected?.accountId ?? null,
   })
+  const formKey = formKeyOf(accountId, draft.code)
+  // Runs during render, so a code or account change drops the arm at once,
+  // however it changed (typing, the code list, the title-bar account).
+  const settledKey = armedKeyAfter(armedKey, formKey)
+  if (settledKey !== armedKey) {
+    setArmedKey(settledKey)
+  }
+  const confirming = formKey !== null && settledKey === formKey
   const check = checkLobbyHackCode(draft.code)
   const busy = pending !== null
   const disabled = busy || !check.ok || !accountId
@@ -149,6 +162,13 @@ export function SubmitPanel({
       return
     }
 
+    // A granted code is spent on the account, so ask twice.
+    if (!confirming) {
+      setArmedKey(formKey)
+      return
+    }
+
+    setArmedKey(null)
     void submitLobbyHackCode(accountId, draft.code)
   }
 
@@ -156,11 +176,13 @@ export function SubmitPanel({
     <span className="text-warning">
       {t('lobby-hacks.form.problems.multi-line-paste')}
     </span>
-  ) : check.ok || check.reason === 'blank' ? (
+  ) : check.ok ? (
     t('lobby-hacks.form.length', {
       length: check.length,
       max: lobbyHackCodeMaxLength,
     })
+  ) : check.reason === 'blank' ? (
+    t('lobby-hacks.form.problems.blank')
   ) : (
     <span className="text-warning">
       {t(`lobby-hacks.form.problems.${check.reason}`, {
@@ -169,6 +191,14 @@ export function SubmitPanel({
       })}
     </span>
   )
+
+  const buttonLabel = busy
+    ? t('lobby-hacks.form.submitting')
+    : confirming && accountId
+      ? t('lobby-hacks.form.confirm', {
+          name: parseCustomDisplayName(accountList[accountId]),
+        })
+      : t('lobby-hacks.form.submit')
 
   return (
     <Panel>
@@ -244,11 +274,19 @@ export function SubmitPanel({
             className="min-w-32"
             disabled={disabled}
             type="submit"
+            variant={confirming ? 'destructive' : 'default'}
           >
-            {busy
-              ? t('lobby-hacks.form.submitting')
-              : t('lobby-hacks.form.submit')}
+            {buttonLabel}
           </Button>
+          {confirming && (
+            <Button
+              onClick={() => setArmedKey(null)}
+              type="button"
+              variant="ghost"
+            >
+              {t('lobby-hacks.form.cancel')}
+            </Button>
+          )}
         </PanelFooter>
       </form>
     </Panel>
@@ -511,26 +549,38 @@ function CodeGroup({
         title={t(`lobby-hacks.codes.categories.${group.key}`)}
       />
       <ul className="grid gap-x-6 px-4 py-1 sm:grid-cols-2 xl:grid-cols-3">
-        {group.codes.map((entry) => (
-          <ListRow
-            caption={[entry.reward, entry.requires ?? entry.note]
-              .filter(Boolean)
-              .join(' · ')}
-            key={entry.code}
-            name={<span className="font-mono">{entry.code}</span>}
-            onClick={
-              onPick && isSubmittableCode(entry)
-                ? () => onPick(entry.code)
-                : undefined
-            }
-            well={
-              <IconWell
-                icon={Icon}
-                size="sm"
-              />
-            }
-          />
-        ))}
+        {group.codes.map((entry) => {
+          const caption = [entry.reward, entry.requires ?? entry.note]
+            .filter(Boolean)
+            .join(' · ')
+
+          return (
+            <ListRow
+              caption={<span title={caption}>{caption}</span>}
+              figure={
+                entry.category === 'lobby-effect' ? (
+                  <CopyButton
+                    getValue={() => entry.code}
+                    label={`Copy ${entry.code}`}
+                  />
+                ) : undefined
+              }
+              key={entry.code}
+              name={<span className="font-mono">{entry.code}</span>}
+              onClick={
+                onPick && isSubmittableCode(entry)
+                  ? () => onPick(entry.code)
+                  : undefined
+              }
+              well={
+                <IconWell
+                  icon={Icon}
+                  size="sm"
+                />
+              }
+            />
+          )
+        })}
       </ul>
     </section>
   )

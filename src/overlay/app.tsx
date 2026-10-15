@@ -35,13 +35,13 @@ function OverlayApp() {
       className={`quest-overlay ${snapshot.position.startsWith('bottom') ? 'position-bottom' : ''}`}
     >
       <header className="overlay-header">
-        <div>
-          <p className="eyebrow">Penny</p>
-          <h1>Squad quests</h1>
-        </div>
-        <div className="live-indicator">
-          <span /> Public data
-        </div>
+        <h1>Squad quests</h1>
+        <time>
+          Updated {new Date(snapshot.updatedAt).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </time>
       </header>
 
       {snapshot.status && snapshot.players.length === 0 ? (
@@ -124,12 +124,6 @@ function OverlayApp() {
 
       <footer>
         <span>Ctrl + Shift + Q to hide</span>
-        <time>
-          Updated {new Date(snapshot.updatedAt).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </time>
       </footer>
     </main>
   )

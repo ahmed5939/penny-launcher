@@ -107,7 +107,12 @@ export function ModesPanel({
   const total = seconds ? timeFor([fortniteAppName], seconds) : null
   const timed = modes
     .map((mode, index) => ({ mode, index, time: seconds ? timeFor(mode.appIds, seconds) : null }))
-    .sort((a, b) => (b.time ?? -1) - (a.time ?? -1) || a.index - b.index)
+    .sort(
+      (a, b) =>
+        Number(b.mode.saveTheWorld) - Number(a.mode.saveTheWorld) ||
+        (b.time ?? -1) - (a.time ?? -1) ||
+        a.index - b.index
+    )
   const played = timed.filter((entry) => entry.time !== null).length
 
   return (
@@ -254,7 +259,7 @@ function GrantList({ empty, items, title }: { empty?: string; items: Array<Libra
         <ul className="divide-y divide-border/30">
           {items.map((item) => (
             <ListRow
-              caption={grantCaption(item)}
+              caption={<span title={grantCaption(item)}>{grantCaption(item)}</span>}
               className={cn(!item.active && 'opacity-60')}
               figure={item.count > 1 ? `×${item.count}` : undefined}
               key={item.catalogItemId || item.entitlementName}

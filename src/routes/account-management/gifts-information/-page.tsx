@@ -175,8 +175,14 @@ function Content() {
   const { t: tSidebar } = useTranslation(['sidebar'])
 
   const { accountList } = useGetAccounts()
-  const { data, handleGetInfo, isDisabledForm, isLoading } =
-    useGiftsInformationData()
+  const {
+    areThereAccounts,
+    data,
+    handleGetInfo,
+    isDisabledForm,
+    isLoading,
+    isSelectedEmpty,
+  } = useGiftsInformationData()
 
   const groupOptions: Array<SegmentedOption<GroupMode>> = [
     { label: t('gifts-information.filters.group-day'), value: 'day' },
@@ -263,22 +269,80 @@ function Content() {
   )
   const failures = data.filter((entry) => entry.errorMessage !== undefined)
   const showAccount = data.length > 1
+  const scopeEmpty = isSelectedEmpty || !areThereAccounts
+  const noneSucceeded = data.length > 0 && failures.length === data.length
+
+  const failureCallouts = failures.map((entry) => (
+    <Callout
+      key={entry.accountId}
+      title={t('gifts-information.account.error', {
+        name: parseCustomDisplayName(accountList[entry.accountId]),
+      })}
+      tone="danger"
+    >
+      {entry.errorMessage} {t('gifts-information.account.retry')}
+    </Callout>
+  ))
+
+  const header = (
+    <PageHeader
+      actions={
+        <RefreshButton
+          disabled={isDisabledForm}
+          loading={isLoading}
+          onClick={handleGetInfo}
+        />
+      }
+      description={t('gifts-information.description')}
+      icon={Gift}
+      section={tSidebar('account-management.title')}
+      title={tSidebar('account-management.options.gifts-information')}
+    />
+  )
+
+  if (scopeEmpty) {
+    return (
+      <>
+        {header}
+
+        <EmptyState
+          className="py-10"
+          description={t('gifts-information.account.no-scope-description')}
+          icon={Gift}
+          title={t('gifts-information.account.no-scope')}
+        />
+      </>
+    )
+  }
+
+  if (isLoading && rows.length === 0) {
+    return (
+      <>
+        {header}
+
+        <div role="status">
+          <EmptyState
+            icon={Gift}
+            title={t('gifts-information.account.loading')}
+          />
+        </div>
+      </>
+    )
+  }
+
+  if (noneSucceeded) {
+    return (
+      <>
+        {header}
+
+        {failureCallouts}
+      </>
+    )
+  }
 
   return (
     <>
-      <PageHeader
-        actions={
-          <RefreshButton
-            disabled={isDisabledForm}
-            loading={isLoading}
-            onClick={handleGetInfo}
-          />
-        }
-        description={t('gifts-information.description')}
-        icon={Gift}
-        section={tSidebar('account-management.title')}
-        title={tSidebar('account-management.options.gifts-information')}
-      />
+      {header}
 
       {data.length > 0 && (
         <StatRow>
@@ -313,14 +377,7 @@ function Content() {
         </StatRow>
       )}
 
-      {failures.map((entry) => (
-        <Callout
-          key={entry.accountId}
-          tone="danger"
-        >
-          {t('gifts-information.account.error')} {entry.errorMessage}
-        </Callout>
-      ))}
+      {failureCallouts}
 
       <LatestGifts
         onSelect={setSelected}
@@ -339,7 +396,7 @@ function Content() {
           actions={
             <span className="micro-label">
               {t('gifts-information.table.groups', {
-                total: groups.length,
+                count: groups.length,
               })}
             </span>
           }
@@ -583,7 +640,7 @@ function GiftsTable({
                   </span>
                   <Chip>
                     {t('gifts-information.table.items', {
-                      total: line.group.count,
+                      count: line.group.count,
                     })}
                   </Chip>
                   {line.group.meta && (

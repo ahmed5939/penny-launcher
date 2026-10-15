@@ -77,6 +77,20 @@ export function formAccountId({
   return linked[0] ?? null
 }
 
+/** The form a submission is for: one account, one code. Null with no account. */
+export function formKeyOf(accountId: string | null, code: string) {
+  return accountId ? JSON.stringify([accountId, code]) : null
+}
+
+/**
+ * The arm after the form reads `key`. A first press arms the form it was made
+ * on and no other: once the form has moved on, the arm is gone, even if the
+ * form comes back to the same key later.
+ */
+export function armedKeyAfter(armedKey: string | null, key: string | null) {
+  return armedKey === key ? armedKey : null
+}
+
 /** Only Epic's own `rewardGranted: true` counts as a grant. */
 export function isConfirmedGrant(result: LobbyHackResult) {
   return result.outcome === 'granted'

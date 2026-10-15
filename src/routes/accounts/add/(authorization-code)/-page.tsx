@@ -137,7 +137,12 @@ export function AuthorizationCodePage() {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <UpdateIcon className="animate-spin" />
+                <>
+                  <UpdateIcon className="animate-spin" />
+                  {t('auth-code.signing-in', {
+                    ns: 'accounts',
+                  })}
+                </>
               ) : (
                 t('actions.login', {
                   ns: 'general',

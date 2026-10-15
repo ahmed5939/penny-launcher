@@ -60,6 +60,14 @@ export function AccountSwitcher() {
       <PopoverContent
         align="end"
         className="w-[min(24rem,calc(100vw-2rem))] p-2"
+        onOpenAutoFocus={(event) => {
+          const search = (event.currentTarget as HTMLElement).querySelector<HTMLInputElement>(
+            'input[type="search"]',
+          )
+          if (!search) return
+          event.preventDefault()
+          search.focus()
+        }}
       >
         <AccountRoster model={model} />
         <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-3 text-xs">

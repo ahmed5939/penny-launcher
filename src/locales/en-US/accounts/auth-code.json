@@ -5,5 +5,9 @@
       "1": "<0>1.</0> Sign in to Epic Games: <3>{{url}}</3>",
       "2": "<0>2.</0> Open <3>Get code</3>, then paste the authorizationCode value below."
     }
-  }
+  },
+  "validations": {
+    "code": "An authorization code is 32 characters. Paste the code, or the whole text from the Get code page."
+  },
+  "signing-in": "Signing in…"
 }

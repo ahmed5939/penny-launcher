@@ -7,6 +7,7 @@ import {
   patchAt,
   resolvePakchunkPath,
 } from './binary'
+import { describeFileError } from './errors'
 
 const CHUNK_FILE = 'pakchunk10-WindowsClient.ucas'
 
@@ -44,7 +45,7 @@ export async function getDevBuildsStatus(): Promise<PatchStatus> {
   } catch (error) {
     return {
       activated: false,
-      error: error instanceof Error ? error.message : 'Scan failed',
+      error: describeFileError(error, 'read the game file'),
       found: false,
     }
   }
@@ -90,9 +91,7 @@ export async function toggleDevBuilds(): Promise<PatchResult> {
     }
   } catch (error) {
     return {
-      message: `Patch failed: ${
-        error instanceof Error ? error.message : 'unknown error'
-      }`,
+      message: describeFileError(error, 'patch the game file'),
       success: false,
     }
   }

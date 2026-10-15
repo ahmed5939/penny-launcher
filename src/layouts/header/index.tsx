@@ -4,7 +4,7 @@ import { Contact, FolderOpen, Rocket, Square, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '../../components/ui/button'
-import { Sheet, SheetContent } from '../../components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from '../../components/ui/sheet'
 
 import { AccountSwitcher } from '../../components/shell/account-switcher'
 import { OverflowMenu } from '../../components/shell/overflow-menu'
@@ -194,6 +194,7 @@ function HistorySheet() {
   return (
     <Sheet open={visibility} onOpenChange={changeVisibility}>
       <SheetContent
+        aria-describedby={undefined}
         onCloseAutoFocus={(event) => {
           event.preventDefault()
           document.getElementById('shell-more')?.focus()
@@ -201,6 +202,7 @@ function HistorySheet() {
         className="flex flex-col p-0"
         hideCloseButton
       >
+        <SheetTitle className="sr-only">History</SheetTitle>
         <HistoryMenu />
       </SheetContent>
     </Sheet>

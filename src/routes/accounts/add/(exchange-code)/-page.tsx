@@ -75,7 +75,12 @@ export function ExchangeCodePage() {
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
-                  <UpdateIcon className="animate-spin" />
+                  <>
+                    <UpdateIcon className="animate-spin" />
+                    {t('exchange-code.signing-in', {
+                      ns: 'accounts',
+                    })}
+                  </>
                 ) : (
                   t('actions.login', {
                     ns: 'general',

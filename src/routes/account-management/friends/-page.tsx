@@ -11,6 +11,7 @@ import {
 
 import { FriendsWorkspace } from '../../../components/friends/workspace'
 import { useFriendsHub } from '../../../components/friends/hooks'
+import { useFriendsManagerStore } from '../../../state/management/friends-manager'
 
 import { parseCustomDisplayName } from '../../../lib/utils'
 
@@ -22,7 +23,14 @@ import { parseCustomDisplayName } from '../../../lib/utils'
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
   const hub = useFriendsHub()
-  const { grouped, handleReload, isLoading, selected } = hub
+  const { errorMessage, grouped, handleReload, isLoading, selected } = hub
+  const loadedFor = useFriendsManagerStore((state) => state.loadedFor)
+
+  /* The list is the previous account's until this account's reply lands. */
+  const countsKnown = loadedFor === selected?.accountId && !errorMessage
+  const count = (length: number) =>
+    countsKnown ? length.toLocaleString() : '—'
+  const waitingOnMe = countsKnown && grouped.incoming.length > 0
 
   return (
     <>
@@ -63,21 +71,21 @@ export function RouteComponent() {
           <StatRow>
             <StatTile
               label="Friends"
-              value={grouped.friends.length.toLocaleString()}
+              value={count(grouped.friends.length)}
             />
             <StatTile
-              hint={grouped.incoming.length > 0 ? 'Waiting for an answer' : undefined}
+              hint={waitingOnMe ? 'Waiting for an answer' : undefined}
               label="Incoming"
-              tone={grouped.incoming.length > 0 ? 'primary' : 'default'}
-              value={grouped.incoming.length.toLocaleString()}
+              tone={waitingOnMe ? 'primary' : 'default'}
+              value={count(grouped.incoming.length)}
             />
             <StatTile
               label="Sent"
-              value={grouped.outgoing.length.toLocaleString()}
+              value={count(grouped.outgoing.length)}
             />
             <StatTile
               label="Blocked"
-              value={grouped.blocked.length.toLocaleString()}
+              value={count(grouped.blocked.length)}
             />
           </StatRow>
 

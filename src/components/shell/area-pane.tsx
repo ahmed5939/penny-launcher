@@ -106,10 +106,19 @@ export function AreaPane({
           !section.items.some((item) => item.to === section.to) && (
             <Link
               to={section.to}
-              className="mb-2 block rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+              className={cn(
+                'relative mb-2 flex h-8 items-center gap-2 rounded-lg px-2 text-xs',
+                'text-muted-foreground hover:bg-accent/30 hover:text-foreground',
+                pathname === section.to &&
+                  'bg-accent/70 font-medium text-foreground',
+              )}
               aria-current={pathname === section.to ? 'page' : undefined}
             >
-              {t(section.label)}
+              {pathname === section.to && (
+                <span className="absolute inset-y-2 left-0 w-[3px] rounded-r bg-primary" />
+              )}
+              <section.icon className="size-4 shrink-0 opacity-75" />
+              <span className="flex-1 truncate">{t(section.label)}</span>
             </Link>
           )}
         <AreaItems items={items} pathname={pathname} />

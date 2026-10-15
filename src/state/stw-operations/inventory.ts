@@ -86,9 +86,17 @@ export const useInventoryStore = create<InventoryState>()((set) => ({
       selection: reset ? {} : state.selection,
     })),
   updateFilters: (filters) =>
-    set((state) => ({
-      filters: { ...state.filters, ...filters },
-    })),
+    set((state) => {
+      const kindChanged = filters.kinds !== undefined && filters.kinds[0] !== state.filters.kinds[0]
+      return {
+        filters: {
+          ...state.filters,
+          /** A search or schematic type for one kind means nothing on another. */
+          ...(kindChanged ? { search: '', schematicType: 'all' as const } : {}),
+          ...filters,
+        },
+      }
+    }),
   updateLoading: (value) => set({ isLoading: value }),
   updateRecycling: (value) => set({ isRecycling: value }),
   updateSelection: (accountId, itemIds) =>

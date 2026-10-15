@@ -5,6 +5,8 @@
       "placeholder": "Set codes to redeem (use newline)."
     },
     "redeem-button": "Redeem codes",
-    "clear-button": "Clear form"
+    "redeeming-button": "Redeeming…",
+    "confirm-button": "Confirm — redeems on {{count}} accounts",
+    "clear-button": "Clear"
   }
 }

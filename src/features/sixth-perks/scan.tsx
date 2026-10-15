@@ -24,7 +24,7 @@ export function useSixthPerksScan(): SixthPerksScanState {
   const includeBook = useSixthPerksStore((state) => state.includeBook)
   const session = useSixthPerksStore((state) => currentSession(state, accountId))
   const scan = useSixthPerksStore((state) => state.scan)
-  const setIncludeBook = useSixthPerksStore((state) => state.setIncludeBook)
+  const storeSetIncludeBook = useSixthPerksStore((state) => state.setIncludeBook)
 
   return {
     accountId,
@@ -35,7 +35,11 @@ export function useSixthPerksScan(): SixthPerksScanState {
     rescan: () => {
       if (accountId) void scan(accountId)
     },
-    setIncludeBook,
+    setIncludeBook: (enabled) => {
+      const had = Boolean(session?.scan || session?.loading)
+      storeSetIncludeBook(enabled)
+      if (accountId && had) void scan(accountId)
+    },
   }
 }
 
@@ -45,7 +49,7 @@ export function ScanActions({ state }: { state: SixthPerksScanState }) {
     <>
       <span className="flex items-center gap-2">
         <Switch checked={state.includeBook} disabled={state.loading} id="sixth-perks-book" onCheckedChange={state.setIncludeBook} />
-        <Label className="text-ui text-muted-foreground" htmlFor="sixth-perks-book">Collection Book</Label>
+        <Label className="text-ui text-muted-foreground" htmlFor="sixth-perks-book">Include Collection Book</Label>
       </span>
       <RefreshButton disabled={!state.accountId} label={state.scan ? 'Rescan' : 'Scan'} loading={state.loading} onClick={state.rescan} />
     </>

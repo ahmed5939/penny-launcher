@@ -17,7 +17,7 @@ export class RedeemCodes {
         Authentication.verifyAccessToken(account)
           .then((accessToken) => {
             if (!accessToken) {
-              return
+              throw new Error('No access token for the account')
             }
 
             redeemCodeAccount({

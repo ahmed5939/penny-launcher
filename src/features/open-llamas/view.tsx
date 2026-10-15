@@ -541,9 +541,6 @@ function RunPanel({
             name="Packs left on account"
           />
         </ul>
-        <p className="text-xs text-muted-foreground">
-          Items leave out resources such as XP. Packs left counts every type, excluded ones too.
-        </p>
         {run.cancelRequested && isRunning && (
           <p className="text-xs text-muted-foreground">Finishing the current request, then stopping.</p>
         )}

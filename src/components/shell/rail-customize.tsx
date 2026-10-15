@@ -1,10 +1,10 @@
-import type { NavItem, NavSection } from '../../config/navigation'
+import type { CustomizeRow, NavSection } from '../../config/navigation'
 
 import { Link } from '@tanstack/react-router'
 import { SlidersHorizontal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { navSections, visibilityKeys } from '../../config/navigation'
+import { customizeRows, navSections } from '../../config/navigation'
 
 import { Label } from '../ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
@@ -120,35 +120,26 @@ function CustomizeSection({ section }: { section: NavSection }) {
         </p>
       )}
       <div className="space-y-0.5 pl-1">
-        {section.items.map((item) => (
-          <ItemToggle key={`${item.to}-${item.label}`} item={item} />
+        {customizeRows(section).map((row) => (
+          <RowToggle key={row.items[0].to} row={row} />
         ))}
       </div>
     </div>
   )
 }
 
-function ItemToggle({ item }: { item: NavItem }) {
+function RowToggle({ row }: { row: CustomizeRow }) {
   const { t } = useTranslation(['sidebar'])
   const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
   const { updateMenuOption } = useCustomizableMenuSettingsActions()
 
-  const keys = visibilityKeys(item)
-
-  if (keys.length === 0) {
-    return null
-  }
-
-  const checked = keys.some((key) => getMenuOptionVisibility(key))
-  const id = `rail-item-${item.to}`
-
   return (
     <ToggleRow
-      checked={checked}
-      id={id}
-      label={t(item.label)}
+      checked={row.keys.some((key) => getMenuOptionVisibility(key))}
+      id={`rail-item-${row.items[0].to}`}
+      label={row.items.map((item) => t(item.label)).join(', ')}
       onCheckedChange={(visibility) => {
-        for (const key of keys) {
+        for (const key of row.keys) {
           updateMenuOption(key)(visibility)
         }
       }}
@@ -177,6 +168,7 @@ function ToggleRow({
           className,
         )}
         htmlFor={id}
+        title={label}
       >
         {label}
       </Label>

@@ -61,7 +61,7 @@ export function CompletionPage() {
             <Button asChild variant="outline">
               <Link to="/stw-operations/sixth-perks">
                 <ArrowLeft className="mr-2 size-4" />
-                6th Perks
+                6th perks
               </Link>
             </Button>
             <ScanActions state={state} />
@@ -93,6 +93,7 @@ function Plan({ onWeapon, records, scan }: { onWeapon: (weaponId: string) => voi
   const rows = useMemo(() => matchWeapons(scan), [scan])
   const plan = useMemo(() => completionPlan(rows, scan), [rows, scan])
   const now = useMemo(() => overallCompletion(rows), [rows])
+  const inventoryRead = scan.inventory.status === 'success'
   const [page, setPage] = useState(0)
   const shown = paginate(plan.steps, page, PAGE_SIZE)
   const additionalCore = plan.additionalCoreLower === plan.additionalCoreUpper ? `${plan.additionalCoreLower}` : `${plan.additionalCoreLower}–${plan.additionalCoreUpper}`
@@ -100,12 +101,12 @@ function Plan({ onWeapon, records, scan }: { onWeapon: (weaponId: string) => voi
   return (
     <>
       <StatRow>
-        <StatTile hint={`${now.owned.toLocaleString()} of ${now.total.toLocaleString()} perks`} label="Now" value={percent(now.percent)} />
+        <StatTile hint={`${now.partial ? 'At least ' : ''}${now.owned.toLocaleString()} of ${now.total.toLocaleString()} perks`} label="Now" value={percent(now.percent)} />
         <StatTile
           accent={raritiesColor[RarityType.Legendary]}
-          hint={`${plan.readyCount.toLocaleString()} ${plan.readyCount === 1 ? 'step' : 'steps'}${plan.partial ? ' · provisional' : ''}`}
+          hint={inventoryRead ? `${plan.readyCount.toLocaleString()} ${plan.readyCount === 1 ? 'step' : 'steps'}${plan.partial ? ' · provisional' : ''}` : undefined}
           label="With copies you own"
-          value={percent(plan.afterReadyPercent)}
+          value={inventoryRead ? percent(plan.afterReadyPercent) : 'Unavailable'}
         />
         <StatTile hint="If you get every extra schematic" label="Catalog ceiling" value={percent(plan.catalogCeilingPercent)} />
       </StatRow>
@@ -114,21 +115,25 @@ function Plan({ onWeapon, records, scan }: { onWeapon: (weaponId: string) => voi
         <PanelHeader compact title="Cost with copies you own" />
         <PanelBody className="space-y-4">
           <StatRow>
-            <StatTile label={<CostLabel name="Legendary Flux" templateId="AccountResource:reagent_evolverarity_sr" />} value={plan.legendaryFlux.toLocaleString()} />
-            <StatTile label={<CostLabel name="Epic Flux" templateId="AccountResource:reagent_evolverarity_vr" />} value={plan.epicFlux.toLocaleString()} />
-            <StatTile label={<CostLabel name="Core RE-PERK" templateId="AccountResource:reagent_alteration_gameplay_generic" />} value={plan.core.toLocaleString()} />
-            <StatTile hint={`of ${plan.fixedTotal} with a fixed starting perk`} label="Fixed-start weapons to re-perk" value={plan.fixedMissing.toLocaleString()} />
+            <StatTile label={<CostLabel name="Legendary Flux" templateId="AccountResource:reagent_evolverarity_sr" />} value={inventoryRead ? plan.legendaryFlux.toLocaleString() : 'Unavailable'} />
+            <StatTile label={<CostLabel name="Epic Flux" templateId="AccountResource:reagent_evolverarity_vr" />} value={inventoryRead ? plan.epicFlux.toLocaleString() : 'Unavailable'} />
+            <StatTile label={<CostLabel name="Core RE-PERK" templateId="AccountResource:reagent_alteration_gameplay_generic" />} value={inventoryRead ? plan.core.toLocaleString() : 'Unavailable'} />
+            <StatTile hint={`of ${plan.fixedTotal} with a fixed starting perk`} label="Fixed-start weapons to re-perk" value={inventoryRead ? plan.fixedMissing.toLocaleString() : 'Unavailable'} />
           </StatRow>
-          <p className="text-xs text-muted-foreground">
-            {plan.extraSchematics > 0 && `Then ${plan.extraSchematics.toLocaleString()} more ${plan.extraSchematics === 1 ? 'schematic' : 'schematics'} and ${additionalCore} more Core RE-PERK, depending on what they roll. `}
-            Getting, researching, unslotting, levelling and evolving schematics cost extra.
-          </p>
+          {inventoryRead && (
+            <p className="text-xs text-muted-foreground">
+              {plan.extraSchematics > 0 && `Then ${plan.extraSchematics.toLocaleString()} more ${plan.extraSchematics === 1 ? 'schematic' : 'schematics'} and ${additionalCore} more Core RE-PERK, depending on what they roll. `}
+              Getting, researching, unslotting, levelling and evolving schematics cost extra.
+            </p>
+          )}
         </PanelBody>
       </Panel>
 
       <Panel>
-        <PanelHeader compact title={`${plan.steps.length.toLocaleString()} ${plan.steps.length === 1 ? 'step' : 'steps'}`} />
-        {plan.steps.length === 0 ? (
+        <PanelHeader compact title={inventoryRead ? `${plan.steps.length.toLocaleString()} ${plan.steps.length === 1 ? 'step' : 'steps'}` : 'Steps'} />
+        {!inventoryRead ? (
+          <EmptyState className="border-0 bg-transparent py-8" icon={ListOrdered} title="No plan without your inventory" description="Could not read your inventory schematics. Rescan to retry." />
+        ) : plan.steps.length === 0 ? (
           <EmptyState className="border-0 bg-transparent py-8" icon={ListOrdered} title="Nothing left to do" description="Every current 6th perk is covered." />
         ) : (
           <ol className="divide-y divide-border/40">
@@ -137,7 +142,7 @@ function Plan({ onWeapon, records, scan }: { onWeapon: (weaponId: string) => voi
             ))}
           </ol>
         )}
-        <Pager onPageChange={setPage} page={shown.page} pageSize={PAGE_SIZE} total={plan.steps.length} />
+        {inventoryRead && <Pager onPageChange={setPage} page={shown.page} pageSize={PAGE_SIZE} total={plan.steps.length} />}
       </Panel>
 
       {plan.blocked.length > 0 && (

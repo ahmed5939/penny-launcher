@@ -1,41 +1,40 @@
-import { BellRing } from 'lucide-react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { Button } from '../../components/ui/button'
+import { toast } from '../../lib/notifications'
 
-import { useCheckNewVersion } from './hooks'
-
+/**
+ * Toasts a newer stable release. Main only checks GitHub when asked, so this
+ * asks once and stays quiet unless there is a release to point at.
+ */
 export function CheckNewVersion() {
-  const { t } = useTranslation(['general'])
+  const { i18n } = useTranslation(['general'])
 
-  const { data, handleGoToNewRelease } = useCheckNewVersion()
+  useEffect(() => {
+    const listener = window.electronAPI.responseNewVersionStatus(
+      async (data) => {
+        if (!data) {
+          return
+        }
 
-  if (!data) {
-    return null
-  }
+        toast.info(i18n.t('version.title', { version: data.version }), {
+          id: 'new-version',
+          description: i18n.t('version.description'),
+          duration: Infinity,
+          action: {
+            label: i18n.t('version.action'),
+            onClick: () => window.electronAPI.openExternalURL(data.link),
+          },
+        })
+      }
+    )
 
-  return (
-    <div className="mb-4 flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2">
-      <BellRing className="size-4 shrink-0 text-primary" />
-      <p className="min-w-0 flex-1 text-sm">
-        <span className="font-semibold">
-          {t('version.title', {
-            version: data.version,
-          })}
-        </span>
-        <span className="text-muted-foreground">
-          {' — '}
-          {t('version.description')}
-        </span>
-      </p>
-      <Button
-        className="shrink-0"
-        size="sm"
-        variant="secondary"
-        onClick={handleGoToNewRelease}
-      >
-        {t('version.action')}
-      </Button>
-    </div>
-  )
+    window.electronAPI.requestNewVersionStatus()
+
+    return () => {
+      listener.removeListener()
+    }
+  }, [i18n])
+
+  return null
 }

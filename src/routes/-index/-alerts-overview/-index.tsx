@@ -14,6 +14,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetTitle,
   SheetTrigger,
 } from '../../../components/ui/sheet'
 import {
@@ -89,7 +90,7 @@ export function AlertsOverview() {
           className="max-w-sm"
           label={t('filters.search.input.placeholder')}
           onChange={(value) => changeInputSearch(value.replace(/\s+/g, ' '))}
-          placeholder="Search missions, rewards or ids"
+          placeholder={t('filters.search.input.placeholder')}
           value={inputSearch}
         />
         <Sheet>
@@ -113,6 +114,7 @@ export function AlertsOverview() {
             className="p-0 pt-2 w-[27rem] sm:max-w-full"
             hideCloseButton
           >
+            <SheetTitle className="sr-only">More filters</SheetTitle>
             <ScrollArea
               className="h-[calc(100vh-0.5rem)]"
               id="alerts-overview-modal-content"
@@ -120,8 +122,10 @@ export function AlertsOverview() {
               <AlertFilters />
 
               <div className="bg-background bottom-0 gap-2 grid grid-cols-2 mt-5 py-2 px-3 sticky">
-                <SheetClose className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-md w-full">
-                  {t('filters.actions.back')}
+                <SheetClose asChild>
+                  <Button className="w-full">
+                    {t('filters.actions.back')}
+                  </Button>
                 </SheetClose>
 
                 <ResetFiltersButton />

@@ -146,7 +146,7 @@ export function ExpeditionHistory({ history, title = 'Expedition history' }: { h
           title="No expedition history"
         />
       ) : (
-        <ul className="max-h-96 divide-y divide-border/50 overflow-y-auto">
+        <ul className="divide-y divide-border/50">
           {shown.items.map((e, index) => {
             const label = expeditionLabel(e.expedition)
             const failed = e.action.endsWith('error')
@@ -191,7 +191,7 @@ export function ExpeditionHistory({ history, title = 'Expedition history' }: { h
       <p className="border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
         This launcher&apos;s automatic runs only. Totals across automations are on{' '}
         <Link className="font-medium text-primary underline-offset-4 hover:underline" to="/stw-operations/recycled-rewards">
-          Recycled Rewards
+          Recycled rewards
         </Link>
         .
       </p>

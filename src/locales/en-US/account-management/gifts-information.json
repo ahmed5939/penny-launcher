@@ -18,8 +18,10 @@
   "table": {
     "by-day": "Gifts by day",
     "by-sender": "Gifts by sender",
-    "groups": "{{total}} group/s",
-    "items": "{{total}} item/s",
+    "groups_one": "{{count}} group",
+    "groups_other": "{{count}} groups",
+    "items_one": "{{count}} item",
+    "items_other": "{{count}} items",
     "item": "Item",
     "type": "Type",
     "rarity": "Rarity",
@@ -39,7 +41,11 @@
     "no-date": "Epic did not record a date for this gift"
   },
   "account": {
-    "error": "Could not load gift history for this account.",
+    "error": "Could not load gift history for {{name}}.",
+    "retry": "Try Refresh.",
+    "loading": "Loading gift history…",
+    "no-scope": "No accounts in scope",
+    "no-scope-description": "Pick one or more accounts in the title bar.",
     "empty": "No gift history",
     "empty-description": "Nothing has been gifted to this account yet."
   }

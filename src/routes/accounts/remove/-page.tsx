@@ -81,7 +81,10 @@ function Content() {
             name={name}
             size="lg"
           />
-          <p className="min-w-0 truncate text-display-sm font-bold leading-tight">
+          <p
+            className="min-w-0 truncate text-display-sm font-bold leading-tight"
+            title={name}
+          >
             {name}
           </p>
         </div>

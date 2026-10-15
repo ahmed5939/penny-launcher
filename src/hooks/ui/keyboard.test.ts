@@ -139,6 +139,22 @@ describe('shell keyboard navigation', () => {
     expect(send('b', { ctrlKey: true }).preventDefault).toHaveBeenCalled()
     expect(mocks.togglePane).toHaveBeenCalledOnce()
   })
+  it('keeps account shortcuts away from open dialogs', () => {
+    dom.activeElement = new FocusNode()
+    dom.querySelector.mockReturnValue({})
+    const digit = send('2', { ctrlKey: true })
+    const tab = send('Tab', { ctrlKey: true })
+    expect(mocks.setPrimary).not.toHaveBeenCalled()
+    expect(digit.preventDefault).not.toHaveBeenCalled()
+    expect(tab.preventDefault).not.toHaveBeenCalled()
+  })
+  it('keeps Ctrl+Tab out of text fields', () => {
+    const input = new FocusNode()
+    input.tagName = 'INPUT'
+    dom.activeElement = input
+    send('Tab', { ctrlKey: true })
+    expect(mocks.setPrimary).not.toHaveBeenCalled()
+  })
   it('preserves account shortcuts and history navigation', () => {
     dom.activeElement = new FocusNode()
     send('2', { ctrlKey: true })

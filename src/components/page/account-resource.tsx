@@ -7,6 +7,7 @@ import { Callout } from './callout'
 import { EmptyState } from './empty-state'
 
 import { useGetSelectedAccount } from '../../hooks/accounts'
+import { ipcErrorMessage } from '../../lib/ipc-error'
 
 export type AccountResource<T> = {
   accountId: string | null
@@ -206,7 +207,7 @@ export function useAccountResource<T>(
       })
       .catch((cause: unknown) => {
         if (!active) return
-        const message = cause instanceof Error && cause.message ? cause.message : fallbackError
+        const message = ipcErrorMessage(cause, fallbackError)
         setState((previous) => resourceLoadFailed(previous, key, message))
       })
     return () => {
@@ -252,7 +253,7 @@ export function AccountResourceGate<T>({
   children: (data: T) => ReactNode
   icon: LucideIcon
   /** Say what is actually happening when it is slow enough to read. */
-  loading?: { title: string; description: string }
+  loading?: { title: string; description?: string }
   resource: AccountResource<T>
   /** Lower-case noun for the messages: "the backpack", "Ventures progress". */
   what: string
@@ -283,7 +284,7 @@ export function AccountResourceGate<T>({
   }
   return (
     <div role="status">
-      <EmptyState description={loading?.description ?? 'Reading the account from Epic.'} icon={icon} title={loading?.title ?? `Loading ${what}…`} />
+      <EmptyState description={loading?.description} icon={icon} title={loading?.title ?? `Loading ${what}…`} />
     </div>
   )
 }

@@ -23,7 +23,7 @@ import { createLauncherArguments } from './launcher-arguments'
 export class FortniteLauncher {
   /** `islandOverride` opens a mode straight away, as the Epic Games Launcher's mode tiles do. */
   static async start(account: AccountData, { islandOverride = null }: { islandOverride?: string | null } = {}) {
-    const sendError = (reason?: 'missing-install') => {
+    const sendError = (reason?: 'missing-install' | 'signed-out') => {
       MainWindow.instance.webContents.send(
         ElectronAPIEventKeys.LauncherNotification,
         {
@@ -50,7 +50,7 @@ export class FortniteLauncher {
       const accessToken = await Authentication.verifyAccessToken(account)
 
       if (!accessToken) {
-        sendError()
+        sendError('signed-out')
 
         return
       }

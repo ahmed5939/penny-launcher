@@ -16,8 +16,9 @@ import { ItemIcon } from '../../components/items/item-icon'
 import { getItemRecord, useItemDatabaseStore } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
 import { assets } from '../../lib/repository'
+import { toast } from '../../lib/notifications'
 import { cn } from '../../lib/utils'
-import { Callout, Chip, EmptyState, FieldRow, FilterBar, PageHeader, Pager, Panel, PanelBody, PanelHeader, Picker, StatRow, StatTile, downloadJson, paginate } from '../../components/page'
+import { Callout, Chip, EmptyState, FilterBar, PageHeader, Pager, Panel, PanelBody, PanelHeader, Picker, StatRow, StatTile, downloadJson, paginate } from '../../components/page'
 import type { PickerOption } from '../../components/page'
 
 const PAGE_SIZE = 20
@@ -38,56 +39,47 @@ export function RecycleCeilingPicker({ disabled, onChange, value }: { disabled?:
 
 function useLlamaRecycling(accountId: string) {
   const [level, setLevel] = useState<RecycleLevel>('off')
-  const [error, setError] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [busy, setBusy] = useState(true)
   useEffect(() => {
     let live = true
     window.electronAPI.getAutomationRewards()
-      .then((s) => { if (live) setLevel(s.llamaRecycling[accountId] ?? 'off') })
-      .catch(() => { if (live) setError('Could not load recycling settings.') })
+      .then((s) => { if (live) { setLevel(s.llamaRecycling[accountId] ?? 'off'); setLoaded(true) } })
+      .catch(() => { if (live) setLoadFailed(true) })
       .finally(() => { if (live) setBusy(false) })
     return () => { live = false }
   }, [accountId])
   const update = async (next: RecycleLevel) => {
     setBusy(true)
-    setError('')
     try {
       const s = await window.electronAPI.updateLlamaRecycling(accountId, next)
       setLevel(s.llamaRecycling[accountId] ?? 'off')
     } catch {
-      setError('Could not save recycling settings.')
+      toast.error('Could not save recycling settings. Try again.')
     } finally {
       setBusy(false)
     }
   }
-  return { busy, error, level, update }
-}
-
-export function LlamaRecycleSetting({ accountId }: { accountId: string }) {
-  const { busy, error, level, update } = useLlamaRecycling(accountId)
-  return (
-    <FieldRow
-      className="py-2.5"
-      hint={
-        <>
-          Free and survivor llamas. Favourites, assigned items, Legendary and Mythic rewards are always kept. Totals appear under Automate → Recycled Rewards.
-          {error && <span className="mt-1 block text-destructive" role="alert">{error}</span>}
-        </>
-      }
-      label="Recycle new llama rewards"
-    >
-      <RecycleCeilingPicker disabled={busy} onChange={(next) => void update(next)} value={level} />
-    </FieldRow>
-  )
+  return { busy, level, loaded, loadFailed, update }
 }
 
 /** The llama recycling ceiling alone, for a row that already says what it is for. */
 export function LlamaRecyclePicker({ accountId }: { accountId: string }) {
-  const { busy, error, level, update } = useLlamaRecycling(accountId)
+  const { busy, level, loaded, loadFailed, update } = useLlamaRecycling(accountId)
+  if (loadFailed) {
+    return (
+      <span className="flex items-center gap-2" role="alert" title="Could not load recycling settings. Reopen the page to retry.">
+        <Chip tone="danger">Recycling unavailable</Chip>
+      </span>
+    )
+  }
+  if (!loaded) {
+    return <span className="text-xs text-muted-foreground" role="status">Loading recycling settings…</span>
+  }
   return (
     <span className="flex items-center gap-2">
       <RecycleCeilingPicker disabled={busy} onChange={(next) => void update(next)} value={level} />
-      {error && <span className="text-xs text-destructive" role="alert">{error}</span>}
     </span>
   )
 }
@@ -152,7 +144,7 @@ export function RewardTotals({ empty = 'None recorded for these filters.', icon,
       {items.length ? (
         <ul className="max-h-72 divide-y divide-border/50 overflow-y-auto">
           {items.map((r) => (
-            <li className="flex items-center gap-2.5 px-4 py-1.5 text-sm" key={r.templateId} title={r.templateId}>
+            <li className="flex items-center gap-2.5 px-4 py-1.5 text-sm" key={r.templateId} title={rewardName(r.templateId)}>
               <ItemIcon records={records} size="small" templateId={r.templateId} />
               <span className="min-w-0 flex-1 truncate">{rewardName(r.templateId)}</span>
               <span className="figure shrink-0">{r.quantity.toLocaleString()}</span>
@@ -229,7 +221,7 @@ export function RewardsView() {
         description="Everything Auto Llamas and Auto Expeditions recorded on this launcher, across your accounts. Received and recycling gains are counted separately."
         icon={Trash2}
         section="Automate"
-        title="Recycled Rewards"
+        title="Recycled rewards"
       />
 
       {error && <div role="alert"><Callout title="Could not load reward history" tone="danger">{error}</Callout></div>}
@@ -323,10 +315,6 @@ export function RewardsView() {
             )}
             <Pager onPageChange={setPage} page={shown.page} pageSize={PAGE_SIZE} total={events.length} />
           </Panel>
-
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Received totals include items later recycled. History starts when tracking was enabled in this build; older expedition history is included where quantities were recorded. Discord and manual actions are not imported.
-          </p>
         </>
       )}
     </div>

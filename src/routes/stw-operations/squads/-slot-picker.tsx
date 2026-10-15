@@ -5,7 +5,7 @@ import type { ItemRecordMap } from '../../../kernel/core/item-database'
 import { Users } from 'lucide-react'
 import { useState } from 'react'
 
-import { Chip, EmptyState, SearchField, Segmented } from '../../../components/page'
+import { Chip, EmptyState, Pager, paginate, SearchField, Segmented } from '../../../components/page'
 import { Button } from '../../../components/ui/button'
 import {
   DialogDescription,
@@ -65,7 +65,7 @@ export function SlotPicker({
 
   const [scope, setScope] = useState<Scope>('best')
   const [query, setQuery] = useState('')
-  const [limit, setLimit] = useState(pageSize)
+  const [page, setPage] = useState(0)
 
   const fits = (candidate: Candidate<DecoratedSurvivor>) =>
     wantsLead
@@ -77,6 +77,7 @@ export function SlotPicker({
     (candidate) =>
       (scope === 'best' || fits(candidate)) && matchesQuery(candidate.survivor, needle)
   )
+  const paged = paginate(shown, page, pageSize)
   const current = occupant?.survivor ?? null
   const bestGain = candidates[0]?.gain ?? 0
 
@@ -102,7 +103,7 @@ export function SlotPicker({
           <Segmented
             onChange={(value) => {
               setScope(value)
-              setLimit(pageSize)
+              setPage(0)
             }}
             options={[
               { label: 'Best', value: 'best' },
@@ -118,7 +119,7 @@ export function SlotPicker({
           label="Search survivors"
           onChange={(value) => {
             setQuery(value)
-            setLimit(pageSize)
+            setPage(0)
           }}
           placeholder="Name, personality or set"
           value={query}
@@ -132,7 +133,7 @@ export function SlotPicker({
 
       {shown.length > 0 ? (
         <ul className={cn('-mx-2', isAssigning && 'pointer-events-none opacity-60')}>
-          {shown.slice(0, limit).map((candidate) => (
+          {paged.items.map((candidate) => (
             <CandidateRow
               candidate={candidate}
               key={candidate.survivor.itemId}
@@ -154,15 +155,7 @@ export function SlotPicker({
         />
       )}
 
-      {shown.length > limit && (
-        <Button
-          className="justify-self-center"
-          onClick={() => setLimit((value) => value + pageSize)}
-          variant="ghost"
-        >
-          Show more ({(shown.length - limit).toLocaleString()} left)
-        </Button>
-      )}
+      <Pager onPageChange={setPage} page={paged.page} pageSize={pageSize} total={shown.length} />
     </>
   )
 }
@@ -200,7 +193,9 @@ function CandidateRow({
         />
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-ui font-medium">{survivor.name}</span>
+            <span className="truncate text-ui font-medium" title={survivor.name}>
+              {survivor.name}
+            </span>
             {elsewhere && (
               <Chip>
                 In {elsewhere}

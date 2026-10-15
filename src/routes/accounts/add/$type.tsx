@@ -102,8 +102,7 @@ function ComponentRoute() {
             bar on its edge, the rest quiet. Icons stand alone — no tinted
             squares.
           */}
-          <div
-            role="tablist"
+          <nav
             aria-label="Sign-in method"
             className="panel grid grid-cols-1 overflow-hidden sm:grid-cols-2 lg:grid-cols-1"
           >
@@ -114,8 +113,7 @@ function ComponentRoute() {
                 <button
                   key={method.type}
                   type="button"
-                  role="tab"
-                  aria-selected={active}
+                  aria-current={active ? 'page' : undefined}
                   className={cn(
                     'relative flex items-start gap-3 px-4 py-3 text-left transition-colors',
                     active
@@ -160,7 +158,7 @@ function ComponentRoute() {
                 </button>
               )
             })}
-          </div>
+          </nav>
 
           <div className="flex items-center gap-3 px-1">
             <Import className="size-4 shrink-0 text-muted-foreground" />
@@ -174,7 +172,10 @@ function ComponentRoute() {
               variant="outline"
             >
               {isImporting ? (
-                <UpdateIcon className="animate-spin" />
+                <>
+                  <UpdateIcon className="animate-spin" />
+                  Importing…
+                </>
               ) : (
                 'Import'
               )}

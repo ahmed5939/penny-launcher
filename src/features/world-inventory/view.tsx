@@ -96,7 +96,8 @@ function tabOptionsFor(items: WorldItem[]) {
 /** Electron wraps a main-process throw in its own sentence; the user only needs ours. */
 function ipcMessage(cause: unknown) {
   const message = cause instanceof Error ? cause.message : ''
-  return message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') || 'The transfer failed. Refresh and try again.'
+  const reason = message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+  return reason && reason !== 'Request failed.' ? reason : 'Could not move the items. Refresh and try again.'
 }
 
 /**
@@ -155,17 +156,19 @@ function BackpackAndStorage({ switcher }: { switcher: ReactNode }) {
       const [backpack, storage] = await Promise.all([
         window.electronAPI.requestWorldInventory(accountId, 'backpack'),
         window.electronAPI.requestWorldInventory(accountId, 'storage'),
-      ])
+      ]).catch(() => {
+        throw new Error('Could not load the backpack and storage. Try Refresh.')
+      })
       return { accountId, backpack, storage }
     },
-    { cacheKey: 'stw.world-inventory.both', owner: (result) => result.accountId }
+    { cacheKey: 'stw.world-inventory.both', fallbackError: 'Could not load the backpack and storage. Try Refresh.', owner: (result) => result.accountId }
   )
 
   return (
     <div className="space-y-5">
       <PageHeader
         actions={<>{switcher}<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} /></>}
-        description="Your backpack and Storm Shield storage side by side, as in game. Select items and move them across; perks are read from each copy."
+        description="Your backpack and Storm Shield storage, side by side."
         icon={Backpack}
         section="Save the World"
         status={<ToolBadges beta />}
@@ -180,21 +183,23 @@ function BackpackAndStorage({ switcher }: { switcher: ReactNode }) {
 
 function VenturesBackpack({ switcher }: { switcher: ReactNode }) {
   const resource = useAccountResource(
-    (accountId) => window.electronAPI.requestWorldInventory(accountId, 'ventures'),
-    { cacheKey: 'stw.world-inventory.ventures', owner: (result) => result.accountId }
+    (accountId) => window.electronAPI.requestWorldInventory(accountId, 'ventures').catch(() => {
+      throw new Error('Could not load the Ventures backpack. Try Refresh.')
+    }),
+    { cacheKey: 'stw.world-inventory.ventures', fallbackError: 'Could not load the Ventures backpack. Try Refresh.', owner: (result) => result.accountId }
   )
 
   return (
     <div className="space-y-5">
       <PageHeader
         actions={<>{switcher}<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} /></>}
-        description="What you carry in Ventures this season. The game keeps it apart from storage."
+        description="What you carry in Ventures this season."
         icon={Compass}
         section="Save the World"
         status={<ToolBadges beta readOnly />}
-        title="Ventures Backpack"
+        title="Ventures backpack"
       />
-      <AccountResourceGate icon={Compass} loading={{ title: 'Loading the Ventures backpack…', description: 'Reading the account profile from Epic.' }} resource={resource} what="the Ventures backpack">
+      <AccountResourceGate icon={Compass} resource={resource} what="the Ventures backpack">
         {(inventory) => <VenturesContents inventory={inventory} key={inventory.accountId} />}
       </AccountResourceGate>
     </div>
@@ -411,7 +416,7 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
                 )}
               </PanelBody>
               <PanelFooter className="min-h-14 px-3 py-2.5">
-                {selected ? (
+                {selected && (
                   <>
                     <span className="min-w-0 flex-1 truncate text-ui">
                       {single ? name(single.templateId) : <><span className="figure">{selected.ids.length}</span> stacks selected</>}
@@ -440,18 +445,12 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
                       {side === 'backpack' && <Arrow className="size-4" />}
                     </Button>
                   </>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Click to select (Ctrl for several), double-click to move a stack, right-click for details and perks.</span>
                 )}
               </PanelFooter>
             </Panel>
           )
         })}
       </div>
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Transfers use the same Storm Shield storage call as the game; Epic refuses them when the other side is full or the item cannot be stored. Names and art come from the item database, or a bundled snapshot for crafted weapons it lacks. Read at {new Date(data.backpack.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — refresh after changing anything in game.
-      </p>
 
       <WorldItemDialog item={detail} onClose={() => setDetail(null)} ratings={ratings} records={records} />
     </>

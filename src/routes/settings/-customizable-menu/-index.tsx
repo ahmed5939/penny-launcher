@@ -1,7 +1,8 @@
-import type { CustomizableMenuSettings } from '../../../types/settings'
+import type { CustomizeRow, MenuKey, NavSection } from '../../../config/navigation'
 
 import { useTranslation } from 'react-i18next'
 
+import { customizeRows, navSections } from '../../../config/navigation'
 import { Panel, PanelHeader } from '../../../components/page'
 import { Switch } from '../../../components/ui/switch'
 
@@ -12,143 +13,59 @@ import {
 
 import { cn } from '../../../lib/utils'
 
-type MenuKey = keyof CustomizableMenuSettings
-
-/** The legacy per-method keys the single "Add account" switch stands in for. */
-const addAccountMenuKeys = [
-  'authorizationCode',
-  'exchangeCode',
-  'deviceAuth',
-] as const
-
 /**
- * One entry: a sidebar key and its label. `keys` lets one switch drive
- * several stored keys (Add account); `label` is either a `sidebar` i18n key
- * or, where the rail never had a translation, the literal name.
- */
-type MenuEntry = {
-  id: string
-  keys: ReadonlyArray<MenuKey>
-  label: string
-  literal?: boolean
-}
-
-type MenuCategory = {
-  entries: ReadonlyArray<MenuEntry>
-  id: string
-  key: MenuKey
-  label: string
-}
-
-const entry = (id: string, key: MenuKey, label: string, literal = false): MenuEntry => ({
-  id,
-  keys: [key],
-  label,
-  literal,
-})
-
-const categories: ReadonlyArray<MenuCategory> = [
-  {
-    id: 'stw-operations',
-    key: 'stwOperations',
-    label: 'stw-operations.title',
-    entries: [
-      entry('menu-currentAlerts', 'currentAlerts', 'missions'),
-      // The auto-kick toggle is hidden while the feature is disabled — party
-      // kicks no longer work while a match is running.
-      entry('expeditions', 'expeditions', 'stw-operations.options.expeditions'),
-      entry('squad-presets', 'squadPresets', 'stw-operations.options.squad-presets'),
-      entry('inventory', 'inventory', 'stw-operations.options.inventory'),
-      entry('codex', 'codex', 'stw-operations.options.codex'),
-      entry('loadouts', 'loadouts', 'stw-operations.options.loadouts'),
-      entry('quests', 'quests', 'stw-operations.options.quests'),
-      entry('timeline', 'timeline', 'stw-operations.options.timeline'),
-      entry('shop', 'shop', 'stw-operations.options.shop'),
-      entry('xp-boosts', 'xpBoosts', 'stw-operations.options.xp-boosts'),
-      entry('auto-pin-urns', 'autoPinUrns', 'stw-operations.options.auto-pin-urns'),
-      entry('auto-llamas', 'autoLlamas', 'stw-operations.options.auto-llamas'),
-      entry('auto-daily-reroll', 'autoDailyReroll', 'stw-operations.options.auto-daily-reroll'),
-      entry('outpost', 'outpost', 'Outpost', true),
-    ],
-  },
-  {
-    id: 'account-management',
-    key: 'accountManagement',
-    label: 'account-management.title',
-    entries: [
-      entry('vbucks-information', 'vbucksInformation', 'account-management.options.vbucks-information'),
-      entry('gifts-information', 'giftsInformation', 'account-management.options.gifts-information'),
-      entry('profile', 'profile', 'account-management.options.history'),
-      entry('redeem-codes', 'redeemCodes', 'account-management.options.redeem-codes'),
-      entry('epic-games-settings', 'epicGamesSettings', 'account-management.options.epic-settings'),
-      entry('eula', 'eula', 'EULA', true),
-    ],
-  },
-  {
-    id: 'advanced-mode',
-    key: 'advancedMode',
-    label: 'advanced-mode.title',
-    entries: [
-      entry('matchmaking-track', 'matchmakingTrack', 'advanced-mode.options.matchmaking-track'),
-      entry('server-status', 'serverStatus', 'advanced-mode.options.server-status'),
-      entry('world-info', 'worldInfo', 'advanced-mode.options.world-info'),
-      entry('game-settings', 'fnLaunch', 'advanced-mode.options.game-settings'),
-    ],
-  },
-  {
-    id: 'my-accounts',
-    key: 'myAccounts',
-    label: 'accounts.title',
-    entries: [
-      entry('show-total-accounts', 'showTotalAccounts', 'accounts.options.show-total-accounts'),
-      /*
-        One switch for the unified Add-account page. It drives the three
-        legacy per-method keys together, so old saved settings still count.
-      */
-      { id: 'add-account', keys: addAccountMenuKeys, label: 'Add account', literal: true },
-      entry('remove-account', 'removeAccount', 'accounts.options.remove'),
-    ],
-  },
-]
-
-/**
- * The sidebar, section by section: each section's switch in its title strip,
- * its pages as a grid of switches underneath, dimmed while the section is off.
+ * The sidebar as the rail shows it: the same sections in the same order, one
+ * switch per row. Save the World and automations share one switch, so it gets
+ * a strip of its own above both sections.
  */
 export function CustomizableMenu() {
-  const { t } = useTranslation(['settings'])
+  const { t } = useTranslation(['settings', 'sidebar'])
 
   return (
     <div className="space-y-5">
       <p className="text-ui text-muted-foreground">
         {t('custom-menu.description')}
       </p>
-      {categories.map((category) => (
-        <CategoryPanel category={category} key={category.id} />
-      ))}
+      <SwitchPanel
+        id="menu-stw-and-automations"
+        label={t('sidebar:stw-and-automations')}
+        menuKey="stwOperations"
+      />
+      {navSections
+        .filter((section) => section.items.length > 0)
+        .map((section) => (
+          <SectionPanel key={section.key} section={section} />
+        ))}
+      <SwitchPanel
+        id="menu-show-total-accounts"
+        label={t('sidebar:accounts.options.show-total-accounts')}
+        menuKey="showTotalAccounts"
+      />
     </div>
   )
 }
 
-function CategoryPanel({ category }: { category: MenuCategory }) {
+function SectionPanel({ section }: { section: NavSection }) {
   const { t } = useTranslation(['sidebar'])
-
   const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
   const { updateMenuOption } = useCustomizableMenuSettingsActions()
 
-  const title = t(category.label)
-  const sectionOn = getMenuOptionVisibility(category.key)
+  const { can } = section
+  const title = t(section.label)
+  const sectionOn = !can || getMenuOptionVisibility(can)
 
   return (
     <Panel>
       <PanelHeader
         actions={
-          <Switch
-            aria-label={title}
-            checked={sectionOn}
-            id={category.id}
-            onCheckedChange={updateMenuOption(category.key)}
-          />
+          can && can !== 'stwOperations' ? (
+            <Switch
+              aria-label={title}
+              checked={sectionOn}
+              id={`menu-section-${section.key}`}
+              onCheckedChange={updateMenuOption(can)}
+            />
+          ) : undefined
         }
         compact
         title={title}
@@ -159,30 +76,70 @@ function CategoryPanel({ category }: { category: MenuCategory }) {
           !sectionOn && 'opacity-50'
         )}
       >
-        {category.entries.map((item) => {
-          const label = item.literal ? item.label : t(item.label)
-
-          return (
-            <li
-              className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted/30"
-              key={item.id}
-            >
-              <label className="min-w-0 flex-1 truncate text-ui" htmlFor={item.id}>
-                {label}
-              </label>
-              <Switch
-                checked={item.keys.some((key) => getMenuOptionVisibility(key))}
-                id={item.id}
-                onCheckedChange={(visibility) => {
-                  for (const key of item.keys) {
-                    updateMenuOption(key)(visibility)
-                  }
-                }}
-              />
-            </li>
-          )
-        })}
+        {customizeRows(section).map((row) => (
+          <RowItem key={row.items[0].to} row={row} />
+        ))}
       </ul>
+    </Panel>
+  )
+}
+
+function RowItem({ row }: { row: CustomizeRow }) {
+  const { t } = useTranslation(['sidebar'])
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
+  const { updateMenuOption } = useCustomizableMenuSettingsActions()
+
+  const id = `menu-${row.items[0].to}`
+  const label = row.items.map((item) => t(item.label)).join(', ')
+
+  return (
+    <li className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted/30">
+      <label
+        className="min-w-0 flex-1 truncate text-ui"
+        htmlFor={id}
+        title={label}
+      >
+        {label}
+      </label>
+      <Switch
+        checked={row.keys.some((key) => getMenuOptionVisibility(key))}
+        id={id}
+        onCheckedChange={(visibility) => {
+          for (const key of row.keys) {
+            updateMenuOption(key)(visibility)
+          }
+        }}
+      />
+    </li>
+  )
+}
+
+function SwitchPanel({
+  id,
+  label,
+  menuKey,
+}: {
+  id: string
+  label: string
+  menuKey: MenuKey
+}) {
+  const { getMenuOptionVisibility } = useCustomizableMenuSettingsVisibility()
+  const { updateMenuOption } = useCustomizableMenuSettingsActions()
+
+  return (
+    <Panel>
+      <PanelHeader
+        actions={
+          <Switch
+            aria-label={label}
+            checked={getMenuOptionVisibility(menuKey)}
+            id={id}
+            onCheckedChange={updateMenuOption(menuKey)}
+          />
+        }
+        compact
+        title={label}
+      />
     </Panel>
   )
 }

@@ -50,12 +50,16 @@ export function SearchForm() {
           Plain <label>: the shadcn Label bakes in a `text-sm` utility, which
           outranks the `.micro-label` component class and would quietly undo it.
         */}
-        <label className="micro-label">
+        <label
+          className="micro-label"
+          id="alerts-done-account-label"
+        >
           {t('form.accounts.select', {
             ns: 'general',
           })}
         </label>
         <Combobox
+          aria-labelledby="alerts-done-account-label"
           className="max-w-full"
           emptyPlaceholder={t('form.accounts.no-options', {
             ns: 'general',
@@ -133,6 +137,10 @@ export function SearchForm() {
           */}
           <Button
             type="submit"
+            aria-busy={searchIsSubmitting}
+            aria-label={t('actions.search', {
+              ns: 'general',
+            })}
             className="absolute right-1 h-7 w-24 px-2 text-caption font-semibold"
             variant="secondary"
             disabled={formDisabled || inputSearchButtonIsDisabled}

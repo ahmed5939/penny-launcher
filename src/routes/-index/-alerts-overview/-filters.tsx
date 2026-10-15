@@ -27,6 +27,7 @@ export function AlertFilters() {
   const { t } = useTranslation(['alerts'], {
     keyPrefix: 'filters',
   })
+  const { t: tZones } = useTranslation(['zones'])
 
   const { missionTypes, rarities, rewards, zones, group } =
     useAlertsOverviewFiltersData()
@@ -62,6 +63,7 @@ export function AlertFilters() {
         <div>
           <Label className="label label-block">{t('sections.zones')}</Label>
           <ToggleGroup
+            aria-label={t('sections.zones')}
             className="toggle-group"
             type="multiple"
             value={zones}
@@ -69,7 +71,9 @@ export function AlertFilters() {
           >
             {zoneOptions.map((option) => (
               <ToggleGroupItem
+                aria-label={tZones(option.value)}
                 className="toggle-item"
+                title={tZones(option.value)}
                 variant="outline"
                 value={option.value}
                 key={option.value}
@@ -77,14 +81,14 @@ export function AlertFilters() {
                 {zoneArtForTheater(option.value) ? (
                   /* The zone's own key art rather than its initial. */
                   <img
-                    alt={option.label}
+                    alt=""
                     className="size-full rounded-[inherit] object-cover"
                     decoding="async"
                     loading="lazy"
                     src={zoneArtForTheater(option.value) ?? undefined}
                   />
                 ) : option.icon ? (
-                  <img decoding="async" loading="lazy"
+                  <img alt="" decoding="async" loading="lazy"
                     src={option.icon}
                     className="toggle-icon"
                   />
@@ -115,6 +119,7 @@ export function AlertFilters() {
               </Label>
               <Switch
 
+                aria-label="Group missions only"
                 id="group-missions"
                 onCheckedChange={toggleGroup}
                 checked={group}
@@ -122,6 +127,7 @@ export function AlertFilters() {
             </div>
           </div>
           <ToggleGroup
+            aria-label={t('sections.types')}
             className="toggle-group"
             type="multiple"
             value={missionTypes}
@@ -129,13 +135,15 @@ export function AlertFilters() {
           >
             {missionTypeOptions.map((option) => (
               <ToggleGroupItem
+                aria-label={option.label}
                 className="toggle-item"
+                title={option.label}
                 variant="outline"
                 value={option.value}
                 key={option.value}
               >
                 {/* The one grid whose icons are all white world glyphs. */}
-                <img decoding="async" loading="lazy"
+                <img alt="" decoding="async" loading="lazy"
                   src={option.icon}
                   className="toggle-icon ink-glyph"
                 />
@@ -149,6 +157,7 @@ export function AlertFilters() {
             {t('sections.rarities')}
           </Label>
           <ToggleGroup
+            aria-label={t('sections.rarities')}
             className="toggle-group"
             type="multiple"
             value={rarities}
@@ -156,12 +165,14 @@ export function AlertFilters() {
           >
             {rarityOptions.map((option) => (
               <ToggleGroupItem
+                aria-label={option.label}
                 className="toggle-item"
+                title={option.label}
                 variant="outline"
                 value={option.value}
                 key={option.value}
               >
-                <img decoding="async" loading="lazy"
+                <img alt="" decoding="async" loading="lazy"
                   src={option.icon}
                   className="toggle-icon"
                 />
@@ -175,6 +186,7 @@ export function AlertFilters() {
             {t('sections.rewards')}
           </Label>
           <ToggleGroup
+            aria-label={t('sections.rewards')}
             className="toggle-group"
             type="multiple"
             value={rewards}
@@ -182,12 +194,14 @@ export function AlertFilters() {
           >
             {rewardOptions.map((option) => (
               <ToggleGroupItem
+                aria-label={option.label}
                 className="toggle-item"
+                title={option.label}
                 variant="outline"
                 value={option.value}
                 key={option.value}
               >
-                <img decoding="async" loading="lazy"
+                <img alt="" decoding="async" loading="lazy"
                   src={option.icon}
                   className="toggle-icon"
                 />

@@ -264,7 +264,7 @@ function Content() {
         <EmptyState
           icon={Shield}
           title="No account selected"
-          description="Pick an account in the titlebar to inspect its outpost."
+          description="Pick an account in the title bar to inspect its outpost."
         />
       </>
     )
@@ -290,7 +290,7 @@ function Content() {
               ) : (
                 <ScanSearch className="size-4" />
               )}
-              Scan all bases
+              {loadingZone !== null ? 'Scanning…' : 'Scan all bases'}
             </Button>
             <RefreshButton
               loading={infoLoading}
@@ -301,9 +301,17 @@ function Content() {
       />
 
       {errorMessage && (
-        <Callout title="Outpost unavailable" tone="warning">
-          {errorMessage}
-        </Callout>
+        <div role="alert">
+          <Callout title="Could not load the outpost" tone="danger">
+            {errorMessage}
+          </Callout>
+        </div>
+      )}
+
+      {infoLoading && zones.length === 0 && (
+        <div role="status">
+          <EmptyState icon={Shield} title="Loading the outpost…" />
+        </div>
       )}
 
       {!infoLoading && zones.length === 0 && !errorMessage && (
@@ -399,7 +407,7 @@ function OutpostSummary({
   return (
     <StatRow>
       <StatTile
-        label="Storm Shield Defenses"
+        label="Storm Shield Defences"
         tone={levels === total ? 'success' : 'primary'}
         value={
           <>
@@ -431,7 +439,7 @@ function OutpostSummary({
                 : undefined
           }
           label="Outpost since"
-          value={<span className="text-base">{day(summary.createdAt)}</span>}
+          value={<span className="text-title">{day(summary.createdAt)}</span>}
         />
       )}
     </StatRow>
@@ -459,7 +467,6 @@ function ZoneCard({
   const canScan = Boolean(zone.saveFile) && !isLoadingBase
   const badge = assets(ZONE_BADGES[zone.zoneId] ?? '')
   const art = ZONE_ART[zone.zoneId]
-  const scanned = Boolean(visibleData?.success)
   const powerStats = visibleData?.success
     ? trapPowerStats(visibleData.trapItems, ratings)
     : null
@@ -492,7 +499,7 @@ function ZoneCard({
     { label: 'Builders', value: zone.editPermissions.length },
     { label: 'Base saves', value: zone.saveCount.toLocaleString() },
     ...(lastDefense
-      ? [{ label: 'Last defense', title: getShortDateFormat(lastDefense), value: day(lastDefense) }]
+      ? [{ label: 'Last defence', title: getShortDateFormat(lastDefense), value: day(lastDefense) }]
       : []),
     ...(powerStats ? [{ label: 'Trap power', value: powerStats.average }] : []),
   ]
@@ -559,7 +566,7 @@ function ZoneCard({
               </Button>
             )}
             {/* Before the first scan the empty blueprint offers the button. */}
-            {(scanned || isLoadingBase) && (
+            {(visibleData || isLoadingBase) && (
               <Button
                 disabled={!canScan}
                 onClick={() => {
@@ -793,9 +800,11 @@ function BlueprintShowcase({
 
   if (baseData && !baseData.success) {
     return (
-      <Callout title="Base scan failed" tone="danger">
-        {message}
-      </Callout>
+      <div role="alert">
+        <Callout title="Could not scan the base" tone="danger">
+          {message}
+        </Callout>
+      </div>
     )
   }
 

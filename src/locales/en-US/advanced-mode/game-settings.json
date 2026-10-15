@@ -1,5 +1,6 @@
 {
-  "description": "Edits Fortnite's own GameUserSettings.ini on this PC — the same file the in-game video settings screen writes. Useful when the game will not start at a resolution your monitor can show.",
+  "description": "Fortnite's video settings on this PC.",
+  "loading": "Loading game settings…",
   "sections": {
     "display": "Display",
     "performance": "Performance",
@@ -16,14 +17,13 @@
   "form": {
     "resolution": {
       "label": "Resolution",
-      "note": "ResolutionSizeX/Y, between {{min}} and {{max}}. The matching LastUserConfirmed values are written too.",
+      "note": "Between {{min}} and {{max}} pixels.",
       "width": "Resolution width",
       "height": "Resolution height",
       "display-preset": "Your display"
     },
     "fullscreen-mode": {
       "label": "Display mode",
-      "note": "Written to FullscreenMode, PreferredFullscreenMode and LastConfirmedFullscreenMode together.",
       "options": {
         "0": "Fullscreen",
         "1": "Borderless",
@@ -32,16 +32,16 @@
     },
     "vsync": {
       "label": "VSync",
-      "note": "bUseVSync. Caps the frame rate to your display refresh rate."
+      "note": "Caps the frame rate to your display's refresh rate."
     },
     "frame-rate-limit": {
       "label": "Frame rate limit",
-      "note": "FrameRateLimit, up to {{max}}. Use 0 for unlimited.",
+      "note": "Up to {{max}}.",
       "unlimited": "Unlimited"
     },
     "resolution-quality": {
       "label": "3D resolution",
-      "note": "sg.ResolutionQuality. Renders the world at {{value}}% and upscales it to the resolution above; the interface stays sharp."
+      "note": "Renders the world at {{value}}%; the interface stays sharp."
     }
   },
   "file": {
@@ -49,15 +49,18 @@
     "backup": {
       "label": "Backup",
       "exists": "Saved {{date}}",
-      "empty": "None yet",
-      "note": "A copy of the file is saved next to it before every write, as GameUserSettings.ini.penny.bak."
+      "empty": "None yet"
     }
   },
   "actions": {
     "save": "Save changes",
+    "saving": "Saving…",
     "discard": "Discard",
     "restore": "Restore backup",
-    "reload": "Refresh"
+    "restore-confirm": "Confirm — overwrites current settings",
+    "reload": "Refresh",
+    "reload-confirm": "Confirm — discards unsaved changes",
+    "cancel": "Cancel"
   },
   "dirty": "Unsaved changes",
   "status": {

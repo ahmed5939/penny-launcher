@@ -67,11 +67,15 @@ export function RouteComponent() {
         </PageTabs>
       </div>
       <div className="dzm fixed inset-0 z-30 bg-background/90 p-8">
-        <div className="flex h-full items-center justify-center rounded border-4 border-dashed border-primary p-4 text-2xl font-medium">
+        <div className="flex h-full items-center justify-center rounded border-4 border-dashed border-primary p-4 text-display-sm font-medium">
           {t('alerts:world-info.dnd.title')}
         </div>
       </div>
-      <div className="dzm-not-allowed fixed inset-0 z-30" />
+      <div className="dzm-not-allowed fixed inset-0 z-30 bg-background/90 p-8">
+        <div className="flex h-full items-center justify-center rounded border-4 border-dashed border-primary p-4 text-display-sm font-medium">
+          Only World Info .json files can be dropped here.
+        </div>
+      </div>
       <GoToTop containerId="alert-navigation-container" />
     </div>
   )

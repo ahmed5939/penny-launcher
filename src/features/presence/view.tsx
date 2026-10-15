@@ -117,6 +117,7 @@ export function SessionPanel({ snapshot }: { snapshot: PresenceSnapshot }) {
   const published = clockTime(snapshot.lastPublishedAt)
   const ends = clockTime(snapshot.expiresAt)
   const retry = clockTime(snapshot.retryAt)
+  const check = checkPresenceText(prefs.text)
 
   const retryStart = () => {
     if (!snapshot.accountId) {
@@ -216,6 +217,9 @@ export function SessionPanel({ snapshot }: { snapshot: PresenceSnapshot }) {
             tone="danger"
           >
             <p>{snapshot.errorMessage ?? 'Something went wrong.'}</p>
+            {!check.ok && (
+              <p className="text-xs">Fix the status line below, then try again.</p>
+            )}
             <div className="mt-3 flex flex-wrap gap-2">
               {needsSignIn(snapshot) && (
                 <Button
@@ -231,7 +235,7 @@ export function SessionPanel({ snapshot }: { snapshot: PresenceSnapshot }) {
                 </Button>
               )}
               <Button
-                disabled={busy !== null || !checkPresenceText(prefs.text).ok}
+                disabled={busy !== null || !check.ok}
                 onClick={retryStart}
                 size="sm"
                 variant="outline"
@@ -355,8 +359,10 @@ export function ComposePanel({
 
             <FieldRow
               hint={
-                check.ok || check.reason === 'blank' ? (
+                check.ok ? (
                   `${check.bytes} of ${presenceTextMaxBytes} bytes. Shown instead of “In the launcher”.`
+                ) : check.reason === 'blank' ? (
+                  `${check.bytes} of ${presenceTextMaxBytes} bytes. Write a status to start.`
                 ) : (
                   <span className="text-warning">
                     {presenceTextProblem(check)}

@@ -50,6 +50,7 @@ export function SearchResultRow({
         </span>
       </span>
       <Button
+        aria-label="Send friend request"
         className="size-7 shrink-0 text-muted-foreground"
         disabled={isPending}
         size="icon"
@@ -272,6 +273,7 @@ export function RowAction({
 }) {
   return (
     <Button
+      aria-label={title}
       className={cn(
         'size-6',
         tone === 'affirmative' ? 'text-success' : 'text-muted-foreground',

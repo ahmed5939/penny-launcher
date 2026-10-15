@@ -1,5 +1,7 @@
+import type { ContextMenuRequestItem } from '../../kernel/startup/context-menu'
 import type { AccountData } from '../../types/accounts'
 
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 
 import { useAccountListStore } from '../../state/accounts/list'
@@ -8,6 +10,8 @@ import {
   useAccountScope,
   usePrimaryAccount,
 } from '../../hooks/accounts/scope'
+
+import { useHandleRemove } from '../../routes/accounts/remove/-actions'
 
 
 import { checkIfCustomDisplayNameIsValid } from '../../lib/validations/properties'
@@ -24,6 +28,8 @@ export function useAccountList() {
   const { members, selectAll, setPrimary, toggleMember } =
     useAccountScope()
   const selected = usePrimaryAccount()
+  const navigate = useNavigate()
+  const { handleRemove } = useHandleRemove()
   const [open, setOpen] = useState(false)
   const accounts = idsList
     .map((accountId) => accountList[accountId])
@@ -104,6 +110,24 @@ export function useAccountList() {
     members.length >= availableAccounts.length
 
   /**
+   * Removing from the roster asks twice, as the Remove page does (§7): the
+   * first pick opens this second menu, and only its Confirm removes anything.
+   */
+  const confirmRemove = async (account: AccountData) => {
+    const chosen = await window.electronAPI.popupContextMenu([
+      {
+        id: 'confirm',
+        label: `Confirm — unlink ${parseCustomDisplayName(account)}`,
+      },
+      { id: 'cancel', label: 'Cancel' },
+    ])
+
+    if (chosen === 'confirm') {
+      handleRemove({ account, defaultRedirect: false })
+    }
+  }
+
+  /**
    * A real OS context menu, not an HTML one.
    *
    * Right-clicking a list row and getting nothing is one of the clearest tells
@@ -117,11 +141,13 @@ export function useAccountList() {
 
       const isInScope = members.includes(account.accountId)
       const isInvalid = account.authStatus === 'invalid'
-      const chosen = await window.electronAPI.popupContextMenu([
+      const isCurrent = account.accountId === selected?.accountId
+      const items: Array<ContextMenuRequestItem> = [
         {
           id: 'switch',
           label: `Switch to ${parseCustomDisplayName(account)}`,
-          enabled: !isInvalid,
+          // Already the current account, so there is nothing to switch to.
+          enabled: !isInvalid && !isCurrent,
         },
         {
           id: 'scope',
@@ -130,15 +156,36 @@ export function useAccountList() {
           enabled: !isInvalid && (!isInScope || members.length > 1),
         },
         { type: 'separator' },
+      ]
+
+      if (isInvalid) {
+        items.push(
+          { id: 'reauth', label: 'Sign in again…' },
+          { id: 'remove', label: 'Remove from Penny…' },
+          { type: 'separator' }
+        )
+      }
+
+      items.push(
         { copy: account.accountId, label: 'Copy account ID' },
-        { copy: account.displayName, label: 'Copy display name' },
-      ])
+        { copy: account.displayName, label: 'Copy display name' }
+      )
+
+      const chosen = await window.electronAPI.popupContextMenu(items)
 
       if (chosen === 'switch') {
         setPrimary(account.accountId)
         setOpen(false)
       } else if (chosen === 'scope') {
         toggleMember(account.accountId)
+      } else if (chosen === 'reauth') {
+        setOpen(false)
+        navigate({
+          to: '/accounts/add/$type',
+          params: { type: 'quick-login' },
+        })
+      } else if (chosen === 'remove') {
+        await confirmRemove(account)
       }
     }
 

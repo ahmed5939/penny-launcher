@@ -1,6 +1,7 @@
 import type { FriendEntry } from '../../kernel/core/friends-manager'
 import type { FriendAction } from './row'
 
+import { useEffect, useState } from 'react'
 import { UpdateIcon } from '@radix-ui/react-icons'
 import { UserPlus } from 'lucide-react'
 
@@ -15,6 +16,9 @@ import { FriendRow, SearchResultRow } from './row'
 import type { GroupedFriends } from './group'
 
 import { cn } from '../../lib/utils'
+
+/** How long a bulk action stays armed before it disarms on its own. */
+const ARMED_MS = 4000
 
 export type FriendsWorkspaceData = {
   errorMessage: string | null
@@ -261,6 +265,7 @@ function FriendLists({
                 ),
             },
             {
+              armedLabel: (count) => `Confirm — rejects ${count} requests`,
               label: 'Reject all',
               destructive: true,
               action: () =>
@@ -283,6 +288,7 @@ function FriendLists({
           onAction={handleAction}
           bulkActions={[
             {
+              armedLabel: (count) => `Confirm — cancels ${count} requests`,
               label: 'Cancel all',
               destructive: true,
               action: () =>
@@ -329,6 +335,14 @@ function CountTab({
   )
 }
 
+type BulkAction = {
+  action: () => void
+  /** The label while a destructive action waits for its second press. */
+  armedLabel?: (count: number) => string
+  destructive?: boolean
+  label: string
+}
+
 function Section({
   bulkActions,
   empty,
@@ -338,11 +352,7 @@ function Section({
   pending,
   showInvite,
 }: {
-  bulkActions?: Array<{
-    action: () => void
-    destructive?: boolean
-    label: string
-  }>
+  bulkActions?: Array<BulkAction>
   empty: string
   entries: Array<FriendEntry>
   onAction: (accountId: string, action: FriendAction) => () => void
@@ -350,6 +360,22 @@ function Section({
   pending: Array<string>
   showInvite?: boolean
 }) {
+  const [armed, setArmed] = useState<string | null>(null)
+
+  useEffect(() => {
+    setArmed(null)
+  }, [entries])
+
+  useEffect(() => {
+    if (armed === null) {
+      return
+    }
+
+    const timeout = window.setTimeout(() => setArmed(null), ARMED_MS)
+
+    return () => window.clearTimeout(timeout)
+  }, [armed])
+
   if (entries.length === 0) {
     return (
       <EmptyState
@@ -357,6 +383,17 @@ function Section({
         title={empty}
       />
     )
+  }
+
+  const press = (bulk: BulkAction) => {
+    if (!bulk.destructive || armed === bulk.label) {
+      setArmed(null)
+      bulk.action()
+
+      return
+    }
+
+    setArmed(bulk.label)
   }
 
   return (
@@ -368,10 +405,13 @@ function Section({
               disabled={pending.length > 0}
               key={bulk.label}
               size="sm"
-              variant={bulk.destructive ? 'destructive' : 'secondary'}
-              onClick={bulk.action}
+              variant={armed === bulk.label ? 'destructive' : 'secondary'}
+              onBlur={() => setArmed(null)}
+              onClick={() => press(bulk)}
             >
-              {bulk.label}
+              {armed === bulk.label && bulk.armedLabel
+                ? bulk.armedLabel(entries.length)
+                : bulk.label}
             </Button>
           ))}
         </div>

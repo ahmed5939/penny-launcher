@@ -162,7 +162,7 @@ function TracksState({
         className="text-ui text-muted-foreground"
         role="status"
       >
-        {isChecking ? 'Reading ranked progress from Epic…' : 'Ranked progress has not been read yet.'}
+        {isChecking ? 'Loading ranked progress…' : 'Not loaded yet. Try Refresh.'}
       </p>
     )
   }

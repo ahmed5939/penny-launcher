@@ -590,9 +590,9 @@ process.on('uncaughtExceptionMonitor', (error) => {
       }
     )
 
-    secureIpcHandle(ElectronAPIEventKeys.SettingsDetectPath, async () => {
+    secureIpcHandle(ElectronAPIEventKeys.SettingsDetectPathOnly, async () => {
       const { GameInstallManager } = await features.gameInstall()
-      return GameInstallManager.detectAndApply()
+      return GameInstallManager.detect()
     })
 
     secureIpcHandle(
@@ -1152,10 +1152,13 @@ process.on('uncaughtExceptionMonitor', (error) => {
       await ItemDatabase.request(true)
     })
 
-    secureIpcOn(ElectronAPIEventKeys.TimelineRequest, async () => {
-      const { Timeline } = await features.timeline()
-      await Timeline.request()
-    })
+    secureIpcOn(
+      ElectronAPIEventKeys.TimelineRequest,
+      async (_, force?: boolean) => {
+        const { Timeline } = await features.timeline()
+        await Timeline.request(force === true)
+      }
+    )
 
     secureIpcOn(
       ElectronAPIEventKeys.LeaderboardRequest,

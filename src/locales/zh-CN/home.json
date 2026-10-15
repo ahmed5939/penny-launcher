@@ -31,7 +31,7 @@
     }
   },
   "information": {
-    "missions": "{{total}} 个任务",
+    "missions_other": "{{count}} 个任务",
     "tile-index": "图块索引：",
     "alert-guid": "任务警报 ：",
     "mission-guid": "任务 GUID：",

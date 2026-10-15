@@ -74,7 +74,7 @@ export function ZoneSection({
           */}
           <span className="figure ml-2 whitespace-nowrap text-caption font-normal normal-case tracking-normal text-muted-foreground/50">
             {t('information.missions', {
-              total: missions.size,
+              count: missions.size,
             })}
           </span>
         </>

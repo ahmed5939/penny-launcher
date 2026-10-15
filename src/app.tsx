@@ -21,6 +21,7 @@ import { LoadItemDatabase } from './bootstrap/components/load-item-database'
 import { LoadPennyDBMissions } from './bootstrap/components/load-pennydb-missions'
 import { LoadSettings } from './bootstrap/components/load-settings'
 import { LauncherNotifications } from './bootstrap/components/launcher-notifications'
+import { CheckNewVersion } from './bootstrap/components/check-new-version'
 
 import { Toaster } from './components/ui/sonner'
 import { ThemeProvider } from './components/theme-provider'
@@ -155,7 +156,12 @@ function DeferredBootstrap() {
           <LoadAutoLlamas />
         </>
       )}
-      {stage >= 3 && <LoadPennyDBMissions />}
+      {stage >= 3 && (
+        <>
+          <LoadPennyDBMissions />
+          <CheckNewVersion />
+        </>
+      )}
     </>
   )
 }

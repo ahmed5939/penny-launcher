@@ -1,1 +1,8 @@
-{}
+{
+  "validations": {
+    "account-id": "Account ID is 32 characters.",
+    "device-id": "Paste the device ID from your saved device auth.",
+    "secret": "Paste the secret from your saved device auth."
+  },
+  "signing-in": "Signing in…"
+}

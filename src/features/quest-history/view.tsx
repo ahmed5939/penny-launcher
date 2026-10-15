@@ -47,7 +47,7 @@ export function QuestHistoryPage() {
     <div className="space-y-6">
       <PageHeader
         actions={<RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />}
-        description="Storm Shield Defences, the storyline quests of every zone and when you finished them — read live from the selected account."
+        description="Storm Shield Defences and every zone's storyline quests, with when you finished them."
         icon={History}
         section="Account"
         status={<ToolBadges readOnly />}
@@ -82,7 +82,7 @@ function HistoryBody({ data }: { data: QuestHistory }) {
           <ProgressBar className="mt-2.5" total={storyTotal} value={storyDone} />
         </StatTile>
         <StatTile label="Quests finished" value={activity.length.toLocaleString()} />
-        <StatTile label="Playing since" value={<span className="text-base">{day(firstAt) ?? '—'}</span>} />
+        <StatTile label="First quest done" value={<span className="text-title">{day(firstAt) ?? '—'}</span>} />
       </StatRow>
 
       <Panel>
@@ -103,10 +103,6 @@ function HistoryBody({ data }: { data: QuestHistory }) {
       </Panel>
 
       <Activity activity={activity} nameOf={(id) => getItemRecord(records, id)?.name ?? null} records={records} />
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Dates are when Epic last changed each quest’s state, which for a finished quest is when it was done. The questline grouping is PennyDB’s list of storyline quest names; a quest the item database cannot name is shown as not done rather than guessed.
-      </p>
     </>
   )
 }
@@ -147,8 +143,8 @@ function ZoneDetail({ progress, records }: { progress: ZoneProgress; records: It
           </div>
           <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
             {[
-              { label: 'Started', value: day(progress.firstAt) ?? '—' },
-              { label: 'Took', value: days !== null && days > 0 ? `${days.toLocaleString()} days` : '—' },
+              { label: 'First quest', value: day(progress.firstAt) ?? '—' },
+              { label: 'Span', value: days !== null && days > 0 ? `${days.toLocaleString()} days` : '—' },
               { label: complete ? 'Finished' : 'Latest', value: day(progress.lastAt) ?? '—' },
             ].map((fact) => (
               <div key={fact.label}>
@@ -168,7 +164,7 @@ function ZoneDetail({ progress, records }: { progress: ZoneProgress; records: It
           return (
             <li aria-label={`SSD ${level.level}`} className="grid gap-3 px-5 py-3.5 md:grid-cols-[8rem_minmax(0,1fr)]" key={level.level}>
               <div>
-                <p className={cn('figure text-lg font-bold leading-none', level.defence.done ? 'text-success' : 'text-foreground')}>SSD {level.level}</p>
+                <p className={cn('figure text-display-sm font-bold leading-none', level.defence.done ? 'text-success' : 'text-foreground')}>SSD {level.level}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{level.defence.done ? `Defended ${day(level.defence.doneAt) ?? ''}`.trim() : 'Not defended'}</p>
                 <p className="figure mt-0.5 text-xs text-muted-foreground">{doneCount}/{level.quests.length} quests</p>
               </div>

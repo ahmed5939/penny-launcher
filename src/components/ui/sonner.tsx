@@ -1,15 +1,15 @@
-import { useTheme } from 'next-themes'
+import { useTheme } from '../theme-provider'
 // eslint-disable-next-line import/no-unresolved
 import { Toaster as Sonner } from 'sonner'
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = 'light' } = useTheme()
+  const { theme } = useTheme()
 
   return (
     <Sonner
-      theme={theme as ToasterProps['theme']}
+      theme={theme}
       className="flex h-auto justify-center text-sm z-50"
       toastOptions={{
         classNames: {

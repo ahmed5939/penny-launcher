@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 
 import {
   AnimatedNumber,
+  Callout,
+  EmptyState,
   KeyValue,
   StatRow,
   StatTile,
@@ -14,6 +16,7 @@ import { ExternalAuthTypeImage } from '../../../routes/stw-operations/xpboosts/-
 
 import { useAlertsDoneData } from '../../../hooks/alerts/alerts-done'
 import { usePlayerData, usePlayerDataActions } from './-hooks'
+import { lookupOutcome } from './-lookup-outcome'
 
 import { stripColon } from '../-components/-mission-data'
 
@@ -32,6 +35,38 @@ export function BasicInformation() {
   const { handleOpenExternalFNDBProfileUrl } = usePlayerDataActions()
   const { missions } = usePlayerData()
 
+  const outcome = lookupOutcome(playerData)
+
+  if (outcome === 'idle') {
+    return (
+      <EmptyState
+        className="mt-6"
+        title="Search a player to see the alerts they claimed today"
+      />
+    )
+  }
+
+  if (outcome === 'not-found') {
+    return (
+      <div
+        className="mt-6"
+        role="alert"
+      >
+        <Callout
+          title="Could not find that player"
+          tone="danger"
+        >
+          Check the display name or account ID and search again.
+          {playerData?.errorMessage && (
+            <span className="mt-1 block text-xs">
+              {playerData.errorMessage}
+            </span>
+          )}
+        </Callout>
+      </div>
+    )
+  }
+
   if (!playerData?.data) {
     return null
   }
@@ -39,11 +74,6 @@ export function BasicInformation() {
   const firstMission = missions.last()
   const lastMission = missions.first()
   const { lookup } = playerData.data
-  /*
-   * With "Public Game Stats" off Epic answers the lookup but nothing else, so
-   * the account id is all there is to show.
-   */
-  const showFullStats = !playerData.isPrivate && playerData.success
   const totalAlerts =
     playerData.data.profileChanges?.profile.stats.attributes
       .mission_alert_redemption_record?.claimData?.length ?? 0
@@ -79,7 +109,7 @@ export function BasicInformation() {
         </dl>
       </div>
 
-      {showFullStats ? (
+      {outcome === 'ok' && (
         /*
           The claim record is lifetime; only the part of it that overlaps
           today's rotation can be listed below, so "today" is what explains a
@@ -117,14 +147,28 @@ export function BasicInformation() {
             }
           />
         </StatRow>
-      ) : (
-        playerData.isPrivate && (
-          <p className="px-5 py-3 text-ui leading-snug text-muted-foreground">
+      )}
+
+      {/*
+        With "Public Game Stats" off Epic answers the lookup but nothing else, so
+        the account id is all there is to show.
+      */}
+      {outcome === 'private' && (
+        <div className="px-5 py-3">
+          <Callout tone="info">
             {t('public-stats', {
               ns: 'general',
             })}
-          </p>
-        )
+          </Callout>
+        </div>
+      )}
+
+      {outcome === 'partial' && (
+        <div className="px-5 py-3">
+          <Callout tone="warning">
+            {`Could not load ${lookup.displayName}'s alert record. Search again in a moment.`}
+          </Callout>
+        </div>
       )}
     </section>
   )

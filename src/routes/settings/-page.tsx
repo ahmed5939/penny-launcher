@@ -1,6 +1,6 @@
 import { Cog, LoaderCircle, Lock } from 'lucide-react'
 import { useRef, useState, type FormEvent } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import packageJson from '../../../package.json'
@@ -114,6 +114,7 @@ function HiddenTweaksTrigger() {
           </p>
           <form className="space-y-3" onSubmit={handleSubmit}>
             <Input
+              aria-label="Access key"
               autoFocus
               onChange={(event) => {
                 setKey(event.currentTarget.value)
@@ -186,6 +187,13 @@ function Content() {
           </div>
         ) : (
           <EmptyState
+            action={
+              <Button asChild variant="outline">
+                <Link params={{ type: 'quick-login' }} to="/accounts/add/$type">
+                  {t('general:home.add-account')}
+                </Link>
+              </Button>
+            }
             icon={Cog}
             title={t('general:form.accounts.no-registered-accounts')}
           />

@@ -44,6 +44,7 @@ export function CardPanel({
   onGenerate,
   onUpdateFilters,
   owned,
+  ownedReady,
   progress,
 }: {
   card: LockerCard | null
@@ -53,6 +54,7 @@ export function CardPanel({
   onGenerate: () => void
   onUpdateFilters: (filters: Partial<LockerCardFilters>) => void
   owned: Array<CosmeticMeta>
+  ownedReady: boolean
   progress: { done: number; total: number } | null
 }) {
   /*
@@ -183,6 +185,11 @@ export function CardPanel({
             )}
             Generate card
           </Button>
+          {owned.length === 0 && (
+            <span className="text-xs text-muted-foreground">
+              {ownedReady ? 'Nothing owned to draw yet' : 'Loading cosmetics…'}
+            </span>
+          )}
           {card && !isGenerating && (
             <>
               <Button
@@ -222,7 +229,7 @@ export function CardPanel({
           </div>
         )}
 
-        {errorMessage && <Callout tone="danger">{errorMessage}</Callout>}
+        {errorMessage && <Callout tone="danger">{errorMessage} Try Refresh.</Callout>}
 
         {card && !isGenerating && (
           <div className="space-y-2">

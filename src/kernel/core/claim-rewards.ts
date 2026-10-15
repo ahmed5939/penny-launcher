@@ -37,11 +37,15 @@ export class ClaimRewards {
         response.forEach((entry) => recordAutomationHistory({ ...entry, source: 'Auto-claim', description: 'Mission and quest rewards claimed', outcome: 'success' }))
       }
 
-      MainWindow.instance.webContents.send(
-        useGlobalNotification
-          ? ElectronAPIEventKeys.ClaimRewardsClientGlobalAutoClaimedNotification
-          : ElectronAPIEventKeys.PartyClaimActionNotification,
-      )
+      if (!useGlobalNotification) {
+        MainWindow.instance.webContents.send(
+          ElectronAPIEventKeys.PartyClaimActionNotification,
+        )
+      } else if (response) {
+        MainWindow.instance.webContents.send(
+          ElectronAPIEventKeys.ClaimRewardsClientGlobalAutoClaimedNotification,
+        )
+      }
     })
   }
 

@@ -8,8 +8,10 @@ import type {
   PluginReviewResult, PluginSettingsResult, PluginSummary, PluginPermission,
 } from '../../types/plugins'
 import { PLUGIN_PERMISSIONS } from '../../types/plugins'
+import { pluginCommandNeedsDialog } from '../../types/plugin-fortnite'
 import { PLUGIN_API_VERSION, PluginBridge, PluginStorage } from './plugin-api'
 import { DataDirectory } from './data-directory'
+import { getPluginMCPPolicy } from './plugin-fortnite-policy'
 import { inspectPlugin, type InspectedPlugin } from './plugin-package'
 import { PluginSandbox } from './plugin-sandbox'
 import {
@@ -228,8 +230,17 @@ export class PluginManager {
         if (pkg.digest !== original.digest) throw new Error('Package changed while being copied. Try again.')
         const previous = PluginManager.plugins.get(pkg.manifest.id)
         const approved = await PluginManager.approval(pkg.manifest.id)
+        const operations = (pkg.manifest.fortnite?.operations ?? []).filter((operation) => operation !== 'QueryProfile')
+        const previousOperations = previous?.manifest.fortnite?.operations ?? []
+        const previousProfiles = previous?.manifest.fortnite?.profiles ?? []
         const review: PluginReview = { token, manifest: pkg.manifest, digest: pkg.digest,
           addedPermissions: (pkg.manifest.permissions ?? []).filter((permission) => !approved.permissions.includes(permission)),
+          commands: operations.map((operation) => {
+            const policy = getPluginMCPPolicy(operation)
+            return { operation, description: policy.description, known: policy.known, asks: pluginCommandNeedsDialog(operation, pkg.manifest.apiVersion) }
+          }),
+          addedOperations: operations.filter((operation) => !previousOperations.includes(operation)),
+          addedProfiles: (pkg.manifest.fortnite?.profiles ?? []).filter((profile) => !previousProfiles.includes(profile)),
           installed: !!previous, previousVersion: previous?.manifest.version ?? null, readme: pkg.readme }
         PluginManager.reviews.set(token, { package: pkg, expires: Date.now() + 10 * 60_000 })
         return { ok: true, review }

@@ -75,7 +75,7 @@ export function HistoryMenu() {
             variant="ghost"
           >
             <X className="size-4" />
-            <span className="sr-only">close history sidebar</span>
+            <span className="sr-only">Close history</span>
           </Button>
         </SheetClose>
       </header>

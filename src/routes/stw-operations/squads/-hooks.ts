@@ -124,6 +124,17 @@ export type PendingSlot = { squadId: string; slotIndex: number }
 /** How long a follow-up waits for the reply the main process sends by itself. */
 const followTimeoutMs = 15_000
 
+/** How long a move waits for its notification before the view gives up on it. */
+const assignTimeoutMs = 30_000
+
+/**
+ * " (reason)" when the main process gives one. "Unknown Error" is only its
+ * placeholder, so it is dropped.
+ */
+function failureReason(message: string | undefined) {
+  return message && message !== 'Unknown Error' ? ` (${message})` : ''
+}
+
 /**
  * The squads IPC is fire-and-forget: a request goes out, the payload comes
  * back on its own channel. This turns one round trip into a promise for
@@ -155,7 +166,7 @@ function readSquads(accountId: string, follow: boolean) {
       if (response.errorMessage) {
         reject(
           new Error(
-            `Could not read the squads (${response.errorMessage}). Try Refresh.`
+            `Could not read the squads${failureReason(response.errorMessage)}. Check the account is signed in, then try Refresh.`
           )
         )
       } else {
@@ -211,6 +222,9 @@ export function useSquads(payload: SquadsPayload, onAssigned: () => void) {
   const records = useItemDatabaseStore((state) => state.records)
 
   const [isAssigning, setAssigning] = useState(false)
+  const assignWatchdog = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  )
   /** The slot waiting for a survivor to be picked for it. */
   const [pendingSlot, setPendingSlot] = useState<PendingSlot | null>(null)
   /** An auto-fill shown for approval before anything moves. */
@@ -226,13 +240,14 @@ export function useSquads(payload: SquadsPayload, onAssigned: () => void) {
           return
         }
 
+        clearTimeout(assignWatchdog.current)
         setAssigning(false)
         setPendingSlot(null)
         setFill(null)
 
         toast[response.errorMessage ? 'error' : 'success'](
           response.errorMessage
-            ? `Could not move survivors: ${response.errorMessage}`
+            ? `Could not move survivors${failureReason(response.errorMessage)}. Refresh to see where they are, then try again.`
             : 'Squads updated'
         )
 
@@ -244,6 +259,12 @@ export function useSquads(payload: SquadsPayload, onAssigned: () => void) {
       listener.removeListener()
     }
   }, [onAssigned, payload.accountId])
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(assignWatchdog.current)
+    }
+  }, [])
 
   const decorated: Array<DecoratedSurvivor> = useMemo(
     () =>
@@ -355,6 +376,15 @@ export function useSquads(payload: SquadsPayload, onAssigned: () => void) {
 
     setAssigning(true)
     window.electronAPI.assignSquadSurvivors(selected, assignments)
+
+    clearTimeout(assignWatchdog.current)
+    assignWatchdog.current = setTimeout(() => {
+      setAssigning(false)
+      toast.error(
+        'No answer about the move. Refresh to see where survivors are.'
+      )
+      onAssigned()
+    }, assignTimeoutMs)
   }
 
   const handleAssignTo = (characterId: string, target: PendingSlot) => {

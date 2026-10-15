@@ -80,7 +80,7 @@ export function SpritesPage() {
             />
           )
         }
-        description="Every sprite Battle Royale has released and each of its treatments: what your accounts own, what they lost in the field, what Sprite Dust can bring back, and what changed since Penny last looked."
+        description="Every sprite and treatment your accounts own, lost or can recover."
         icon={Ghost}
         section={t('account-management.title')}
         status={<ToolBadges beta readOnly />}
@@ -150,14 +150,6 @@ export function SpritesPage() {
           <HistoryTab />
         </PageTabPanel>
       </PageTabs>
-
-      <p className="text-xs text-muted-foreground">
-        Ownership, mastery and Sprite Dust come from each account’s own sprite
-        inventory at Epic; summon costs from Epic’s catalogue, which lists only
-        what can be summoned now. Names and art are bundled with Penny. History
-        starts the first time Penny reads an account. Penny never summons,
-        equips or spends anything.
-      </p>
     </>
   )
 }

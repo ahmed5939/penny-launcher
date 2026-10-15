@@ -1,12 +1,20 @@
 {
   "description": "See what a player is doing in Save the World right now — current mission, difficulty, squad and rewards.",
+  "no-account": {
+    "title": "No account selected",
+    "description": "Pick one in the title bar to look players up."
+  },
+  "not-found": {
+    "description": "Check the spelling, or paste their account ID."
+  },
   "form": {
     "title": "Find a player",
     "description": "Search by Epic, PlayStation, Xbox display name, or account ID.",
     "quick-pick": "Quick pick",
     "suggestions": "Player matches",
     "exact-match": "Exact match",
-    "player-result": "{{mutual}} mutual friends",
+    "player-result_one": "{{count}} mutual friend",
+    "player-result_other": "{{count}} mutual friends",
     "recently": {
       "label": "Note: these players are stored temporarily",
       "placeholder": "Recent players and friends"
@@ -14,7 +22,7 @@
   },
   "live": {
     "eyebrow": "Active deployment",
-    "loading": "Checking player session...",
+    "loading": "Checking player session…",
     "unknown-mission": "Unknown mission",
     "hestia-lobby": "Hestia lobby",
     "zone": "Zone",

@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEvent, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import type { ItemRecordMap } from '../../kernel/core/item-database'
 
 import { Check, Lock } from 'lucide-react'
@@ -131,6 +131,13 @@ export function ItemTile({
   const isButton = Boolean(onClick) && !onToggleSelect
   const Element = isButton ? 'button' : 'div'
 
+  const pressOnKey = (event: KeyboardEvent<HTMLElement>) => {
+    if ((event.key === 'Enter' || event.key === ' ') && event.target === event.currentTarget) {
+      event.preventDefault()
+      event.currentTarget.click()
+    }
+  }
+
   const tile = (
     <Element
       aria-pressed={isButton ? selected : undefined}
@@ -150,6 +157,7 @@ export function ItemTile({
       disabled={isButton ? disabled : undefined}
       onClick={disabled ? undefined : onClick}
       onDoubleClick={disabled ? undefined : onDoubleClick}
+      onKeyDown={onClick && !isButton ? pressOnKey : undefined}
       role={onClick && !isButton ? 'button' : undefined}
       style={
         {
@@ -207,6 +215,7 @@ export function ItemTile({
         {onToggleSelect && !locked && (
           <button
             aria-checked={selected}
+            aria-label={`Select ${label}`}
             className={cn(
               'absolute right-1 top-1 z-10 grid size-5 place-items-center rounded-md border transition-[opacity,background-color,border-color]',
               selected
@@ -259,7 +268,7 @@ export function ItemTile({
         <span className="mt-2 flex min-w-0 flex-col gap-1 px-0.5">
           <span className="flex items-baseline justify-between gap-1">
             <span
-              className="truncate text-2xs font-semibold uppercase leading-none tracking-wider"
+              className="truncate text-2xs font-semibold leading-none"
               style={{ color: graded ? rarityInk(color) : undefined }}
             >
               {rarities[rarity] ?? 'Item'}

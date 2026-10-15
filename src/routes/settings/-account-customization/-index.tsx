@@ -1,9 +1,16 @@
 import type { PropsWithChildren } from 'react'
 
-import { DndContext } from '@dnd-kit/core'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers'
 import {
   SortableContext,
+  sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { GripVertical } from 'lucide-react'
@@ -22,7 +29,7 @@ import { useRegisterAccounts } from '../../../hooks/accounts'
 import { useCustomizableMenuSettingsVisibility } from '../../../hooks/settings'
 import { useAccounts, useActions, useOrdering } from './-hooks'
 
-import { cn } from '../../../lib/utils'
+import { cn, parseCustomDisplayName } from '../../../lib/utils'
 
 export function AccountCustomization() {
   const { t } = useTranslation(['settings', 'general'])
@@ -35,6 +42,13 @@ export function AccountCustomization() {
   const { idsList, reorderAccounts } = useRegisterAccounts()
   const { getMenuOptionVisibility } =
     useCustomizableMenuSettingsVisibility()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   return (
     <Panel>
@@ -59,21 +73,23 @@ export function AccountCustomization() {
           />
         </FilterBar>
       )}
-      {accounts.length > 0 ? (
-        <ul className="divide-y divide-border/30 px-2 py-1">
-          <DndContext
-            modifiers={[restrictToFirstScrollableAncestor]}
-            onDragEnd={reorderAccounts}
-          >
-            <SortableContext
-              items={idsList}
-              strategy={verticalListSortingStrategy}
-            >
+      <DndContext
+        modifiers={[restrictToFirstScrollableAncestor]}
+        onDragEnd={reorderAccounts}
+        sensors={sensors}
+      >
+        <SortableContext
+          items={idsList}
+          strategy={verticalListSortingStrategy}
+        >
+          {accounts.length > 0 ? (
+            <ul className="divide-y divide-border/30 px-2 py-1">
               {accounts.map((account) => {
                 return (
                   <SortableItem
                     id={account.accountId}
                     key={account.accountId}
+                    label={parseCustomDisplayName(account)}
                   >
                     <AccountItem
                       account={account}
@@ -85,17 +101,17 @@ export function AccountCustomization() {
                   </SortableItem>
                 )
               })}
-            </SortableContext>
-          </DndContext>
-        </ul>
-      ) : (
-        <EmptyState
-          className="border-0 bg-transparent py-8"
-          title={t('form.accounts.search-empty', {
-            ns: 'general',
-          })}
-        />
-      )}
+            </ul>
+          ) : (
+            <EmptyState
+              className="border-0 bg-transparent py-8"
+              title={t('form.accounts.search-empty', {
+                ns: 'general',
+              })}
+            />
+          )}
+        </SortableContext>
+      </DndContext>
       <p className="border-t border-border/30 px-5 py-3 text-xs text-muted-foreground">
         {t('account-customization.note')}
       </p>
@@ -107,8 +123,16 @@ function SortableItem({
   children,
   className,
   id,
-}: PropsWithChildren<{ className?: string; id: string }>) {
-  const { attributes, data, listeners, setNodeRef, style } = useOrdering({
+  label,
+}: PropsWithChildren<{ className?: string; id: string; label: string }>) {
+  const {
+    attributes,
+    data,
+    listeners,
+    setActivatorNodeRef,
+    setNodeRef,
+    style,
+  } = useOrdering({
     id,
   })
 
@@ -121,18 +145,20 @@ function SortableItem({
         className
       )}
       style={style}
-      {...attributes}
     >
-      <span
-        aria-hidden
+      <button
+        aria-label={`Reorder ${label}`}
         className={cn(
-          'flex cursor-grab items-center self-stretch px-1.5 text-muted-foreground/60 hover:text-foreground',
+          'flex cursor-grab items-center self-stretch rounded-md px-1.5 text-muted-foreground/60 hover:text-foreground',
           data?.handleClassName
         )}
+        ref={setActivatorNodeRef}
+        type="button"
+        {...attributes}
         {...listeners}
       >
         <GripVertical className="size-4" />
-      </span>
+      </button>
       {children}
     </li>
   )

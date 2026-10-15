@@ -70,6 +70,17 @@ export function BuyButton({
       </span>
     </span>
   )
+  const stripName = soldOut
+    ? 'Sold out'
+    : offer.fulfillmentOwned
+      ? 'Owned'
+      : offer.currency === 'RealMoney'
+        ? 'Real money only'
+        : !offer.affordable
+          ? `Not enough ${offer.currencyLabel}`
+          : confirming
+            ? `Confirm — spends ${price}`
+            : `Buy for ${price}`
 
   const handleClick = () => {
     if (!confirming) {
@@ -86,6 +97,7 @@ export function BuyButton({
     <Button
       className={cn('w-full', className)}
       title={isStrip && !offer.affordable ? `Not enough ${offer.currencyLabel}` : undefined}
+      aria-label={isPurchasing ? 'Buying…' : isStrip ? stripName : undefined}
       disabled={
         isPurchaseLocked ||
         isPurchasing ||

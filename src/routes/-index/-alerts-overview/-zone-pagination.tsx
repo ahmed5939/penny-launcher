@@ -13,23 +13,18 @@ export function ZonePagination({
 }: {
   totalMissions: number
 } & ReturnType<typeof useZoneMissionsPagination>) {
-  const { t } = useTranslation(['alerts'], {
-    keyPrefix: 'pagination',
-  })
+  const { t } = useTranslation(['alerts'])
 
   const { isReloading } = useWorldInfo()
 
-  const shown =
-    pagination.active === totalPages
-      ? totalMissions
-      : pagination.active * perPage
+  const shown = pagination.active * perPage
 
   /*
    * A full-width rail rather than a centred triptych: the list has to
    * terminate in something as wide as the rows above it, otherwise it just
-   * trails off. The dashed edge is the same one the empty state uses, and it
-   * means the same thing in both places — what you are looking for is not on
-   * screen yet.
+   * trails off. On the last page the rail stops offering more and ends in the
+   * count instead, so the list closes on a figure rather than a control that
+   * does nothing.
    *
    * `pagination.results` goes unused: the inline `shown/total` figure on the
    * button already says it.
@@ -43,20 +38,29 @@ export function ZonePagination({
           onClick={pagination.previous}
           disabled={isReloading}
         >
-          {t('actions.previous')}
+          {t('pagination.actions.previous')}
         </Button>
       )}
-      <Button
-        className="h-9 flex-1 rounded-xl border border-dashed border-border/70 text-caption font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:bg-accent/20 hover:text-foreground disabled:opacity-40"
-        variant="ghost"
-        onClick={pagination.next}
-        disabled={pagination.active === totalPages || isReloading}
-      >
-        {t('actions.next')}
-        <span className="figure ml-2 normal-case tracking-normal text-muted-foreground/60">
-          {shown}/{totalMissions}
+      {pagination.active === totalPages ? (
+        <span className="figure flex-1 px-3 text-right text-caption text-muted-foreground/60">
+          {t('information.missions', {
+            count: totalMissions,
+            total: totalMissions,
+          })}
         </span>
-      </Button>
+      ) : (
+        <Button
+          className="h-9 flex-1 rounded-xl text-caption font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+          variant="ghost"
+          onClick={pagination.next}
+          disabled={isReloading}
+        >
+          {t('pagination.actions.next')}
+          <span className="figure ml-2 normal-case tracking-normal text-muted-foreground/60">
+            {shown}/{totalMissions}
+          </span>
+        </Button>
+      )}
     </div>
   )
 }

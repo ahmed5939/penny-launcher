@@ -1,10 +1,14 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useLayoutEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 
 import { useOutpostStore } from '../../../state/stw-operations/outpost'
 import { usePrimaryAccount } from '../../../hooks/accounts/scope'
 
 import { toast } from '../../../lib/notifications'
+
+import { createRequestGate } from './-request-gate'
+
+const requests = createRequestGate()
 
 export function useOutpostData() {
   const { baseData, errorMessage, infoLoading, loadingZone, summary, zones } =
@@ -27,6 +31,7 @@ export function useOutpostData() {
       return
     }
 
+    const stillCurrent = requests.begin()
     const store = useOutpostStore.getState()
 
     store.setInfoLoading(true)
@@ -35,11 +40,18 @@ export function useOutpostData() {
       const result = await window.electronAPI.requestOutpostInfo(
         primaryAccount
       )
-      store.setInfo(result)
+
+      if (stillCurrent()) {
+        store.setInfo(result)
+      }
     } catch {
-      store.setError('Failed to load outpost information.')
+      if (stillCurrent()) {
+        store.setError('Try Refresh to load it again.')
+      }
     } finally {
-      store.setInfoLoading(false)
+      if (stillCurrent()) {
+        store.setInfoLoading(false)
+      }
     }
   }, [primaryAccount])
 
@@ -50,6 +62,7 @@ export function useOutpostData() {
         return
       }
 
+      const stillCurrent = requests.begin()
       const store = useOutpostStore.getState()
 
       store.setLoadingZone(zoneId)
@@ -59,11 +72,18 @@ export function useOutpostData() {
           primaryAccount,
           saveFile
         )
-        store.setBaseData(zoneId, result)
+
+        if (stillCurrent()) {
+          store.setBaseData(zoneId, result)
+        }
       } catch {
-        toast.error('Base scan failed.')
+        if (stillCurrent()) {
+          toast.error('Could not scan the base. Try again.')
+        }
       } finally {
-        store.setLoadingZone(null)
+        if (stillCurrent()) {
+          store.setLoadingZone(null)
+        }
       }
     },
     [primaryAccount]
@@ -71,10 +91,18 @@ export function useOutpostData() {
 
   /**
    * Sequential on purpose — each scan downloads a multi-megabyte .sav, and
-   * `loadingZone` is a single slot, so the cards animate one at a time.
+   * `loadingZone` is a single slot, so the cards animate one at a time. Stops
+   * as soon as the account changes, so the rest of the bases are not read
+   * into the next account's page.
    */
   const handleScanAll = useCallback(async () => {
+    const stillCurrent = requests.begin()
+
     for (const zone of useOutpostStore.getState().zones) {
+      if (!stillCurrent()) {
+        break
+      }
+
       if (zone.saveFile) {
         await handleScanBase(zone.zoneId, zone.saveFile)
       }
@@ -82,9 +110,21 @@ export function useOutpostData() {
   }, [handleScanBase])
 
   /**
+   * Runs before paint, so the previous account's data never shows for a frame.
    * Load once per visit. Re-scanning is the refresh button's job.
    */
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (requests.select(primaryAccount?.accountId ?? null)) {
+      useOutpostStore.setState({
+        baseData: {},
+        errorMessage: null,
+        infoLoading: false,
+        loadingZone: null,
+        summary: null,
+        zones: [],
+      })
+    }
+
     if (primaryAccount) {
       void handleRefresh()
     }

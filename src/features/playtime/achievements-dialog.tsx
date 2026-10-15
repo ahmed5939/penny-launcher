@@ -94,7 +94,7 @@ export function AchievementsDialog({
           )}
 
           {result && !result.ok && (
-            <Callout title="Achievements unavailable" tone="danger">
+            <Callout role="alert" title="Achievements unavailable" tone="danger">
               <p>{result.error}</p>
               <Button className="mt-3" size="sm" variant="outline" onClick={() => setAttempt((n) => n + 1)}>
                 Try again

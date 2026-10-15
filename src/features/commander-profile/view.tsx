@@ -10,7 +10,9 @@ import {
   AccountResourceGate,
   AnimatedNumber,
   Callout,
+  EmptyState,
   KeyValue,
+  ListRow,
   PageHeader,
   Panel,
   PanelBody,
@@ -32,7 +34,6 @@ import { useRequestItemDatabase } from '../../bootstrap/components/load-item-dat
 
 import { computeItemPower } from '../../config/constants/fortnite/power'
 import { fortStats } from '../../config/constants/fortnite/fort'
-import { squadAttributeStats } from '../../config/constants/fortnite/squads'
 import { pennyDBProfileUrl } from '../../services/endpoints/pennydb'
 
 import { cn } from '../../lib/utils'
@@ -59,7 +60,7 @@ export function CommanderProfilePage() {
             <RefreshButton disabled={!resource.accountId} loading={resource.loading} onClick={resource.refresh} />
           </>
         }
-        description="Your commander at a glance — levels, F.O.R.T., squads, loadout and stockpile, read from the account's own campaign profile."
+        description="Your commander at a glance — levels, F.O.R.T., squads and stockpile."
         icon={UserRound}
         section="Save the World"
         status={<ToolBadges readOnly />}
@@ -111,7 +112,7 @@ function Profile({ entry }: { entry: ProfileEntry }) {
           value={entry.ventures?.zonesUnlocked != null ? `${entry.ventures.zonesUnlocked} / ${entry.ventures.zones}` : 'Unavailable'}
         />
         <StatTile
-          hint={`${entry.counts.heroes.toLocaleString()} heroes · ${entry.counts.schematics.toLocaleString()} schematics`}
+          hint={`${entry.llamas.length} ${entry.llamas.length === 1 ? 'type' : 'types'}`}
           label="Unopened llamas"
           value={unopened.toLocaleString()}
         />
@@ -122,52 +123,46 @@ function Profile({ entry }: { entry: ProfileEntry }) {
       <div className="grid gap-4 xl:grid-cols-2">
         <Panel>
           <PanelHeader as="div" compact title="Survivor set bonuses" />
-          <PanelBody className="grid grid-cols-2 gap-2">
-            {Object.keys(setBonusRules).map((name) => {
-              const bonus = entry.setBonuses.find((candidate) => candidate.name === name)
+          <PanelBody>
+            <ul>
+              {Object.keys(setBonusRules).map((name) => {
+                const bonus = entry.setBonuses.find((candidate) => candidate.name === name)
 
-              return (
-                <div className={cn('flex items-center gap-3 rounded-lg bg-muted/40 px-3 py-2', !bonus?.active && 'opacity-60')} key={name}>
-                  <BonusIcon name={name} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-ui text-muted-foreground">{name}</span>
-                    <span className="figure block text-lg font-bold leading-tight text-primary">
-                      +{bonus?.totalPct ?? 0}%
-                      {bonus && bonus.active > 0 && (
-                        <span className="ml-1.5 text-xs font-medium text-muted-foreground">×{bonus.active} active</span>
-                      )}
-                    </span>
-                  </span>
-                </div>
-              )
-            })}
+                return (
+                  <ListRow
+                    caption={bonus && bonus.active > 0 ? `×${bonus.active} active` : undefined}
+                    className={bonus?.active ? undefined : 'opacity-60'}
+                    figure={`+${bonus?.totalPct ?? 0}%`}
+                    key={name}
+                    name={name}
+                    well={<BonusIcon name={name} />}
+                  />
+                )
+              })}
+            </ul>
           </PanelBody>
         </Panel>
 
         <Panel>
           <PanelHeader as="div" compact title="Squads" />
-          <PanelBody className="grid grid-cols-2 gap-2">
-            {entry.squads.map((squad) => {
-              const stat = fortStats.find((candidate) => candidate.key === squadAttributeStats[squad.attribute])
-              const src = badgeUrl(squadEmblem[squad.id] ?? '')
+          <PanelBody>
+            <ul>
+              {entry.squads.map((squad) => {
+                const src = badgeUrl(squadEmblem[squad.id] ?? '')
+                const lead = squad.leadMatches ? 'Lead job matches' : squad.filled > 0 ? 'Lead job does not match' : 'No lead'
+                const personalities = squad.filled > 1 ? ` · ${squad.personalityMatches}/${squad.filled - 1} personalities match` : ''
 
-              return (
-                <div className="flex items-center gap-3 rounded-lg bg-muted/40 px-3 py-2" key={squad.id}>
-                  {src ? <img alt="" className="size-7 shrink-0 object-contain" src={src} /> : <span className="size-7 shrink-0" />}
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="truncate text-ui font-medium">{squad.label}</span>
-                      <span className="figure shrink-0 text-xs text-muted-foreground">{squad.filled}/8</span>
-                    </span>
-                    <ProgressBar className="mt-1.5 h-1 bg-background/70" color={stat?.color} label={`${squad.label} slots filled`} total={8} value={squad.filled} />
-                    <span className="mt-1 block truncate text-2xs text-muted-foreground">
-                      {squad.leadMatches ? 'Lead job matches' : squad.filled > 0 ? 'Lead job does not match' : 'No lead'}
-                      {squad.filled > 1 && ` · ${squad.personalityMatches}/${squad.filled - 1} personalities match`}
-                    </span>
-                  </span>
-                </div>
-              )
-            })}
+                return (
+                  <ListRow
+                    caption={`${lead}${personalities}`}
+                    figure={`${squad.filled}/8`}
+                    key={squad.id}
+                    name={squad.label}
+                    well={src ? <img alt="" className="size-7 shrink-0 object-contain" src={src} /> : <span className="size-7 shrink-0" />}
+                  />
+                )
+              })}
+            </ul>
           </PanelBody>
         </Panel>
       </div>
@@ -176,13 +171,6 @@ function Profile({ entry }: { entry: ProfileEntry }) {
         <Shelf items={entry.resources} records={records} title="Resources" />
         <Shelf items={entry.llamas} records={records} title="Llamas" />
       </div>
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Everything here is the account&apos;s own campaign profile, read with its sign-in. F.O.R.T. is the commander-level
-        stats plus the survivor squads, worked out with the game&apos;s v42.20 rating tables. Power is rated from the survivor
-        squads and research on the homebase curve, the way PennyDB shows it; a fully researched account with maxed squads
-        sits at 145.28. Nothing on this page changes the account.
-      </p>
     </>
   )
 }
@@ -286,18 +274,14 @@ function FortPanel({ fort }: { fort: ProfileFort | null }) {
   return (
     <Panel>
       <PanelHeader as="div" compact title="F.O.R.T. stats" />
-      <PanelBody className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {fortStats.map((stat) => (
-          <div className="rounded-lg bg-muted/40 px-3 py-2.5" key={stat.key}>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-xs font-semibold" style={{ color: stat.color }}>
-                {stat.label}
-              </span>
-              <span className="figure text-title font-bold">{fort ? fort[stat.key].toLocaleString() : '—'}</span>
-            </div>
-            <ProgressBar className="mt-2 bg-background/70" color={stat.color} label={stat.label} total={top} value={fort?.[stat.key] ?? 0} />
-          </div>
-        ))}
+      <PanelBody>
+        <StatRow>
+          {fortStats.map((stat) => (
+            <StatTile accent={stat.color} key={stat.key} label={stat.label} value={fort ? fort[stat.key].toLocaleString() : '—'}>
+              <ProgressBar className="mt-2 bg-background/70" color={stat.color} label={stat.label} total={top} value={fort?.[stat.key] ?? 0} />
+            </StatTile>
+          ))}
+        </StatRow>
       </PanelBody>
     </Panel>
   )
@@ -341,23 +325,18 @@ function Shelf({ items, records, title }: { items: Array<ProfileStack>; records:
       <PanelHeader as="div" compact title={title} />
       <PanelBody>
         {items.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-2">
-            {items.map((item) => {
-              const name = resolveItemArt(item.templateId, records).name
-
-              return (
-                <div className="flex min-w-0 items-center gap-2 rounded-lg bg-muted/40 px-2 py-1.5" key={item.templateId} title={name}>
-                  <ItemIcon records={records} templateId={item.templateId} />
-                  <span className="min-w-0">
-                    <span className="figure block text-ui font-semibold leading-tight">{compact(item.quantity)}</span>
-                    <span className="block truncate text-2xs text-muted-foreground">{name}</span>
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-x-6">
+            {items.map((item) => (
+              <ListRow
+                figure={compact(item.quantity)}
+                key={item.templateId}
+                name={resolveItemArt(item.templateId, records).name}
+                well={<ItemIcon records={records} templateId={item.templateId} />}
+              />
+            ))}
+          </ul>
         ) : (
-          <p className="text-xs text-muted-foreground">Nothing here.</p>
+          <EmptyState className="border-0 bg-transparent py-8" title="Nothing here" />
         )}
       </PanelBody>
     </Panel>

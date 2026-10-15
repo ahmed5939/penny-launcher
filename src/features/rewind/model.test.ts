@@ -96,6 +96,14 @@ describe('buildRewind', () => {
     expect(rewind.battleRoyale?.topMode?.label).toBe('Creative and islands')
   })
 
+  it('leaves wins and eliminations unknown, not zero, for an account whose Battle Royale stats were not read', () => {
+    const unread = buildRewind({ ...input, playtime: { ...input.playtime, c: timed([['Fortnite', 4345429]], null) } })
+
+    expect(unread.perAccount.find((account) => account.id === 'c')).toMatchObject({ wins: null, kills: null })
+    expect(unread.perAccount.find((account) => account.id === 'b')).toMatchObject({ wins: 317, kills: 24878 })
+    expect(unread.battleRoyale).toMatchObject({ matches: 38323, wins: 1081, kills: 65926 })
+  })
+
   it('counts Founders, Save the World access and its recorded hours', () => {
     expect(rewind.saveTheWorld.founders).toEqual([
       { name: 'ay dast xooshhhh', edition: 'Deluxe' },

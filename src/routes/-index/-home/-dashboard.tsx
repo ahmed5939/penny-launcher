@@ -18,6 +18,7 @@ import {
   PanelBody,
   PanelHeader,
   ProgressBar,
+  RefreshButton,
 } from '../../../components/page'
 import { Skeleton } from '../../../components/ui/skeleton'
 import { ItemIcon } from '../../../components/items/item-icon'
@@ -140,10 +141,11 @@ function RowsSkeleton({ rows = 3 }: { rows?: number }) {
   )
 }
 
-function PanelError({ children }: { children: ReactNode }) {
+function PanelError({ error, resource, what }: { error: string; resource: Pick<AccountResource<unknown>, 'loading' | 'refresh'>; what: string }) {
   return (
-    <div className="p-3" role="alert">
-      <Callout tone="danger">{children}</Callout>
+    <div className="space-y-3 p-3" role="alert">
+      <Callout title={`Could not load ${what}`} tone="danger">{error}</Callout>
+      <RefreshButton loading={resource.loading} onClick={resource.refresh} />
     </div>
   )
 }
@@ -153,7 +155,7 @@ function AutomationLine({ children, to }: { children: ReactNode; to: string }) {
   return (
     <p className="flex items-center gap-2 border-t border-border/60 bg-surface/60 px-4 py-2 text-xs text-muted-foreground">
       <span className="min-w-0 flex-1 truncate">{children}</span>
-      <OpenLink to={to}>Settings</OpenLink>
+      <OpenLink to={to}>Manage</OpenLink>
     </p>
   )
 }
@@ -208,7 +210,7 @@ function DailyQuestsPanel({ dailies, records, resource }: { dailies: Array<Daily
   return (
     <PanelShell actions={<OpenLink to="/stw-operations/quests">Quest log</OpenLink>} icon={ScrollText} title="Daily quests">
       {!dailies ? (
-        resource.error ? <PanelError>{resource.error}</PanelError> : <RowsSkeleton />
+        resource.error ? <PanelError error={resource.error} resource={resource} what="daily quests" /> : <RowsSkeleton />
       ) : dailies.length === 0 ? (
         <EmptyState className="border-0 bg-transparent py-6" description={`Every daily is claimed. The next one arrives at ${dailyResetLocalTime(Date.now())}.`} title="No daily quests in the log" />
       ) : (
@@ -216,9 +218,9 @@ function DailyQuestsPanel({ dailies, records, resource }: { dailies: Array<Daily
          * One card per daily, drawn the way the quest log draws a quest: the
          * game's quest icon, the objective, a progress bar and the reward art.
          */
-        <ul className="grid gap-px bg-border/40 sm:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-3">
           {dailies.map((quest) => (
-            <li className="flex flex-col gap-2.5 bg-card p-4" key={quest.itemId}>
+            <li className="flex flex-col gap-2.5 rounded-lg bg-muted/30 p-4" key={quest.itemId}>
               <div className="flex items-start gap-3">
                 <ItemIcon records={records} size="large" templateId={quest.templateId} />
                 <div className="min-w-0 flex-1">
@@ -275,7 +277,7 @@ function ExpeditionsPanel({ now, resource }: { now: number; resource: AccountRes
   return (
     <PanelShell actions={<OpenLink to="/stw-operations/expeditions">Expeditions</OpenLink>} icon={Compass} title="Expeditions">
       {!summary ? (
-        resource.error ? <PanelError>{resource.error}</PanelError> : <RowsSkeleton />
+        resource.error ? <PanelError error={resource.error} resource={resource} what="expeditions" /> : <RowsSkeleton />
       ) : (
         <>
           {/*

@@ -1,4 +1,8 @@
-import type { ChangeEventHandler, FormEventHandler } from 'react'
+import type {
+  ChangeEventHandler,
+  FormEventHandler,
+  KeyboardEventHandler,
+} from 'react'
 import type { WorldInfoFileData } from '../../../types/data/advanced-mode/world-info'
 
 import { useTranslation } from 'react-i18next'
@@ -222,11 +226,18 @@ export function useItemData({ data }: { data: WorldInfoFileData }) {
   const [name, setName] = useState(data.filename)
 
   const validName = name.trim() !== ''
+  const changed = name.trim() !== data.filename
 
   const handleUpdateName: ChangeEventHandler<HTMLInputElement> = (
     event
   ) => {
     setName(event.target.value.replace(/\s+/g, ' '))
+  }
+
+  const handleNameKeyDown: KeyboardEventHandler<HTMLInputElement> = (event) => {
+    if (event.key === 'Escape') {
+      setName(data.filename)
+    }
   }
 
   const handleDeleteFile = () => {
@@ -244,6 +255,10 @@ export function useItemData({ data }: { data: WorldInfoFileData }) {
   const onSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault()
 
+    if (!changed) {
+      return
+    }
+
     if (validName) {
       window.electronAPI.renameWorldInfoFile(data, name.trim())
     } else {
@@ -252,11 +267,13 @@ export function useItemData({ data }: { data: WorldInfoFileData }) {
   }
 
   return {
+    changed,
     name,
     validName,
 
     handleDeleteFile,
     handleExportFile,
+    handleNameKeyDown,
     handleOpenFile,
     handleUpdateName,
     onSubmit,

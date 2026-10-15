@@ -28,12 +28,10 @@ export type RedeemCodesState = {
    * `state/accounts/scope` and every tool reads the same one.
    */
   codes: string
-  isLoading: boolean
   notifications: Record<string, RedeemCodesData>
   tags: Array<string>
 
   updateCodes: (value: string) => void
-  updateLoading: (state: boolean) => void
   updateTags: (tags: Array<string>) => void
 
   setInitialResponse: (value: Record<string, RedeemCodesData>) => void
@@ -49,12 +47,10 @@ export type RedeemCodesState = {
 export const useRedeemCodesStore = create<RedeemCodesState>()(
   immer((set) => ({
     codes: '',
-    isLoading: false,
     notifications: {},
     tags: [],
 
     updateCodes: (value) => set({ codes: value }),
-    updateLoading: (state) => set({ isLoading: state }),
     updateTags: (tags) =>
       set({
         tags: [...new Set(tags)],
@@ -63,9 +59,32 @@ export const useRedeemCodesStore = create<RedeemCodesState>()(
     setInitialResponse: (value) => set({ notifications: value }),
     updateResponse: (accountId, code) => {
       set((state) => {
-        state.notifications[accountId].codes[code.value].status =
-          code.status
+        const entry = state.notifications[accountId]?.codes[code.value]
+
+        if (entry) {
+          entry.status = code.status
+        }
       })
     },
   }))
 )
+
+let listening = false
+
+/**
+ * Replies are written to the store whichever page is open, so a redeem that is
+ * still answering when the user leaves finishes in the background.
+ */
+export function listenForRedeemCodes() {
+  if (listening) {
+    return
+  }
+
+  listening = true
+  window.electronAPI.redeemCodesNotification(async (notification) => {
+    useRedeemCodesStore.getState().updateResponse(notification.accountId, {
+      status: notification.status,
+      value: notification.code,
+    })
+  })
+}

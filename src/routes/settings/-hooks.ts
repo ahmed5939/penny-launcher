@@ -39,6 +39,7 @@ export function useSetupForm() {
   const { refresh: refreshGameInstall } = useGameInstall()
   const form = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
+    resetOptions: { keepDirtyValues: true },
     values: {
       autoDailyQuests,
       claimingRewards,
@@ -53,18 +54,13 @@ export function useSetupForm() {
   })
 
   const onDetectPath = async () => {
-    const result = await window.electronAPI.detectGamePath()
+    const result = await window.electronAPI.detectGamePathOnly()
 
     form.setValue('path', result.path, {
       shouldDirty: true,
       shouldTouch: true,
       shouldValidate: true,
     })
-    onSubmit({
-      ...form.getValues(),
-      path: result.path,
-    })
-    await refreshGameInstall(true)
   }
 
   const onChooseFolder = async () => {
@@ -79,15 +75,21 @@ export function useSetupForm() {
       return
     }
 
-    form.setValue('path', result.path, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    })
-    onSubmit({
-      ...form.getValues(),
+    const current = useSettingsStore.getState()
+
+    window.electronAPI.updateSettings({
+      autoDailyQuests: current.autoDailyQuests,
+      claimingRewards: current.claimingRewards,
+      customProcess: current.customProcess,
+      missionInterval: current.missionInterval,
       path: result.path,
+      systemTray: current.systemTray,
+      discordRichPresence: current.discordRichPresence,
+      overlay: current.overlay,
+      userAgent: current.userAgent,
     })
+    form.resetField('path', { defaultValue: result.path })
+    toast.success(t('form.submit.status.success'))
     await refreshGameInstall(true)
   }
 

@@ -23,6 +23,7 @@ import {
   PageHeader,
   Panel,
   PanelBody,
+  RefreshButton,
   SearchField,
   Segmented,
   StatusPill,
@@ -91,19 +92,7 @@ function defaultSeasonKey(payload: TimelinePayload) {
 }
 
 export function RouteComponent() {
-  const { t } = useTranslation(['sidebar'])
-
-  return (
-    <>
-      <PageHeader
-        icon={CalendarRange}
-        section={t('stw-operations.title')}
-        title={t('stw-operations.options.timeline')}
-        description="Every Ventures season in running order — its modifier, llama and event mode via the community Bug List, plus the items each week's event shop stocks."
-      />
-      <Content />
-    </>
-  )
+  return <Content />
 }
 
 /** Template id prefixes (record keys are lower-case) an event shop sells. */
@@ -150,12 +139,15 @@ function findItemByName<T>(
 function Content() {
   useRequestItemDatabase()
 
+  const { t } = useTranslation(['sidebar'])
+
   const [detail, setDetail] = useState<ItemDetailSubject | null>(null)
   const [search, setSearch] = useState('')
   const [seasons, setSeasons] = useState<Array<TimelineSeason>>([])
   const [currentIndex, setCurrentIndex] = useState(-1)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [tab, setTab] = useState<DetailTab>('overview')
 
@@ -201,6 +193,7 @@ function Content() {
         setCurrentIndex(response.currentIndex)
         setErrorMessage(response.errorMessage ?? null)
         setHasLoaded(true)
+        setRefreshing(false)
         // Land the reader on the live season, but never steal a selection
         // they have already made.
         setSelectedKey((previous) => previous ?? defaultSeasonKey(response))
@@ -296,33 +289,70 @@ function Content() {
   // The season's event mode (Dungeons, Frostnite…), else its Ventures zone.
   usePageBackdrop(eventBackdrop(selected?.extras?.eventMode, selected?.name) ?? seasonBackdrop(selected?.name))
 
+  const header = (
+    <PageHeader
+      actions={
+        <RefreshButton
+          loading={!hasLoaded || refreshing}
+          onClick={() => {
+            setRefreshing(true)
+            window.electronAPI.requestTimeline(true)
+          }}
+        />
+      }
+      description="Every Ventures season in order, with its modifier, llama and weekly event shop."
+      icon={CalendarRange}
+      section={t('stw-operations.title')}
+      title={t('stw-operations.options.timeline')}
+    />
+  )
+
   if (errorMessage) {
     return (
-      <Callout
-        title="Could not load the timeline"
-        tone="danger"
-      >
-        {errorMessage}
-      </Callout>
+      <>
+        {header}
+        <div role="alert">
+          <Callout
+            title="Could not load the timeline"
+            tone="danger"
+          >
+            {errorMessage}. Try Refresh.
+          </Callout>
+        </div>
+      </>
+    )
+  }
+
+  if (!hasLoaded) {
+    return (
+      <>
+        {header}
+        <div role="status">
+          <EmptyState
+            icon={CalendarRange}
+            title="Loading the timeline…"
+          />
+        </div>
+      </>
     )
   }
 
   if (seasons.length <= 0) {
     return (
-      <EmptyState
-        description={
-          hasLoaded
-            ? 'Epic did not return any Ventures seasons. Try again in a moment.'
-            : 'Fetching the season schedule.'
-        }
-        icon={CalendarRange}
-        title={hasLoaded ? 'No seasons available' : 'Loading timeline'}
-      />
+      <>
+        {header}
+        <EmptyState
+          description="Epic did not return any Ventures seasons. Try Refresh."
+          icon={CalendarRange}
+          title="No seasons available"
+        />
+      </>
     )
   }
 
   return (
     <>
+      {header}
       <Panel id="timeline-card">
         <PanelBody className="p-0">
           <div className="grid lg:grid-cols-[17rem_minmax(0,1fr)]">
@@ -578,7 +608,7 @@ function SeasonDetail({
 
           {availableItems.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground">
+              <p className="section-label flex items-center gap-1.5">
                 <Sparkles className="size-3" />
                 Available this season
               </p>
@@ -616,7 +646,7 @@ function SeasonDetail({
         <div className="space-y-4">
           {season.questlines.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground">
+              <p className="section-label flex items-center gap-1.5">
                 <ScrollText className="size-3" />
                 Questlines
               </p>
@@ -648,7 +678,7 @@ function SeasonDetail({
 
           {season.events.length > 0 && (
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-2xs font-semibold text-muted-foreground">
+              <p className="section-label flex items-center gap-1.5">
                 <CalendarRange className="size-3" />
                 Limited-time events
               </p>

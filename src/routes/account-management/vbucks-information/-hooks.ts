@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useAccountSelectorData } from '../../../components/selectors/accounts/hooks'
 
 import { VBucksInformationData } from '../../../state/management/vbucks-information'
+import { useAccountScopeStore } from '../../../state/accounts/scope'
 
 import {
   useGetVBucksInformationActions,
@@ -12,6 +13,7 @@ import {
 import { useGetAccounts } from '../../../hooks/accounts'
 
 import { toast } from '../../../lib/notifications'
+import { parseCustomDisplayName } from '../../../lib/utils'
 
 /**
  * One definition of "how many V-Bucks does this account have", so the banner
@@ -32,9 +34,10 @@ function accountTotal(data: VBucksInformationData): number {
 export function useVBucksInformationData() {
   const { t } = useTranslation(['general'])
 
-  const { accountsArray } = useGetAccounts()
+  const { accountList, accountsArray } = useGetAccounts()
   const { data, isLoading, selectedAccounts } =
     useGetVBucksInformationData()
+  const [requestedIds, setRequestedIds] = useState<Array<string>>([])
   const {
     vbucksInformationUpdateData,
     vbucksInformationUpdateLoading,
@@ -46,8 +49,16 @@ export function useVBucksInformationData() {
     getAccounts,
   } = useAccountSelectorData()
 
+  const scope = new Set(selectedAccounts)
+  const requestedInScope = requestedIds.filter((accountId) =>
+    scope.has(accountId)
+  )
+
   const parsedData = accountsArray
-    .filter((account) => data[account.accountId] !== undefined)
+    .filter(
+      (account) =>
+        scope.has(account.accountId) && data[account.accountId] !== undefined
+    )
     .map((account) => data[account.accountId])
   const vbucksSummary = parsedData.reduce(
     (accumulator, current) => accumulator + accountTotal(current),
@@ -56,11 +67,29 @@ export function useVBucksInformationData() {
 
   const isDisabledForm = isSelectedEmpty || isLoading || !areThereAccounts
 
+  /**
+   * The main process drops an account that fails rather than reporting it, so
+   * a requested account with no balance back is the only sign it failed.
+   */
+  const failedIds =
+    isLoading || isSelectedEmpty
+      ? []
+      : requestedInScope.filter((accountId) => !data[accountId])
+  const failedNames = failedIds.map((accountId) =>
+    parseCustomDisplayName(accountList[accountId])
+  )
+
   useEffect(() => {
     const listener = window.electronAPI.getVBucksInformationNotification(
       async (data) => {
+        const inScope = new Set(useAccountScopeStore.getState().members)
+
         vbucksInformationUpdateLoading(false)
-        vbucksInformationUpdateData(data)
+        vbucksInformationUpdateData(
+          Object.fromEntries(
+            Object.entries(data).filter(([accountId]) => inScope.has(accountId))
+          )
+        )
       }
     )
 
@@ -82,6 +111,7 @@ export function useVBucksInformationData() {
       return
     }
 
+    setRequestedIds(selectedAccounts.map((account) => account.accountId))
     vbucksInformationUpdateLoading(true)
     vbucksInformationUpdateData({}, true)
 
@@ -104,9 +134,11 @@ export function useVBucksInformationData() {
 
   return {
     areThereAccounts,
+    failedNames,
     isDisabledForm,
     isLoading,
     isSelectedEmpty,
+    requestedCount: requestedInScope.length,
     vbucksSummary,
     data: parsedData,
 

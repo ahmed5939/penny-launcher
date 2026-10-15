@@ -3,7 +3,7 @@
     "add": "Add",
     "change": "Change",
     "create": "Create",
-    "login": "Login",
+    "login": "Log in",
     "revert": "Revert",
     "search": "Search",
     "success": "Success",
@@ -26,8 +26,8 @@
       }
     },
     "accounts": {
-      "placeholder": "Search on {{total}} accounts",
-      "placeholder_private": "Search on your accounts",
+      "placeholder": "Search {{total}} accounts",
+      "placeholder_private": "Search your accounts",
       "search-empty": "No account found",
       "select": "Select account",
       "selected": "Selected account",
@@ -47,13 +47,13 @@
     "player": {
       "search-empty": "No player found",
       "recently": {
-        "empty-placeholder": "No recently players",
-        "search-placeholder": "Search on {{total}} player/s",
-        "select-placeholder": "Select a recently player"
+        "empty-placeholder": "No recent players",
+        "search-placeholder": "Search {{total}} players",
+        "select-placeholder": "Select a recent player"
       }
     },
     "search-account": {
-      "label": "Search player by accountId or display name (epic, xbl or psn)",
+      "label": "Search by account ID or display name (Epic, Xbox or PlayStation)",
       "input": {
         "placeholder": "Example: sample"
       }
@@ -91,12 +91,13 @@
     "button": "Launch Fortnite",
     "notifications": {
       "success": "The game has been launched with the account {{name}}",
-      "error": "An error has occurred launching game with account {{name}}, try again later",
+      "error": "Could not launch Fortnite with {{name}}. Check the game is installed and not already running, then try again.",
       "missing": "FortniteLauncher.exe was not found. Choose the Win64 folder or install Fortnite from Epic or Xbox."
     }
   },
   "close-game": {
-    "button": "Close game"
+    "button": "Close game",
+    "confirm": "Confirm — close Fortnite"
   },
   "separators": {
     "or": "Or"
@@ -115,15 +116,6 @@
   "validations": {
     "form": {
       "input": {
-        "account-id": {
-          "invalid": "❌ Invalid accountId"
-        },
-        "device-id": {
-          "invalid": "❌ Invalid deviceId"
-        },
-        "secret": {
-          "invalid": "❌ Invalid secret"
-        },
         "code": {
           "invalid": "❌ Invalid code"
         }
@@ -131,7 +123,7 @@
     },
     "screenshot": {
       "success": "Screenshot generated and copied to clipboard",
-      "error": "Couldn't generate screenshot, please try again later"
+      "error": "Could not take the screenshot. Try again."
     }
   },
   "home": {
@@ -139,9 +131,10 @@
     "ready": "Ready to play",
     "playing": "Now playing",
     "no-account": "Add an account to start",
-    "no-account-description": "Authorization code, device auth, exchange code, or import from Aerial.",
+    "no-account-description": "Sign in with an Epic Games account.",
     "add-account": "Add account",
     "select-account": "Pick an account in the titlebar",
+    "sign-in-expired": "Sign-in expired — add this account again",
     "session": "Session",
     "stats": {
       "accounts": "Accounts",
@@ -164,21 +157,24 @@
       "refresh": "Refresh alerts",
       "vbucks": "V-Bucks",
       "survivors": "Legendary survivors",
-      "perk-up": "Uncommon PERK-UP!"
+      "perk-up": "Uncommon PERK-UP!",
+      "loading": "Loading alerts…"
     },
     "mission-board": {
       "title": "Daily missions",
-      "source": "Penny DB",
+      "zone": "Zone",
       "refresh": "Refresh",
       "updated": "Updated {{time}}",
+      "loading": "Loading missions…",
       "empty": "No missions match this filter",
-      "error": "Couldn't load Penny DB missions",
+      "error": "Could not load Penny DB missions. Try Refresh.",
       "filter-all": "All",
       "filter-alerts": "Alerts",
       "filter-vbucks": "V-Bucks",
       "zone-all": "All zones",
       "vbucks-count": "{{count}} V-Bucks",
       "alerts-count": "{{count}} alerts",
+      "alerts-count_one": "{{count}} alert",
       "open-site": "Penny DB",
       "alert": "Alert",
       "zones": {
@@ -212,19 +208,23 @@
       "check": "Check for update",
       "update": "Update",
       "incomplete": "Install is incomplete",
+      "loading": "Loading Fortnite install…",
       "update-started": "Opened the official updater. Finish the update in Epic Games Launcher or the Xbox app.",
-      "update-failed": "Could not open the official updater.",
+      "update-failed": "Could not open the official updater. Open Epic Games Launcher or the Xbox app yourself.",
+      "opened-egl": "Opened Epic Games Launcher. Finish the install there.",
+      "open-egl-failed": "Could not open Epic Games Launcher. Open it yourself and try again.",
+      "opened-xbox": "Opened the Xbox app. Finish the install there.",
+      "open-xbox-failed": "Could not open the Xbox app. Open it yourself and try again.",
       "folder-invalid": "That folder does not contain FortniteLauncher.exe.",
       "source-settings": "Saved path",
       "source-egl-manifest": "Epic Games Launcher",
       "source-egl-installed": "Epic Games Launcher",
       "source-program-files": "Program Files",
-      "source-xbox": "Xbox PC app",
-      "note": "Updates are installed by Epic or Xbox. Penny does not download or patch game files."
+      "source-xbox": "Xbox PC app"
     }
   },
   "account-selected": "Selected account: <2>{{name}}</2>",
-  "boosts": "Boost/s",
+  "boosts": "Boosts",
   "credits": "Credits",
   "current": "Current",
   "date": "Date",
@@ -235,7 +235,7 @@
   "hide-information": "Hide information",
   "note": "Note",
   "show-information": "Show hidden information",
-  "ip-address": "IP Address",
+  "ip-address": "IP address",
   "is-running": "App is running",
   "is-not-running": "App is not running",
   "last-played": "Last played at: {{date}}",

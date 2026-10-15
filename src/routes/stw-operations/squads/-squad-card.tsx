@@ -79,6 +79,7 @@ export function SquadCard({
   squad: SquadView
 }) {
   const issues = issueLabels(squad.issues, Boolean(squad.lead))
+  const status = issues.length > 0 ? issues.join(' · ') : `Led by ${leadShortName(squad.lead)}`
   const sets = tallySets(
     squad.slots.map((slot) => ({
       slotIndex: slot.slotIndex,
@@ -91,7 +92,9 @@ export function SquadCard({
       <header className="flex items-center gap-3 border-b border-border/30 px-4 py-3">
         <SquadEmblem className="size-8" squadId={squad.id} />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-title font-semibold leading-tight">{squad.label}</h3>
+          <h3 className="truncate text-title font-semibold leading-tight" title={squad.label}>
+            {squad.label}
+          </h3>
           <p
             className={cn(
               'mt-0.5 flex items-center gap-1.5 truncate text-2xs',
@@ -101,8 +104,8 @@ export function SquadCard({
             {issues.length > 0 && (
               <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-warning" />
             )}
-            <span className="truncate">
-              {issues.length > 0 ? issues.join(' · ') : `Led by ${leadShortName(squad.lead)}`}
+            <span className="truncate" title={status}>
+              {status}
             </span>
           </p>
         </div>
@@ -262,7 +265,7 @@ function SlotRow({
         className="flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left transition-colors hover:bg-accent/30 disabled:pointer-events-none disabled:opacity-60"
         disabled={isAssigning}
         onClick={onPick}
-        title={isLead ? 'Swap the lead' : 'Swap this survivor'}
+        title={`Swap ${survivor.name}`}
         type="button"
       >
         <SurvivorArt
@@ -274,7 +277,9 @@ function SlotRow({
         />
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 items-center gap-1.5">
-            <span className="truncate text-ui font-medium leading-tight">{survivor.name}</span>
+            <span className="truncate text-ui font-medium leading-tight" title={survivor.name}>
+              {survivor.name}
+            </span>
             {isLead && <Chip tone="accent">Lead</Chip>}
           </span>
           <span className="mt-0.5 block">

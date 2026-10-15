@@ -1,8 +1,8 @@
 import type { MarketplacePlugin, PluginManageRequest, PluginReview, PluginSummary } from '../../types/plugins'
 import { useCallback, useEffect, useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '../../lib/notifications'
 
-const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Request failed.'
+const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Could not finish that request.'
 export function usePluginsData() {
   const [installed, setInstalled] = useState<PluginSummary[] | null>(null)
   const [marketplace, setMarketplace] = useState<MarketplacePlugin[] | null>(null)
@@ -10,18 +10,22 @@ export function usePluginsData() {
   const [readme, setReadme] = useState<{ name: string; content: string } | null>(null)
   const [removeTarget, setRemoveTarget] = useState<PluginSummary | null>(null)
   const [review, setReview] = useState<PluginReview | null>(null)
+  const [rollbackTarget, setRollbackTarget] = useState<PluginSummary | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const [mode, setMode] = useState({ safeMode: false, forced: false })
   const refresh = useCallback(async () => {
+    setRefreshing(true)
     try {
       const [plugins, catalog, state] = await Promise.all([
         window.electronAPI.listPlugins(), window.electronAPI.listMarketplacePlugins(), window.electronAPI.pluginMode(),
       ])
-      setInstalled(plugins); setMarketplace(catalog); setMode(state)
+      setInstalled(plugins); setMarketplace(catalog); setMode(state); setLoadError(null)
     } catch (error) {
+      setLoadError(errorMessage(error))
       setInstalled((previous) => previous ?? [])
       setMarketplace((previous) => previous ?? [])
-      toast.error(`Add-ons could not be loaded: ${errorMessage(error)}`)
-    }
+    } finally { setRefreshing(false) }
   }, [])
   useEffect(() => {
     refresh()
@@ -40,7 +44,7 @@ export function usePluginsData() {
   }, [refresh])
   const perform = useCallback(async (id: string, operation: () => Promise<{ ok: boolean; error?: string }>) => {
     setPendingId(id)
-    try { const result = await operation(); if (!result.ok) toast.error(result.error ?? 'Add-on operation failed.') }
+    try { const result = await operation(); if (!result.ok) toast.error(result.error ?? 'Could not finish that add-on action. Try again.') }
     catch (error) { toast.error(errorMessage(error)) }
     finally { setPendingId(null); await refresh() }
   }, [refresh])
@@ -48,7 +52,7 @@ export function usePluginsData() {
     setPendingId(id ?? 'import')
     try {
       const result = await window.electronAPI.reviewPlugin(kind, id)
-      if (!result.ok) toast.error(result.error ?? 'Could not inspect add-on.')
+      if (!result.ok) toast.error(result.error ?? 'Could not inspect the add-on. Try again.')
       else if (result.review) setReview(result.review)
     } catch (error) { toast.error(errorMessage(error)) }
     finally { setPendingId(null) }
@@ -75,6 +79,14 @@ export function usePluginsData() {
       return result
     })
   }
+  const handleRollback = async () => {
+    if (!rollbackTarget) return
+    await perform(rollbackTarget.id, async () => {
+      const result = await window.electronAPI.managePlugin({ action: 'rollback', id: rollbackTarget.id })
+      if (result.ok) setRollbackTarget(null)
+      return result
+    })
+  }
   const handleReadme = async (plugin: { id: string; name: string }) => {
     try {
       const result = await window.electronAPI.readPluginReadme(plugin.id)
@@ -83,8 +95,8 @@ export function usePluginsData() {
     } catch (error) { toast.error(errorMessage(error)) }
   }
   return {
-    handleInstall, handleOpen, handleReadme, handleRemove, handleReview, handleAccept, handleCancelReview, handleManage,
-    installed: installed ?? [], marketplace: marketplace ?? [], isLoading: installed === null || marketplace === null,
-    pendingId, readme, removeTarget, setReadme, setRemoveTarget, review, mode,
+    handleInstall, handleOpen, handleReadme, handleRemove, handleRollback, handleReview, handleAccept, handleCancelReview, handleManage,
+    installed: installed ?? [], loadError, marketplace: marketplace ?? [], isLoading: installed === null || marketplace === null,
+    pendingId, readme, refresh, refreshing, removeTarget, rollbackTarget, setReadme, setRemoveTarget, setRollbackTarget, review, mode,
   }
 }

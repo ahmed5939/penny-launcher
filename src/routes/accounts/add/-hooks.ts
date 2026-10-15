@@ -40,6 +40,7 @@ export function useHandlers() {
 
 export function useBaseSetupForm({
   fetcher,
+  onSuccess,
   type,
 }: {
   fetcher: (
@@ -47,6 +48,7 @@ export function useBaseSetupForm({
   ) => {
     removeListener: () => Electron.IpcRenderer
   }
+  onSuccess?: () => void
   type: keyof AddAccountsLoadingsState
 }) {
   const { t } = useTranslation(['accounts'], {
@@ -76,6 +78,8 @@ export function useBaseSetupForm({
         // window.electronAPI.requestProviderAndAccessToken(
         //   data.currentAccount
         // )
+
+        onSuccess?.()
 
         toast.success(
           t('success', {

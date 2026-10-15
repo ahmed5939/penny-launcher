@@ -98,7 +98,13 @@ export function AccountStandingLine({ accountId }: { accountId: string }) {
       {entry.status === 'unknown' && (
         <>
           <ShieldQuestion className="size-3.5 shrink-0" />
-          <span title={entry.errorMessage}>Standing unavailable</span>
+          <span>Standing unavailable</span>
+          {entry.errorMessage && (
+            <>
+              <span>·</span>
+              <span>{entry.errorMessage}</span>
+            </>
+          )}
           <span>·</span>
           <button
             className="font-medium text-primary hover:underline disabled:opacity-50"

@@ -31,7 +31,8 @@
     }
   },
   "information": {
-    "missions": "{{total}} misiones",
+    "missions_one": "{{count}} misiones",
+    "missions_other": "{{count}} misiones",
     "tile-index": "Tile Index:",
     "alert-guid": "Mission Alert Guid:",
     "mission-guid": "Mission Guid:",

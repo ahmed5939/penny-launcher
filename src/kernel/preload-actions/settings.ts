@@ -46,10 +46,11 @@ export function appLanguageNotification(
  * Settings
  */
 
-export function detectGamePath(): Promise<{
+/** Finds the install without saving it: the settings form decides when to save. */
+export function detectGamePathOnly(): Promise<{
   appVersion: string
   name: string
   path: string
 }> {
-  return ipcRenderer.invoke(ElectronAPIEventKeys.SettingsDetectPath)
+  return ipcRenderer.invoke(ElectronAPIEventKeys.SettingsDetectPathOnly)
 }

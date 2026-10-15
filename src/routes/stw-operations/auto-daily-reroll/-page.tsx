@@ -5,7 +5,7 @@ import type {
   DailyRerollStatus,
 } from '../../../features/daily-reroll/policy'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Lock, RefreshCw, ScrollText } from 'lucide-react'
 
 import {
@@ -19,6 +19,7 @@ import {
   Panel,
   PanelBody,
   PanelHeader,
+  RefreshButton,
   SearchField,
 } from '../../../components/page'
 import { ItemIcon } from '../../../components/items/item-icon'
@@ -28,6 +29,7 @@ import { useAccountSelectorData } from '../../../components/selectors/accounts/h
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
 import { useItemDatabaseStore } from '../../../state/items/database'
 import { questRewardAmount } from '../../../config/constants/fortnite/accolade-xp'
+import { dailyResetLocalTime } from '../../-index/-home/-dashboard-model'
 import { cn } from '../../../lib/utils'
 
 type Quest = DailyRerollStatus['quests'][number]
@@ -44,39 +46,41 @@ export function RouteComponent() {
   const [status, setStatus] = useState<DailyRerollStatus | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const generation = useRef(0)
+
+  const load = useCallback(() => {
+    const started = generation.current
+    setLoading(true)
+    return window.electronAPI
+      .getAutoDailyRerollStatus()
+      .then((value) => {
+        if (started !== generation.current) return
+        setStatus(value)
+        setError('')
+      })
+      .catch(() => {
+        if (started !== generation.current) return
+        setError('Could not load daily quest settings. Try Refresh.')
+      })
+      .finally(() => {
+        if (started === generation.current) setLoading(false)
+      })
+  }, [])
 
   useEffect(() => {
     if (busy) return
-    let active = true
-    const refresh = () =>
-      window.electronAPI
-        .getAutoDailyRerollStatus()
-        .then((value) => {
-          if (active) {
-            setStatus(value)
-            setError('')
-          }
-        })
-        .catch(() => {
-          if (active)
-            setError(
-              'Could not load reroll settings or quest data. Please try again.',
-            )
-        })
-    void refresh()
-    const timer = setInterval(() => {
-      if (!busy) void refresh()
-    }, 30_000)
-    return () => {
-      active = false
-      clearInterval(timer)
-    }
-  }, [busy])
+    void load()
+    const timer = setInterval(() => void load(), 30_000)
+    return () => clearInterval(timer)
+  }, [busy, load])
 
   const update = async (
     accountId: string,
     settings: DailyRerollPreferences,
   ) => {
+    generation.current += 1
+    setLoading(false)
     setBusy(true)
     setError('')
     try {
@@ -84,9 +88,7 @@ export function RouteComponent() {
         await window.electronAPI.updateAutoDailyReroll(accountId, settings),
       )
     } catch {
-      setError(
-        'Could not save settings. Refresh to check the saved state before trying again.',
-      )
+      setError('Could not save the setting. Try Refresh to see what was saved.')
     } finally {
       setBusy(false)
     }
@@ -95,10 +97,17 @@ export function RouteComponent() {
   return (
     <div className="space-y-5">
       <PageHeader
+        actions={
+          <RefreshButton
+            disabled={busy}
+            loading={loading}
+            onClick={load}
+          />
+        }
         icon={RefreshCw}
         section="Automate"
         title="Daily quests"
-        description="Pull new dailies at reset and reroll the one you don't want."
+        description={`Pull new dailies and reroll the one you don't want. Runs at daily reset (${dailyResetLocalTime(Date.now())}) while Penny is open.`}
       />
 
       {error && (
@@ -109,8 +118,9 @@ export function RouteComponent() {
 
       {parsedSelectedAccounts.length === 0 ? (
         <EmptyState
+          description="Select an account in the title bar to set up daily quests."
           icon={RefreshCw}
-          title="Select an account in the title bar to set up daily quests."
+          title="Choose an account"
         />
       ) : !status ? (
         !error && (
@@ -147,10 +157,6 @@ export function RouteComponent() {
           ))}
         </>
       )}
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Updates run after 00:01 UTC and rerolls after 00:04 UTC while Penny is open (or when you next open it), and a reroll only follows a successful update. Rerolling uses your daily allowance and can use today&apos;s on the next check. Quests over 50% done or with unknown targets are always kept.
-      </p>
     </div>
   )
 }
@@ -176,6 +182,7 @@ function AccountDailies({
 }) {
   const [search, setSearch] = useState('')
   const updating = config.updateQuests || config.enabled
+  const awaitingQuests = !config.enabled && quests.length === 0
   const save = (partial: Partial<DailyRerollPreferences>) =>
     onSave({
       enabled: config.enabled,
@@ -228,7 +235,9 @@ function AccountDailies({
             className="py-3"
             hint={
               <span role="status">
-                {lastRun(config.lastResult, config.lastActivity, 'No automatic rerolls yet.')}
+                {awaitingQuests
+                  ? 'Waiting for quest data.'
+                  : lastRun(config.lastResult, config.lastActivity, 'No automatic rerolls yet.')}
               </span>
             }
             label="Reroll a daily I don't keep"
@@ -236,7 +245,7 @@ function AccountDailies({
             <Switch
               aria-label={`Auto daily reroll for ${label}`}
               checked={config.enabled}
-              disabled={busy || (!config.enabled && quests.length === 0)}
+              disabled={busy || awaitingQuests}
               onCheckedChange={(enabled) =>
                 save({ enabled, updateQuests: enabled || config.updateQuests })
               }
@@ -337,10 +346,13 @@ function AccountDailies({
             })}
           </ul>
           {shown.length === 0 && (
-            <p className="px-4 py-6 text-center text-xs text-muted-foreground">No daily quest matches “{search}”.</p>
+            <EmptyState
+              className="border-0 bg-transparent py-8"
+              title={`No daily quest matches “${search}”.`}
+            />
           )}
           <p className="border-t border-border/60 px-4 py-2.5 text-xs text-muted-foreground">
-            Kept quests are never rerolled; any other daily may be.
+            Kept quests are never rerolled. Quests over half done, or with unknown targets, are always kept.
           </p>
         </>
       )}

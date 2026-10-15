@@ -86,12 +86,11 @@ export function Resources({ data, label }: { data: CollectionBookData; label: (i
         </PanelBody>
       </Panel>
 
-      <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
-        <p>Invested is today’s cost to recreate each item’s level and evolutions from level 1 at its current rarity — not a record of what was spent. It excludes acquisition, rarity increases, perk changes, refunds and superchargers. Missing slots are not counted.</p>
-        {totals.unknownInvested.length > 0 && (
-          <p>Investment leaves out {totals.unknownInvested.length} item{totals.unknownInvested.length === 1 ? '' : 's'} whose earlier evolution route cannot be verified: {data.slotted.filter((i) => totals.unknownInvested.includes(i.id)).map((i) => label(i.templateId)).join(', ')}. Their remaining upgrade costs are still included.</p>
-        )}
-      </div>
+      {totals.unknownInvested.length > 0 && (
+        <Callout tone="warning">
+          Investment leaves out {totals.unknownInvested.length} item{totals.unknownInvested.length === 1 ? '' : 's'} whose earlier evolution route cannot be verified: {data.slotted.filter((i) => totals.unknownInvested.includes(i.id)).map((i) => label(i.templateId)).join(', ')}. Their remaining upgrade costs are still included.
+        </Callout>
+      )}
     </div>
   )
 }

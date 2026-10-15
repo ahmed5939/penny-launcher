@@ -1,5 +1,4 @@
 import type { LucideIcon } from 'lucide-react'
-import type { CSSProperties } from 'react'
 import type {
   LeaderboardMetric,
   LeaderboardRow,
@@ -28,7 +27,6 @@ import {
 } from '../../../kernel/core/leaderboard-parse'
 
 import { pennyDbLinks } from '../../../config/about/links'
-import { raritiesColor, RarityType } from '../../../config/constants/resources'
 import {
   leaderboardDefinitionByMetric,
   leaderboardGroups,
@@ -236,9 +234,11 @@ export function RouteComponent() {
               )}
 
               {errorMessage && (
-                <Callout title={t('leaderboards.error-title')} tone="danger">
-                  {errorMessage}
-                </Callout>
+                <div role="alert">
+                  <Callout title={t('leaderboards.error-title')} tone="danger">
+                    {errorMessage}. {t('leaderboards.error-retry')}
+                  </Callout>
+                </div>
               )}
 
               {yourRow && (
@@ -264,7 +264,11 @@ export function RouteComponent() {
 
               {rows.length <= 0 ? (
                 isLoading ? (
-                  <div className="space-y-2 pt-1">
+                  <div
+                    aria-label={t('leaderboards.loading')}
+                    className="space-y-2 pt-1"
+                    role="status"
+                  >
                     {Array.from({ length: 10 }, (_, index) => (
                       <div
                         className="flex items-center gap-3 px-2 py-1.5"
@@ -277,11 +281,13 @@ export function RouteComponent() {
                     ))}
                   </div>
                 ) : (
-                  <EmptyState
-                    description={t('leaderboards.empty-description')}
-                    icon={Trophy}
-                    title={t('leaderboards.empty')}
-                  />
+                  !errorMessage && (
+                    <EmptyState
+                      description={t('leaderboards.empty-description')}
+                      icon={Trophy}
+                      title={t('leaderboards.empty')}
+                    />
+                  )
                 )
               ) : (
                 <div>
@@ -342,21 +348,9 @@ function leaderboardRowId(rank: number) {
   return `leaderboard-row-${rank}`
 }
 
-/** Gold, silver and bronze, borrowed from the rarity palette. */
-const medalColors: Record<number, string> = {
-  1: raritiesColor[RarityType.Mythic],
-  2: raritiesColor[RarityType.Common],
-  3: raritiesColor[RarityType.Legendary],
-}
-
-function medalStyle(color: string | undefined): CSSProperties | undefined {
-  if (!color) return undefined
-
-  return {
-    backgroundColor: `color-mix(in srgb, ${color} 15%, transparent)`,
-    boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${color} 30%, transparent)`,
-    color,
-  }
+/** First takes the warning tone; second and third stand apart in foreground. */
+function medalTone(rank: number) {
+  return rank === 1 ? 'text-warning' : 'text-foreground'
 }
 
 /**
@@ -381,7 +375,6 @@ function Podium({
       className="mb-3 grid grid-cols-3 items-end gap-2"
     >
       {order.map((row) => {
-        const color = medalColors[row.rank]
         const isLinked = linkedDisplayNames.has(row.displayName.toLowerCase())
 
         return (
@@ -391,17 +384,15 @@ function Podium({
               row.rank === 1 ? 'pb-4 pt-5' : 'pb-3 pt-3'
             )}
             key={`${row.profileId}-${row.rank}`}
-            style={{
-              backgroundImage: `linear-gradient(to top, color-mix(in srgb, ${color} 14%, transparent), transparent)`,
-            }}
           >
             <Trophy
-              className={row.rank === 1 ? 'size-6' : 'size-5'}
-              style={{ color }}
+              className={cn(
+                row.rank === 1 ? 'size-6' : 'size-5',
+                medalTone(row.rank)
+              )}
             />
             <span
-              className="figure text-xs font-semibold"
-              style={{ color }}
+              className={cn('figure text-xs font-semibold', medalTone(row.rank))}
             >
               #{row.rank}
             </span>
@@ -417,7 +408,7 @@ function Podium({
             <span
               className={cn(
                 'figure font-bold leading-none',
-                row.rank === 1 ? 'text-xl' : 'text-base'
+                row.rank === 1 ? 'text-display-sm' : 'text-title'
               )}
             >
               {formatLeaderboardValue(row.value, metric)}
@@ -430,15 +421,12 @@ function Podium({
 }
 
 function RankBadge({ rank }: { rank: number }) {
-  const medal = medalColors[rank]
-
   return (
     <span
       className={cn(
         'flex h-7 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold tabular-nums',
-        !medal && 'text-muted-foreground'
+        rank <= 3 ? medalTone(rank) : 'text-muted-foreground'
       )}
-      style={medalStyle(medal)}
     >
       {rank}
     </span>

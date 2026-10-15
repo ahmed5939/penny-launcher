@@ -113,7 +113,7 @@ export function ShopCatalog({
   return (
     <>
       {storefronts.length > 0 && (
-        <StatRow className="lg:grid-cols-2">
+        <StatRow>
           <StatTile
             icon={Store}
             label="Storefronts"
@@ -138,7 +138,7 @@ export function ShopCatalog({
               variant="ghost"
             >
               <ExternalLink className="size-3.5" />
-              Penny DB
+              PennyDB
             </Button>
           }
           compact
@@ -179,7 +179,7 @@ export function ShopCatalog({
           <div role="status">
             <EmptyState
               className="border-0 bg-transparent py-8"
-              description="Asking Penny DB for the current llamas and storefronts."
+              description="Asking PennyDB for the current llamas and storefronts."
               icon={Compass}
               title="Loading the catalog…"
             />
@@ -210,12 +210,6 @@ export function ShopCatalog({
           storefront={storefront}
         />
       ))}
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Names, prices, limits and images come from Penny DB. Purchases go
-        through this account&apos;s Epic catalog when the same offer is there —
-        never through Penny DB.
-      </p>
 
       <GoToTop containerId="shop-catalog-card" />
     </>
@@ -299,7 +293,10 @@ function CatalogCard({
           <div className="size-16 shrink-0 rounded-lg bg-muted/40" />
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-ui font-semibold leading-tight">
+          <p
+            className="truncate text-ui font-semibold leading-tight"
+            title={catalogOffer.name}
+          >
             {catalogOffer.name}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -322,7 +319,7 @@ function CatalogCard({
                 src={catalogOffer.currencyImageUrl}
               />
             )}
-            <span className="figure text-lg font-bold leading-none">
+            <span className="figure text-title font-bold leading-none">
               {catalogOffer.price.toLocaleString()}
             </span>
           </p>

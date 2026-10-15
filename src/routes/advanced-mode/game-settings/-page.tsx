@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import { Monitor, RotateCcw } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -133,11 +134,37 @@ function Content() {
     saving,
   } = useGameUserSettings()
 
+  const isDirty = form.formState.isDirty
+
+  /* Restoring and refreshing overwrite work, so each asks twice (§7). */
+  const [armed, setArmed] = useState<'restore' | 'reload' | null>(null)
+
+  /* Disarm after a few seconds, so a stray second click later does nothing. */
+  useEffect(() => {
+    if (!armed) {
+      return
+    }
+
+    const timer = setTimeout(() => setArmed(null), 5000)
+
+    return () => clearTimeout(timer)
+  }, [armed])
+
+  /* Saving, discarding or editing changes what the press would do, so it starts again. */
+  useEffect(() => {
+    setArmed(null)
+  }, [isDirty])
+
   if (loading) {
     return (
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Skeleton className="h-72 lg:col-span-2" />
-        <Skeleton className="h-72" />
+      <div
+        aria-label={t('loading')}
+        role="status"
+      >
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Skeleton className="h-72 lg:col-span-2" />
+          <Skeleton className="h-72" />
+        </div>
       </div>
     )
   }
@@ -170,11 +197,42 @@ function Content() {
     Number(values.resolutionX),
     Number(values.resolutionY)
   )
-  const isDirty = form.formState.isDirty
+  const restoreConfirming = armed === 'restore'
+  // Refresh only asks when it would throw away edits; a clean form reloads at once.
+  const reloadConfirming = armed === 'reload' && isDirty
 
   const setResolution = (width: number, height: number) => {
     form.setValue('resolutionX', `${width}`, { shouldDirty: true })
     form.setValue('resolutionY', `${height}`, { shouldDirty: true })
+  }
+
+  const onRestoreClick = () => {
+    if (!restoreConfirming) {
+      setArmed('restore')
+
+      return
+    }
+
+    setArmed(null)
+    void onRestore()
+  }
+
+  const onReloadClick = () => {
+    if (!isDirty) {
+      setArmed(null)
+      void reload()
+
+      return
+    }
+
+    if (!reloadConfirming) {
+      setArmed('reload')
+
+      return
+    }
+
+    setArmed(null)
+    void reload()
   }
 
   return (
@@ -289,7 +347,6 @@ function Content() {
                     render={({ field }) => (
                       <FormItem className="space-y-0">
                         <FieldRow
-                          hint={t('form.fullscreen-mode.note')}
                           label={
                             <FormLabel>
                               {t('form.fullscreen-mode.label')}
@@ -428,7 +485,7 @@ function Content() {
                                 }
                               />
                             </FormControl>
-                            <span className="w-12 shrink-0 text-right text-sm tabular-nums">
+                            <span className="figure w-12 shrink-0 text-right text-sm">
                               {field.value || resolutionQualityRange.max}%
                             </span>
                           </div>
@@ -464,19 +521,28 @@ function Content() {
                     : t('file.backup.empty')
                 }
               />
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {t('file.backup.note')}
-              </p>
               <Button
                 className="w-full"
                 disabled={saving || !backup?.exists}
-                onClick={() => void onRestore()}
+                onClick={onRestoreClick}
                 type="button"
-                variant="outline"
+                variant={restoreConfirming ? 'destructive' : 'outline'}
               >
                 <RotateCcw className="mr-2 size-3.5" />
-                {t('actions.restore')}
+                {restoreConfirming
+                  ? t('actions.restore-confirm')
+                  : t('actions.restore')}
               </Button>
+              {restoreConfirming && (
+                <Button
+                  className="w-full"
+                  onClick={() => setArmed(null)}
+                  type="button"
+                  variant="ghost"
+                >
+                  {t('actions.cancel')}
+                </Button>
+              )}
             </PanelBody>
           </Panel>
         </div>
@@ -499,12 +565,23 @@ function Content() {
           </p>
           <Button
             disabled={saving}
-            onClick={() => void reload()}
+            onClick={onReloadClick}
             type="button"
-            variant="ghost"
+            variant={reloadConfirming ? 'destructive' : 'ghost'}
           >
-            {t('actions.reload')}
+            {reloadConfirming
+              ? t('actions.reload-confirm')
+              : t('actions.reload')}
           </Button>
+          {reloadConfirming && (
+            <Button
+              onClick={() => setArmed(null)}
+              type="button"
+              variant="ghost"
+            >
+              {t('actions.cancel')}
+            </Button>
+          )}
           <Button
             disabled={saving || !isDirty}
             onClick={() => form.reset()}
@@ -517,7 +594,7 @@ function Content() {
             disabled={saving || !isDirty}
             type="submit"
           >
-            {t('actions.save')}
+            {saving ? t('actions.saving') : t('actions.save')}
           </Button>
         </div>
       </form>

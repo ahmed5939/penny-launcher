@@ -1,7 +1,12 @@
-import { RefreshCw } from 'lucide-react'
+import { Compass } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { EmptyState, RefreshButton } from '../../../components/page'
+import {
+  EmptyState,
+  RefreshButton,
+  StatRow,
+  StatTile,
+} from '../../../components/page'
 
 import { LoadingMissions } from '../-components/-loading'
 import { EndgameTwinePeaksSection } from './endgame-twine-peaks'
@@ -57,7 +62,7 @@ export function HomeAlerts({ summaryOnly = false }: { summaryOnly?: boolean }) {
       {!summaryOnly && <h2 className="micro-label mb-2 px-0.5">
         {t('home.alerts.title')}
       </h2>}
-      <ul className="gap-3 grid grid-cols-2 sm:grid-cols-3">
+      <StatRow>
         <PreviewItem
           imageUrl={assets('currency_mtxswap')}
           isLoading={summary.isLoading}
@@ -76,7 +81,7 @@ export function HomeAlerts({ summaryOnly = false }: { summaryOnly?: boolean }) {
           quantity={uncommonPerksTotal}
           title={t('home.alerts.perk-up')}
         />
-      </ul>
+      </StatRow>
 
       {!summaryOnly && <div className="mt-6 space-y-6">
         {loading.isFetching ? (
@@ -117,29 +122,39 @@ function PreviewItem({
   title: string
   quantity: number
 }) {
+  const { t } = useTranslation(['general'])
+
   return (
-    <li className="panel flex items-center gap-3.5 px-4 py-3">
-      {/* The reward's own art, large, not an icon in a tinted tile. */}
-      <img
-        alt=""
-        className="size-12 shrink-0 object-contain drop-shadow-[0_4px_8px_rgba(0,0,0,0.35)]"
-        decoding="async"
-        loading="lazy"
-        src={imageUrl}
-      />
-      <div className="min-w-0 flex-grow">
-        {isLoading ? (
-          <div className="h-7 w-16 animate-pulse rounded bg-muted" />
+    <StatTile
+      label={title}
+      value={
+        isLoading ? (
+          /*
+           * `Skeleton` is a div, and the tile's figure sits inside a paragraph.
+           * The same pulsing bar as a span keeps the markup valid.
+           */
+          <span role="status">
+            <span
+              aria-hidden
+              className="block h-7 w-16 animate-pulse rounded bg-muted"
+            />
+            <span className="sr-only">{t('home.alerts.loading')}</span>
+          </span>
         ) : (
-          <div className="figure truncate text-display-sm font-bold leading-none">
+          <span className="flex items-center gap-2">
             {numberWithCommaSeparator(quantity)}
-          </div>
-        )}
-        <div className="mt-1 truncate text-xs text-muted-foreground">
-          {title}
-        </div>
-      </div>
-    </li>
+            {/* The reward's own art, beside the figure, not an icon in a tinted tile. */}
+            <img
+              alt=""
+              className="size-6 object-contain"
+              decoding="async"
+              loading="lazy"
+              src={imageUrl}
+            />
+          </span>
+        )
+      }
+    />
   )
 }
 
@@ -154,7 +169,7 @@ function AlertsEmptyState() {
    */
   return (
     <EmptyState
-      icon={RefreshCw}
+      icon={Compass}
       title={t(
         account ? 'home.alerts.empty-title' : 'home.alerts.login-title'
       )}

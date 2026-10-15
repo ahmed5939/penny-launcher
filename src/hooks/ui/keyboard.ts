@@ -23,6 +23,14 @@ function isTypingTarget(target: EventTarget | null) {
   )
 }
 
+function isModalOpen() {
+  return Boolean(
+    document.querySelector(
+      '[role="dialog"][data-state="open"],[role="alertdialog"][data-state="open"]',
+    ),
+  )
+}
+
 /**
  * The keys Windows taught people to expect.
  *
@@ -138,7 +146,13 @@ export function useAppKeyboard({
       }
 
       // Ctrl+1..9 — jump straight to an account by their stable roster position.
-      if (event.ctrlKey && !event.shiftKey && !event.altKey && !typing) {
+      if (
+        event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey &&
+        !typing &&
+        !isModalOpen()
+      ) {
         const index = Number.parseInt(event.key, 10)
 
         if (Number.isInteger(index) && index >= 1 && index <= 9) {
@@ -155,7 +169,7 @@ export function useAppKeyboard({
       }
 
       // Ctrl+Tab — cycle the subject through the accounts in scope.
-      if (event.ctrlKey && event.key === 'Tab') {
+      if (event.ctrlKey && event.key === 'Tab' && !typing && !isModalOpen()) {
         const { members, primary, setPrimary } = useAccountScopeStore.getState()
 
         if (members.length > 1) {

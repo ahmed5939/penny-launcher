@@ -39,6 +39,8 @@ import {
 
 import { getItemRecord, useItemDatabaseStore } from '../../../state/items/database'
 import { useRequestItemDatabase } from '../../../bootstrap/components/load-item-database'
+import { useMinuteClock } from '../../-index/-home/-dashboard-hooks'
+import { formatCountdown } from '../../-index/-home/-dashboard-model'
 
 import {
   useShopActions,
@@ -68,6 +70,12 @@ const sectionOptions: Array<SegmentedOption<ShopSection>> = [
   { label: 'Event Store', value: 'event' },
   { label: 'Weekly Store', value: 'weekly' },
 ]
+
+const emptyShelfCopy: Record<ShopSection, string> = {
+  llamas: 'No X-Ray llamas in this rotation.',
+  event: 'The event store only stocks items while an event is running.',
+  weekly: 'No weekly store items in this rotation.',
+}
 
 export function RouteComponent() {
   const { t } = useTranslation(['sidebar'])
@@ -125,8 +133,7 @@ export function RouteComponent() {
           icon={Store}
           loading={{
             title: 'Loading the shop…',
-            description:
-              'Asking Epic for the X-Ray rolls, the event and weekly stores and your balances.',
+            description: 'Reading the shelves and balances from Epic.',
           }}
           resource={resource}
           what="this account's shop"
@@ -191,8 +198,16 @@ function AccountShop({
 }) {
   const records = useItemDatabaseStore((state) => state.records)
   const { section, updateSection } = useShopView()
+  const now = useMinuteClock()
 
   const offers = entry.offers.filter((offer) => offer.section === section)
+  const sectionTabs = sectionOptions.map((option) => ({
+    ...option,
+    label: `${option.label} · ${entry.offers.filter((offer) => offer.section === option.value).length}`,
+  }))
+  const msUntilRefresh = entry.expiration
+    ? Date.parse(entry.expiration) - now
+    : 0
   const balances = groupBalances(entry.currencies)
   const nameOf = (currency: ShopCurrency) =>
     // The game's own name ("Pure Drop of Rain"), not the id turned into
@@ -212,52 +227,32 @@ function AccountShop({
        * they are paid from and the rotation clock opposite them.
        */}
       <div
-        className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border/60"
+        className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
         id="shop-card"
       >
-        <div
-          aria-label="Store"
-          className="flex gap-1"
-          role="tablist"
-        >
-          {sectionOptions.map((option) => {
-            const isActive = option.value === section
-            const count = entry.offers.filter(
-              (offer) => offer.section === option.value
-            ).length
-
-            return (
-              <button
-                aria-selected={isActive}
-                className={cn(
-                  '-mb-px flex items-center gap-2 border-b-2 px-3 pb-2.5 pt-1 text-title font-bold transition-colors',
-                  isActive
-                    ? 'border-primary text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
-                )}
-                key={option.value}
-                onClick={() => updateSection(option.value)}
-                role="tab"
-                type="button"
-              >
-                {option.label}
-                <span className="figure text-xs font-medium text-muted-foreground">
-                  {count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pb-2.5 text-ui">
+        <Segmented
+          onChange={updateSection}
+          options={sectionTabs}
+          value={section}
+        />
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-ui">
           {entry.expiration && (
             <span
               className="text-muted-foreground"
               title={dayjs(entry.expiration).format('MMM D, HH:mm')}
             >
-              Refreshes in{' '}
-              <span className="figure font-semibold text-foreground">
-                {dayjs(entry.expiration).fromNow(true)}
-              </span>
+              {msUntilRefresh > 0 ? (
+                <>
+                  Refreshes in{' '}
+                  <span className="figure font-semibold text-foreground">
+                    {formatCountdown(msUntilRefresh)}
+                  </span>
+                </>
+              ) : (
+                <span className="font-semibold text-foreground">
+                  New stock — press Refresh
+                </span>
+              )}
             </span>
           )}
           {entry.unopenedLlamas > 0 && (
@@ -295,7 +290,7 @@ function AccountShop({
       {offers.length <= 0 ? (
         <EmptyState
           className="border-0 bg-transparent py-12"
-          description="The event and weekly stores only stock items while an event is running."
+          description={emptyShelfCopy[section]}
           icon={Store}
           title="Nothing on this shelf"
         />
@@ -363,13 +358,6 @@ function AccountShop({
           </PanelBody>
         )}
       </Panel>
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Offers, prices, limits and balances come from this account&apos;s Epic
-        catalog; opening the page populates the X-Ray rolls exactly as walking
-        into the llama store does. Buying asks twice and spends straight away;
-        real-money offers cannot be bought here.
-      </p>
 
       <GoToTop containerId="shop-card" />
     </>

@@ -40,17 +40,19 @@ Everything a tool page needs is exported from `src/components/page`
 
 Every tool page, top to bottom:
 
-1. `PageHeader`: the page title over the game's zone key art, bled to the
-   pane edges (`art="twine-peaks"` etc.; picked from the title when
-   omitted), a one- or two-sentence `description`, `status` badges and
-   page-wide `actions` (usually `RefreshButton`). It must be the page's first
-   element — it pulls itself up and out to the pane edges.
+1. `PageHeader`: the page title on one line, `status` badges, page-wide
+   `actions` (usually `RefreshButton`), and a `description` of one short line
+   saying what the page is for, not how it works. The zone art sits behind the
+   header as a faded strip that takes no space; its route picks it in
+   `config/backdrops.ts` (`PageBackdrop`). `art`, `icon` and `section` are still
+   accepted but ignored, so leave them out.
 2. The gate: no account → error → loading (see §3).
 3. `StatRow` — up to four numbers that answer "how am I doing?" first.
 4. Panels. Filters sit in a `FilterBar` directly under the `PanelHeader` of
    the list they filter; pagination in the same panel's footer.
-5. Caveats: one `text-xs text-muted-foreground` paragraph at the bottom
-   stating data sources, what is estimated, and what the page does not do.
+5. No caveat or data-source paragraph, at the bottom or anywhere else. A
+   read-only tool says so with `ToolBadges readOnly` (§7), and an estimate is
+   marked where the figure is (§4).
 
 ## 3. Loading data for an account
 
@@ -85,6 +87,7 @@ const resource = useAccountResource((id) => window.electronAPI.requestThing(id),
 - Name the game's things as the game does: Collection Book, Storm Shield,
   F.O.R.T., Ventures. British spelling in prose ("favourite") matches the
   existing app.
+- Save the World before Battle Royale in nav, lists, tabs and copy.
 - Never present an estimate as fact. Unknown is "unavailable", not 0; a
   derived level is "at least level 11".
 

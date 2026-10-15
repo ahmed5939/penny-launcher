@@ -43,10 +43,12 @@ const themeModes: ReadonlyArray<{ icon: LucideIcon; id: Theme }> = [
  * the tooltip.
  */
 export function ThemeModeToggle({
+  'aria-label': ariaLabel,
   className,
   showLabels = true,
   size = 'default',
 }: {
+  'aria-label'?: string
   className?: string
   showLabels?: boolean
   size?: 'default' | 'sm' | 'xs'
@@ -56,6 +58,7 @@ export function ThemeModeToggle({
 
   return (
     <ToggleGroup
+      aria-label={ariaLabel ?? t('app-settings.form.appearance.label')}
       className={cn('justify-start', className)}
       type="single"
       variant="outline"
@@ -127,18 +130,23 @@ export function ThemeSwatch({
  * they hang off.
  */
 export function ThemeSwatchGrid({
+  'aria-label': ariaLabel,
   className,
   variant = 'cards',
 }: {
+  'aria-label'?: string
   className?: string
   variant?: 'cards' | 'menu'
 }) {
+  const { t } = useTranslation(['settings'])
   const { colorTheme, setColorTheme } = useTheme()
 
   const isMenu = variant === 'menu'
 
   return (
     <div
+      aria-label={ariaLabel ?? t('app-settings.form.appearance.theme.label')}
+      role="group"
       className={cn(
         isMenu ? 'flex flex-col' : 'grid grid-cols-2 gap-2 sm:grid-cols-3',
         className

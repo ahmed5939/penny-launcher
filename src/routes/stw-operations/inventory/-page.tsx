@@ -168,6 +168,7 @@ function ItemMenu({
   onInspect: () => void
   onRecycle: () => void
 }) {
+  const [confirming, setConfirming] = useState<string | null>(null)
   const locked = item.lockedReason !== null
   /*
    * Same ladder as the detail dialog: manuals to the tier cap, then a maxed
@@ -175,10 +176,30 @@ function ItemMenu({
    */
   const cap = levelCapForTier(item.tier)
   const supercharging = item.tier >= 5 && item.level >= 50
-  const canLevel = !supercharging || item.level < superchargeMaxLevel
+  const canLevel = supercharging
+    ? item.level < superchargeMaxLevel
+    : cap === null || item.level < cap
   const bulkTarget =
     cap !== null && !supercharging ? Math.min(item.level + 10, cap) : null
   const canBulkLevel = bulkTarget !== null && bulkTarget - item.level >= 2
+  const canUpgradeRarity =
+    Object.keys(getItemRecord(records, item.templateId)?.upgradeCost ?? {}).length > 0
+
+  /** Spending asks twice: the first press arms the action, the second spends. */
+  const spend = (key: string, request: ItemActionRequest) => (event: Event) => {
+    if (confirming !== key) {
+      event.preventDefault()
+      setConfirming(key)
+
+      return
+    }
+
+    onAction(request)
+  }
+  const label = (key: string, idle: string) =>
+    confirming === key ? 'Confirm — spends materials' : idle
+  const armedTone = (key: string) =>
+    confirming === key ? 'text-destructive focus:text-destructive' : undefined
 
   return (
     <>
@@ -194,67 +215,71 @@ function ItemMenu({
 
       {canLevel && (
         <ContextMenuItem
+          className={armedTone('level')}
           disabled={isActing}
-          onSelect={() =>
-            onAction({ kind: 'level', itemId: item.itemId })
-          }
+          onSelect={spend('level', { kind: 'level', itemId: item.itemId })}
         >
           {supercharging ? (
             <Zap className="mr-2 size-3.5" />
           ) : (
             <ArrowUp className="mr-2 size-3.5" />
           )}
-          {supercharging ? 'Supercharge' : 'Level up'}
-          <ContextMenuShortcut>+1</ContextMenuShortcut>
+          {label('level', supercharging ? 'Supercharge' : 'Level up')}
+          {confirming !== 'level' && <ContextMenuShortcut>+1</ContextMenuShortcut>}
         </ContextMenuItem>
       )}
 
       {canBulkLevel && (
         <ContextMenuItem
+          className={armedTone('bulk-level')}
           disabled={isActing}
-          onSelect={() =>
-            onAction({
-              kind: 'level',
-              itemId: item.itemId,
-              desiredLevel: bulkTarget as number,
-            })
-          }
+          onSelect={spend('bulk-level', {
+            kind: 'level',
+            itemId: item.itemId,
+            desiredLevel: bulkTarget as number,
+          })}
         >
           <ArrowUp className="mr-2 size-3.5" />
-          Level to {bulkTarget}
-          {bulkTarget === cap && ' (tier max)'}
-          <ContextMenuShortcut>
-            +{(bulkTarget as number) - item.level}
-          </ContextMenuShortcut>
+          {label(
+            'bulk-level',
+            `Level to ${bulkTarget}${bulkTarget === cap ? ' (tier max)' : ''}`
+          )}
+          {confirming !== 'bulk-level' && (
+            <ContextMenuShortcut>
+              +{(bulkTarget as number) - item.level}
+            </ContextMenuShortcut>
+          )}
         </ContextMenuItem>
       )}
 
       {item.tier > 0 && item.tier < 5 && evolutionOptions(getItemRecord(records, item.templateId), item.tier).map((option) => (
         <ContextMenuItem
+          className={armedTone(`evolve-${option.conversionIndex}`)}
           key={option.conversionIndex}
           disabled={isActing}
-          onSelect={() =>
-            onAction({
-              kind: 'evolve',
-              itemId: item.itemId,
-              desiredLevel: item.level,
-              desiredTier: romanTiers[item.tier] ?? 'no_tier',
-              conversionIndex: option.conversionIndex,
-            })
-          }
+          onSelect={spend(`evolve-${option.conversionIndex}`, {
+            kind: 'evolve',
+            itemId: item.itemId,
+            desiredLevel: item.level,
+            desiredTier: romanTiers[item.tier] ?? 'no_tier',
+            conversionIndex: option.conversionIndex,
+          })}
         >
           <Star className="mr-2 size-3.5" />
-          {option.label}
+          {label(`evolve-${option.conversionIndex}`, option.label)}
         </ContextMenuItem>
       ))}
 
-      <ContextMenuItem
-        disabled={isActing}
-        onSelect={() => onAction({ kind: 'rarity', itemId: item.itemId })}
-      >
-        <Sparkles className="mr-2 size-3.5" />
-        Upgrade rarity
-      </ContextMenuItem>
+      {canUpgradeRarity && (
+        <ContextMenuItem
+          className={armedTone('rarity')}
+          disabled={isActing}
+          onSelect={spend('rarity', { kind: 'rarity', itemId: item.itemId })}
+        >
+          <Sparkles className="mr-2 size-3.5" />
+          {label('rarity', 'Upgrade rarity')}
+        </ContextMenuItem>
+      )}
 
       <ContextMenuSeparator />
 
@@ -278,10 +303,10 @@ function ItemMenu({
  * and recycling.
  */
 const kindPages: Record<ItemKind, { description: string }> = {
-  schematic: { description: 'Every weapon and trap schematic the account owns. Click to inspect, tick to select, right-click for quick actions.' },
-  hero: { description: 'Every hero the account owns, with their perks and loadout status. Click to inspect, tick to select, right-click for quick actions.' },
-  defender: { description: 'Every defender the account owns. Switch to Weapon fit to match their rolls with the schematics you have.' },
-  survivor: { description: 'Every survivor and lead the account owns, with personality and set bonus. Click to inspect, tick to select, right-click for quick actions.' },
+  schematic: { description: 'Every weapon and trap schematic on the account.' },
+  hero: { description: 'Every hero on the account.' },
+  defender: { description: 'Every defender on the account.' },
+  survivor: { description: 'Every survivor and lead on the account.' },
 }
 
 function KindPage({ kind }: { kind: ItemKind }) {
@@ -318,12 +343,8 @@ function KindPage({ kind }: { kind: ItemKind }) {
       {current === kind && (
         <AccountResourceGate
           icon={kindIcons[kind]}
-          loading={{
-            title: `Loading ${kindNouns[kind][1]}…`,
-            description: 'Reading the account profile from Epic.',
-          }}
           resource={resource}
-          what={`this account's ${kindNouns[kind][1]}`}
+          what={kindNouns[kind][1]}
         >
           {(entry) => (
             <Content
@@ -352,6 +373,7 @@ function Content({
 }) {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [sort, setSort] = useState<SortMode>('power')
+  const [levelAllArmed, setLevelAllArmed] = useState(false)
 
   const {
     activeKind,
@@ -385,6 +407,11 @@ function Content({
   } = useInventoryData(entry, reload)
 
   const defenderFit = activeKind === 'defender' && filters.defenderView === 'fit'
+
+  /* A changed selection is a different thing to spend on, so the arm does not carry over. */
+  useEffect(() => {
+    setLevelAllArmed(false)
+  }, [totalSelected])
 
   /**
    * One section per rarity, strongest first. A vault is read top-down for the
@@ -476,12 +503,26 @@ function Content({
     setDetailId(item.itemId)
   })
   const handleRecycleOne = useStableCallback((itemId: string) => {
-    handleToggleItem(itemId)
+    if (!selectedSet.has(itemId)) {
+      handleToggleItem(itemId)
+    }
+
     setConfirmOpen(true)
   })
   const handleToggleOne = useStableCallback(handleToggleItem)
   const handleAction = useStableCallback(handleItemAction)
   const handleToggleSection = useStableCallback(handleToggleMany)
+
+  const handleLevelAll = () => {
+    if (!levelAllArmed) {
+      setLevelAllArmed(true)
+
+      return
+    }
+
+    setLevelAllArmed(false)
+    handleUpgradeSelected()
+  }
 
   const allSelected =
     recyclableCount > 0 && selectedIds.length >= recyclableCount
@@ -558,11 +599,6 @@ function Content({
               ]}
               value={filters.defenderView}
             />
-            <span className="text-xs text-muted-foreground">
-              {defenderFit
-                ? 'Ranks each defender’s rolls and suggests schematics you own that suit them.'
-                : 'Switch to Weapon fit to match defenders with your weapon schematics.'}
-            </span>
           </FilterBar>
         )}
 
@@ -669,7 +705,7 @@ function Content({
                   >
                     {allSelected
                       ? 'Deselect all'
-                      : `Select all ${recyclableCount} selectable`}
+                      : `Select all ${recyclableCount}`}
                   </Button>
                 ) : undefined
               }
@@ -749,19 +785,21 @@ function Content({
             <Button
               className="ml-auto"
               disabled={isActing}
-              onClick={handleUpgradeSelected}
+              onClick={handleLevelAll}
               size="sm"
-              variant="secondary"
+              variant={levelAllArmed ? 'destructive' : 'secondary'}
             >
               {isActing ? (
                 <>
                   <UpdateIcon className="animate-spin" />
-                  {queuedUpgrades > 0 && `${queuedUpgrades} left`}
+                  {queuedUpgrades > 0 ? `Levelling… ${queuedUpgrades} left` : 'Levelling…'}
                 </>
               ) : (
                 <>
                   <ArrowUp className="size-4" />
-                  Level up all
+                  {levelAllArmed
+                    ? `Confirm — levels ${totalSelected} item${totalSelected === 1 ? '' : 's'}`
+                    : 'Level up all'}
                 </>
               )}
             </Button>
@@ -779,7 +817,10 @@ function Content({
               variant="destructive"
             >
               {isRecycling ? (
-                <UpdateIcon className="animate-spin" />
+                <>
+                  <UpdateIcon className="animate-spin" />
+                  Recycling…
+                </>
               ) : (
                 <>
                   <Trash2 className="size-4" />

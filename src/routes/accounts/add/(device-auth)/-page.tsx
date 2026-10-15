@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { InputSecret } from '../../../../components/ui/extended/form/input-secret'
 import { Button } from '../../../../components/ui/button'
+import { Input } from '../../../../components/ui/input'
 import {
   Panel,
   PanelBody,
@@ -20,9 +21,9 @@ import {
 import { useSetupForm } from './-hooks'
 
 export function DeviceAuthPage() {
-  const { t } = useTranslation(['general'])
+  const { t } = useTranslation(['general', 'accounts'])
 
-  const { form, isSubmitting, onSubmit } = useSetupForm()
+  const { form, isSubmitting, onPaste, onSubmit } = useSetupForm()
 
   return (
     <Form {...form}>
@@ -39,7 +40,7 @@ export function DeviceAuthPage() {
                 <FormItem>
                   <FormLabel>{t('form.credentials.account-id')}</FormLabel>
                   <FormControl>
-                    <InputSecret inputProps={field} />
+                    <Input {...field} onPaste={onPaste} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -53,7 +54,7 @@ export function DeviceAuthPage() {
                 <FormItem>
                   <FormLabel>{t('form.credentials.device-id')}</FormLabel>
                   <FormControl>
-                    <InputSecret inputProps={field} />
+                    <InputSecret inputProps={{ ...field, onPaste }} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -67,7 +68,7 @@ export function DeviceAuthPage() {
                 <FormItem>
                   <FormLabel>{t('form.credentials.secret')}</FormLabel>
                   <FormControl>
-                    <InputSecret inputProps={field} />
+                    <InputSecret inputProps={{ ...field, onPaste }} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -82,7 +83,12 @@ export function DeviceAuthPage() {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <UpdateIcon className="animate-spin" />
+                <>
+                  <UpdateIcon className="animate-spin" />
+                  {t('device-auth.signing-in', {
+                    ns: 'accounts',
+                  })}
+                </>
               ) : (
                 t('actions.login')
               )}

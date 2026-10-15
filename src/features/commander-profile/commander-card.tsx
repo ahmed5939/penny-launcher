@@ -5,7 +5,7 @@ import { UserRound } from 'lucide-react'
 
 import { Artboard } from '../../components/items/artboard'
 import { resolveItemArt } from '../../components/items/item-icon'
-import { Panel, PanelHeader, ProgressBar } from '../../components/page'
+import { Callout, Panel, PanelHeader, ProgressBar, RefreshButton } from '../../components/page'
 import { Skeleton } from '../../components/ui/skeleton'
 
 import { useItemDatabaseStore } from '../../state/items/database'
@@ -40,9 +40,10 @@ export function CommanderCard() {
       {entry ? (
         <CommanderBody entry={entry} />
       ) : resource.error ? (
-        <p className="px-4 py-3 text-xs text-muted-foreground" role="alert">
-          {resource.error}
-        </p>
+        <div className="p-3 space-y-2" role="alert">
+          <Callout tone="danger">{resource.error}</Callout>
+          <RefreshButton loading={resource.loading} onClick={resource.refresh} />
+        </div>
       ) : !resource.accountId ? (
         <p className="px-4 py-3 text-xs text-muted-foreground">Sign in to an account to see its commander.</p>
       ) : (

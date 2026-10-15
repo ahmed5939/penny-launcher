@@ -1,4 +1,5 @@
 import type { MenuKey, NavItem } from '../../config/navigation'
+import { navSections, visibilityKeys } from '../../config/navigation'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { AutomationStatusType } from '../../config/constants/automation'
@@ -52,11 +53,17 @@ export function NavRow({
     'text-muted-foreground',
     !isDisabled && 'hover:bg-accent/30 hover:text-foreground',
     isActive && 'bg-accent/70 font-medium text-foreground',
-    isDisabled && 'pointer-events-none opacity-45',
+    isDisabled && 'opacity-45',
   )
 
   const row = isDisabled ? (
-    <span className={className}>{body}</span>
+    <span
+      aria-disabled="true"
+      className={className}
+      title={t('sidebar:needs-account')}
+    >
+      {body}
+    </span>
   ) : (
     <Link
       aria-current={isActive ? 'page' : undefined}
@@ -71,7 +78,16 @@ export function NavRow({
     </Link>
   )
 
-  if (hideKeys.length === 0) {
+  // Hiding one item that shares a toggle would hide its neighbours too.
+  const sharesKeys = navSections.some((section) =>
+    section.items.some(
+      (other) =>
+        other.to !== item.to &&
+        visibilityKeys(other).some((key) => hideKeys.includes(key)),
+    ),
+  )
+
+  if (hideKeys.length === 0 || sharesKeys) {
     return row
   }
 

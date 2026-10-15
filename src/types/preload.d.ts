@@ -69,7 +69,7 @@ export type CommonNotificationCallbackResponseParam<
 
 export type LauncherNotificationCallbackResponseParam =
   CommonNotificationCallbackResponseParam<{
-    reason?: 'missing-install'
+    reason?: 'missing-install' | 'signed-out'
   }>
 
 export type EpicGamesSettingsNotificationCallbackResponseParam =

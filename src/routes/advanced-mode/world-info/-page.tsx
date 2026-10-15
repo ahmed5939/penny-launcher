@@ -10,6 +10,7 @@ import {
   Share,
   Trash2,
 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { LoadWorldInfoFiles } from '../../../bootstrap/components/advanced-mode/load-world-info-files'
@@ -169,8 +170,17 @@ function Content() {
         ) : (
           <EmptyState
             className="border-0 bg-transparent py-8"
+            description={
+              files.length === 0
+                ? t('world-info.empty.description')
+                : undefined
+            }
             icon={FileWarning}
-            title={t('world-info.search.no-files')}
+            title={
+              files.length === 0
+                ? t('world-info.empty.title')
+                : t('world-info.search.no-match')
+            }
           />
         )}
       </Panel>
@@ -187,15 +197,38 @@ function Content() {
 function Item({ data }: { data: WorldInfoFileData }) {
   const { t } = useTranslation(['advanced-mode', 'general'])
 
+  const [armed, setArmed] = useState(false)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const deleteRef = useRef<HTMLButtonElement>(null)
+
   const {
+    changed,
     handleDeleteFile,
     handleExportFile,
+    handleNameKeyDown,
     handleOpenFile,
     handleUpdateName,
     name,
     onSubmit,
     validName,
   } = useItemData({ data })
+
+  /* Disarm after a few seconds, so a stray second click later does nothing. */
+  useEffect(() => {
+    if (!armed) {
+      return
+    }
+
+    const timer = setTimeout(() => {
+      if (cancelRef.current === document.activeElement) {
+        deleteRef.current?.focus()
+      }
+
+      setArmed(false)
+    }, 5000)
+
+    return () => clearTimeout(timer)
+  }, [armed])
 
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
@@ -216,25 +249,23 @@ function Item({ data }: { data: WorldInfoFileData }) {
             })}
             value={name}
             onChange={handleUpdateName}
+            onKeyDown={handleNameKeyDown}
           />
           <p className="px-2 text-xs text-muted-foreground">
             {getShortDateFormat(data.date)} · {relativeTime(data.createdAt)}
           </p>
         </div>
-        <Button
-          className="shrink-0"
-          size="sm"
-          type="submit"
-          variant="secondary"
-        >
-          {validName
-            ? t('actions.update', {
-                ns: 'general',
-              })
-            : t('actions.revert', {
-                ns: 'general',
-              })}
-        </Button>
+        {changed && (
+          <Button
+            className="shrink-0"
+            disabled={!validName}
+            size="sm"
+            type="submit"
+            variant="secondary"
+          >
+            {t('world-info.file.rename')}
+          </Button>
+        )}
       </form>
 
       <div className="flex shrink-0 items-center gap-0.5">
@@ -260,16 +291,46 @@ function Item({ data }: { data: WorldInfoFileData }) {
         >
           <Share className="size-4" />
         </Button>
+        {armed && (
+          <Button
+            onClick={() => {
+              deleteRef.current?.focus()
+              setArmed(false)
+            }}
+            ref={cancelRef}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            {t('world-info.file.cancel')}
+          </Button>
+        )}
         <Button
-          aria-label="Delete file"
-          className="size-8 text-destructive/70 hover:text-destructive"
-          onClick={handleDeleteFile}
-          size="icon"
-          title="Delete"
+          aria-label={armed ? undefined : 'Delete file'}
+          className={
+            armed ? 'ml-1' : 'size-8 text-destructive/70 hover:text-destructive'
+          }
+          onClick={() => {
+            if (!armed) {
+              setArmed(true)
+
+              return
+            }
+
+            setArmed(false)
+            handleDeleteFile()
+          }}
+          ref={deleteRef}
+          size={armed ? 'sm' : 'icon'}
+          title={armed ? undefined : 'Delete'}
           type="button"
-          variant="ghost"
+          variant={armed ? 'destructive' : 'ghost'}
         >
-          <Trash2 className="size-4" />
+          {armed ? (
+            t('world-info.file.confirm-delete')
+          ) : (
+            <Trash2 className="size-4" />
+          )}
         </Button>
       </div>
     </li>

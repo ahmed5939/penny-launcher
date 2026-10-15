@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   compact: false,
   collapsed: false,
   hidden: [] as Array<string>,
+  accounts: [] as Array<{ accountId: string; authStatus: string }>,
 }))
 // Structural SSR checks do not run browser layout or focus effects.
 vi.mock('react', async (importOriginal) => {
@@ -44,7 +45,7 @@ vi.mock('../../state/ui/shell', () => ({
 }))
 vi.mock('../../hooks/accounts', () => ({
   useGetAccounts: () => ({
-    accountsArray: [{ accountId: 'one', authStatus: 'valid' }],
+    accountsArray: state.accounts,
   }),
 }))
 vi.mock('../../hooks/settings', () => ({
@@ -71,6 +72,7 @@ beforeEach(() => {
   state.compact = false
   state.collapsed = false
   state.hidden = []
+  state.accounts = [{ accountId: 'one', authStatus: 'valid' }]
 })
 
 describe('area shell rendering', () => {
@@ -100,5 +102,14 @@ describe('area shell rendering', () => {
   it('does not show an empty Automate area when only STW tools remain visible', () => {
     state.hidden = ['autoLlamas', 'autoPinUrns', 'autoDailyReroll', 'expeditions']
     expect(render()).not.toContain('aria-label="sidebar:groups.automate"')
+  })
+  it('explains an account-only row when every account is invalid', () => {
+    state.accounts = [{ accountId: 'one', authStatus: 'invalid' }]
+    const markup = render()
+    const profile = markup.match(
+      /<span[^>]*aria-disabled="true"[^>]*>(?:(?!<\/span>)[\s\S])*?sidebar:stw-operations\.options\.profile/,
+    )
+    expect(profile?.[0]).toContain('title="sidebar:needs-account"')
+    expect(markup).not.toContain('href="/stw-operations/profile"')
   })
 })

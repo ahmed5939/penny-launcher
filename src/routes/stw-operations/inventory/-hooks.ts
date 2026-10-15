@@ -29,6 +29,10 @@ import {
 import { matchesSchematicType } from '../../../config/constants/fortnite/schematic-types'
 
 import { useAccountResource } from '../../../components/page'
+import {
+  levelCapForTier,
+  superchargeMaxLevel,
+} from '../../../components/items/item-detail'
 
 import { toast } from '../../../lib/notifications'
 
@@ -130,6 +134,17 @@ export type InventoryRow = InventoryItem & {
   power: number | null
 }
 
+/** The detail dialog's rule for whether an item can take another level. */
+function canLevelFurther(item: InventoryRow) {
+  const cap = levelCapForTier(item.tier)
+
+  if (item.tier >= 5 && item.level >= 50) {
+    return item.level < superchargeMaxLevel
+  }
+
+  return cap === null || item.level < cap
+}
+
 /**
  * Everything the vault pages do with a loaded entry. Mounted under the
  * resource gate, keyed by account, so it never sees another account's items.
@@ -194,7 +209,7 @@ export function useInventoryData(entry: InventoryEntry, reload: () => void) {
    * tab strip has to say how many schematics you have *under the current
    * rarity, tier and search* while you are standing on the heroes tab.
    */
-  const { allRows, countsByKind, lockedCount, rows } = useMemo(() => {
+  const { allRows, countsByKind, rows } = useMemo(() => {
     const items = entry.items
 
     const mapped: Array<InventoryRow> = items.map((item) => {
@@ -276,9 +291,6 @@ export function useInventoryData(entry: InventoryEntry, reload: () => void) {
        */
       allRows: mapped,
       countsByKind: counts,
-      /** Of what is on screen — the stat sits in a row about the shown set. */
-      lockedCount: kindRows.filter((item) => item.lockedReason !== null)
-        .length,
       rows: kindRows,
     }
   }, [deferredSearch, entry, filters, maxRarityIndex, ratings, records])
@@ -287,12 +299,19 @@ export function useInventoryData(entry: InventoryEntry, reload: () => void) {
     () => new Map(rows.map((item) => [item.itemId, item])),
     [rows]
   )
+  const allRowsById = useMemo(
+    () => new Map(allRows.map((item) => [item.itemId, item])),
+    [allRows]
+  )
 
-  /** What the current selection would hand back, by resource. */
+  /**
+   * What the current selection would hand back, by resource. Read from every
+   * item, not the shown ones, so a search cannot hide part of what is ticked.
+   */
   const recycleRewards = useMemo(() => {
     const totals: Record<string, number> = {}
 
-    rows.forEach((item) => {
+    allRows.forEach((item) => {
       if (!selectedSet.has(item.itemId) || !item.recycle) {
         return
       }
@@ -305,10 +324,25 @@ export function useInventoryData(entry: InventoryEntry, reload: () => void) {
       .filter(([, amount]) => amount > 0)
       .sort(([, a], [, b]) => b - a)
       .map(([templateId, amount]) => ({ amount, templateId }))
-  }, [rows, selectedSet])
+  }, [allRows, selectedSet])
 
   /** Exactly one kind is ever shown; the strip is the only way to change it. */
   const activeKind: ItemKind = filters.kinds[0] ?? itemKinds[0]
+
+  /** The whole kind's protected items, counted the way the page's Owned is. */
+  const lockedCount = useMemo(
+    () =>
+      allRows.filter(
+        (item) =>
+          item.kind === activeKind &&
+          item.lockedReason !== null &&
+          (item.kind !== 'schematic' ||
+            ['Melee', 'Ranged', 'Trap'].includes(
+              getItemRecord(records, item.templateId)?.category ?? ''
+            ))
+      ).length,
+    [activeKind, allRows, records]
+  )
 
   const totalSelected = selected_.length
   const isDisabledRecycle = isRecycling || totalSelected <= 0 || !accountId
@@ -474,7 +508,24 @@ export function useInventoryData(entry: InventoryEntry, reload: () => void) {
       return
     }
 
-    const [first, ...rest] = selected_
+    const levellable = selected_.filter((itemId) => {
+      const item = allRowsById.get(itemId)
+
+      return item !== undefined && canLevelFurther(item)
+    })
+    const skipped = selected_.length - levellable.length
+
+    if (levellable.length === 0) {
+      toast.info('Every selected item is at its tier cap. Evolve them first.')
+
+      return
+    }
+
+    if (skipped > 0) {
+      toast.info(`Skipping ${skipped} at their tier cap.`)
+    }
+
+    const [first, ...rest] = levellable
 
     setQueue(rest)
     handleItemAction({ kind: 'level', itemId: first })

@@ -332,13 +332,6 @@ export function useFriendsWorkspace({ active }: { active: boolean }) {
       return
     }
 
-    if (
-      action === 'remove' &&
-      !window.confirm(`Remove all ${targetAccountIds.length} requests?`)
-    ) {
-      return
-    }
-
     targetAccountIds.forEach((accountId) => setPending(accountId, true))
     window.electronAPI.friendsBulkAction(selected, targetAccountIds, action)
   }

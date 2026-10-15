@@ -29,7 +29,7 @@ export function TitleSection({
 
   const onScrollTop = () => {
     const childElement = document.querySelector(
-      `[aria-labelledby=${id}]`
+      `[aria-labelledby="${id}"]`
     ) as HTMLElement | null
 
     if (!childElement) {
@@ -53,34 +53,40 @@ export function TitleSection({
     >
       <h2
         className="flex items-center gap-2.5 border-b border-transparent bg-background/95 py-2.5 transition-colors"
-        onClick={onScrollTop}
         id={id}
       >
-        {/*
-          Pinned state is a fade, not a slide: nothing may move under the
-          pointer while the list is scrolling past it.
-        */}
-        <span
-          aria-hidden
-          className="tick h-3 w-[2px] shrink-0 rounded-full opacity-0 transition-opacity"
-          style={{ backgroundColor: accent ?? 'hsl(var(--primary))' }}
-        />
-        {art && (
-          <img
-            alt=""
-            className="h-7 w-12 shrink-0 rounded-md object-cover ring-1 ring-inset ring-border/50"
-            src={art}
+        <button
+          className="flex w-full items-center gap-2.5 text-left"
+          onClick={onScrollTop}
+          title="Back to the start of this section"
+          type="button"
+        >
+          {/*
+            Pinned state is a fade, not a slide: nothing may move under the
+            pointer while the list is scrolling past it.
+          */}
+          <span
+            aria-hidden
+            className="tick h-3 w-[2px] shrink-0 rounded-full opacity-0 transition-opacity"
+            style={{ backgroundColor: accent ?? 'hsl(var(--primary))' }}
           />
-        )}
-        <span className="section-label">{children}</span>
-        {/* The rule is what carries the eye across, so it bleeds right and fades. */}
-        <span
-          aria-hidden
-          className="h-px min-w-8 flex-1"
-          style={{
-            backgroundImage: `linear-gradient(to right, ${accent ?? 'hsl(var(--border))'}, transparent)`,
-          }}
-        />
+          {art && (
+            <img
+              alt=""
+              className="h-7 w-12 shrink-0 rounded-md object-cover ring-1 ring-inset ring-border/50"
+              src={art}
+            />
+          )}
+          <span className="section-label">{children}</span>
+          {/* The rule is what carries the eye across, so it bleeds right and fades. */}
+          <span
+            aria-hidden
+            className="h-px min-w-8 flex-1"
+            style={{
+              backgroundImage: `linear-gradient(to right, ${accent ?? 'hsl(var(--border))'}, transparent)`,
+            }}
+          />
+        </button>
       </h2>
     </div>
   )

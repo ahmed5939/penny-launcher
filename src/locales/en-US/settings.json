@@ -23,7 +23,7 @@
         "dialog": {
           "title": "What language do you want to use?",
           "notes": {
-            "1": "This notification will not showing after selection.",
+            "1": "Pick the language for menus and labels.",
             "2": "You can change this selection on the Settings page."
           },
           "submit-button": "Save selection"
@@ -150,7 +150,7 @@
   },
   "custom-menu": {
     "title": "Customizable menu",
-    "description": "Choose what the sidebar shows. Hidden pages stay reachable from search (Ctrl+K) and from Customize at the foot of the rail."
+    "description": "Choose what the sidebar shows."
   },
   "account-customization": {
     "title": "Account customization",
@@ -160,7 +160,7 @@
   "form": {
     "submit": {
       "status": {
-        "success": "Information updated"
+        "success": "Settings saved"
       }
     }
   }

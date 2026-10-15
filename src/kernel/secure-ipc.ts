@@ -5,6 +5,7 @@ import { ipcMain } from 'electron'
 import { RuntimeLog } from './runtime-log'
 import { isReasonableIpcPayload } from './security'
 import { MainWindow } from './startup/windows/main'
+import { publicIpcMessage } from './user-error'
 
 type IpcEvent = IpcMainEvent | IpcMainInvokeEvent
 
@@ -77,7 +78,7 @@ export function secureIpcHandle(
       return await listener(event, ...args)
     } catch (error) {
       RuntimeLog.error(`ipc:${channel}`, error)
-      throw new Error('Request failed.')
+      throw new Error(publicIpcMessage(error))
     }
   })
 }

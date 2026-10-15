@@ -60,6 +60,7 @@ function Content() {
     cardError,
     companions,
     companionsError,
+    companionsReady,
     equipping,
     errorMessage,
     filters,
@@ -70,8 +71,10 @@ function Content() {
     isLoading,
     isLoadingCompanions,
     isLoadingOwned,
+    loadedFor,
     owned,
     ownedError,
+    ownedReady,
     progress,
     slots,
   } = useLockerPage()
@@ -99,7 +102,7 @@ function Content() {
           onClick={handleReload}
         />
       }
-      description="What this account is wearing, everything it owns, the sidekicks it is still missing, and the whole locker as one shareable image. Pick a slot to change it."
+      description="What this account is wearing, everything it owns, the sidekicks it is still missing, and the whole locker as one shareable image. Choose a slot to change it."
       icon={Shirt}
       section={t('account-management.title')}
       status={<ToolBadges beta />}
@@ -127,6 +130,8 @@ function Content() {
     (cosmetic) => cosmetic.backendType === 'AthenaCharacter'
   ).length
 
+  const boardReady = loadedFor === account.accountId
+
   return (
     <>
       {header}
@@ -136,7 +141,7 @@ function Content() {
           title="Could not read the locker"
           tone="danger"
         >
-          {errorMessage}
+          {errorMessage} Try Refresh.
         </Callout>
       )}
 
@@ -145,7 +150,7 @@ function Content() {
           title="Could not list owned cosmetics"
           tone="warning"
         >
-          {ownedError}
+          {ownedError} Try Refresh.
         </Callout>
       )}
 
@@ -154,16 +159,16 @@ function Content() {
           <StatTile
             icon={Sparkles}
             label="Owned"
-            value={owned.length.toLocaleString()}
+            value={ownedReady ? owned.length.toLocaleString() : '—'}
           />
           <StatTile
             icon={Shirt}
             label="Outfits"
-            value={outfitCount.toLocaleString()}
+            value={ownedReady ? outfitCount.toLocaleString() : '—'}
           />
           <StatTile
             label="Slots filled"
-            value={`${equippedCount} / ${slotTotal}`}
+            value={boardReady ? `${equippedCount} / ${slotTotal}` : '—'}
           />
         </StatRow>
 
@@ -174,7 +179,17 @@ function Content() {
         />
       </div>
 
+      {view === 'loadout' && !boardReady && (
+        <div role="status">
+          <EmptyState
+            icon={Shirt}
+            title="Loading the locker…"
+          />
+        </div>
+      )}
+
       {view === 'loadout' &&
+        boardReady &&
         lockerSlotCategories.map((category) => (
           <Panel key={category.label}>
             <PanelHeader
@@ -187,6 +202,7 @@ function Content() {
                   <SlotBoardTile
                     key={slotKey}
                     isBusy={equipping === slotKey}
+                    isLocked={!ownedReady}
                     onPick={() => openPicker(slotKey)}
                     slot={slots[slotKey] ?? null}
                     slotKey={slotKey}
@@ -199,7 +215,7 @@ function Content() {
 
       {view === 'collection' && (
         <Collection
-          isLoading={isLoadingOwned}
+          isLoading={isLoadingOwned || !ownedReady}
           owned={owned}
         />
       )}
@@ -209,6 +225,7 @@ function Content() {
           companions={companions}
           errorMessage={companionsError}
           isLoading={isLoadingCompanions}
+          isReady={companionsReady}
         />
       )}
 
@@ -221,6 +238,7 @@ function Content() {
           onGenerate={handleGenerate}
           onUpdateFilters={setFilters}
           owned={owned}
+          ownedReady={ownedReady}
           progress={progress}
         />
       )}
@@ -255,11 +273,13 @@ function Content() {
  */
 function SlotBoardTile({
   isBusy,
+  isLocked,
   onPick,
   slot,
   slotKey,
 }: {
   isBusy: boolean
+  isLocked: boolean
   onPick: () => void
   slot: LockerSlotState | null
   slotKey: LockerSlotKey
@@ -268,7 +288,7 @@ function SlotBoardTile({
     return (
       <button
         className="flex w-28 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-border/60 py-6 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
-        disabled={isBusy}
+        disabled={isBusy || isLocked}
         onClick={onPick}
         type="button"
       >
@@ -289,7 +309,7 @@ function SlotBoardTile({
         rarity: slot.rarity ?? 'common',
         seriesColors: slot.seriesColors,
       }}
-      disabled={isBusy}
+      disabled={isBusy || isLocked}
       footer={slotLabels[slotKey]}
       onClick={onPick}
     />

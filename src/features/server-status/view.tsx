@@ -55,13 +55,17 @@ dayjs.extend(relativeTime)
  */
 export function ServerStatusPage() {
   const { t } = useTranslation(['sidebar'])
-  const { checkedAt, isLoading, status } = useServerStatusStore(
+  const { checkedAt, isLoading, lastStatusPage, status } = useServerStatusStore(
     useShallow((state) => ({
       checkedAt: state.checkedAt,
       isLoading: state.isLoading,
+      lastStatusPage: state.lastStatusPage,
       status: state.status,
     }))
   )
+
+  const stale = !status?.statusPage && lastStatusPage
+  const statusPage = status?.statusPage ?? lastStatusPage?.page
 
   // The shell's sync checks on open and keeps checking while this is mounted.
   useEffect(() => useServerStatusStore.getState().watch(), [])
@@ -84,8 +88,9 @@ export function ServerStatusPage() {
 
       {status && status.errors.length > 0 && (
         <Callout tone="warning">
-          {status.errors.join(' ')} What's below is from the parts that
-          answered.
+          {status.errors.join(' ')}
+          {(status.statusPage || status.fortnite.status !== 'UNKNOWN') &&
+            " What's below is from the parts that answered."}
         </Callout>
       )}
 
@@ -94,13 +99,21 @@ export function ServerStatusPage() {
         status={status}
       />
 
-      {status?.statusPage && (
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-          <IncidentsPanel incidents={status.statusPage.incidents} />
-          <OtherServicesPanel
-            groups={otherServiceGroups(status.statusPage)}
-          />
-        </div>
+      {statusPage && (
+        <>
+          {stale && (
+            <p className="text-xs text-muted-foreground">
+              From Epic's status page at{' '}
+              {dayjs(stale.checkedAt).format('LT')}.
+            </p>
+          )}
+          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <IncidentsPanel incidents={statusPage.incidents} />
+            <OtherServicesPanel
+              groups={otherServiceGroups(statusPage)}
+            />
+          </div>
+        </>
       )}
     </>
   )

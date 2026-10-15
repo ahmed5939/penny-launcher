@@ -22,6 +22,7 @@ import { useData } from './hooks'
 import { cn } from '../../../../lib/utils'
 
 export function Combobox({
+  'aria-labelledby': ariaLabelledby,
   className,
   classNamePopoverContent,
   containerClassName,
@@ -111,6 +112,7 @@ export function Combobox({
             variant="outline"
             role="combobox"
             aria-expanded={open}
+            aria-labelledby={ariaLabelledby}
             disabled={
               disabled
                 ? true

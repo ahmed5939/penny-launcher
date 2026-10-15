@@ -106,6 +106,23 @@ export function CollectionTab({
       )
   }, [families, ownership, query])
 
+  if (!collection) {
+    return errorMessage ? (
+      <div role="alert">
+        <Callout
+          title="Could not read the sprite collection. Try Refresh."
+          tone="danger"
+        >
+          {errorMessage}
+        </Callout>
+      </div>
+    ) : (
+      <div role="status">
+        <EmptyState title="Loading sprites…" />
+      </div>
+    )
+  }
+
   return (
     <>
       {errorMessage && (
@@ -121,21 +138,21 @@ export function CollectionTab({
 
       <StatRow>
         <StatTile
-          hint={`of ${(collection?.totalVariants ?? 0).toLocaleString()} released`}
+          hint={`of ${collection.totalVariants.toLocaleString()} released`}
           icon={Sparkles}
           label="Owned"
-          value={(collection?.ownedVariants ?? 0).toLocaleString()}
+          value={collection.ownedVariants.toLocaleString()}
         />
         <StatTile
           icon={Star}
           label="Mastered"
-          value={(collection?.masteredVariants ?? 0).toLocaleString()}
+          value={collection.masteredVariants.toLocaleString()}
         />
         <StatTile
           hint="Encountered but not secured"
           label="Lost"
-          tone={(collection?.lostVariants ?? 0) > 0 ? 'warning' : 'default'}
-          value={(collection?.lostVariants ?? 0).toLocaleString()}
+          tone={collection.lostVariants > 0 ? 'warning' : 'default'}
+          value={collection.lostVariants.toLocaleString()}
         />
         <StatTile
           hint={`of ${families.length.toLocaleString()} sprites`}
@@ -149,15 +166,14 @@ export function CollectionTab({
         />
         <StatTile
           hint={
-            collection && collection.spriteDust === null
+            collection.spriteDust === null
               ? 'Unavailable — the inventory did not say'
               : 'Summons lost sprites back'
           }
           icon={Coins}
           label="Sprite Dust"
           value={
-            collection?.spriteDust === null ||
-            collection?.spriteDust === undefined
+            collection.spriteDust === null
               ? '—'
               : collection.spriteDust.toLocaleString()
           }
@@ -222,19 +238,21 @@ export function CollectionTab({
           ))}
         </div>
       ) : (
-        <EmptyState
-          description={
-            isLoading
-              ? 'Reading this account’s sprites…'
-              : families.length === 0
-                ? 'Nothing loaded yet — try Refresh.'
-                : ownership === 'missing' || ownership === 'lost'
-                  ? 'Nothing in this state — good news.'
-                  : 'Nothing matches that search.'
-          }
-          icon={Ghost}
-          title={isLoading ? 'Loading' : 'Nothing to show'}
-        />
+        <div role={isLoading ? 'status' : undefined}>
+          <EmptyState
+            description={
+              isLoading
+                ? 'Reading this account’s sprites…'
+                : families.length === 0
+                  ? 'Nothing loaded yet — try Refresh.'
+                  : ownership === 'missing' || ownership === 'lost'
+                    ? 'Nothing in this state — good news.'
+                    : 'Nothing matches that search.'
+            }
+            icon={Ghost}
+            title={isLoading ? 'Loading sprites…' : 'Nothing to show'}
+          />
+        </div>
       )}
     </>
   )

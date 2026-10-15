@@ -1,9 +1,3 @@
 {
-  "note": "Choose any active quest for each account. Repeatable quests are pinned again automatically after the launcher claims them.",
-  "description": "Automatically keep the quests you choose pinned after their rewards are claimed.",
-  "loading": "Loading active quests…",
-  "options": {
-    "urns": "Urns",
-    "mini-bosses": "Mini-Bosses"
-  }
+  "loading": "Loading active quests…"
 }

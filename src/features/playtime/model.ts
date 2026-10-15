@@ -25,6 +25,7 @@ import { pickArt } from '../library/model'
 export const fortniteNamespace = 'fn'
 export const fortniteAppName = 'Fortnite'
 export const uefnAppName = 'Fortnite_Studio'
+export const saveTheWorldAppName = 'aa31f9e94e844b299ca757d1d0b97a09'
 
 export type PlaytimeAppKind =
   /** Fortnite itself — every mode's time, as one launcher app. */
@@ -59,7 +60,7 @@ export type PlaytimeEntry = PlaytimeTotal & {
 
 export type AccountPlaytime = {
   status: 'ok' | 'unknown'
-  /** Most played first. */
+  /** Fortnite, then Save the World, then the rest most played first. */
   entries: Array<PlaytimeEntry>
   /** Epic achievements per game; null when they could not be read. */
   achievements: Array<GameAchievementSummary> | null
@@ -96,7 +97,7 @@ export const knownApps: Record<string, AppInfo> = {
     namespace: fortniteNamespace,
     art: { tall: null, wide: null },
   },
-  aa31f9e94e844b299ca757d1d0b97a09: {
+  [saveTheWorldAppName]: {
     title: 'Fortnite Save the World Content',
     namespace: fortniteNamespace,
     art: { tall: null, wide: null },
@@ -275,7 +276,10 @@ const kindOrder: Record<PlaytimeAppKind, number> = {
   other: 3,
 }
 
-/** Totals joined to what is known of each app: Fortnite's first, then most played. */
+/**
+ * Totals joined to what is known of each app: Fortnite's first, then Save the
+ * World, then the rest by most played.
+ */
 export function describePlaytime(
   totals: Array<PlaytimeTotal>,
   apps: Record<string, AppInfo>
@@ -296,6 +300,7 @@ export function describePlaytime(
     .sort(
       (a, b) =>
         kindOrder[a.kind] - kindOrder[b.kind] ||
+        Number(b.artifactId === saveTheWorldAppName) - Number(a.artifactId === saveTheWorldAppName) ||
         b.seconds - a.seconds ||
         a.artifactId.localeCompare(b.artifactId)
     )

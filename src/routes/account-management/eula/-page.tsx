@@ -116,7 +116,14 @@ function Content({ actions }: { actions: ReturnType<typeof useEULAActions> }) {
           </FilterBar>
         )}
 
-        {accounts.length > 0 ? (
+        {accountsArray.length === 0 ? (
+          <EmptyState
+            className="border-0 bg-transparent py-8"
+            description="Add an account to check its EULA."
+            icon={FileWarning}
+            title="No accounts linked"
+          />
+        ) : accounts.length > 0 ? (
           <ul className="divide-y divide-border/40">
             {accounts.map((account) => (
               <AccountRow
@@ -143,11 +150,8 @@ function Content({ actions }: { actions: ReturnType<typeof useEULAActions> }) {
         <Trans
           ns="account-management"
           i18nKey="eula.link"
-          values={{
-            link: eulaHistoryUrl,
-          }}
         >
-          You can go to{' '}
+          Or accept it yourself on{' '}
           <a
             href={eulaHistoryUrl}
             className="font-medium text-primary hover:underline"
@@ -156,9 +160,9 @@ function Content({ actions }: { actions: ReturnType<typeof useEULAActions> }) {
               window.electronAPI.openExternalURL(eulaHistoryUrl)
             }}
           >
-            {eulaHistoryUrl}
-          </a>{' '}
-          and click the "I Agree" button at the bottom of the page:
+            epicgames.com
+          </a>
+          .
         </Trans>
       </p>
     </div>
@@ -177,6 +181,8 @@ function AccountRow({
   const { t } = useTranslation(['general'])
 
   const url = status.url ?? null
+  const checkFailed =
+    status.status === false && status.correctiveAction === 'Unknown'
 
   return (
     <li className="px-4 py-3">
@@ -187,10 +193,12 @@ function AccountRow({
 
         {status.status === true ? (
           <Chip tone="success">{t('actions.accepted')}</Chip>
+        ) : checkFailed ? (
+          <Chip tone="warning">Check failed</Chip>
         ) : status.status === false ? (
-          <Chip tone="danger">
-            {status.correctiveAction ?? 'Needs accepting'}
-          </Chip>
+          <span title={status.correctiveAction ?? undefined}>
+            <Chip tone="danger">Needs accepting</Chip>
+          </span>
         ) : (
           <span className="text-xs text-muted-foreground">Not checked</span>
         )}
@@ -209,6 +217,12 @@ function AccountRow({
           )}
         </Button>
       </div>
+
+      {checkFailed && (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Could not check. Try Verify again.
+        </p>
+      )}
 
       {url && (
         <div className="mt-2 flex items-center gap-2">

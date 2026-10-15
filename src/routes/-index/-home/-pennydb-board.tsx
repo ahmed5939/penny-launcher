@@ -4,12 +4,16 @@ import { useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 
 import { Button } from '../../../components/ui/button'
+import { Skeleton } from '../../../components/ui/skeleton'
 import {
   Chip,
   EmptyState,
+  FilterBar,
   Panel,
   PanelBody,
   PanelHeader,
+  Picker,
+  type PickerOption,
   RefreshButton,
   Segmented,
 } from '../../../components/page'
@@ -64,6 +68,17 @@ export function PennyDBMissionBoard() {
     [filter, rows, zone]
   )
 
+  const zoneOptions: Array<PickerOption<PennyDBMissionZone | 'all'>> = [
+    {
+      label: t('home.mission-board.zone-all'),
+      value: 'all',
+    },
+    ...pennyDBMissionZones.map((id) => ({
+      label: t(zoneLabelKeys[id]),
+      value: id,
+    })),
+  ]
+
   const updatedLabel = lastUpdatedAt
     ? dayjs(lastUpdatedAt).format('LT')
     : null
@@ -71,7 +86,6 @@ export function PennyDBMissionBoard() {
   return (
     <Panel
       aria-busy={isLoading}
-      className="mt-6"
     >
       <PanelHeader
         compact
@@ -103,36 +117,13 @@ export function PennyDBMissionBoard() {
           </div>
         }
       />
-      <PanelBody className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip>{t('home.mission-board.source')}</Chip>
-          <Chip tone={alertCount > 0 ? 'accent' : 'neutral'}>
-            {t('home.mission-board.alerts-count', { count: alertCount })}
-          </Chip>
-          <Chip tone={vbucksCount > 0 ? 'warning' : 'neutral'}>
-            {t('home.mission-board.vbucks-count', { count: vbucksCount })}
-          </Chip>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <ZonePill
-            active={zone === 'all'}
-            onClick={() => setZone('all')}
-          >
-            {t('home.mission-board.zone-all')}
-          </ZonePill>
-          {pennyDBMissionZones.map((id) => (
-            <ZonePill
-              active={zone === id}
-              color={pennyDBZoneColors[id]}
-              key={id}
-              onClick={() => setZone(id)}
-            >
-              {t(zoneLabelKeys[id])}
-            </ZonePill>
-          ))}
-        </div>
-
+      <FilterBar>
+        <Picker
+          label={t('home.mission-board.zone')}
+          onChange={setZone}
+          options={zoneOptions}
+          value={zone}
+        />
         <Segmented
           onChange={setFilter}
           options={[
@@ -151,6 +142,16 @@ export function PennyDBMissionBoard() {
           ]}
           value={filter}
         />
+      </FilterBar>
+      <PanelBody className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip tone={alertCount > 0 ? 'accent' : 'neutral'}>
+            {t('home.mission-board.alerts-count', { count: alertCount })}
+          </Chip>
+          <Chip tone={vbucksCount > 0 ? 'warning' : 'neutral'}>
+            {t('home.mission-board.vbucks-count', { count: vbucksCount })}
+          </Chip>
+        </div>
 
         {errorMessage && !isLoading && rows.length === 0 ? (
           <EmptyState
@@ -183,43 +184,6 @@ export function PennyDBMissionBoard() {
   )
 }
 
-function ZonePill({
-  active,
-  children,
-  color,
-  onClick,
-}: {
-  active: boolean
-  children: string
-  color?: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      aria-pressed={active}
-      className={cn(
-        'rounded-full border px-3 py-1 text-xs font-semibold transition-colors',
-        active
-          ? 'border-primary/50 bg-primary/15 text-primary'
-          : 'border-border/70 text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-      )}
-      onClick={onClick}
-      style={
-        active && color
-          ? {
-              borderColor: color,
-              color,
-              backgroundColor: 'transparent',
-            }
-          : undefined
-      }
-      type="button"
-    >
-      {children}
-    </button>
-  )
-}
-
 function MissionBoardRow({ row }: { row: PennyDBBoardRow }) {
   const { t } = useTranslation(['general'])
   const color = pennyDBZoneColors[row.zone]
@@ -232,10 +196,9 @@ function MissionBoardRow({ row }: { row: PennyDBBoardRow }) {
   return (
     <li
       className={cn(
-        'flex min-h-12 overflow-hidden rounded-xl border border-border/70 bg-card',
-        '[border-bottom-color:hsl(var(--control-stroke))]',
-        row.hasVBucks && 'border-warning/40 bg-warning/[0.07]',
-        !row.hasVBucks && row.hasAlert && 'border-primary/25 bg-primary/[0.04]'
+        'flex min-h-12 overflow-hidden rounded-lg',
+        row.hasVBucks && 'bg-warning/[0.07]',
+        !row.hasVBucks && row.hasAlert && 'bg-primary/[0.04]'
       )}
     >
       <span
@@ -258,21 +221,19 @@ function MissionBoardRow({ row }: { row: PennyDBBoardRow }) {
       </span>
 
       <span className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-1.5">
-        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted/40 ring-1 ring-inset ring-border/60">
-          {typeIcon ? (
-            <img
-              alt=""
-              className="size-5 object-contain"
-              decoding="async"
-              loading="lazy"
-              src={typeIcon}
-            />
-          ) : (
-            <span className="text-2xs font-bold text-muted-foreground">
-              ?
-            </span>
-          )}
-        </span>
+        {typeIcon ? (
+          <img
+            alt=""
+            className="size-6 shrink-0 object-contain"
+            decoding="async"
+            loading="lazy"
+            src={typeIcon}
+          />
+        ) : (
+          <span className="grid size-6 shrink-0 place-items-center text-2xs font-bold text-muted-foreground">
+            ?
+          </span>
+        )}
         <span className="min-w-0">
           <span className="block truncate text-ui font-semibold leading-tight">
             {typeName}
@@ -343,6 +304,7 @@ function RewardStrip({
   rewards: Array<PennyDBMissionReward>
   variant: 'alert' | 'base'
 }) {
+  const { t } = useTranslation(['general'])
   const shown = rewards.slice(0, variant === 'alert' ? 4 : 3)
   const extra = rewards.length - shown.length
 
@@ -351,9 +313,12 @@ function RewardStrip({
       {shown.map((reward, index) => {
         const isVBuck = isPennyDBVBuckReward(reward)
         const quantity = reward.quantity ?? 0
+        const name = reward.name || reward.itemType || t('unknown')
+        const label = quantity > 1 ? `${name} ×${quantity}` : name
 
         return (
           <span
+            aria-label={label}
             className={cn(
               'relative grid size-7 shrink-0 place-items-center rounded-md bg-background/60 ring-1 ring-inset',
               isVBuck
@@ -363,11 +328,8 @@ function RewardStrip({
                   : 'ring-border/60'
             )}
             key={`${reward.itemType ?? reward.name ?? index}-${index}`}
-            title={
-              quantity > 1
-                ? `${reward.name ?? ''} ×${quantity}`
-                : (reward.name ?? undefined)
-            }
+            role="img"
+            title={label}
           >
             {reward.icon ? (
               <img
@@ -400,14 +362,20 @@ function RewardStrip({
 }
 
 function BoardSkeleton() {
+  const { t } = useTranslation(['general'])
+
   return (
-    <ul className="space-y-1">
+    <div
+      className="space-y-1"
+      role="status"
+    >
+      <span className="sr-only">{t('home.mission-board.loading')}</span>
       {Array.from({ length: 5 }).map((_, index) => (
-        <li
-          className="h-12 animate-pulse rounded-xl border border-border/70 bg-muted/30"
+        <Skeleton
+          className="h-12 rounded-lg bg-muted/30"
           key={index}
         />
       ))}
-    </ul>
+    </div>
   )
 }

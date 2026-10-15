@@ -1,10 +1,15 @@
-import type { ServerStatusPayload } from '../../features/server-status/model'
+import type {
+  ServerStatusPayload,
+  StatusPage,
+} from '../../features/server-status/model'
 
 import { create } from 'zustand'
 
 export type ServerStatusState = {
   checkedAt: number | null
   isLoading: boolean
+  /** The last Epic status page that answered, kept through a failed check. */
+  lastStatusPage: { checkedAt: number; page: StatusPage } | null
   status: ServerStatusPayload | null
   /** Mounted Servers pages; while any is open the status is kept fresh. */
   viewers: number
@@ -18,12 +23,20 @@ export type ServerStatusState = {
 export const useServerStatusStore = create<ServerStatusState>()((set) => ({
   checkedAt: null,
   isLoading: false,
+  lastStatusPage: null,
   status: null,
   viewers: 0,
 
   setLoading: (value) => set({ isLoading: value }),
   setResponse: (status, checkedAt) =>
-    set({ checkedAt, isLoading: false, status }),
+    set((state) => ({
+      checkedAt,
+      isLoading: false,
+      lastStatusPage: status.statusPage
+        ? { checkedAt, page: status.statusPage }
+        : state.lastStatusPage,
+      status,
+    })),
   watch: () => {
     set((state) => ({ viewers: state.viewers + 1 }))
 

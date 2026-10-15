@@ -11,6 +11,7 @@ import {
   parseAppBuilds,
   parsePlaytimeTotals,
   playtimeErrorMessage,
+  saveTheWorldAppName,
   unnamedApps,
 } from './model'
 
@@ -204,6 +205,18 @@ describe('describePlaytime', () => {
       ['other', 'Operation Tango - Friend Pass'],
       ['other', null],
     ])
+  })
+
+  it('puts Save the World before LEGO Fortnite even with fewer seconds', () => {
+    const modes = describePlaytime(
+      [
+        { artifactId: '94bc5ec13f8f438c97fdbef3e9019e27', seconds: 21430 },
+        { artifactId: saveTheWorldAppName, seconds: 1802 },
+      ],
+      parseAppBuilds(buildsReply)
+    )
+
+    expect(modes.map((entry) => entry.title)).toEqual(['Save the World', 'LEGO® Fortnite'])
   })
 
   it('falls back to the known Fortnite apps when appBuilds could not be read', () => {

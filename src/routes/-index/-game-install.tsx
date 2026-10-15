@@ -1,7 +1,4 @@
-import {
-  HardDrive,
-  RefreshCw,
-} from 'lucide-react'
+import { HardDrive } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -11,6 +8,7 @@ import {
   PanelBody,
   PanelFooter,
   PanelHeader,
+  RefreshButton,
 } from '../../components/page'
 import { Button } from '../../components/ui/button'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -18,6 +16,13 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { useGameInstall } from '../../hooks/game-install'
 import { relativeTime } from '../../lib/dates'
 import { toast } from '../../lib/notifications'
+
+/** Each store app gets its own confirmation, and its own failure, so the toast names what opened. */
+const officialAppToasts = {
+  updater: { ok: 'home.game.update-started', failed: 'home.game.update-failed' },
+  egl: { ok: 'home.game.opened-egl', failed: 'home.game.open-egl-failed' },
+  xbox: { ok: 'home.game.opened-xbox', failed: 'home.game.open-xbox-failed' },
+} as const
 
 /** Point Penny at the game, or hand off to the store app that installs it. */
 export function useGameFolderActions() {
@@ -43,9 +48,9 @@ export function useGameFolderActions() {
     const result = await window.electronAPI.openGameOfficialApp(target)
 
     if (result.ok) {
-      toast.success(t('home.game.update-started'))
+      toast.success(t(officialAppToasts[target].ok))
     } else {
-      toast.error(t('home.game.update-failed'))
+      toast.error(t(officialAppToasts[target].failed))
     }
     await refresh(true)
   }
@@ -66,7 +71,7 @@ export function HomeGameInstall() {
   if (!status) {
     return (
       <Panel>
-        <PanelBody className="grid gap-3">
+        <PanelBody className="grid gap-3" role="status" aria-label={t('home.game.loading')}>
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-2/3" />
@@ -141,25 +146,22 @@ export function HomeGameInstall() {
             : ''}
           {install.incomplete ? ` · ${t('home.game.incomplete')}` : ''}
         </p>
-        <p className="mt-2 text-xs text-muted-foreground">{t('home.game.note')}</p>
       </PanelBody>
       <PanelFooter>
-        <Button
-          type="button"
-          disabled={loading}
-          onClick={() => void handleOpen('updater')}
-        >
-          {t('home.game.update')}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={loading}
+        {status.updateAvailable && (
+          <Button
+            type="button"
+            disabled={loading}
+            onClick={() => void handleOpen('updater')}
+          >
+            {t('home.game.update')}
+          </Button>
+        )}
+        <RefreshButton
+          label={t('home.game.check')}
+          loading={loading}
           onClick={() => void refresh(true)}
-        >
-          <RefreshCw className="mr-2 size-3.5" />
-          {t('home.game.check')}
-        </Button>
+        />
         <Button
           type="button"
           variant="ghost"

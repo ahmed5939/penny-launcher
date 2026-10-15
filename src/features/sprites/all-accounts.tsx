@@ -115,6 +115,7 @@ export function AllAccountsTab() {
   )
   const shown = paginate(filtered, page, pageSize)
   const shownRows = filtered.reduce((sum, family) => sum + family.rows.length, 0)
+  const failed = accountColumns.filter(({ column }) => column?.state === 'failed')
 
   const rarityOptions = useMemo<Array<PickerOption>>(
     () => [
@@ -244,14 +245,26 @@ export function AllAccountsTab() {
           <Legend />
         </div>
 
-        {matrix.readCount === 0 ? (
+        {matrix.readCount === 0 && !running && failed.length > 0 ? (
+          <div className="px-4 pb-4" role="alert">
+            <Callout
+              title="Could not read any account"
+              tone="danger"
+            >
+              <ul className="space-y-1">
+                {failed.map(({ accountId, column, name }) => (
+                  <li key={accountId}>
+                    {name}: {column?.errorMessage ?? 'unknown error'}
+                  </li>
+                ))}
+              </ul>
+              <p>Try Refresh.</p>
+            </Callout>
+          </div>
+        ) : matrix.readCount === 0 ? (
           <EmptyState
             className="border-0 bg-transparent py-8"
-            description={
-              running
-                ? 'Each account is read with its own sign-in, one after another. Results appear as they land.'
-                : 'No account could be read. Check the marks on the account names, then try Refresh.'
-            }
+            description={running ? 'Results appear as each account is read.' : undefined}
             icon={Ghost}
             title={running ? 'Reading your accounts…' : 'Nothing read yet'}
           />

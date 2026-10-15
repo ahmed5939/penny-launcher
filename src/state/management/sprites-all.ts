@@ -62,14 +62,14 @@ export const useSpritesAllStore = create<SpritesAllState>()((set) => ({
           return state
         }
 
-        const columns = { ...state.columns }
+        const columns: Record<string, SpritesAccountColumn> = {}
 
         payload.accounts.forEach(({ accountId, displayName }) => {
           columns[accountId] = {
             accountId,
             displayName,
             state: 'reading',
-            collection: columns[accountId]?.collection ?? null,
+            collection: state.columns[accountId]?.collection ?? null,
             errorMessage: null,
           }
         })

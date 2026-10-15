@@ -52,17 +52,17 @@ export const missionTypeOptions: Array<
   },
   {
     icon: assets('atlas-c2'),
-    label: 'Atlas',
+    label: 'Atlas C2',
     value: 'atlas-c2',
   },
   {
     icon: assets('atlas-c3'),
-    label: 'Atlas',
+    label: 'Atlas C3',
     value: 'atlas-c3',
   },
   {
     icon: assets('atlas-c4'),
-    label: 'Atlas',
+    label: 'Atlas C4',
     value: 'atlas-c4',
   },
   {

@@ -1,4 +1,23 @@
 import type { PluginPermission } from '../../types/plugins'
+import type { PluginFortniteProfile } from '../../types/plugin-fortnite'
+/** Save the World first; the order here is the order the review lists profiles in. */
+export const profileLabels: Record<PluginFortniteProfile, string> = {
+  campaign: 'Save the World',
+  athena: 'Battle Royale',
+  common_core: 'Account and V-Bucks',
+  common_public: 'Public profile',
+  collections: 'Collections',
+  creative: 'Creative',
+  metadata: 'Account metadata',
+  theater0: 'Save the World theater 0',
+  theater1: 'Save the World theater 1',
+  theater2: 'Save the World theater 2',
+  outpost0: 'Save the World outposts',
+  profile0: 'Save the World profile',
+  recycle_bin: 'Recycle bin',
+  collection_book_people0: 'Collection Book: survivors',
+  collection_book_schematics0: 'Collection Book: schematics',
+}
 export const permissionLabels: Record<PluginPermission, string> = {
   'accounts:read': 'Read account names and current selection',
   'quests:read': 'Read quests for selected accounts (authenticated)',

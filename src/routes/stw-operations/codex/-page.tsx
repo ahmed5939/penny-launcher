@@ -11,10 +11,12 @@ import { ItemDetailDialog } from '../../../components/items/item-detail'
 import { ItemTile } from '../../../components/items/item-tile'
 import { VirtualList } from '../../../components/virtual-list'
 import {
+  Callout,
   EmptyState,
   FilterBar,
   PageHeader,
   Panel,
+  PanelBody,
   Picker,
   SearchField,
   Segmented,
@@ -40,7 +42,7 @@ export function RouteComponent() {
         icon={BookOpen}
         section={t('stw-operations.title')}
         title={t('stw-operations.options.codex')}
-        description="Every hero, weapon, trap, defender and survivor in the game, whether you own it or not. Pick one to see its perks and stats."
+        description="Every hero, weapon, trap, defender and survivor in the game."
       />
       <Content />
     </>
@@ -53,6 +55,7 @@ function Content() {
   const {
     alterationPools,
     entries,
+    errorMessage,
     family,
     familyTotal,
     isLoading,
@@ -116,17 +119,23 @@ function Content() {
           </span>
         </FilterBar>
 
-        {total <= 0 ? (
-          <EmptyState
-            className="border-0 bg-transparent py-10"
-            description={
-              isLoading
-                ? 'Downloading the game data. This happens once, then it is cached.'
-                : 'The item database has not been downloaded yet. It is fetched on startup — restart the app if this persists.'
-            }
-            icon={BookOpen}
-            title={isLoading ? 'Building the codex' : 'No data yet'}
-          />
+        {total <= 0 && !isLoading && errorMessage ? (
+          <PanelBody role="alert">
+            <Callout
+              title="Could not load the item database"
+              tone="danger"
+            >
+              {errorMessage}. Leave this page and open it again to retry.
+            </Callout>
+          </PanelBody>
+        ) : total <= 0 ? (
+          <div role="status">
+            <EmptyState
+              className="border-0 bg-transparent py-10"
+              icon={BookOpen}
+              title="Loading the codex…"
+            />
+          </div>
         ) : entries.length > 0 ? (
           <CodexGrid
             entries={entries}

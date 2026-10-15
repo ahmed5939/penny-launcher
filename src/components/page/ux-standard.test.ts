@@ -102,8 +102,6 @@ describe('UX standard', () => {
   it('reloads page data with RefreshButton, not a hand-built one', () => {
     // RefreshCw is RefreshButton's icon. Files here use it for another action.
     const allow = [
-      // "Check for updates" on the game install.
-      'src/routes/-index/-game-install.tsx',
       // "Revert all", "Regenerate" and per-patch re-scan buttons.
       'src/routes/settings/tweaks/-page.tsx',
     ]
