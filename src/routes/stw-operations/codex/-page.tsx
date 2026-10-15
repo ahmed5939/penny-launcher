@@ -120,7 +120,7 @@ function Content() {
         </FilterBar>
 
         {total <= 0 && !isLoading && errorMessage ? (
-          <PanelBody>
+          <PanelBody role="alert">
             <Callout
               title="Could not load the item database"
               tone="danger"
