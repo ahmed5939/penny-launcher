@@ -96,7 +96,8 @@
     }
   },
   "close-game": {
-    "button": "Close game"
+    "button": "Close game",
+    "confirm": "Confirm — close Fortnite"
   },
   "separators": {
     "or": "Or"
@@ -142,6 +143,7 @@
     "no-account-description": "Authorization code, device auth, exchange code, or import from Aerial.",
     "add-account": "Add account",
     "select-account": "Pick an account in the titlebar",
+    "sign-in-expired": "Sign-in expired — add this account again",
     "session": "Session",
     "stats": {
       "accounts": "Accounts",

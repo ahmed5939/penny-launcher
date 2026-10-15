@@ -17,7 +17,7 @@ import { useGameAction } from '../../hooks/ui/game-action'
 import { useGameInstall } from '../../hooks/game-install'
 import { useGameFolderActions } from './-game-install'
 
-import { parseCustomDisplayName } from '../../lib/utils'
+import { cn, parseCustomDisplayName } from '../../lib/utils'
 
 /** What a player checks before pressing Play. Absent until loaded. */
 export type HeroToday = {
@@ -46,9 +46,39 @@ export function HomeHero({ today }: { today?: HeroToday }) {
   const notInstalled = install !== null && !install.install.found
 
   const elapsed = useSessionTimer(customProcessIsRunning)
+  const [confirmingClose, setConfirmingClose] = useState(false)
+
+  useEffect(() => {
+    if (!confirmingClose) return
+
+    const timeout = setTimeout(() => {
+      setConfirmingClose(false)
+    }, 4000)
+
+    return () => {
+      clearTimeout(timeout)
+    }
+  }, [confirmingClose])
+
+  useEffect(() => {
+    if (!customProcessIsRunning) setConfirmingClose(false)
+  }, [customProcessIsRunning])
 
   const hasAccounts = accountsArray.length > 0
   const displayName = selected ? parseCustomDisplayName(selected) : null
+  const signInExpired = selected?.authStatus === 'invalid'
+  const launchBlockedBy = signInExpired ? t('home.sign-in-expired') : t('home.select-account')
+
+  const pressClose = () => {
+    if (!confirmingClose) {
+      setConfirmingClose(true)
+
+      return
+    }
+
+    setConfirmingClose(false)
+    close()
+  }
 
   // The game's name, not a status: the state (ready, playing, not
   // installed) is the line above it, in the tone it deserves.
@@ -84,7 +114,25 @@ export function HomeHero({ today }: { today?: HeroToday }) {
                 <span className="relative inline-flex size-full rounded-full bg-success" />
               </span>
             )}
-            {!hasAccounts ? t('home.eyebrow') : customProcessIsRunning ? t('home.playing') : notInstalled ? <span className="text-warning">{t('home.game.missing-title')}</span> : t('home.ready')}
+            {!hasAccounts ? (
+              t('home.eyebrow')
+            ) : customProcessIsRunning ? (
+              t('home.playing')
+            ) : notInstalled ? (
+              <span className="text-warning">{t('home.game.missing-title')}</span>
+            ) : canLaunch ? (
+              t('home.ready')
+            ) : signInExpired ? (
+              <Link
+                className="text-warning hover:underline"
+                params={{ type: 'quick-login' }}
+                to="/accounts/add/$type"
+              >
+                {launchBlockedBy}
+              </Link>
+            ) : (
+              <span className="text-warning">{launchBlockedBy}</span>
+            )}
           </div>
 
           <h1 className="mt-2 text-display-lg font-extrabold leading-none tracking-tight text-foreground">
@@ -111,9 +159,7 @@ export function HomeHero({ today }: { today?: HeroToday }) {
                   </span>
                 )}
               </>
-            ) : (
-              <span>{t('home.select-account')}</span>
-            )}
+            ) : null}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2.5">
@@ -147,29 +193,32 @@ export function HomeHero({ today }: { today?: HeroToday }) {
                   {t('home.game.open-egl')}
                 </Button>
               </>
-            ) : (
+            ) : customProcessIsRunning ? null : (
               <Button
                 className="h-12 min-w-44 px-10 text-base font-semibold"
-                disabled={
-                  !canLaunch
-                }
+                disabled={!canLaunch}
                 onClick={handleLaunch}
+                title={canLaunch ? undefined : launchBlockedBy}
               >
                 <Rocket className="mr-2 size-4" />
-                {customProcessIsRunning
-                  ? t('is-running')
-                  : t('launch-game.button')}
+                {t('launch-game.button')}
               </Button>
             )}
 
             {customProcessIsRunning && (
               <Button
-                className="h-12 border-destructive/40 px-5 text-sm font-semibold text-destructive hover:bg-destructive/15"
-                variant="outline"
-                onClick={close}
+                className={cn(
+                  'h-12 px-5 text-sm font-semibold',
+                  !confirmingClose && 'border-destructive/40 text-destructive hover:bg-destructive/15',
+                )}
+                onBlur={() => {
+                  setConfirmingClose(false)
+                }}
+                onClick={pressClose}
+                variant={confirmingClose ? 'destructive' : 'outline'}
               >
                 <Square className="mr-2 size-3.5" />
-                {t('close-game.button')}
+                {confirmingClose ? t('close-game.confirm') : t('close-game.button')}
               </Button>
             )}
           </div>
