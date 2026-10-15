@@ -90,19 +90,12 @@ export function DefendersView({ accountSelected, loading, error, items, records,
                 <Picker label="Weapon order" value={weaponOrder} onChange={v => { setWeaponOrder(v); setWeaponPage(0) }} options={[{value:'fit',label:'Best perk fit'},{value:'level',label:'Highest current level'}]} />
               </FilterBar>
               {filteredMatches.length === 0
-                ? <EmptyState className="border-0 bg-transparent py-8" icon={Swords} title="No checked weapon matches" description="Try another role. Unsupported or unknown weapons are not guessed; this does not mean the defender is useless." />
+                ? <EmptyState className="border-0 bg-transparent py-8" icon={Swords} title="No checked weapon matches" description="Try another role." />
                 : <ul className="divide-y divide-border/50">{shownWeapons.items.map(w => <WeaponRow key={w.item.itemId} match={w} power={power(w.item)} records={records} />)}</ul>}
               <Pager onPageChange={setWeaponPage} page={shownWeapons.page} pageSize={WEAPON_PAGE_SIZE} total={filteredMatches.length} />
             </Panel>
           </div>
         </div>}
-        <details className="text-xs text-muted-foreground"><summary className="text-foreground/80">How usefulness is judged</summary><div className="mt-2 space-y-2">
-          <p>Epic and Legendary defenders with three compatible weapon perks rank first. Damage, critical stats, fire rate, reload and magazine size count as weapon perks. Survival perks remain useful when staying alive is the priority.</p>
-          <p>Roll quality is separate from level. Allocated perks are shown; low-level defenders may need upgrading to unlock their full roll. Melee bonuses for different weapon types are not added together.</p>
-          <p>Weapon suggestions favour AOE and matching perk interactions. They use your actual schematic rolls and are not measured DPS rankings. No headshot, ammo-saving or durability benefit is credited. A wasted perk does not disqualify a weapon.</p>
-          <p>Defender mechanics used here: sixth-perk cooldowns are ignored; Dragon’s Roar supplies 3-second innate affliction. These are player-reported rules. Trigger conditions and target immunity still matter. Legacy effects outside slot six may need separate verification.</p>
-          <p>Game definitions: {catalog.build}. New or unrecognised items need review. Owned schematics do not guarantee a crafted weapon is in your backpack.</p>
-        </div></details>
       </>}
   </div>
 }
