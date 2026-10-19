@@ -82,7 +82,7 @@
     "cmdk": "^1.0.0",
     "color": "^4.2.3",
     "dayjs": "^1.11.13",
-    "electron-squirrel-startup": "^1.0.0",
+    "electron-squirrel-startup": "^1.0.1",
     "fnbr": "^4.1.2",
     "i18next": "^24.1.2",
     "immer": "^10.1.1",
