@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Backpack, BrickWall, Compass, Crosshair, Gem, In
 
 import { useItemDatabaseStore } from '../../state/items/database'
 import { useRequestItemDatabase } from '../../bootstrap/components/load-item-database'
-import { worldItemDisplay, worldPerkDisplay, rollColors } from './display'
+import { worldItemDisplay, worldPerkDisplay } from './display'
 import resources from '../../data/resources.json'
 import ingredients from '../../data/ingredients.json'
 
@@ -20,7 +20,7 @@ import { Input } from '../../components/ui/input'
 import { ItemDetailDialog } from '../../components/items/item-detail'
 import { ItemTile } from '../../components/items/item-tile'
 import { DetailSection } from '../../components/items/detail-parts'
-import { AccountResourceGate, Chip, EmptyState, KeyValue, PageHeader, Panel, PanelBody, PanelFooter, PanelHeader, RefreshButton, SearchField, Segmented, ToolBadges, useAccountResource } from '../../components/page'
+import { AccountResourceGate, EmptyState, KeyValue, PageHeader, Panel, PanelBody, PanelFooter, PanelHeader, RefreshButton, SearchField, Segmented, ToolBadges, useAccountResource } from '../../components/page'
 
 /** The two sides stacks move between. The Ventures backpack is view-only. */
 type Side = Exclude<WorldInventoryLocation, 'ventures'>
@@ -460,7 +460,8 @@ function Contents({ data, onChanged, refreshing }: { data: BothSides; onChanged:
 /**
  * The item dialog every other screen opens, read-only. A backpack copy's
  * perks come from the bundled perk table — crafted weapons roll ids the
- * database often lacks — so each row carries that name and its rarity.
+ * database often lacks — so each row carries that name and its rarity,
+ * drawn as the schematics dialog draws them.
  */
 function WorldItemDialog({ item, onClose, ratings, records }: {
   item: WorldItem | null
@@ -476,16 +477,7 @@ function WorldItemDialog({ item, onClose, ratings, records }: {
       onOpenChange={(open) => { if (!open) onClose() }}
       perkDetails={perks.map((id) => {
         const perk = worldPerkDisplay(id, records)
-        const color = perk.rarity ? rollColors[perk.rarity] : null
-        return {
-          name: perk.description,
-          tags: (
-            <>
-              {perk.rarity ? <Chip><span style={{ color: color ?? undefined }}>{perk.rarity}</span></Chip> : <Chip tone="warning">Rarity unavailable</Chip>}
-              {perk.system === 'legacy' && <Chip tone="accent">Legacy</Chip>}
-            </>
-          ),
-        }
+        return { name: perk.description, rarity: perk.rarity }
       })}
       ratings={ratings}
       records={records}

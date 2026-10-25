@@ -18,4 +18,9 @@ describe('crafted weapon presentation', () => {
     expect(worldPerkDisplay('Alteration:new_unknown', {}).rarity).toBeNull()
     expect(worldPerkDisplay('Alteration:new_unknown', {}).description).toContain('Unrecognized')
   })
+  it('reads a missing perk rarity from the tier the id spells', () => {
+    expect(worldPerkDisplay('Alteration:aid_att_ranged_damage_alt1', {}).rarity).toBe('Uncommon')
+    expect(worldPerkDisplay('Alteration:aid_att_trap_coredamage_t03', {}).rarity).toBe('Rare')
+    expect(worldPerkDisplay('Alteration:aid_g_weapon_stun', {}).rarity).toBeNull()
+  })
 })

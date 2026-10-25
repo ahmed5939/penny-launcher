@@ -25,6 +25,14 @@ describe('world inventories', () => {
     expect(trap.alterations).toEqual(['Alteration:aid_ele_fire_intrin_t05', 'Alteration:aid_att_maxdurability_trap_t05'])
     expect(trap.alterationSlots).toEqual(['Alteration:aid_ele_fire_intrin_t05', null, 'Alteration:aid_att_maxdurability_trap_t05'])
   })
+  it('reads crafted perks from alterationDefinitions when alterations holds only empty slots', () => {
+    const body = { profileChanges: [{ profile: { profileId: 'theater0', accountId: 'a', items: {
+      weapon: { templateId: 'Weapon:wid_assault_auto_sr_ore_t05', quantity: 1, attributes: { level: 50, alterations: ['', ''], alterationDefinitions: ['Alteration:aid_att_damage_t05', '', 'Alteration:aid_att_critchance_t04'] } },
+    } } }] }
+    const [weapon] = parseWorldProfile(body, 'a', 'backpack').items
+    expect(weapon.alterations).toEqual(['Alteration:aid_att_damage_t05', 'Alteration:aid_att_critchance_t04'])
+    expect(weapon.alterationSlots).toEqual(['Alteration:aid_att_damage_t05', null, 'Alteration:aid_att_critchance_t04'])
+  })
   it('reads the Ventures backpack from theater2 only', () => {
     const result = parseWorldProfile(profile('theater2'), 'a', 'ventures')
     expect(result.location).toBe('ventures')

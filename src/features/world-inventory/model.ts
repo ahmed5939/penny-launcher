@@ -12,8 +12,8 @@ export function parseWorldProfile(body: unknown, accountId: string, location: Wo
     if (location !== 'storage' && /^Weapon:(?:buildingitemdata_(?:floor|roofs|stair_w|wall)|edittool)$/i.test(item.templateId)) return []
     const a = item.attributes ?? {}
     const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null
-    // Crafted copies roll their perks into `alterationDefinitions`; `alterations` is the schematic field and is normally absent here.
-    const rolled = Array.isArray(a.alterations) && a.alterations.length ? a.alterations : Array.isArray(a.alterationDefinitions) ? a.alterationDefinitions : []
+    // Crafted copies roll their perks into `alterationDefinitions`; `alterations` is the schematic field and, when present here, can be only empty slots.
+    const rolled = [a.alterations, a.alterationDefinitions].find((list): list is unknown[] => Array.isArray(list) && list.some((v) => typeof v === 'string' && !!v)) ?? []
     return [{ id, templateId: item.templateId, category: item.templateId.split(':')[0], quantity: number(item.quantity) ?? 1, level: number(a.level), durability: number(a.durability), favorite: a.favorite === true,
       alterations: rolled.filter((v): v is string => typeof v === 'string' && !!v),
       alterationSlots: rolled.map((v) => typeof v === 'string' && v ? v : null) }]

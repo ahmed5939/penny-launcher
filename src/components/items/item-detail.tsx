@@ -85,6 +85,8 @@ export type ItemDetailSubject = {
 export type PerkDetail = {
   /** Beats the database name — legacy perks are often missing from it. */
   name?: string
+  /** Beats the database rarity, for the edge and pips — same reason. */
+  rarity?: string | null
   tags?: ReactNode
 }
 
@@ -722,8 +724,10 @@ function PerkRow({
   const [swapping, setSwapping] = useState(false)
 
   const perkRecord = getItemRecord(records, alteration)
-  const accent = accentForRarityName(perkRecord?.rarity)
-  const upgrade = perkRecord?.upgradeCost ?? {}
+  const rarity = detail?.rarity ?? perkRecord?.rarity
+  const accent = accentForRarityName(rarity)
+  // Only a schematic's perks can be upgraded; a crafted copy's are fixed.
+  const upgrade = subject.templateId.startsWith('Schematic:') ? perkRecord?.upgradeCost ?? {} : {}
   const name = detail?.name ?? displayAlteration(records, alteration)
   const options = (pool?.options ?? [])
     .map((option) => alterationAtCurrentTier(option, alteration))
@@ -754,7 +758,7 @@ function PerkRow({
           {detail?.tags && (
             <span className="mt-1 flex flex-wrap gap-1">{detail.tags}</span>
           )}
-          <PerkRankPips className="mt-1.5" color={edge} rarity={perkRecord?.rarity} />
+          <PerkRankPips className="mt-1.5" color={edge} rarity={rarity} />
 
           {Object.keys(upgrade).length > 0 && (
             <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
